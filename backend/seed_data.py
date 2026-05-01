@@ -6,22 +6,34 @@ from app.models.sqlalchemy_models import User, Bank, BankRule, BankTable, Coeffi
 
 async def seed():
     async with AsyncSessionLocal() as session:
-        # Create a default Admin user with hashed password
-        admin = User(
-            name="Admin Teste",
-            email="admin@teste.com",
-            password_hash=get_password_hash("admin123"),
-            role="admin"
-        )
-        session.add(admin)
-
-        # Banks
-        c6 = Bank(name="C6 Bank", active=True)
-        bmg = Bank(name="BMG", active=True)
-        facta = Bank(name="Facta", active=True)
+        from sqlalchemy import select
         
-        session.add_all([c6, bmg, facta])
-        await session.flush() # Get IDs
+        # Check if admin exists
+        res = await session.execute(select(User).where(User.email == "admin@teste.com"))
+        if not res.scalar():
+            admin = User(
+                name="Admin Teste",
+                email="admin@teste.com",
+                password_hash=get_password_hash("admin123"),
+                role="admin"
+            )
+            session.add(admin)
+
+        # Banks - Check and Add
+        for b_name in ["C6 Bank", "BMG", "Facta"]:
+            res = await session.execute(select(Bank).where(Bank.name == b_name))
+            if not res.scalar():
+                session.add(Bank(name=b_name, active=True))
+        
+        await session.commit()
+        
+        # Re-fetch for IDs
+        res = await session.execute(select(Bank))
+        banks = {b.name: b for b in res.scalars().all()}
+        c6 = banks.get("C6 Bank")
+        bmg = banks.get("BMG")
+        facta = banks.get("Facta")
+
 
         # Rules
         rules = [
