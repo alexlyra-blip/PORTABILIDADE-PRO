@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy[asyncio]
+asyncpg
+psycopg2-binary
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+reportlab
+pytest
+pytest-asyncio
+httpx
+email-validator
+aiosqlite
+python-dateutil

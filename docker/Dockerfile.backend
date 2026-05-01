@@ -1,0 +1,18 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY ./backend/requirements.txt .
+# We assume there will be a requirements.txt with fastapi, uvicorn, etc.
+RUN pip install --no-cache-dir -r requirements.txt || true
+# fallback if requirements.txt doesn't exist yet but we'll create it
+RUN pip install fastapi uvicorn pydantic SQLAlchemy psycopg2-binary redis
+
+COPY ./engine /engine
+COPY ./backend /app
+
+ENV PYTHONPATH=/app:/engine
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
