@@ -61,26 +61,16 @@ async def upload_bank_logo(
     db: AsyncSession = Depends(get_db), 
     admin: UserResponse = Depends(get_admin_user)
 ):
-    # Ensure directory exists
-    os.makedirs("uploads/logos", exist_ok=True)
+    import base64
+    contents = await file.read()
+    base64_logo = f"data:{file.content_type};base64,{base64.b64encode(contents).decode()}"
     
-    # Create unique filename
-    file_ext = os.path.splitext(file.filename)[1]
-    filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = os.path.join("uploads/logos", filename)
-    
-    # Save file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    # Update bank in DB
-    logo_url = f"/uploads/logos/{filename}"
-    bank = await AdminService.update_bank(db, bank_id, {"logo_url": logo_url})
+    bank = await AdminService.update_bank(db, bank_id, {"logo_url": base64_logo})
     
     if not bank:
         raise HTTPException(status_code=404, detail="Bank not found")
         
-    return {"logo_url": logo_url}
+    return {"logo_url": base64_logo}
 
 # Rules
 @router.get("/banks/{bank_id}/rules", response_model=List[BankRuleResponse])
@@ -184,18 +174,14 @@ async def upload_sub_logo(
     db: AsyncSession = Depends(get_db), 
     admin: UserResponse = Depends(get_admin_user)
 ):
-    import os, uuid, shutil
-    os.makedirs("uploads/logos", exist_ok=True)
-    file_ext = os.path.splitext(file.filename)[1]
-    filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = os.path.join("uploads/logos", filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    logo_url = f"/uploads/logos/{filename}"
-    logo = await AdminService.update_sub_logo(db, logo_id, {"logo_url": logo_url})
+    import base64
+    contents = await file.read()
+    base64_logo = f"data:{file.content_type};base64,{base64.b64encode(contents).decode()}"
+    
+    logo = await AdminService.update_sub_logo(db, logo_id, {"logo_url": base64_logo})
     if not logo:
         raise HTTPException(status_code=404, detail="Logo not found")
-    return {"logo_url": logo_url}
+    return {"logo_url": base64_logo}
 
 # Users
 @router.get("/users", response_model=List[UserResponse])
