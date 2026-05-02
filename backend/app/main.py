@@ -9,6 +9,12 @@ from app.routers import auth, banks, users, admin, pdf, simulacao
 # Remove old sqlite migrate call
 # migrate()
 
+app = FastAPI(
+    title="Portabilidade Platform API",
+    description="Motor Python de Cálculos Financeiros e CRM",
+    version="2.0.0"
+)
+
 @app.on_event("startup")
 async def startup_event():
     from app.database import AsyncSessionLocal
@@ -42,12 +48,6 @@ async def startup_event():
             print("LOG: Default admin user created at startup.")
             
         await session.commit()
-
-app = FastAPI(
-    title="Portabilidade Platform API",
-    description="Motor Python de Cálculos Financeiros e CRM",
-    version="2.0.0"
-)
 
 app.add_middleware(
     CORSMiddleware,
