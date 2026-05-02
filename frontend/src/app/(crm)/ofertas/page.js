@@ -359,13 +359,13 @@ export default function OfertasPage() {
                 {h.data && (
                   <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mb-3 text-xs text-slate-500 font-bold uppercase tracking-widest border border-slate-100 dark:border-white/5">
                     <div className="flex flex-col gap-1.5">
-                      <span>Taxa Port: <strong className="text-slate-800 dark:text-slate-200">{h.data.taxa_portabilidade_atual?.toFixed(2)}%</strong></span>
-                      <span>Taxa Refin: <strong className="text-slate-800 dark:text-slate-200">{h.data.taxa_juros?.toFixed(2)}%</strong></span>
+                      <span>Taxa Port: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_portabilidade_atual?.toFixed(2)}%</strong></span>
+                      <span>Taxa Refin: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_juros?.toFixed(2)}%</strong></span>
                     </div>
                     <div className="text-right flex flex-col gap-1.5">
                       <span>Total Contrato</span>
                       <strong className="text-slate-800 dark:text-slate-200">
-                        {formatCurrency((activeContractData?.saldoDevedor ? parseFloat(activeContractData.saldoDevedor.replace(/[^\d,]/g, '').replace(',', '.')) : 0) + h.data.valor_liberado)}
+                        {formatCurrency((activeContractData?.saldoDevedor ? parseFloat(String(activeContractData.saldoDevedor).replace(/[^\d,]/g, '').replace(',', '.')) : 0) + (h.data?.valor_liberado || 0))}
                       </strong>
                     </div>
                   </div>
@@ -462,26 +462,29 @@ export default function OfertasPage() {
         </div>
 
         {/* SECTION: BANCOS REJEITADOS */}
-        {data.rejeitados && data.rejeitados.length > 0 && (
+        {data?.rejeitados && data.rejeitados.length > 0 && (
           <div className="mt-16 pt-10 border-t border-slate-100 dark:border-white/5">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-4">
               <span className="w-8 h-[2px] bg-slate-200 dark:bg-white/10"></span>
               Bancos Indisponíveis nesta Simulação
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.rejeitados.map((rej, i) => (
-                <div key={i} className="bg-slate-50 dark:bg-white/5 p-5 rounded-2xl border border-slate-100 dark:border-white/5 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-white shadow-sm border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                       {rej.logo_url ? <img src={getStaticUrl(rej.logo_url)} className="w-full h-full object-cover" /> : "🏦"}
+              {data.rejeitados.map((rej, i) => {
+                if (!rej) return null;
+                return (
+                  <div key={i} className="bg-slate-50 dark:bg-white/5 p-5 rounded-2xl border border-slate-100 dark:border-white/5 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-10 h-10 rounded-lg bg-white shadow-sm border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                         {rej?.logo_url ? <img src={getStaticUrl(rej.logo_url)} className="w-full h-full object-cover" alt="" /> : <span className="text-lg">🏦</span>}
+                      </div>
+                      <span className="font-black text-slate-900 dark:text-white uppercase text-xs truncate">{rej?.banco || "Banco Indeterminado"}</span>
                     </div>
-                    <span className="font-black text-slate-900 dark:text-white uppercase text-xs truncate">{rej.banco}</span>
+                    <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight leading-relaxed italic">
+                      ❌ {rej?.motivo || "Não atende aos requisitos mínimos."}
+                    </p>
                   </div>
-                  <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight leading-relaxed italic">
-                    ❌ {rej.motivo || "Não atende aos requisitos mínimos."}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
