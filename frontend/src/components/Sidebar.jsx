@@ -58,9 +58,9 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { name: "Painel Geral", href: "/dashboard", icon: "📊" },
     { name: "Nova Simulação", href: "/simulador", icon: "✨", roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Ofertas", href: "/ofertas", icon: "🏆", roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Painel Geral", href: "/dashboard", icon: "📊" },
     { name: "Meus Contratos", href: "/meus-contratos", icon: "📄", roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Relatórios", href: "/relatorio", icon: "📈", roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
   ].filter(item => !item.roles || item.roles.includes(user.role));
@@ -85,7 +85,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 flex h-screen w-80 flex-col text-white shadow-xl z-50 transition-all border-r border-white/5"
+      className="fixed left-0 top-0 flex h-screen w-64 flex-col text-white shadow-xl z-50 transition-all border-r border-white/5"
       style={{
         background: user.sidebar_color_secondary
           ? `linear-gradient(135deg, ${user.sidebar_color || '#0f172a'}, ${user.sidebar_color_secondary})`
@@ -100,7 +100,7 @@ export default function Sidebar() {
           animate={{ y: [0, -5, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="w-28 h-28 rounded-2xl overflow-hidden border-2 border-white/30 shadow-[0_0_30px_rgba(0,0,0,0.4)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
+          <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/30 shadow-[0_0_30px_rgba(0,0,0,0.4)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
             {(profileImageUrl && !imgError) ? (
               <img
                 src={profileImageUrl}
@@ -129,8 +129,8 @@ export default function Sidebar() {
 
         {/* Username Banner */}
         <div className="mb-4 text-center flex flex-col items-center w-full">
-          <p className="text-xs font-black uppercase text-blue-400 tracking-normal opacity-80 mb-0.5 text-center">Bem-vindo(a)</p>
-          <h2 className="text-base font-black text-white truncate max-w-[220px] drop-shadow-md text-center mx-auto">{user.name}</h2>
+          <p className="text-[11px] font-black uppercase text-blue-400 tracking-wider opacity-80 mb-0.5 text-center">Bem-vindo(a)</p>
+          <h2 className="text-base font-black text-white truncate max-w-[180px] drop-shadow-md text-center mx-auto">{user.name}</h2>
         </div>
 
         {/* Branding Row */}
@@ -145,7 +145,7 @@ export default function Sidebar() {
             Portabilidade<span className="pointer-events-none" style={{ color: proColor }}>PRO</span>
           </span>
         </div>
-        <p className="text-xs text-white/30 uppercase tracking-[0.3em] font-black mt-2 italic text-center">Simulador Inteligente</p>
+        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-black mt-2 italic text-center">Simulador Inteligente</p>
       </div>
 
       {/* Navigation */}

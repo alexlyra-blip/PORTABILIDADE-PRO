@@ -43,7 +43,7 @@ export default function AdminLayout({
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <div className="flex-1 lg:ml-80 flex flex-col">
+      <div className="flex-1 lg:ml-64 flex flex-col">
         <Header />
         <main className="p-4 max-w-[98%] mx-auto w-full">
           {children}
