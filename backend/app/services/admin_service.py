@@ -177,6 +177,19 @@ class AdminService:
     @staticmethod
     async def create_sub_logo(db: AsyncSession, logo_data):
         from app.models.sqlalchemy_models import SubAgreementLogo
+        
+        # Verifica se já existe um logo com esse nome
+        result = await db.execute(select(SubAgreementLogo).where(SubAgreementLogo.name == logo_data.name))
+        existing = result.scalar_one_or_none()
+        
+        if existing:
+            # Se existe, apenas atualiza a URL
+            existing.logo_url = logo_data.logo_url
+            await db.commit()
+            await db.refresh(existing)
+            return existing
+            
+        # Se não existe, cria um novo
         db_logo = SubAgreementLogo(**logo_data.dict())
         db.add(db_logo)
         await db.commit()
@@ -188,7 +201,14 @@ class AdminService:
         from app.models.sqlalchemy_models import SubAgreementLogo
         result = await db.execute(select(SubAgreementLogo).where(SubAgreementLogo.id == logo_id))
         db_logo = result.scalar_one_or_none()
+        
         if db_logo:
+            # Se estiver tentando mudar o nome, verifica se o novo nome já existe em outro ID
+            if 'name' in logo_data and logo_data['name'] != db_logo.name:
+                check_res = await db.execute(select(SubAgreementLogo).where(SubAgreementLogo.name == logo_data['name']))
+                if check_res.scalar_one_or_none():
+                    raise HTTPException(status_code=400, detail=f"Já existe um logo com o nome '{logo_data['name']}'. Use o existente ou escolha outro nome.")
+
             for key, value in logo_data.items():
                 setattr(db_logo, key, value)
             await db.commit()
