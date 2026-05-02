@@ -460,6 +460,32 @@ export default function OfertasPage() {
               )
             })}
         </div>
+
+        {/* SECTION: BANCOS REJEITADOS */}
+        {data.rejeitados && data.rejeitados.length > 0 && (
+          <div className="mt-16 pt-10 border-t border-slate-100 dark:border-white/5">
+            <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-4">
+              <span className="w-8 h-[2px] bg-slate-200 dark:bg-white/10"></span>
+              Bancos Indisponíveis nesta Simulação
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.rejeitados.map((rej, i) => (
+                <div key={i} className="bg-slate-50 dark:bg-white/5 p-5 rounded-2xl border border-slate-100 dark:border-white/5 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-white shadow-sm border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                       {rej.logo_url ? <img src={getStaticUrl(rej.logo_url)} className="w-full h-full object-cover" /> : "🏦"}
+                    </div>
+                    <span className="font-black text-slate-900 dark:text-white uppercase text-xs truncate">{rej.banco}</span>
+                  </div>
+                  <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight leading-relaxed italic">
+                    ❌ {rej.motivo || "Não atende aos requisitos mínimos."}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
       </div>
     </>
   );

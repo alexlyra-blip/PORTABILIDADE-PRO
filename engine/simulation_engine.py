@@ -156,35 +156,44 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     continue
  
                 banco_tem_oferta = False
+                motivos_tabelas = []
+
                 for tabela in banco.tables:
                     if not tabela.active:
                         continue
                     
                     # Additional Table Validation: Agreement Matching (INSS, SIAPE, etc.)
                     if tabela.agreement and str(tabela.agreement).upper() != str(cliente_input.convenio).upper():
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Convênio {tabela.agreement} diferente de {cliente_input.convenio}")
                         continue
                         
                     # Additional Table Validation: Sub-Agreement
                     if tabela.sub_agreement:
                         if not cliente_input.sub_convenio or str(tabela.sub_agreement).upper() != str(cliente_input.sub_convenio).upper():
+                            motivos_tabelas.append(f"Tabela {tabela.name}: Sub-convênio {tabela.sub_agreement} não coincide")
                             continue
 
                     # Additional Table Validation: Min Paid Installments
                     if tabela.min_paid_installments:
                         parcelas_pagas = prazo_total - prazo_restante
                         if parcelas_pagas < tabela.min_paid_installments:
+                            motivos_tabelas.append(f"Tabela {tabela.name}: Exige {tabela.min_paid_installments} parcelas pagas")
                             continue
                     
                     # Additional Table Validation: Installment limits
                     if tabela.min_installment and parcela_atual < float(tabela.min_installment):
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Parcela mínima R$ {tabela.min_installment}")
                         continue
                     if tabela.max_installment and float(tabela.max_installment) > 0 and parcela_atual > float(tabela.max_installment):
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Parcela máxima R$ {tabela.max_installment}")
                         continue
                         
                     # Additional Table Validation: Age limits
                     if tabela.min_age and int(cliente_input.idade or 0) < tabela.min_age:
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Idade mínima {tabela.min_age}")
                         continue
                     if tabela.max_age and tabela.max_age > 0 and int(cliente_input.idade or 0) > tabela.max_age:
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Idade máxima {tabela.max_age}")
                         continue
                             
                     # Additional Table Validation: Exclusividade de Tabela de Invalidez
@@ -193,33 +202,30 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     cliente_is_invalidez = str(cliente_input.convenio).upper() == "INSS" and cliente_input.especie_beneficio in especies_invalidez_match
                     
                     if "invalidez" in tabela_nome and not cliente_is_invalidez:
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Exclusiva para Invalidez")
                         continue
                         
                     # 1. Taxa Portabilidade Ajustada vs Mínima do Banco
                     tabela_viavel_taxa = True
                     for regra in regras_aplicaveis:
-                        # Buscamos o maior threshold para segurança
                         threshold = float(regra.portability_rate_threshold or 0.0)
                         if threshold > 0:
                             port_adj = float(tabela.portability_adjustment or 0.0)
                             taxa_port_com_ajuste = taxa_port_calc + port_adj
-                            if taxa_port_com_ajuste < (threshold - 0.0005): # Epsilon maior para C6
+                            if taxa_port_com_ajuste < (threshold - 0.0005) and not tabela.min_port_rate:
                                 tabela_viavel_taxa = False
+                                motivos_tabelas.append(f"Tabela {tabela.name}: Taxa port. {taxa_port_com_ajuste:.2f}% abaixo do global {threshold}%")
                                 break
                     
                     if not tabela_viavel_taxa:
-                        if "C6" in banco.name.upper():
-                            print(f"DEBUG C6: Tabela {tabela.name} rejeitada por taxa insuficiente ({taxa_port_calc + float(tabela.portability_adjustment or 0):.4f} < {threshold})")
                         continue
                                 
                     for coeff_obj in tabela.coefficients:
-                        # Match term: if table has an explicit term, match it; otherwise match original prazo_total
                         target_term = int(tabela.term) if tabela.term else prazo_total
                         if coeff_obj.term != target_term:
                             continue
                             
                         try:
-                            # RESULTADO: (viavel, troco, stats, detalhe)
                             resultado = calcular_viabilidade_financeira(
                                 cliente_input, banco, coeff_obj, tabela
                             )
@@ -230,8 +236,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                             motivo_rejeicao = resultado[3] if len(resultado) > 3 else "Viabilidade reprovada"
                             
                             if not viavel:
-                                if "C6" in banco.name.upper():
-                                    print(f"DEBUG C6: Tabela {tabela.name} REJEITADA: {motivo_rejeicao}")
+                                motivos_tabelas.append(f"Tabela {tabela.name}: {motivo_rejeicao}")
                                 continue
                                 
                             # Validação de Troco Mínimo (Regra de Aceitação)
@@ -241,14 +246,11 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                                         viavel = False
                                         motivo_rejeicao = f"Troco insuficiente (R$ {troco:.2f} < R$ {regra.min_release_amount})"
                                         break
-                                
-                                # Validação opcional: Saldo Devedor + Troco (Ticket Total)
-                                if getattr(regra, "use_balance_plus_released", False) and regra.min_debt_balance:
-                                    if (troco + saldo_devedor) < float(regra.min_debt_balance):
-                                        viavel = False
-                                        motivo_rejeicao = f"Ticket total insuficiente (R$ {troco + saldo_devedor:.2f} < R$ {regra.min_debt_balance})"
-                                        break
                             
+                            if not viavel:
+                                motivos_tabelas.append(f"Tabela {tabela.name}: {motivo_rejeicao}")
+                                continue
+
                             banco_tem_oferta = True
                             bancos_aprovados.append({
                                 "banco": banco.name,
@@ -273,12 +275,16 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         except Exception as e:
                             continue
                 
-                if not banco_tem_oferta and banco.name not in [r["banco"] for r in rejeitados]:
+                if not banco_tem_oferta:
+                    motivo_final = "Nenhuma tabela compatível."
+                    if motivos_tabelas:
+                        motivo_final = " | ".join(motivos_tabelas[:3]) # Mostra até 3 motivos
+                    
                     rejeitados.append({
                         "banco": banco.name,
                         "bank_id": banco.id,
                         "logo_url": banco.logo_url,
-                        "motivo": "Nenhuma tabela deste banco atendeu aos requisitos de rentabilidade ou prazo para esta simulação.",
+                        "motivo": motivo_final,
                         "elegivel": False
                     })
             except Exception as e:
