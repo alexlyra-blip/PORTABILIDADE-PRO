@@ -94,7 +94,12 @@ export default function Header() {
         <div className="hidden md:flex items-center bg-slate-50 dark:bg-white/5 rounded-full px-4 py-2 border border-slate-200 dark:border-white/10 shadow-sm">
           <span className="text-[10px] uppercase font-black text-slate-400 mr-2 tracking-widest">Meta Diária:</span>
           <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-            R$ {Number(apiData?.historical?.find(d => d.name === new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}))?.valor_propostas || 0).toLocaleString('pt-BR', {minimumFractionDigits: 0})} / 100k
+            {(() => {
+               const todayStr = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+               const todayData = apiData?.historical?.find(d => d.name === todayStr);
+               const valor = Number(todayData?.valor_propostas || 0);
+               return `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 0})}`;
+            })()} / 100k
           </span>
         </div>
         
