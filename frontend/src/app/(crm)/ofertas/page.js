@@ -492,7 +492,6 @@ export default function OfertasPage() {
           </div>
         )}
       </div>
-      </div>
     </>
   );
 }
