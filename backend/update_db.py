@@ -1,55 +1,32 @@
-import sqlite3
+import asyncio
+import os
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import text
 
-def upgrade():
-    conn = sqlite3.connect('local_db.sqlite')
-    c = conn.cursor()
-    try:
-        c.execute('ALTER TABLE bank_tables ADD COLUMN min_installment NUMERIC(15, 2);')
-        c.execute('ALTER TABLE bank_tables ADD COLUMN max_installment NUMERIC(15, 2);')
-        c.execute('ALTER TABLE bank_tables ADD COLUMN min_age INTEGER;')
-        c.execute('ALTER TABLE bank_tables ADD COLUMN max_age INTEGER;')
-        c.execute('ALTER TABLE bank_tables ADD COLUMN term INTEGER;')
-    except Exception:
-        pass
-    
-    try:
-        c.execute('ALTER TABLE bank_rules ADD COLUMN sub_agreement VARCHAR(50);')
-    except Exception:
-        pass
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-    try:
-        c.execute('ALTER TABLE bank_tables ADD COLUMN sub_agreement VARCHAR(50);')
-    except Exception:
-        pass
+engine = create_async_engine(DATABASE_URL)
 
-    try:
-        c.execute('ALTER TABLE banks ADD COLUMN priority INTEGER DEFAULT 99;')
-    except Exception:
-        pass
-
-    try:
-        c.execute('ALTER TABLE bank_rules ADD COLUMN excluded_benefit_types TEXT;')
-    except Exception:
-        pass
-
-    try:
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS sub_agreement_logos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name VARCHAR(100) UNIQUE,
-                logo_url VARCHAR(500)
-            );
-        ''')
-    except Exception:
-        pass
+async def fix_db():
+    print("Starting database column fix...")
+    async with engine.connect() as conn:
+        tables_columns = [
+            ("users", "avatar_url"),
+            ("users", "logo_url"),
+            ("banks", "logo_url")
+        ]
         
-    try:
-        conn.commit()
-        print("Banco de dados atualizado com sucesso!")
-    except Exception as e:
-        print(f"Erro ao atualizar: {e}")
-    finally:
-        conn.close()
+        for table, column in tables_columns:
+            try:
+                await conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT"))
+                await conn.commit()
+                print(f"DATABASE FIX: Column {column} in table {table} updated to TEXT.")
+            except Exception as e:
+                print(f"DATABASE FIX ERROR ({table}.{column}): {e}")
+    
+    await engine.dispose()
 
-if __name__ == '__main__':
-    upgrade()
+if __name__ == "__main__":
+    asyncio.run(fix_db())
