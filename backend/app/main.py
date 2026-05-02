@@ -15,6 +15,27 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# REFORMA DE BANCO - FORÇA BRUTA
+def run_db_fix():
+    import psycopg2
+    try:
+        db_url = os.getenv("DATABASE_URL")
+        if not db_url: return
+        conn = psycopg2.connect(db_url)
+        conn.autocommit = True
+        cursor = conn.cursor()
+        print("FORCING DB SCHEMA UPDATE...")
+        cursor.execute('ALTER TABLE "users" ALTER COLUMN "avatar_url" TYPE TEXT;')
+        cursor.execute('ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT;')
+        cursor.execute('ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT;')
+        print("DB SCHEMA UPDATED SUCCESSFULLY.")
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"DB FIX WARNING: {e}")
+
+run_db_fix()
+
 @app.middleware("http")
 async def catch_exceptions_middleware(request, call_next):
     try:
