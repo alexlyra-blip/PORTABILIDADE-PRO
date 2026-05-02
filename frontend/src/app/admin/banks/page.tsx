@@ -274,6 +274,8 @@ export default function BanksPage() {
       const refreshedRules = await api.get(`/admin/banks/${savedBank.id}/rules`);
       setBankRules(refreshedRules);
       loadBanks();
+      alert("✅ Configurações salvas com sucesso!");
+      handleCloseModal();
     } catch (error) {
       console.error("Erro ao salvar banco:", error);
       alert("Erro ao salvar banco. Tente novamente.");
