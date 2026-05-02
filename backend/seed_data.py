@@ -8,87 +8,71 @@ async def seed():
     async with AsyncSessionLocal() as session:
         from sqlalchemy import select
         
-        # Check if admin exists
-        res = await session.execute(select(User).where(User.email == "admin@teste.com"))
+        # 1. Admin User
+        res = await session.execute(select(User).where(User.email == "alexlyra@gmail.com"))
         if not res.scalar():
             admin = User(
+                name="Alexandre Lyra",
+                email="alexlyra@gmail.com",
+                password_hash=get_password_hash("admin123"),
+                role="admin"
+            )
+            session.add(admin)
+            print("Alexandre admin user created.")
+
+        res = await session.execute(select(User).where(User.email == "admin@teste.com"))
+        if not res.scalar():
+            admin2 = User(
                 name="Admin Teste",
                 email="admin@teste.com",
                 password_hash=get_password_hash("admin123"),
                 role="admin"
             )
-            session.add(admin)
+            session.add(admin2)
+            print("Admin user created.")
 
-        # Banks - Check and Add
-        for b_name in ["C6 Bank", "BMG", "Facta"]:
+        # 2. Banks
+        bank_names = ["C6 Bank", "BMG", "Facta"]
+        for b_name in bank_names:
             res = await session.execute(select(Bank).where(Bank.name == b_name))
             if not res.scalar():
                 session.add(Bank(name=b_name, active=True))
+                print(f"Bank {b_name} created.")
         
         await session.commit()
         
-        # Re-fetch for IDs
+        # Re-fetch banks to get IDs
         res = await session.execute(select(Bank))
-        banks = {b.name: b for b in res.scalars().all()}
-        c6 = banks.get("C6 Bank")
-        bmg = banks.get("BMG")
-        facta = banks.get("Facta")
+        banks_db = {b.name: b for b in res.scalars().all()}
 
+        # 3. Rules & Tables (Example for one bank to keep it clean)
+        for b_name in bank_names:
+            bank = banks_db.get(b_name)
+            if not bank: continue
 
-        # Rules
-        rules = [
-            BankRule(
-                bank_id=c6.id, 
-                min_age=18, 
-                max_age=75, 
-                max_term=84, 
-                allowed_benefit_types="INSS,SIAPE",
-                min_release_amount=Decimal("500.00")
-            ),
-            BankRule(
-                bank_id=bmg.id, 
-                min_age=18, 
-                max_age=80, 
-                max_term=84, 
-                allowed_benefit_types="INSS",
-                min_release_amount=Decimal("300.00")
-            ),
-            BankRule(
-                bank_id=facta.id, 
-                min_age=18, 
-                max_age=70, 
-                max_term=84, 
-                allowed_benefit_types="INSS,SIAPE,Governo",
-                min_release_amount=Decimal("1000.00")
-            ),
-        ]
-        session.add_all(rules)
+            # Check if rule exists
+            res = await session.execute(select(BankRule).where(BankRule.bank_id == bank.id))
+            if not res.scalar():
+                rule = BankRule(
+                    bank_id=bank.id, 
+                    min_age=18, 
+                    max_age=80, 
+                    max_term=84, 
+                    allowed_benefit_types="INSS",
+                    min_release_amount=Decimal("300.00")
+                )
+                session.add(rule)
+                print(f"Default rule created for {b_name}.")
 
-        # Tables
-        t_c6_normal = BankTable(bank_id=c6.id, name="Normal", active=True)
-        t_c6_flex1 = BankTable(bank_id=c6.id, name="Flex1", active=True)
-        t_bmg_normal = BankTable(bank_id=bmg.id, name="Normal", active=True)
-        t_bmg_flex2 = BankTable(bank_id=bmg.id, name="Flex2", active=True)
-        t_facta_normal = BankTable(bank_id=facta.id, name="Normal", active=True)
-
-        session.add_all([t_c6_normal, t_c6_flex1, t_bmg_normal, t_bmg_flex2, t_facta_normal])
-        await session.flush()
-
-        # Coefficients
-        coeffs = [
-            # C6
-            Coefficient(bank_id=c6.id, table_id=t_c6_normal.id, term=84, interest_rate=1.60, coefficient=Decimal("0.02324")),
-            Coefficient(bank_id=c6.id, table_id=t_c6_flex1.id, term=84, interest_rate=1.55, coefficient=Decimal("0.02280")),
-            # BMG
-            Coefficient(bank_id=bmg.id, table_id=t_bmg_normal.id, term=84, interest_rate=1.65, coefficient=Decimal("0.02450")),
-            Coefficient(bank_id=bmg.id, table_id=t_bmg_flex2.id, term=84, interest_rate=1.58, coefficient=Decimal("0.02350")),
-            # Facta
-            Coefficient(bank_id=facta.id, table_id=t_facta_normal.id, term=84, interest_rate=1.70, coefficient=Decimal("0.02500")),
-        ]
-        session.add_all(coeffs)
+            # Check if tables exist
+            res = await session.execute(select(BankTable).where(BankTable.bank_id == bank.id, BankTable.name == "Normal"))
+            if not res.scalar():
+                table = BankTable(bank_id=bank.id, name="Normal", active=True)
+                session.add(table)
+                print(f"Default table 'Normal' created for {b_name}.")
 
         await session.commit()
-        print("Database seeded successfully!")
+        print("Database verification/seeding completed safely.")
 
 if __name__ == "__main__":
     asyncio.run(seed())
