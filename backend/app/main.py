@@ -51,7 +51,14 @@ async def startup_event():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://portabilidadepro.com.br",
+        "http://portabilidadepro.com.br",
+        "https://simulador-portabilidadepro.qzznq7.easypanel.host",
+        "http://localhost:3000",
+        "http://localhost:80",
+        "*"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
