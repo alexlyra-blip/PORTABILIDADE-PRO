@@ -107,6 +107,10 @@ app.add_middleware(
 os.makedirs("uploads/logos", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+from app.routers import auth, banks, users, admin, pdf, simulacao, external
+
+# ... (restante dos imports e lógica)
+
 # Include Routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(banks.router, prefix="/api/banks", tags=["Banks"])
@@ -114,6 +118,7 @@ app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(pdf.router, prefix="/api/pdf", tags=["Proposals"])
 app.include_router(simulacao.router, prefix="/api", tags=["Simulation"])
+app.include_router(external.router, prefix="/api", tags=["External Integration"])
 
 @app.get("/health")
 def health_check():

@@ -198,6 +198,7 @@ class SimulationBase(BaseModel):
     client_age: int
     agreement: str
     benefit_species: Optional[str] = None
+    benefit_start_date: Optional[str] = None # DIB (Data de Início do Benefício)
     current_bank: str
     debt_balance: Decimal
     installment_value: Decimal
@@ -205,6 +206,7 @@ class SimulationBase(BaseModel):
     total_term: int
     remaining_term: int
     is_60_plus: bool = False
+    is_illiterate: bool = False # Se o cliente é analfabeto
 
 class SimulationCreate(SimulationBase):
     user_id: Optional[int] = None
