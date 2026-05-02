@@ -10,7 +10,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*` : 'http://127.0.0.1:8000/api/:path*',
+        destination: 'https://simulador-portabilidade-api.qzznq7.easypanel.host/api/:path*',
       },
       {
         source: '/uploads/:path*',
