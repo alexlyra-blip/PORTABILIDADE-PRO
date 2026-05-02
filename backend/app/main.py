@@ -47,6 +47,14 @@ async def startup_event():
             session.add(admin2)
             print("LOG: Default admin user created at startup.")
             
+        # Update columns to Text to support Base64
+        try: await session.execute("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT")
+        except: pass
+        try: await session.execute("ALTER TABLE users ALTER COLUMN logo_url TYPE TEXT")
+        except: pass
+        try: await session.execute("ALTER TABLE banks ALTER COLUMN logo_url TYPE TEXT")
+        except: pass
+            
         await session.commit()
 
 app.add_middleware(

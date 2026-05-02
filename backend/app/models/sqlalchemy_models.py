@@ -42,8 +42,8 @@ class User(Base):
     brand_color = Column(String(7), nullable=True) # HEX code
     sidebar_color = Column(String(7), nullable=True) # HEX code
     sidebar_color_secondary = Column(String(50), nullable=True)
-    logo_url = Column(String(255), nullable=True)
-    avatar_url = Column(String(255), nullable=True)
+    avatar_url = Column(Text, nullable=True)
+    logo_url = Column(Text, nullable=True)
     dark_mode = Column(Boolean, default=False)
     phone = Column(String(15), nullable=True)
 
