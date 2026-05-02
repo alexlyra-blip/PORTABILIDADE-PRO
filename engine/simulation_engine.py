@@ -113,13 +113,19 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     
                 # Buscar todas as regras aplicáveis (pelo convênio ou genéricas)
                 regras_aplicaveis = []
+                convenio_input = str(cliente_input.convenio or "").strip().upper()
+                sub_input = str(cliente_input.sub_convenio or "").strip().upper()
+
                 for r in banco.rules:
-                    match_conv = str(r.agreement or "").upper() == str(cliente_input.convenio).upper() or not r.agreement
+                    rule_conv = str(r.agreement or "").strip().upper()
+                    match_conv = rule_conv == convenio_input or not rule_conv
+                    
                     match_sub = True
-                    if r.sub_agreement and cliente_input.sub_convenio:
-                        match_sub = str(r.sub_agreement).upper() == str(cliente_input.sub_convenio).upper()
-                    elif r.sub_agreement and not cliente_input.sub_convenio:
-                        match_sub = False # Rule demands a sub, but client has none
+                    rule_sub = str(r.sub_agreement or "").strip().upper()
+                    if rule_sub and sub_input:
+                        match_sub = rule_sub == sub_input
+                    elif rule_sub and not sub_input:
+                        match_sub = False 
                     
                     if match_conv and match_sub:
                         regras_aplicaveis.append(r)
@@ -129,7 +135,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         "banco": banco.name,
                         "bank_id": banco.id,
                         "logo_url": banco.logo_url,
-                        "motivo": f"Sem regras para o convênio {cliente_input.convenio}.",
+                        "motivo": f"Sem regras configuradas para o convênio {convenio_input}.",
                         "elegivel": False
                     })
                     continue
@@ -160,21 +166,23 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         continue
                     
                     # Additional Table Validation: Agreement Matching (INSS, SIAPE, etc.)
-                    if tabela.agreement and str(tabela.agreement).upper() != str(cliente_input.convenio).upper():
-                        motivos_tabelas.append(f"Tabela {tabela.name}: Convênio {tabela.agreement} diferente de {cliente_input.convenio}")
+                    t_conv = str(tabela.agreement or "").strip().upper()
+                    if t_conv and t_conv != convenio_input:
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Convênio {t_conv} diferente de {convenio_input}")
                         continue
                         
                     # Additional Table Validation: Sub-Agreement
-                    if tabela.sub_agreement:
-                        if not cliente_input.sub_convenio or str(tabela.sub_agreement).upper() != str(cliente_input.sub_convenio).upper():
-                            motivos_tabelas.append(f"Tabela {tabela.name}: Sub-convênio {tabela.sub_agreement} não coincide")
+                    t_sub = str(tabela.sub_agreement or "").strip().upper()
+                    if t_sub:
+                        if not sub_input or t_sub != sub_input:
+                            motivos_tabelas.append(f"Tabela {tabela.name}: Sub-convênio {t_sub} não coincide")
                             continue
 
                     # Additional Table Validation: Min Paid Installments
                     if tabela.min_paid_installments:
-                        parcelas_pagas = prazo_total - prazo_restante
-                        if parcelas_pagas < tabela.min_paid_installments:
-                            motivos_tabelas.append(f"Tabela {tabela.name}: Exige {tabela.min_paid_installments} parcelas pagas")
+                        parcelas_pagas = (int(prazo_total) - int(prazo_restante))
+                        if parcelas_pagas < int(tabela.min_paid_installments):
+                            motivos_tabelas.append(f"Tabela {tabela.name}: Exige {tabela.min_paid_installments} parcelas pagas (Cliente tem {parcelas_pagas})")
                             continue
                     
                     # Additional Table Validation: Installment limits
@@ -202,16 +210,27 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         motivos_tabelas.append(f"Tabela {tabela.name}: Exclusiva para Invalidez")
                         continue
                         
-                    # 1. Taxa Portabilidade Ajustada vs Mínima do Banco
+                    # 1. Taxa Portabilidade Ajustada vs Mínima do Banco (Hierarquia: Tabela > Banco)
                     tabela_viavel_taxa = True
+                    tabela_threshold = float(tabela.min_port_rate or 0.0)
+                    
                     for regra in regras_aplicaveis:
-                        threshold = float(regra.portability_rate_threshold or 0.0)
-                        if threshold > 0:
+                        bank_threshold = float(regra.portability_rate_threshold or 0.0)
+                        
+                        # Se a tabela NÃO define um limite próprio, usamos o do banco
+                        if tabela_threshold <= 0 and bank_threshold > 0:
                             port_adj = float(tabela.portability_adjustment or 0.0)
                             taxa_port_com_ajuste = taxa_port_calc + port_adj
-                            if taxa_port_com_ajuste < (threshold - 0.0005) and not tabela.min_port_rate:
+                            if taxa_port_com_ajuste < (bank_threshold - 0.0005):
                                 tabela_viavel_taxa = False
-                                motivos_tabelas.append(f"Tabela {tabela.name}: Taxa port. {taxa_port_com_ajuste:.2f}% abaixo do global {threshold}%")
+                                motivos_tabelas.append(f"Tabela {tabela.name}: Taxa port. {taxa_port_com_ajuste:.2f}% abaixo do global {bank_threshold}%")
+                                break
+                        
+                        # Se a tabela DEFINE um limite, comparamos com a taxa do cliente (ignorando o banco)
+                        elif tabela_threshold > 0:
+                            if taxa_port_calc < (tabela_threshold - 0.0005):
+                                tabela_viavel_taxa = False
+                                motivos_tabelas.append(f"Tabela {tabela.name}: Taxa port. atual {taxa_port_calc:.2f}% abaixo do permitido por esta tabela ({tabela_threshold}%)")
                                 break
                     
                     if not tabela_viavel_taxa:

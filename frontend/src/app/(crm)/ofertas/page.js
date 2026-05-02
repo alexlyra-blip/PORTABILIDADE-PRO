@@ -102,6 +102,14 @@ export default function OfertasPage() {
     { id: "maior_troco", title: "MAIOR TROCO", data: topByTroco, icon: "💰", bg: "bg-emerald-600/10", text: "text-emerald-600", metric: topByTroco ? `R$ ${Number(topByTroco?.valor_liberado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00", label: "Liberado" }
   ];
 
+  const getStaticUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    if (path.startsWith('data:image')) return path;
+    // Em produção, usamos o caminho relativo que o Next.js reescreve para o backend
+    return path.startsWith('/') ? path : `/${path}`;
+  };
+
   const highlights = [...baseHighlights].sort((a, b) => {
     if (a.id === sortBy) return -1;
     if (b.id === sortBy) return 1;
@@ -478,9 +486,15 @@ export default function OfertasPage() {
                   <div key={i} className="bg-slate-50 dark:bg-white/5 p-5 rounded-2xl border border-slate-100 dark:border-white/5 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
                     <div className="flex items-center gap-4 mb-3">
                       <div className="w-10 h-10 rounded-lg bg-white shadow-sm border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                         {rej?.logo_url ? <img src={getStaticUrl(rej.logo_url)} className="w-full h-full object-cover" alt="" /> : <span className="text-lg">🏦</span>}
+                         {rej?.logo_url ? (
+                           <img src={getStaticUrl(rej.logo_url)} className="w-full h-full object-cover" alt={rej?.banco} />
+                         ) : (
+                           <span className="text-lg">🏦</span>
+                         )}
                       </div>
-                      <span className="font-black text-slate-900 dark:text-white uppercase text-xs truncate">{rej?.banco || "Banco Indeterminado"}</span>
+                      <span className="font-black text-slate-900 dark:text-white uppercase text-[10px] truncate leading-tight">
+                        {rej?.banco || "Banco Indeterminado"}
+                      </span>
                     </div>
                     <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight leading-relaxed italic">
                       ❌ {rej?.motivo || "Não atende aos requisitos mínimos."}
