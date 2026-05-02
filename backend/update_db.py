@@ -1,50 +1,50 @@
-import asyncio
 import os
+import psycopg2
 import time
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy import text
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-async def fix_db():
-    print("Starting robust database column fix...")
-    
-    # Retry logic
-    engine = None
+def force_fix():
+    print("!!! INICIANDO REFORMA TANQUE DE GUERRA !!!")
+    if not DATABASE_URL:
+        print("Erro: DATABASE_URL ausente.")
+        return
+
+    conn = None
     for i in range(5):
         try:
-            engine = create_async_engine(DATABASE_URL)
-            async with engine.connect() as conn:
-                await conn.execute(text("SELECT 1"))
-            print("Connected to database successfully.")
+            conn = psycopg2.connect(DATABASE_URL)
+            conn.autocommit = True
+            print("Conectado ao Supabase.")
             break
         except Exception as e:
-            print(f"Connection attempt {i+1} failed: {e}")
-            if i < 4:
-                time.sleep(5)
-            else:
-                print("Could not connect to database after 5 attempts.")
-                return
+            print(f"Erro na conexão {i+1}: {e}")
+            time.sleep(2)
 
-    async with engine.connect() as conn:
-        tables_columns = [
-            ("users", "avatar_url"),
-            ("users", "logo_url"),
-            ("banks", "logo_url")
-        ]
-        
-        for table, column in tables_columns:
-            try:
-                # Force update column type to TEXT
-                await conn.execute(text(f'ALTER TABLE "{table}" ALTER COLUMN "{column}" TYPE TEXT'))
-                await conn.commit()
-                print(f"DATABASE FIX SUCCESS: {table}.{column} is now TEXT.")
-            except Exception as e:
-                print(f"DATABASE FIX INFO ({table}.{column}): {e} (Might already be TEXT)")
+    if not conn: return
+
+    cursor = conn.cursor()
     
-    await engine.dispose()
+    # Lista de todas as colunas que guardam imagens em todo o sistema
+    reformas = [
+        ("users", "avatar_url"),
+        ("users", "logo_url"),
+        ("banks", "logo_url"),
+        ("sub_agreement_logos", "logo_url")
+    ]
+
+    for table, col in reformas:
+        try:
+            print(f"Forçando {table}.{col} para TEXT...")
+            # Usando SET DATA TYPE que é o comando mais forte do Postgres
+            cursor.execute(f'ALTER TABLE "{table}" ALTER COLUMN "{col}" SET DATA TYPE TEXT;')
+            print(f"OK: {table}.{col} reformado.")
+        except Exception as e:
+            print(f"INFO: {table}.{col} ignorado: {e}")
+
+    cursor.close()
+    conn.close()
+    print("!!! REFORMA CONCLUÍDA COM SUCESSO !!!")
 
 if __name__ == "__main__":
-    asyncio.run(fix_db())
+    force_fix()

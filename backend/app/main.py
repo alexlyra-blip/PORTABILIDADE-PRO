@@ -15,6 +15,17 @@ app = FastAPI(
     version="2.0.0"
 )
 
+@app.middleware("http")
+async def catch_exceptions_middleware(request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        import traceback
+        print(f"CRITICAL ERROR: {e}")
+        print(traceback.format_exc())
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
 @app.on_event("startup")
 async def startup_event():
     from app.database import AsyncSessionLocal
@@ -48,12 +59,18 @@ async def startup_event():
             print("LOG: Default admin user created at startup.")
             
         # Update columns to Text to support Base64
-        try: await session.execute("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT")
-        except: pass
-        try: await session.execute("ALTER TABLE users ALTER COLUMN logo_url TYPE TEXT")
-        except: pass
-        try: await session.execute("ALTER TABLE banks ALTER COLUMN logo_url TYPE TEXT")
-        except: pass
+        from sqlalchemy import text
+        reformas = [
+            'ALTER TABLE "users" ALTER COLUMN "avatar_url" TYPE TEXT',
+            'ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT',
+            'ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT'
+        ]
+        for sql in reformas:
+            try: 
+                await session.execute(text(sql))
+                print(f"SQL SUCCESS: {sql}")
+            except Exception as e: 
+                print(f"SQL INFO: {sql} -> {e}")
             
         await session.commit()
 
