@@ -151,9 +151,6 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                 
                 if banco_bloqueado:
                     continue
-                    
-                if banco_bloqueado:
-                    continue
  
                 banco_tem_oferta = False
                 motivos_tabelas = []
