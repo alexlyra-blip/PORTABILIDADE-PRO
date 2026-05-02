@@ -1,5 +1,5 @@
-const BASE_URL = 'http://127.0.0.1:8000'; // 1️⃣ Endereço completo do backend (FastAPI)
-const API_BASE_URL = `${BASE_URL}/api`; // 1️⃣ Endereço completo do backend (FastAPI)
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = BASE_URL.endsWith('/') ? `${BASE_URL}api` : `${BASE_URL}/api`;
 
 export const getStaticUrl = (path) => {
   if (!path) return null;
