@@ -57,46 +57,49 @@ export default function OfertasPage() {
 
   if (!data || !data.ofertas) return null;
 
-  const results = data.ofertas;
-  const cliente = data.cliente || {};
+  const results = data?.ofertas || [];
+  const cliente = data?.cliente || {};
 
   const applySort = (list, sortType) => {
+    if (!Array.isArray(list)) return [];
     const newList = [...list];
-    if (sortType === "melhor_tabela") return newList.sort((a, b) => a.valor_liberado - b.valor_liberado);
-    if (sortType === "maior_troco") return newList.sort((a, b) => b.valor_liberado - a.valor_liberado);
-    if (sortType === "menor_taxa") return newList.sort((a, b) => a.taxa_juros - b.taxa_juros);
+    if (sortType === "melhor_tabela") return newList.sort((a, b) => (a?.valor_liberado || 0) - (b?.valor_liberado || 0));
+    if (sortType === "maior_troco") return newList.sort((a, b) => (b?.valor_liberado || 0) - (a?.valor_liberado || 0));
+    if (sortType === "menor_taxa") return newList.sort((a, b) => (a?.taxa_juros || 0) - (b?.taxa_juros || 0));
     return newList;
   };
 
   const contracts = inputData?.contracts || [];
-  const activeContractData = contracts.find(c => c.id === activeContractId) || contracts[0] || inputData;
-  const contractResults = results.filter(res => res._contrato_id === activeContractId || !res._contrato_id);
+  const activeContractData = contracts.find(c => c.id === activeContractId) || contracts[0] || inputData || {};
+  const contractResults = Array.isArray(results) ? results.filter(res => res?._contrato_id === activeContractId || !res?._contrato_id) : [];
 
   const filteredResults = applySort(
-    contractResults.filter(res => !filterBank || res.banco.toLowerCase().includes(filterBank.toLowerCase())),
+    contractResults.filter(res => !filterBank || res?.banco?.toLowerCase().includes(filterBank.toLowerCase())),
     sortBy
   );
 
   const groupedByBank = {};
   filteredResults.forEach(offer => {
-    if (!groupedByBank[offer.banco]) {
-      groupedByBank[offer.banco] = [];
+    if (offer && offer.banco) {
+      if (!groupedByBank[offer.banco]) {
+        groupedByBank[offer.banco] = [];
+      }
+      groupedByBank[offer.banco].push(offer);
     }
-    groupedByBank[offer.banco].push(offer);
   });
 
   const nextOffer = (banco, total) => {
     setBankOfferIdx(prev => ({ ...prev, [banco]: ((prev[banco] || 0) + 1) % total }));
   };
 
-  const bestTableOffer = [...contractResults].sort((a, b) => a.valor_liberado - b.valor_liberado)[0];
-  const topByTaxa = [...contractResults].sort((a, b) => a.taxa_juros - b.taxa_juros)[0];
-  const topByTroco = [...contractResults].sort((a, b) => b.valor_liberado - a.valor_liberado)[0];
+  const bestTableOffer = contractResults.length > 0 ? [...contractResults].sort((a, b) => (a?.valor_liberado || 0) - (b?.valor_liberado || 0))[0] : null;
+  const topByTaxa = contractResults.length > 0 ? [...contractResults].sort((a, b) => (a?.taxa_juros || 0) - (b?.taxa_juros || 0))[0] : null;
+  const topByTroco = contractResults.length > 0 ? [...contractResults].sort((a, b) => (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] : null;
 
   const baseHighlights = [
-    { id: "melhor_tabela", title: "MELHOR TABELA", data: bestTableOffer, icon: "🏆", bg: "bg-blue-600/10", text: "text-blue-600", metric: bestTableOffer ? `R$ ${bestTableOffer?.valor_liberado?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00", label: "Liberado" },
-    { id: "menor_taxa", title: "MENOR TAXA", data: topByTaxa, icon: "📉", bg: "bg-cyan-600/10", text: "text-cyan-600", metric: topByTaxa ? `${topByTaxa?.taxa_juros?.toFixed(2)}%` : "0,00%", label: "Taxa" },
-    { id: "maior_troco", title: "MAIOR TROCO", data: topByTroco, icon: "💰", bg: "bg-emerald-600/10", text: "text-emerald-600", metric: topByTroco ? `R$ ${topByTroco?.valor_liberado?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00", label: "Liberado" }
+    { id: "melhor_tabela", title: "MELHOR TABELA", data: bestTableOffer, icon: "🏆", bg: "bg-blue-600/10", text: "text-blue-600", metric: bestTableOffer ? `R$ ${Number(bestTableOffer?.valor_liberado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00", label: "Liberado" },
+    { id: "menor_taxa", title: "MENOR TAXA", data: topByTaxa, icon: "📉", bg: "bg-cyan-600/10", text: "text-cyan-600", metric: topByTaxa ? `${Number(topByTaxa?.taxa_juros || 0).toFixed(2)}%` : "0,00%", label: "Taxa" },
+    { id: "maior_troco", title: "MAIOR TROCO", data: topByTroco, icon: "💰", bg: "bg-emerald-600/10", text: "text-emerald-600", metric: topByTroco ? `R$ ${Number(topByTroco?.valor_liberado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00", label: "Liberado" }
   ];
 
   const highlights = [...baseHighlights].sort((a, b) => {
