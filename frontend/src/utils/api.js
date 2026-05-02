@@ -4,6 +4,7 @@ const API_BASE_URL = '/api';
 export const getStaticUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
+  if (path.startsWith('data:image')) return path; // Suporte para Base64
   if (path.startsWith('/uploads')) return `${BASE_URL}${path}`;
   return `${BASE_URL}/uploads${path.startsWith('/') ? '' : '/'}${path}`;
 };

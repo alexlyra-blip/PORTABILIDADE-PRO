@@ -63,16 +63,22 @@ export default function SubLogosPage() {
       if (selectedFile && savedLogo?.id) {
         const uploadFormData = new FormData();
         uploadFormData.append("file", selectedFile);
-        await api.upload(`/admin/sub-logos/${savedLogo.id}/upload-logo`, uploadFormData);
+        const response = await api.upload(`/admin/sub-logos/${savedLogo.id}/upload-logo`, uploadFormData);
+        
+        // Se o upload retornou o novo logo_url (Base64), atualizamos a lista local
+        if (response.logo_url) {
+          setLogos(prev => prev.map(l => l.id === savedLogo.id ? { ...l, logo_url: response.logo_url } : l));
+        }
       }
 
       handleCloseModal();
-      loadLogos();
+      alert("✅ Logo salvo com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar:", error);
       alert("Erro ao salvar. Verifique se o nome não está duplicado.");
     } finally {
       setIsSubmitting(false);
+      loadLogos();
     }
   };
 

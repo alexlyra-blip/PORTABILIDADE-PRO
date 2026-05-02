@@ -298,12 +298,19 @@ export default function BanksPage() {
 
     try {
       const response = await api.upload(`/admin/banks/${editingBank?.id}/upload-logo`, uploadFormData);
-      setFormData({ ...formData, logo_url: response.logo_url });
-      loadBanks();
-      alert("Logo enviada com sucesso!");
+      
+      // Atualiza o estado local IMEDIATAMENTE para a imagem aparecer na hora
+      setFormData(prev => ({ ...prev, logo_url: response.logo_url }));
+      
+      // Atualiza o banco na lista lateral
+      setBanks(prev => prev.map(b => b.id === editingBank.id ? { ...b, logo_url: response.logo_url } : b));
+      
+      alert("✅ Logo enviada com sucesso!");
     } catch (error) {
       console.error("Erro no upload:", error);
       alert("Erro ao enviar logo.");
+    } finally {
+      loadBanks(); // Recarrega do banco para garantir sincronia
     }
   };
 

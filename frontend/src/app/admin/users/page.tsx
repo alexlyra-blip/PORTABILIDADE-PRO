@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/utils/api";
+import { api, getStaticUrl } from "@/utils/api";
 
 interface User {
   id: number;
@@ -263,7 +263,7 @@ export default function UsersPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       {(user.avatar_url || user.logo_url) ? (
-                        <img src={user.avatar_url || user.logo_url} alt="Avatar" className="w-10 h-10 rounded-full object-cover bg-white border border-slate-200 shadow-sm" />
+                        <img src={getStaticUrl(user.avatar_url || user.logo_url) || ''} alt="Avatar" className="w-10 h-10 rounded-full object-cover bg-white border border-slate-200 shadow-sm" />
                       ) : (
                         <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs border border-blue-100 uppercase shadow-inner" 
                              style={{ backgroundColor: user.brand_color + '15', color: user.brand_color || '#4f46e5' }}>
@@ -430,7 +430,7 @@ export default function UsersPage() {
                     <div className="w-28 h-28 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg bg-slate-800 relative flex items-center justify-center">
                       {(formData.avatar_url || formData.logo_url) ? (
                         <img 
-                          src={formData.avatar_url || formData.logo_url} 
+                          src={getStaticUrl(formData.avatar_url || formData.logo_url) || ''} 
                           className="w-full h-full object-cover" 
                           alt="Preview Menu" 
                         />

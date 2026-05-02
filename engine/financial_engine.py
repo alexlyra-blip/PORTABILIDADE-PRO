@@ -44,9 +44,11 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     # 5. Weighted Refinancing Rate Math
     taxa_convenio_tabela = float(tabela_obj.taxa_convenio or 0.0)
     
-    # Se taxa convenio for zero, usamos o interest_rate do próprio coeficiente como base
+    # Se taxa convenio for zero, usamos o interest_rate do próprio coeficiente como base (Taxa Tabela)
     base_rate = taxa_convenio_tabela if taxa_convenio_tabela > 0 else float(coeficiente_obj.interest_rate)
-    taxa_refin_ponderada = base_rate
+    
+    # FÓRMULA SOLICITADA: (Portabilidade + Taxa Tabela) / 2
+    taxa_refin_ponderada = (taxa_portabilidade_calc + base_rate) / 2
     
     refin_adj = float(tabela_obj.refin_adjustment or 0.0)
     final_refin_rate = taxa_refin_ponderada + refin_adj

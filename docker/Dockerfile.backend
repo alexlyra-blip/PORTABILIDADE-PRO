@@ -6,13 +6,14 @@ COPY ./backend/requirements.txt .
 # We assume there will be a requirements.txt with fastapi, uvicorn, etc.
 RUN pip install --no-cache-dir -r requirements.txt || true
 # fallback if requirements.txt doesn't exist yet but we'll create it
-RUN pip install fastapi uvicorn pydantic SQLAlchemy psycopg2-binary redis
+RUN pip install fastapi uvicorn pydantic SQLAlchemy psycopg2-binary asyncpg redis
 
 COPY ./engine /engine
 COPY ./backend /app
 
 ENV PYTHONPATH=/app:/engine
 
+RUN mkdir -p uploads/logos uploads/avatars && chmod -R 777 uploads
 EXPOSE 8000
 
-CMD ["sh", "-c", "python init_db.py && python seed_data.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "python init_db.py; python update_db.py; python seed_data.py; uvicorn app.main:app --host 0.0.0.0 --port 8000"]

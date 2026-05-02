@@ -21,8 +21,8 @@ export default function Header() {
     if (!path || path === "null" || path === "undefined") return null;
     if (path.startsWith('http')) return path;
     if (path.startsWith('data:image')) return path;
-    const base = "http://localhost:8000";
-    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+    if (path.startsWith('/uploads')) return path;
+    return `/uploads${path.startsWith('/') ? '' : '/'}${path}`;
   };
 
   return (
