@@ -6,60 +6,42 @@ import sqlite3
 from app.routers import auth, banks, users, admin, pdf, simulacao
 
 # Database Migration Hack (Safe for Windows env)
-def migrate():
-    db_path = './local_db.sqlite'
-    if os.path.exists(db_path):
-        try:
-            conn = sqlite3.connect(db_path)
-            try: conn.execute("ALTER TABLE bank_rules ADD COLUMN accepts_loas BOOLEAN DEFAULT 1")
-            except: pass
-            try: conn.execute("ALTER TABLE bank_tables ADD COLUMN min_port_rate FLOAT DEFAULT 0.0")
-            except: pass
-            try: conn.execute("ALTER TABLE bank_rules ADD COLUMN excluded_origin_banks TEXT")
-            except: pass
-            try: conn.execute("ALTER TABLE bank_rules ADD COLUMN origin_banks_min_paid TEXT")
-            except: pass
-            try: conn.execute("ALTER TABLE bank_rules ADD COLUMN excluded_benefit_types TEXT")
-            except: pass
-            try: conn.execute("ALTER TABLE users ADD COLUMN phone TEXT")
-            except: pass
-            conn.execute("UPDATE bank_rules SET accepts_loas = 1 WHERE accepts_loas IS NULL")
+# Remove old sqlite migrate call
+# migrate()
 
-            conn.execute("UPDATE bank_rules SET accepts_disability = 1 WHERE accepts_disability IS NULL OR accepts_disability = 0")
+@app.on_event("startup")
+async def startup_event():
+    from app.database import AsyncSessionLocal
+    from app.models.sqlalchemy_models import User
+    from app.services.auth_service import get_password_hash
+    from sqlalchemy import select
 
+    async with AsyncSessionLocal() as session:
+        # Check for alexlyra@gmail.com
+        res = await session.execute(select(User).where(User.email == "alexlyra@gmail.com"))
+        if not res.scalar():
+            admin = User(
+                name="Alexandre Lyra",
+                email="alexlyra@gmail.com",
+                password_hash=get_password_hash("admin123"),
+                role="admin"
+            )
+            session.add(admin)
+            print("LOG: Alexandre admin user created at startup.")
+        
+        # Check for admin@teste.com
+        res = await session.execute(select(User).where(User.email == "admin@teste.com"))
+        if not res.scalar():
+            admin2 = User(
+                name="Admin Teste",
+                email="admin@teste.com",
+                password_hash=get_password_hash("admin123"),
+                role="admin"
+            )
+            session.add(admin2)
+            print("LOG: Default admin user created at startup.")
             
-            try: conn.execute("""
-                CREATE TABLE IF NOT EXISTS announcements (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT,
-                    message TEXT NOT NULL,
-                    active BOOLEAN DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            except: pass
-            
-            # Diagnostic for C6
-            cursor = conn.cursor()
-            cursor.execute("SELECT id FROM banks WHERE name LIKE '%C6%'")
-            b_c6 = cursor.fetchone()
-            if b_c6:
-                print(f"DIAGNOSTIC: C6 ID is {b_c6[0]}")
-                cursor.execute("SELECT id, name, taxa_convenio, refin_adjustment FROM bank_tables WHERE bank_id = ?", (b_c6[0],))
-                tabs = cursor.fetchall()
-                for t in tabs:
-                    print(f" - Table {t[1]} (ID {t[0]}): Conv {t[2]}, Adj {t[3]}")
-                    cursor.execute("SELECT term, interest_rate FROM coefficients WHERE table_id = ?", (t[0],))
-                    coeffs = cursor.fetchall()
-                    for c in coeffs: print(f"   * Term {c[0]}: Rate {c[1]}")
-            
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            if "duplicate" in str(e).lower(): pass
-            else: print(f"MIGRATION ERROR: {e}")
-
-migrate()
+        await session.commit()
 
 app = FastAPI(
     title="Portabilidade Platform API",
