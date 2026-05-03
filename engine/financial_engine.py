@@ -61,11 +61,11 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
 
     # 6.b Validação Refin: Regra de Vantagem Real (Tabela < Taxa Atual Informada)
     # Compara a taxa da tabela (1,55%) diretamente contra a taxa que o cliente paga (1,59%)
-    # Ignora cálculos internos de média para evitar discrepâncias com a calculadora
     disable_validation = any(getattr(r, "disable_weighted_rate_validation", False) for r in (banco.rules or []))
     
-    if not disable_validation and base_rate >= float(cliente_input.current_rate or 0):
-        return False, 0.0, None, f"Taxa da tabela ({base_rate:.3f}%) não é inferior à taxa informada do cliente ({cliente_input.current_rate:.3f}%)"
+    taxa_cliente = float(cliente_input.taxa_juros or 0)
+    if not disable_validation and taxa_cliente > 0 and base_rate >= taxa_cliente:
+        return False, 0.0, None, f"Taxa da tabela ({base_rate:.3f}%) não é inferior à taxa informada do cliente ({taxa_cliente:.3f}%)"
     
     return True, float(valor_liberado), {
         "taxa_portabilidade_atual": float(nova_taxa_portabilidade),
