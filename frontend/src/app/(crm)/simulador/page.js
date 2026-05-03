@@ -440,7 +440,7 @@ export default function SimuladorPage() {
   };
 
   return (
-    <div className="w-full max-w-[98%] mx-auto py-6 px-4 relative">
+    <div className="w-full max-w-[1200px] mx-auto py-6 px-4 relative">
       {/* Calculating Animation Overlay */}
       {loading && (
         <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-3xl animate-fade-in">
@@ -469,13 +469,13 @@ export default function SimuladorPage() {
         </div>
       )}
 
-      <div className="mb-10 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-white/10 shadow-2xl overflow-hidden animate-fade-in">
+      <div className="max-w-4xl mx-auto mb-10 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-white/10 shadow-2xl overflow-hidden animate-fade-in">
         
-        <div className="bg-blue-600 p-10 flex items-center gap-6">
-          <div className="w-16 h-16 rounded-[1.5rem] bg-white/20 backdrop-blur-xl flex items-center justify-center text-white text-3xl shadow-2xl">⚡</div>
+        <div className="bg-blue-600 p-8 flex items-center gap-6">
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-xl flex items-center justify-center text-white text-2xl shadow-2xl">⚡</div>
           <div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Simulador PRO</h2>
-            <p className="text-[10px] text-white/70 font-bold uppercase tracking-[0.4em] mt-1">Análise de Portabilidade e Elegibilidade</p>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Simulador PRO</h2>
+            <p className="text-[9px] text-white/70 font-bold uppercase tracking-[0.4em] mt-0.5">Análise de Portabilidade e Elegibilidade</p>
           </div>
         </div>
 
@@ -484,20 +484,20 @@ export default function SimuladorPage() {
           <div className="space-y-10">
             <h3 className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest border-l-8 border-blue-600 pl-4 py-2 bg-blue-50/50 dark:bg-blue-900/20 rounded-r-xl">I. Perfil de Identificação</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Nome Completo</label>
-                <input type="text" name="nome_cliente" value={formData.nome_cliente} onChange={handleChange} className="input-premium w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm" placeholder="Digite o nome completo..." />
+                <input type="text" name="nome_cliente" value={formData.nome_cliente} onChange={handleChange} className="input-premium w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm py-1.5" placeholder="Digite o nome completo..." />
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">CPF</label>
-                <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} className={`input-premium w-full bg-slate-50 dark:bg-slate-800 border-2 ${formData.cpf && !validateCPF(formData.cpf) ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} text-slate-900 dark:text-white focus:border-blue-600 shadow-sm transition-all`} placeholder="000.000.000-00" />
+                <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} className={`input-premium w-full bg-slate-50 dark:bg-slate-800 border-2 ${formData.cpf && !validateCPF(formData.cpf) ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} text-slate-900 dark:text-white focus:border-blue-600 shadow-sm transition-all py-1.5`} placeholder="000.000.000-00" />
                 {formData.cpf && !validateCPF(formData.cpf) && <p className="text-[9px] text-red-500 font-bold uppercase ml-1 animate-pulse">CPF Inválido</p>}
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Idade</label>
-                <input type="text" name="idade" value={formData.idade} onChange={handleChange} className="input-premium w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm font-black text-xl" placeholder="65" maxLength={2} required />
+                <input type="text" name="idade" value={formData.idade} onChange={handleChange} className="input-premium w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm font-black text-xl py-1" placeholder="65" maxLength={2} required />
               </div>
 
               <div className="space-y-3">
@@ -511,7 +511,7 @@ export default function SimuladorPage() {
                       <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-xs">{formData.agreement.substring(0, 3)}</div>
                     );
                   })()}
-                  <select name="agreement" value={formData.agreement} onChange={handleChange} className="input-premium flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold uppercase text-xs" required>
+                  <select name="agreement" value={formData.agreement} onChange={handleChange} className="input-premium flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold uppercase text-xs py-1.5" required>
                     <option value="">Selecione o Convênio</option>
                     <option value="INSS">INSS - PREVIDÊNCIA SOCIAL</option>
                     <option value="SIAPE">SIAPE - FEDERAL</option>
@@ -550,7 +550,7 @@ export default function SimuladorPage() {
                           }} 
                           onFocus={() => setSubDropdownOpen(true)}
                           onBlur={() => setTimeout(() => setSubDropdownOpen(false), 200)}
-                          className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm" 
+                          className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm py-1.5" 
                           placeholder={isForcas ? "Ex: EXERCITO" : "Ex: SP"} 
                           required 
                           autoComplete="off"
@@ -594,7 +594,7 @@ export default function SimuladorPage() {
             {formData.agreement === 'INSS' && (
               <div className="space-y-3 animate-slide-up">
                 <label className="text-[11px] font-black text-blue-600 uppercase tracking-widest ml-1">Espécie do Benefício</label>
-                <select name="benefit_species" value={formData.benefit_species} onChange={handleChange} className="input-premium w-full font-black text-blue-800 dark:text-blue-300 bg-blue-50/20 dark:bg-slate-800 border-2 border-blue-200 dark:border-slate-700 text-xs" required>
+                <select name="benefit_species" value={formData.benefit_species} onChange={handleChange} className="input-premium w-full font-black text-blue-800 dark:text-blue-300 bg-blue-50/20 dark:bg-slate-800 border-2 border-blue-200 dark:border-slate-700 text-xs py-1.5" required>
                   <option value="">Buscar espécie...</option>
                   {inssSpecies.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
@@ -711,7 +711,7 @@ export default function SimuladorPage() {
                         }} 
                         onFocus={() => setDropdownOpen({...dropdownOpen, [c.id]: true})}
                         onBlur={() => setTimeout(() => setDropdownOpen({...dropdownOpen, [c.id]: false}), 200)}
-                        className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm" 
+                        className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm py-1.5" 
                         placeholder="Ex: 029 - ITAU..." 
                         required 
                         autoComplete="off"
@@ -782,22 +782,22 @@ export default function SimuladorPage() {
 
                 <div className="md:col-span-5 space-y-3">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Valor da Parcela (R$)</label>
-                  <input type="text" name="parcela" value={c.parcela} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm font-black text-xl" placeholder="0,00" required />
+                  <input type="text" name="parcela" value={c.parcela} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm font-black text-xl py-1" placeholder="0,00" required />
                 </div>
 
                 <div className="md:col-span-5 space-y-3">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Saldo Devedor (R$)</label>
-                  <input type="text" name="saldoDevedor" value={c.saldoDevedor} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm font-black text-xl" placeholder="0,00" required />
+                  <input type="text" name="saldoDevedor" value={c.saldoDevedor} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm font-black text-xl py-1" placeholder="0,00" required />
                 </div>
 
                 <div className="md:col-span-7 grid grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Prazo Contratual</label>
-                    <input type="number" name="prazoTotal" value={c.prazoTotal} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" placeholder="84" required />
+                    <input type="number" name="prazoTotal" value={c.prazoTotal} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white py-1.5" placeholder="84" required />
                   </div>
                   <div className="space-y-3">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Parcelas Pagas</label>
-                    <input type="number" name="parcelasPagas" value={c.parcelasPagas} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" placeholder="Ex: 12" required />
+                    <input type="number" name="parcelasPagas" value={c.parcelasPagas} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white py-1.5" placeholder="Ex: 12" required />
                   </div>
                 </div>
 
