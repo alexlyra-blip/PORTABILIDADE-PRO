@@ -241,7 +241,6 @@ export default function OfertasPage() {
               📄 Imprimir
             </button>
           </div>
-
           <div className="flex flex-col md:flex-row items-center gap-4">
             {(() => {
               const searchName = activeContractData?.banco ? (activeContractData.banco.includes('-') ? activeContractData.banco.split('-')[1].trim().toUpperCase() : activeContractData.banco.toUpperCase()) : "";
@@ -251,50 +250,36 @@ export default function OfertasPage() {
                  return bName.includes(sName) || sName.includes(bName) || b.name.toUpperCase().includes(sName.slice(0, 5));
               });
 
-              if (searchName.includes('BVC') || searchName.includes('BCV')) {
-                 return (
-                   <div className="flex items-center gap-4 min-w-[300px] xl:min-w-[350px] bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
-                     <div className="w-16 h-16 rounded-xl bg-blue-600 shadow-md overflow-hidden flex-shrink-0 flex items-center justify-center text-white text-lg font-black">
-                       BVC
-                     </div>
-                     <div>
-                       <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">INSTITUIÇÃO DE ORIGEM</p>
-                       <p className="text-base font-black text-slate-900 dark:text-white truncate max-w-[180px]">{activeContractData?.banco || "-"}</p>
-                     </div>
-                   </div>
-                 );
-              }
-
               return (
-                <div className="flex items-center gap-3 min-w-[280px] bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
+                <div className="flex items-center gap-3 min-w-[320px] xl:min-w-[400px] bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
                   <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
                     {matchedBank?.logo ? <img src={matchedBank.logo} alt="" className="w-full h-full object-cover" /> : <span className="text-xl">🏛️</span>}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ORIGEM</p>
-                    <p className="text-sm font-black text-slate-900 dark:text-white truncate max-w-[150px]">{activeContractData?.banco || "-"}</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white truncate max-w-[280px]">{activeContractData?.banco || "-"}</p>
                   </div>
                 </div>
               );
             })()}
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-1 w-full">
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">SALDO DEVEDOR</p>
-                <p className="text-sm font-black text-slate-900 dark:text-white">{activeContractData?.saldoDevedor || "-"}</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 flex-1 w-full">
+              <div className="bg-slate-50/50 dark:bg-white/5 p-2 rounded-xl border border-slate-100/50 dark:border-white/5">
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">SALDO</p>
+                <p className="text-xs font-black text-slate-900 dark:text-white">{activeContractData?.saldoDevedor || "-"}</p>
               </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">PARCELA</p>
-                <p className="text-sm font-black text-slate-900 dark:text-white">{activeContractData?.parcela || "-"}</p>
+              <div className="bg-slate-50/50 dark:bg-white/5 p-2 rounded-xl border border-slate-100/50 dark:border-white/5">
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">PARCELA</p>
+                <p className="text-xs font-black text-slate-900 dark:text-white">{activeContractData?.parcela || "-"}</p>
               </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">CONVÊNIO</p>
-                <p className="text-sm font-black text-slate-900 dark:text-white">{inputData?.agreement || "-"}</p>
+              <div className="bg-slate-50/50 dark:bg-white/5 p-2 rounded-xl border border-slate-100/50 dark:border-white/5">
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">CONVÊNIO</p>
+                <p className="text-xs font-black text-slate-900 dark:text-white">{inputData?.agreement || "-"}</p>
               </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">PRAZO RESTANTE</p>
-                <p className="text-sm font-black text-slate-900 dark:text-white">
-                  {activeContractData?.prazoTotal ? `${Math.max(0, parseInt(activeContractData.prazoTotal) - parseInt(activeContractData.parcelasPagas || "0"))} Parcelas` : "-"}
+              <div className="bg-slate-50/50 dark:bg-white/5 p-2 rounded-xl border border-slate-100/50 dark:border-white/5">
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">PRAZO REST.</p>
+                <p className="text-xs font-black text-slate-900 dark:text-white truncate">
+                  {activeContractData?.prazoTotal ? `${Math.max(0, parseInt(activeContractData.prazoTotal) - parseInt(activeContractData.parcelasPagas || "0"))} X` : "-"}
                 </p>
               </div>
             </div>
@@ -359,7 +344,7 @@ export default function OfertasPage() {
                   <h3 className="text-xs xl:text-sm font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight mt-1">
                     {h.data?.banco || "INDISPONÍVEL"}
                   </h3>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">{h.data?.tabela || "INDISPONÍVEL"} • PRAZO: {h.data?.prazo || "84"}X</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">{h.data?.tabela || "INDISPONÍVEL"}</p>
                   {h.data && (
                     <span className="mt-1 inline-flex px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase">CONVÊNIO {inputData?.agreement || "INSS"}</span>
                   )}
@@ -372,6 +357,7 @@ export default function OfertasPage() {
                     <div className="flex flex-col gap-1.5">
                       <span>Taxa Port: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_portabilidade_atual?.toFixed(2)}%</strong></span>
                       <span>Taxa Refin: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_juros?.toFixed(2)}%</strong></span>
+                      <span className="text-[9px] text-blue-600 dark:text-blue-400 font-black">PRAZO: {h.data?.prazo || "84"}X</span>
                     </div>
                     <div className="text-right flex flex-col gap-1.5">
                       <span>Total Contrato</span>
@@ -423,7 +409,7 @@ export default function OfertasPage() {
                         <div className="min-w-0 flex-1">
                           <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase mb-1 inline-block truncate max-w-full">CONVÊNIO {inputData?.agreement || "INSS"}</span>
                           <h3 className="text-sm xl:text-base font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight break-words">{offer.banco}</h3>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest truncate">{offer.tabela} • {offer.prazo || "84"}X</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest truncate">{offer.tabela}</p>
                         </div>
                       </div>
                       {offers.length > 1 && (
@@ -453,6 +439,7 @@ export default function OfertasPage() {
                               {offer.taxa_juros?.toFixed(2)}%
                               <span className="text-[10px] text-slate-400 ml-1 font-bold">a.m.</span>
                             </p>
+                            <p className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mt-1">Prazo: {offer.prazo || "84"}X</p>
                           </div>
                           <div className="space-y-0.5 bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 flex flex-col justify-center w-full md:w-auto shrink-0 md:min-w-[180px] xl:min-w-[210px] shadow-sm">
                             <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center md:text-left">TROCO LIBERADO</p>
