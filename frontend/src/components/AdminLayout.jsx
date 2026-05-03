@@ -11,28 +11,28 @@ const AdminLayout = ({ children }) => {
             Admin Panel
           </h1>
         </div>
-        <nav className="flex-1 px-4 space-y-2">
-          <Link href="/admin" className="block p-3 rounded-lg hover:bg-slate-700 transition-colors">
+        <nav className="flex-1 px-4 space-y-1">
+          <Link href="/admin" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
             Painel Geral
           </Link>
-          <Link href="/admin/banks" className="block p-3 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/banks" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
             Bancos
           </Link>
-          <Link href="/admin/rules" className="block p-3 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/rules" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
             Regras
           </Link>
-          <Link href="/admin/tables" className="block p-3 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/tables" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
             Tabelas
           </Link>
-          <Link href="/admin/coefficients" className="block p-3 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/coefficients" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
             Coeficientes
           </Link>
-          <Link href="/admin/users" className="block p-3 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/users" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
             Usuários
           </Link>
         </nav>
         <div className="p-4 border-t border-slate-700">
-          <Link href="/simulacao" className="block p-3 text-center rounded-lg bg-blue-600 hover:bg-blue-500 transition-all font-semibold">
+          <Link href="/simulador" className="block p-2.5 text-center rounded-lg bg-blue-600 hover:bg-blue-500 transition-all font-semibold">
             Ir para Simulador
           </Link>
         </div>

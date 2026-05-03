@@ -25,11 +25,18 @@ router = APIRouter()
 @router.on_event("startup")
 async def ensure_columns_exist():
     from sqlalchemy import text
+    from app.models.sqlalchemy_models import Bank
+    from sqlalchemy import select, delete
     async for db in get_db():
         try:
+            # 1. Garantir coluna de validação
             await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disable_weighted_rate_validation BOOLEAN DEFAULT FALSE"))
+            
+            # 2. Excluir C6 Bank definitivamente do DB local
+            await db.execute(delete(Bank).where(Bank.name.like('%C6%')))
+            
             await db.commit()
-            print("Database migration: disable_weighted_rate_validation added.")
+            print("Database migration: disable_weighted_rate_validation added and C6 Bank removed.")
         except Exception as e:
             print(f"Migration skip/error: {e}")
         break
