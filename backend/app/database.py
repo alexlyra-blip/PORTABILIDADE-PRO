@@ -6,7 +6,6 @@ import os
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    print("⚠️ DATABASE_URL não encontrada! Usando SQLite local.")
     DATABASE_URL = "sqlite+aiosqlite:///./local_db.sqlite"
 else:
     # Garante que URLs do Supabase (postgresql://) usem o driver asyncpg
@@ -15,9 +14,9 @@ else:
     elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     
-    print(f"🚀 Conectando ao Banco de Dados: {DATABASE_URL.split('@')[-1]}") # Loga apenas o host para segurança
+    print(f"🚀 Conectando ao Banco de Dados: {DATABASE_URL.split('@')[-1]}")
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = sessionmaker(
     bind=engine,
     class_=AsyncSession,
