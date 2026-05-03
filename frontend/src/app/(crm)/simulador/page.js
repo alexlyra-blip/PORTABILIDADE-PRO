@@ -251,7 +251,7 @@ export default function SimuladorPage() {
     { value: "149", label: "149 - FACTA" },
     { value: "012", label: "012 - INBURSA" },
     { value: "029", label: "029 - ITAÚ CONSIGNADO" },
-    { value: "184", label: "184 - ITAU BBA" },
+    { value: "184", label: "184 - ITAÚ BBA" },
     { value: "341", label: "341 - ITAÚ UNIBANCO S.A." },
     { value: "389", label: "389 - MERCANTIL" },
     { value: "386", label: "386 - NU FINANCEIRA S.A." },

@@ -209,7 +209,7 @@ export default function SubLogosPage() {
                   {/* Estados */}
                   {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(uf => <option key={uf} value={uf} />)}
                   {/* Bancos de Origem */}
-                  {["AGIBANK", "BANCO BCV", "BANCO ALFA", "BANCO CIFRA", "BANCO DO BRASIL", "BANCO DO ESTADO DO SERGIPE", "BANCO ORIGINAL", "BANCO PINE", "BANCO SEGURO", "BANRISUL", "BARIGUI", "BMG", "BRADESCO S.A.", "BRB", "C6 CONSIGNADO", "CCB BRASIL", "CAIXA", "CREFISA", "DAYCOVAL", "DIGIO", "FACTA", "INBURSA", "ITAÚ CONSIGNADO", "ITAU BBA", "ITAÚ UNIBANCO S.A.", "MERCANTIL", "NU FINANCEIRA S.A.", "NBC BANK", "OLÉ CONSIGNADO", "PAGBANK", "PAN", "PARANÁ BANCO", "BNP PARIBAS", "PARATI", "PAULISTA", "PICPAY", "QI SOCIEDADE", "SABEMI", "SAFRA", "SANTANDER", "ZEMA", "OUTROS"].map(b => <option key={b} value={b} />)}
+                  {["AGIBANK", "BANCO BCV", "BANCO ALFA", "BANCO CIFRA", "BANCO DO BRASIL", "BANCO DO ESTADO DO SERGIPE", "BANCO ORIGINAL", "BANCO PINE", "BANCO SEGURO", "BANRISUL", "BARIGUI", "BMG", "BRADESCO S.A.", "BRB", "C6 CONSIGNADO", "CCB BRASIL", "CAIXA", "CREFISA", "DAYCOVAL", "DIGIO", "FACTA", "INBURSA", "ITAÚ CONSIGNADO", "ITAÚ BBA", "ITAÚ UNIBANCO S.A.", "MERCANTIL", "NU FINANCEIRA S.A.", "NBC BANK", "OLÉ CONSIGNADO", "PAGBANK", "PAN", "PARANÁ BANCO", "BNP PARIBAS", "PARATI", "PAULISTA", "PICPAY", "QI SOCIEDADE", "SABEMI", "SAFRA", "SANTANDER", "ZEMA", "OUTROS"].map(b => <option key={b} value={b} />)}
                 </datalist>
               </div>
               
