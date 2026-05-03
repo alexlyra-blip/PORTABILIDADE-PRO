@@ -443,6 +443,7 @@ export default function BanksPage() {
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-200">
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Nome do Banco</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Convênio</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
             </tr>
@@ -470,6 +471,28 @@ export default function BanksPage() {
                         <span className="font-bold text-slate-700 block">{bank?.name}</span>
                         <span className="text-[10px] text-slate-400 font-mono">ID: #{bank?.id}</span>
                       </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                      {bank.rules && bank.rules.length > 0 ? (
+                        Array.from(new Set(bank.rules.map(r => r.agreement))).map(agr => (
+                          <span 
+                            key={agr} 
+                            className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border ${
+                              agr === 'INSS' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                              agr === 'SIAPE' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                              agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                              agr === 'GOV_EST' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                              'bg-slate-50 text-slate-500 border-slate-100'
+                            }`}
+                          >
+                            {agr === 'GOV_EST' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-slate-300 italic font-medium uppercase tracking-widest">Sem Regra</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
