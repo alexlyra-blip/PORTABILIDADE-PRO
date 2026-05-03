@@ -127,6 +127,9 @@ class BankRule(Base):
     disability_min_benefit_years = Column(Integer, nullable=True)
     disability_min_benefit_months = Column(Integer, nullable=True)
 
+    # Validation Toggles
+    disable_weighted_rate_validation = Column(Boolean, default=False)
+
     bank = relationship("Bank", back_populates="rules")
 
 class BankTable(Base):

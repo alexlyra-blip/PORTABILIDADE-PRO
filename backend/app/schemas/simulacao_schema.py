@@ -137,6 +137,7 @@ class BankRuleBase(BaseModel):
     excluded_origin_banks: Optional[str] = None
     origin_banks_min_paid: Optional[str] = None
     excluded_benefit_types: Optional[str] = None
+    disable_weighted_rate_validation: bool = False
 
 class BankRuleCreate(BankRuleBase):
     pass

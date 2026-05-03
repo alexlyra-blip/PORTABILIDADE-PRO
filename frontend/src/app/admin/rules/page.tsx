@@ -36,6 +36,7 @@ export default function RulesPage() {
     min_debt_balance: 0,
     portability_rate_threshold: 0,
     use_balance_plus_released: false,
+    disable_weighted_rate_validation: false,
     sub_agreement: ""
   });
 
@@ -100,6 +101,7 @@ export default function RulesPage() {
         min_debt_balance: rule.min_debt_balance || 0,
         portability_rate_threshold: rule.portability_rate_threshold || 0,
         use_balance_plus_released: rule.use_balance_plus_released || false,
+        disable_weighted_rate_validation: rule.disable_weighted_rate_validation || false,
         sub_agreement: rule.sub_agreement || ""
       });
     } else {
@@ -128,6 +130,7 @@ export default function RulesPage() {
         min_debt_balance: 0,
         portability_rate_threshold: 0,
         use_balance_plus_released: false,
+        disable_weighted_rate_validation: false,
         sub_agreement: ""
       });
     }
@@ -467,6 +470,20 @@ export default function RulesPage() {
                     <div className="leading-tight">
                        <label htmlFor="use_sum" className="text-sm font-bold text-blue-700 cursor-pointer select-none">Somar Saldo + Troco para Validação?</label>
                        <p className="text-[10px] text-slate-500 font-medium">Se marcado, o saldo mínimo exigido será comparado com o valor total do novo contrato (Saldo + Liberação).</p>
+                    </div>
+                 </div>
+
+                 <div className="flex items-center gap-3 pt-2 border-t border-blue-100/50">
+                    <input 
+                      type="checkbox" 
+                      id="disable_w" 
+                      checked={formData.disable_weighted_rate_validation} 
+                      onChange={(e) => setFormData({...formData, disable_weighted_rate_validation: e.target.checked})} 
+                      className="w-5 h-5 rounded border-slate-300 text-red-600 cursor-pointer" 
+                    />
+                    <div className="leading-tight">
+                       <label htmlFor="disable_w" className="text-sm font-bold text-red-700 cursor-pointer select-none">DESATIVAR Validação de Taxa Ponderada?</label>
+                       <p className="text-[10px] text-slate-500 font-medium italic">Se marcado, o sistema NÃO irá validar se a taxa da tabela é menor que a taxa final da operação para este banco.</p>
                     </div>
                  </div>
               </div>

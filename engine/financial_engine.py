@@ -59,10 +59,13 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     if min_port_limit > 0 and nova_taxa_portabilidade < (min_port_limit - 0.0001):
         return False, 0.0, None, f"Taxa Portabilidade ({nova_taxa_portabilidade:.3f}%) abaixo do mínimo da tabela ({min_port_limit:.3f}%)."
 
-    # 6.b Validação Refin: Regra de Vantagem Direta
-    # Só pode ser ofertada se a Taxa da Tabela for MENOR que a Taxa Atual do Cliente
-    if base_rate >= taxa_portabilidade_calc:
-        return False, 0.0, None, f"Taxa da tabela ({base_rate:.3f}%) não é inferior à taxa atual do cliente ({taxa_portabilidade_calc:.3f}%)"
+    # 6.b Validação Refin: Regra de Vantagem Real (Tabela < Final Refin)
+    # Só pode ser ofertada se a Taxa da Tabela for MENOR que a Taxa Ponderada Final (1.59%)
+    # Esta regra pode ser desativada nas configurações do banco
+    disable_validation = any(getattr(r, "disable_weighted_rate_validation", False) for r in (banco.rules or []))
+    
+    if not disable_validation and base_rate >= final_refin_rate:
+        return False, 0.0, None, f"Taxa da tabela ({base_rate:.3f}%) não é inferior à Taxa Refin Final ({final_refin_rate:.3f}%)"
     
     return True, float(valor_liberado), {
         "taxa_portabilidade_atual": float(nova_taxa_portabilidade),
