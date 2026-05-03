@@ -21,6 +21,19 @@ from typing import List
 
 router = APIRouter()
 
+# Auto-migration at startup
+@router.on_event("startup")
+async def ensure_columns_exist():
+    from sqlalchemy import text
+    async for db in get_db():
+        try:
+            await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disable_weighted_rate_validation BOOLEAN DEFAULT FALSE"))
+            await db.commit()
+            print("Database migration: disable_weighted_rate_validation added.")
+        except Exception as e:
+            print(f"Migration skip/error: {e}")
+        break
+
 # Announcements
 @router.post("/announcements")
 async def create_announcement(data: dict, db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
