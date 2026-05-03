@@ -31,7 +31,7 @@ const AdminLayout = ({ children }) => {
         {/* Header: Centered Avatar (Grande como na Imagem 1) */}
         <div className="p-8 pb-6 border-b border-white/5 flex flex-col items-center">
           <div className="mb-5 relative">
-            <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10">
+            <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10">
               {profileImageUrl ? (
                 <img src={profileImageUrl} className="w-full h-full object-cover" />
               ) : (
@@ -40,7 +40,7 @@ const AdminLayout = ({ children }) => {
                 </div>
               )}
             </div>
-            <div className="absolute inset-0 rounded-[2rem] blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none bg-blue-600"></div>
+            <div className="absolute inset-0 rounded-xl blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none bg-blue-600"></div>
           </div>
           <div className="mb-4 text-center flex flex-col items-center w-full">
             <p className="text-[11px] font-black uppercase text-blue-400 tracking-wider opacity-80 mb-0.5">Acesso AdminMaster</p>

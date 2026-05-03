@@ -86,7 +86,7 @@ export default function Sidebar() {
           animate={{ y: [0, -5, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/30 shadow-[0_0_30px_rgba(0,0,0,0.4)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
+          <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
             {(profileImageUrl && !imgError) ? (
               <img 
                 src={profileImageUrl} 
@@ -99,7 +99,7 @@ export default function Sidebar() {
               />
             ) : (
               <div 
-                className="w-full h-full flex items-center justify-center font-black text-5xl text-white shadow-inner"
+                className="w-full h-full flex items-center justify-center font-black text-6xl text-white shadow-inner"
                 style={{ backgroundColor: user.brand_color || '#3b82f6' }}
               >
                 {user.name?.charAt(0).toUpperCase()}
@@ -107,7 +107,7 @@ export default function Sidebar() {
             )}
           </div>
           <div 
-             className="absolute inset-0 rounded-2xl blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none"
+             className="absolute inset-0 rounded-xl blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none"
              style={{ backgroundColor: user.brand_color || '#3b82f6' }}
           ></div>
         </motion.div>
