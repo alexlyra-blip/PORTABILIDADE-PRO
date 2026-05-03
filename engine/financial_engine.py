@@ -37,25 +37,23 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
         except Exception:
             taxa_portabilidade_calc = 0.0
     
-    # 4. Cálculo da Portabilidade Ajustada
+    # 4. Cálculo da Portabilidade Ajustada (Conforme Frontend)
     taxa_port_base = float(cliente_input.taxa_juros or taxa_portabilidade_calc)
     taxa_port_ajustada = taxa_port_base + float(tabela_obj.portability_adjustment or 0.0)
     
-    # 5. Cálculo do Teto (Final Refin) - CONFORME SOLICITADO
-    # LÓGICA: (PORTABILIDADE + TAXA TABELA) / 2 + AJUSTE REFIN
+    # 5. Cálculo do Teto (Final Refin) - CONFORME CÓDIGO DO FRONTEND
+    # LÓGICA: TAXA TABELA + AJUSTE REFIN (Ignora médias para bater com o preview)
     taxa_tabela = float(tabela_obj.taxa_convenio or 0.0)
     if taxa_tabela <= 0:
         taxa_tabela = float(coeficiente_obj.interest_rate)
         
-    # 6. Validação de Vantagem Real (Teto = Taxa do Contrato Atual do Cliente)
-    # A tabela só aparece se for mais barata que o que o cliente já paga (ex: 1,55 < 1,59)
+    final_refin_rate = taxa_tabela + float(tabela_obj.refin_adjustment or 0.0)
+    
+    # 6. Validação de Vantagem Real
     disable_validation = any(getattr(r, "disable_weighted_rate_validation", False) for r in (banco.rules or []))
     
-    # Threshold de comparação: Taxa Atual do Cliente (1,59%)
-    teto_aprovacao = float(cliente_input.taxa_juros or 0)
-    
-    if not disable_validation and teto_aprovacao > 0 and taxa_tabela >= teto_aprovacao:
-        return False, 0.0, None, f"Taxa da tabela ({taxa_tabela:.3f}%) não é inferior à taxa do contrato atual ({teto_aprovacao:.3f}%)"
+    if not disable_validation and taxa_tabela >= final_refin_rate:
+        return False, 0.0, None, f"Taxa da tabela ({taxa_tabela:.3f}%) não é inferior à Taxa Refin Final ({final_refin_rate:.3f}%)"
     
     return True, float(valor_liberado), {
         "taxa_portabilidade_atual": float(taxa_port_ajustada),
