@@ -39,7 +39,9 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     
     # 4. Applying Adjustments from TABLE (Phase 7)
     port_adj = float(tabela_obj.portability_adjustment or 0.0)
-    nova_taxa_portabilidade = taxa_portabilidade_calc + port_adj
+    # Prioriza a taxa informada pelo usuário (calculadora) sobre o cálculo automático do motor
+    base_port_rate = float(cliente_input.taxa_juros or taxa_portabilidade_calc)
+    nova_taxa_portabilidade = base_port_rate + port_adj
     
     # 5. Weighted Refinancing Rate Math
     taxa_convenio_tabela = float(tabela_obj.taxa_convenio or 0.0)
@@ -59,13 +61,13 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     if min_port_limit > 0 and nova_taxa_portabilidade < (min_port_limit - 0.0001):
         return False, 0.0, None, f"Taxa Portabilidade ({nova_taxa_portabilidade:.3f}%) abaixo do mínimo da tabela ({min_port_limit:.3f}%)."
 
-    # 6.b Validação Refin: Regra de Vantagem Real (Tabela < Taxa Atual Informada)
-    # Compara a taxa da tabela (1,55%) diretamente contra a taxa que o cliente paga (1,59%)
+    # 6.b Validação Refin: Regra de Vantagem Real (Tabela < Final Refin)
+    # Compara a taxa da tabela (1,55%) diretamente contra o custo final da operação (1,59%)
+    # Se a tabela for mais barata que o custo final, ela é vantajosa.
     disable_validation = any(getattr(r, "disable_weighted_rate_validation", False) for r in (banco.rules or []))
     
-    taxa_cliente = float(cliente_input.taxa_juros or 0)
-    if not disable_validation and taxa_cliente > 0 and base_rate >= taxa_cliente:
-        return False, 0.0, None, f"Taxa da tabela ({base_rate:.3f}%) não é inferior à taxa informada do cliente ({taxa_cliente:.3f}%)"
+    if not disable_validation and base_rate >= final_refin_rate:
+        return False, 0.0, None, f"Taxa da tabela ({base_rate:.3f}%) não é inferior à Taxa Refin Final ({final_refin_rate:.3f}%)"
     
     return True, float(valor_liberado), {
         "taxa_portabilidade_atual": float(nova_taxa_portabilidade),
