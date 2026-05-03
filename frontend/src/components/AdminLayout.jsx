@@ -27,38 +27,38 @@ const AdminLayout = ({ children }) => {
           </div>
         </div>
 
-        {/* Navigation - Same compact style as Simulator */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <p className="px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-3 italic">Configurações Base</p>
+        {/* Navigation - Identical to Simulator pattern */}
+        <nav className="flex-1 p-4 space-y-0.5 overflow-y-auto">
+          <p className="px-4 text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 italic">Configurações Base</p>
           
-          <Link href="/admin" className="flex items-center gap-3 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">📊</span>
-            <span className="font-bold text-xs tracking-tight">Painel Geral</span>
+          <Link href="/admin" className="flex items-center gap-2 px-4 py-1 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">📊</span>
+            <span className="font-bold text-[11px] tracking-tight">Painel Geral</span>
           </Link>
           
-          <Link href="/admin/banks" className="flex items-center gap-3 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">🏦</span>
-            <span className="font-bold text-xs tracking-tight">Bancos</span>
+          <Link href="/admin/banks" className="flex items-center gap-2 px-4 py-1 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">🏦</span>
+            <span className="font-bold text-[11px] tracking-tight">Bancos</span>
           </Link>
           
-          <Link href="/admin/rules" className="flex items-center gap-3 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">⚖️</span>
-            <span className="font-bold text-xs tracking-tight">Regras</span>
+          <Link href="/admin/rules" className="flex items-center gap-2 px-4 py-1 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">⚖️</span>
+            <span className="font-bold text-[11px] tracking-tight">Regras</span>
           </Link>
           
-          <Link href="/admin/tables" className="flex items-center gap-3 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">📋</span>
-            <span className="font-bold text-xs tracking-tight">Tabelas</span>
+          <Link href="/admin/tables" className="flex items-center gap-2 px-4 py-1 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">📋</span>
+            <span className="font-bold text-[11px] tracking-tight">Tabelas</span>
           </Link>
           
-          <Link href="/admin/coefficients" className="flex items-center gap-3 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">🔢</span>
-            <span className="font-bold text-xs tracking-tight">Coeficientes</span>
+          <Link href="/admin/coefficients" className="flex items-center gap-2 px-4 py-1 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">🔢</span>
+            <span className="font-bold text-[11px] tracking-tight">Coeficientes</span>
           </Link>
           
-          <Link href="/admin/users" className="flex items-center gap-3 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">👥</span>
-            <span className="font-bold text-xs tracking-tight">Usuários</span>
+          <Link href="/admin/users" className="flex items-center gap-2 px-4 py-1 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">👥</span>
+            <span className="font-bold text-[11px] tracking-tight">Usuários</span>
           </Link>
 
           <div className="pt-6 mt-6 border-t border-white/5">

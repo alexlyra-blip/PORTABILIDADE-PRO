@@ -134,8 +134,8 @@ export default function DashboardPage() {
               )}
             </div>
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.title}</h3>
-            <p className="text-sm font-bold text-slate-500 mb-2">{s.label}</p>
-            <p className="text-2xl font-black text-slate-800 dark:text-white truncate">{s.value}</p>
+            <p className="text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tight">{s.label}</p>
+            <p className="text-sm font-black text-slate-800 dark:text-white leading-tight break-words">{s.value}</p>
           </div>
         ))}
       </div>
