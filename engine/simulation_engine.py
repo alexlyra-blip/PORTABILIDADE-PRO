@@ -286,7 +286,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                                 "valor_liberado": troco,
                                 "valor_total_contrato": troco + saldo_devedor,
                                 "valor_parcela": parcela_atual,
-                                "prazo": target_term,
+                                "prazo": current_term,
                                 "priority": getattr(banco, 'priority', 99),
                                 "elegivel": True
                             })
