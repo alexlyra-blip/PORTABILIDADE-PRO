@@ -274,11 +274,12 @@ export default function BanksPage() {
       const refreshedRules = await api.get(`/admin/banks/${savedBank.id}/rules`);
       setBankRules(refreshedRules);
       loadBanks();
-      alert("✅ Configurações salvas com sucesso!");
+      alert("✅ Banco e Regras salvos com sucesso!");
       handleCloseModal();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao salvar banco:", error);
-      alert("Erro ao salvar banco. Tente novamente.");
+      const detail = error.response?.data?.detail || "Erro ao salvar banco. Verifique os dados e tente novamente.";
+      alert(detail);
     } finally {
       setIsSubmitting(false);
     }

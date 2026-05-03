@@ -16,6 +16,11 @@ class AdminService:
 
     @staticmethod
     async def create_bank(db: AsyncSession, bank: BankCreate):
+        # Verifica se já existe um banco com este nome
+        result = await db.execute(select(Bank).where(Bank.name == bank.name))
+        if result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail=f"O banco '{bank.name}' já está cadastrado no sistema.")
+            
         db_bank = Bank(**bank.dict())
         db.add(db_bank)
         await db.commit()
@@ -26,7 +31,14 @@ class AdminService:
     async def update_bank(db: AsyncSession, bank_id: int, bank_data: dict):
         result = await db.execute(select(Bank).where(Bank.id == bank_id))
         db_bank = result.scalar_one_or_none()
+        
         if db_bank:
+            # Se estiver tentando mudar o nome, verifica se o novo nome já pertence a OUTRO banco
+            if 'name' in bank_data and bank_data['name'] != db_bank.name:
+                check_res = await db.execute(select(Bank).where(Bank.name == bank_data['name'], Bank.id != bank_id))
+                if check_res.scalar_one_or_none():
+                    raise HTTPException(status_code=400, detail=f"Não é possível renomear para '{bank_data['name']}' pois este banco já existe.")
+
             for key, value in bank_data.items():
                 setattr(db_bank, key, value)
             await db.commit()
