@@ -236,11 +236,13 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     if not tabela_viavel_taxa:
                         continue
                                 
+                    tem_coeficiente_valido = False
                     for coeff_obj in tabela.coefficients:
-                        target_term = int(tabela.term) if tabela.term else prazo_total
-                        if coeff_obj.term != target_term:
-                            continue
-                            
+                        # Removido filtro rígido de prazo (target_term). 
+                        # Agora analisamos todos os prazos disponíveis na tabela.
+                        current_term = int(coeff_obj.term)
+                        
+                        tem_coeficiente_valido = True
                         try:
                             resultado = calcular_viabilidade_financeira(
                                 cliente_input, banco, coeff_obj, tabela
@@ -290,11 +292,14 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                             })
                         except Exception as e:
                             continue
+                    
+                    if not tem_coeficiente_valido:
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Sem coeficiente para o prazo {prazo_total}")
                 
                 if not banco_tem_oferta:
                     motivo_final = "Nenhuma tabela compatível."
                     if motivos_tabelas:
-                        motivo_final = " | ".join(motivos_tabelas[:3]) # Mostra até 3 motivos
+                        motivo_final = " | ".join(motivos_tabelas) # Mostra TODOS os motivos
                     
                     rejeitados.append({
                         "banco": banco.name,
