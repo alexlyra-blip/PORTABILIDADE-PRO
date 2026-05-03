@@ -57,57 +57,57 @@ const AdminLayout = ({ children }) => {
           <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-black mt-2 italic text-center uppercase">Painel Administrativo</p>
         </div>
 
-        {/* Navigation - Padrão de Botões ainda MAIS REDUZIDOS */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {/* Navigation - Padrão de Botões ULTRA REDUZIDOS */}
+        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
           
           {/* Botões de Destaque (Versão Compacta) */}
-          <Link href="/simulador" className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 group mb-3 relative overflow-hidden shadow-2xl border-2 border-white/40"
+          <Link href="/simulador" className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-2xl border-2 border-white/30"
             style={{
               backgroundColor: '#2563eb',
               backgroundImage: `linear-gradient(45deg, #3b82f6 0%, #172554 100%)`,
-              boxShadow: `0 8px 12px -4px rgba(37, 99, 235, 0.3)`
+              boxShadow: `0 4px 8px -2px rgba(37, 99, 235, 0.3)`
             }}
           >
-            <span className="text-lg group-hover:scale-125 transition-transform">🚀</span>
-            <span className="font-black text-[10px] text-white uppercase tracking-[0.15em]">Acessar Simulador</span>
+            <span className="text-base group-hover:scale-125 transition-transform">🚀</span>
+            <span className="font-black text-[9px] text-white uppercase tracking-[0.1em]">Simulador</span>
           </Link>
 
-          <Link href="/admin" className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 group mb-4 relative overflow-hidden shadow-2xl border-2 border-white/20"
+          <Link href="/admin" className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 group mb-3 relative overflow-hidden shadow-2xl border-2 border-white/10"
             style={{
               backgroundColor: '#2563eb',
               backgroundImage: `linear-gradient(45deg, #2563eb 0%, #1e3a8a 100%)`,
-              boxShadow: `0 6px 10px -4px rgba(37, 99, 235, 0.2)`
+              boxShadow: `0 4px 8px -2px rgba(37, 99, 235, 0.2)`
             }}
           >
-            <span className="text-lg group-hover:scale-125 transition-transform">📊</span>
-            <span className="font-black text-[10px] text-white uppercase tracking-[0.15em]">Painel Geral</span>
+            <span className="text-base group-hover:scale-125 transition-transform">📊</span>
+            <span className="font-black text-[9px] text-white uppercase tracking-[0.1em]">Dashboard</span>
           </Link>
 
-          <p className="px-3 text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 italic mt-4">Gestão de Configurações</p>
+          <p className="px-3 text-[7px] font-black text-white/20 uppercase tracking-[0.2em] mb-1 italic mt-2">Configurações</p>
           
-          <Link href="/admin/banks" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">🏦</span>
-            <span className="font-bold text-[10px] tracking-tight uppercase">BANCOS</span>
+          <Link href="/admin/banks" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">🏦</span>
+            <span className="font-bold text-[9px] tracking-tight uppercase">BANCOS</span>
           </Link>
           
-          <Link href="/admin/rules" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">⚖️</span>
-            <span className="font-bold text-[10px] tracking-tight uppercase">REGRAS</span>
+          <Link href="/admin/rules" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">⚖️</span>
+            <span className="font-bold text-[9px] tracking-tight uppercase">REGRAS</span>
           </Link>
           
-          <Link href="/admin/tables" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">📋</span>
-            <span className="font-bold text-[10px] tracking-tight uppercase">TABELAS</span>
+          <Link href="/admin/tables" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">📋</span>
+            <span className="font-bold text-[9px] tracking-tight uppercase">TABELAS</span>
           </Link>
           
-          <Link href="/admin/coefficients" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">🔢</span>
-            <span className="font-bold text-[10px] tracking-tight uppercase">COEFICIENTES</span>
+          <Link href="/admin/coefficients" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">🔢</span>
+            <span className="font-bold text-[9px] tracking-tight uppercase">COEFICIENTES</span>
           </Link>
           
-          <Link href="/admin/users" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/50 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-base opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform">👥</span>
-            <span className="font-bold text-[10px] tracking-tight uppercase">USUÁRIOS</span>
+          <Link href="/admin/users" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">👥</span>
+            <span className="font-bold text-[9px] tracking-tight uppercase">USUÁRIOS</span>
           </Link>
         </nav>
 

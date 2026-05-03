@@ -467,28 +467,43 @@ export default function OfertasPage() {
               Bancos Indisponíveis nesta Simulação
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {data.rejeitados.map((rej, i) => {
-                if (!rej) return null;
-                return (
-                  <div key={i} className="bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-slate-100 dark:border-white/5 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                         {rej?.logo_url ? (
-                           <img src={getStaticUrl(rej.logo_url)} className="w-full h-full object-cover" alt={rej?.banco} />
-                         ) : (
-                           <span className="text-base">🏦</span>
-                         )}
+              {data.rejeitados
+                .filter(rej => rej && !rej.banco?.toUpperCase().includes("C6")) // Filtro definitivo C6
+                .map((rej, i) => {
+                  if (!rej) return null;
+                  
+                  // Função para resumir e limpar motivos
+                  const getCleanMotivo = (msg) => {
+                    if (!msg) return "Requisitos não atendidos";
+                    const m = msg.toUpperCase();
+                    if (m.includes("IDADE")) return "IDADE FORA DO LIMITE";
+                    if (m.includes("ESPÉCIE") || m.includes("ESPECIE")) return "ESPÉCIE NÃO PERMITIDA";
+                    if (m.includes("ANALFABETO")) return "NÃO ACEITA ANALFABETO";
+                    if (m.includes("VALOR MÍNIMO") || m.includes("TROCO") || m.includes("MÍNIMO")) return "TROCO MÍNIMO NÃO ATINGIDO";
+                    if (m.includes("TABELA") || m.includes("REGRAS")) return "REGRAS DE TABELA NÃO ATENDIDAS";
+                    return msg.length > 50 ? msg.substring(0, 47) + "..." : msg;
+                  };
+
+                  return (
+                    <div key={i} className="bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-slate-100 dark:border-white/5 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                           {rej?.logo_url ? (
+                             <img src={getStaticUrl(rej.logo_url)} className="w-full h-full object-cover" alt={rej?.banco} />
+                           ) : (
+                             <span className="text-base">🏦</span>
+                           )}
+                        </div>
+                        <span className="font-black text-slate-900 dark:text-white uppercase text-[9px] truncate leading-tight flex-1">
+                          {rej?.banco || "Banco Indeterminado"}
+                        </span>
                       </div>
-                      <span className="font-black text-slate-900 dark:text-white uppercase text-[9px] truncate leading-tight flex-1">
-                        {rej?.banco || "Banco Indeterminado"}
-                      </span>
+                      <p className="text-[8px] text-red-500 font-black uppercase tracking-tight leading-relaxed italic">
+                        ❌ {getCleanMotivo(rej?.motivo)}
+                      </p>
                     </div>
-                    <p className="text-[8px] text-red-500 font-bold uppercase tracking-tight leading-relaxed italic">
-                      ❌ {rej?.motivo || "Não atende aos requisitos mínimos."}
-                    </p>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
         )}
