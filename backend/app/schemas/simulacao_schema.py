@@ -107,7 +107,7 @@ class BankCreate(BankBase):
 
 class BankResponse(BankBase):
     id: int
-    rules: Optional[List[BankRuleResponse]] = None
+    rules: Optional[List["BankRuleResponse"]] = None
     class Config:
         from_attributes = True
 
