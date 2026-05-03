@@ -1,22 +1,12 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: portabilidade_user
-      POSTGRES_PASSWORD: portabilidade_password
-      POSTGRES_DB: portabilidade_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./database:/docker-entrypoint-initdb.d
-
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
 
   backend:
     build: 
@@ -25,10 +15,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://portabilidade_user:portabilidade_password@db:5432/portabilidade_db
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     depends_on:
-      - db
       - redis
     volumes:
       - ./backend:/app
@@ -47,4 +36,4 @@ services:
       - /app/node_modules
 
 volumes:
-  pgdata:
+  redis_data:
