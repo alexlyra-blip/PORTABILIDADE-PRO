@@ -506,9 +506,9 @@ export default function SimuladorPage() {
                   {formData.agreement && (() => {
                     const match = subLogos.find(l => l.name === formData.agreement);
                     return match?.logo_url ? (
-                      <img src={getStaticUrl(match.logo_url)} alt="" className="w-12 h-12 object-contain rounded-xl overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
+                      <img src={getStaticUrl(match.logo_url)} alt="" className="w-9 h-9 object-contain rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
                     ) : (
-                      <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-xs">{formData.agreement.substring(0, 3)}</div>
+                      <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-[10px]">{formData.agreement.substring(0, 3)}</div>
                     );
                   })()}
                   <select name="agreement" value={formData.agreement} onChange={handleChange} className="input-premium flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold uppercase text-xs py-1.5" required>
@@ -536,9 +536,9 @@ export default function SimuladorPage() {
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">{isForcas ? "Força Armada" : "Estado"}</label>
                     <div className="flex items-center gap-2">
                       {currentLogoUrl ? (
-                        <img src={currentLogoUrl} alt="Logo" className="w-12 h-12 object-cover rounded-xl overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
+                        <img src={currentLogoUrl} alt="Logo" className="w-9 h-9 object-cover rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
                       ) : formData.sub_agreement ? (
-                        <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700">{formData.sub_agreement.substring(0, 2)}</div>
+                        <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-[10px]">{formData.sub_agreement.substring(0, 2)}</div>
                       ) : null}
                       <div className="relative flex-1">
                         <input 
@@ -698,7 +698,7 @@ export default function SimuladorPage() {
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Instituição de Origem (Contrato {activeContractIndex + 1})</label>
                   <div className="flex items-center gap-2">
                     {cLogo && (
-                      <img src={cLogo} alt="Logo" className="w-12 h-12 object-cover rounded-xl overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
+                      <img src={cLogo} alt="Logo" className="w-9 h-9 object-cover rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
                     )}
                     <div className="relative flex-1">
                       <input 
