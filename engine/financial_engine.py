@@ -37,24 +37,19 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
         except Exception:
             taxa_portabilidade_calc = 0.0
     
-    # 4. Cálculo da Portabilidade Ajustada (Conforme lógica do Preview)
-    # Portabilidade = Taxa Informada + Ajuste Portabilidade da Tabela
+    # 4. Cálculo da Portabilidade Ajustada
     taxa_port_base = float(cliente_input.taxa_juros or taxa_portabilidade_calc)
-    ajuste_port = float(tabela_obj.portability_adjustment or 0.0)
-    taxa_port_ajustada = taxa_port_base + ajuste_port
+    taxa_port_ajustada = taxa_port_base + float(tabela_obj.portability_adjustment or 0.0)
     
-    # 5. Cálculo da Taxa Final do Refinanciamento (Média Aritmética + Ajuste)
-    # LÓGICA: (Portabilidade Ajustada + Taxa Tabela) / 2 + Ajuste Refin
+    # 5. Cálculo do Teto (Final Refin) - CONFORME SOLICITADO
+    # LÓGICA: (PORTABILIDADE + TAXA TABELA) / 2 + AJUSTE REFIN
     taxa_tabela = float(tabela_obj.taxa_convenio or 0.0)
     if taxa_tabela <= 0:
         taxa_tabela = float(coeficiente_obj.interest_rate)
-    
-    media_ponderada = (taxa_port_ajustada + taxa_tabela) / 2
-    ajuste_refin = float(tabela_obj.refin_adjustment or 0.0)
-    final_refin_rate = media_ponderada + ajuste_refin
+        
+    final_refin_rate = ((taxa_port_ajustada + taxa_tabela) / 2) + float(tabela_obj.refin_adjustment or 0.0)
     
     # 6. Validação de Vantagem Real
-    # Se a Taxa da Tabela for maior ou igual ao Resultado Final, a tabela é descartada.
     disable_validation = any(getattr(r, "disable_weighted_rate_validation", False) for r in (banco.rules or []))
     
     if not disable_validation and taxa_tabela >= final_refin_rate:
@@ -63,9 +58,9 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     return True, float(valor_liberado), {
         "taxa_portabilidade_atual": float(taxa_port_ajustada),
         "taxa_refin": float(final_refin_rate),
-        "weighted_refin": float(media_ponderada),
-        "port_adj": float(ajuste_port),
-        "refin_adj": float(ajuste_refin),
+        "weighted_refin": float((taxa_port_ajustada + taxa_tabela) / 2),
+        "port_adj": float(tabela_obj.portability_adjustment or 0.0),
+        "refin_adj": float(tabela_obj.refin_adjustment or 0.0),
         "taxa_convenio": float(taxa_tabela)
     }, "Cálculo aprovado"
 
