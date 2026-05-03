@@ -183,25 +183,25 @@ export default function OfertasPage() {
       {/* Remoção da animação antiga para evitar duplicidade com o novo simulador */}
 
 
-      <div className="w-full max-w-[98%] mx-auto px-4 py-6 space-y-8 animate-fade-in">
+      <div className="w-full max-w-[1200px] mx-auto px-4 py-6 space-y-6 animate-fade-in">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-3xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-500/30">
-              <span className="text-white text-3xl font-black italic">PRO</span>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-500/30">
+              <span className="text-white text-xl font-black italic">PRO</span>
             </div>
             <div>
-              <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tighter">Oportunidades Disponíveis</h1>
-              <p className="text-slate-400 font-bold text-sm uppercase tracking-widest mt-1">Simulativo para: {inputData?.nome_cliente || "Geral"}</p>
+              <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tighter">Oportunidades Disponíveis</h1>
+              <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-0.5">Simulativo para: {inputData?.nome_cliente || "Geral"}</p>
             </div>
           </div>
-          <Link href="/simulador" className="px-10 py-5 bg-blue-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-blue-500/20 transition-all hover:scale-105">← Início</Link>
+          <Link href="/simulador" className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/20 transition-all hover:scale-105">← Início</Link>
         </div>
 
 
 
         {/* DADOS DA PORTABILIDADE SECTION */}
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-white/10 shadow-xl">
-          <h2 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-3">DADOS DA PORTABILIDADE</h2>
+        <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 border border-slate-100 dark:border-white/10 shadow-xl">
+          <h2 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3">DADOS DA PORTABILIDADE</h2>
 
           {contracts.length > 0 && (
             <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
@@ -209,7 +209,7 @@ export default function OfertasPage() {
                 <button
                   key={c.id}
                   onClick={() => setActiveContractId(c.id)}
-                  className={`px-6 py-2.5 rounded-xl text-sm font-black uppercase whitespace-nowrap transition-all ${activeContractId === c.id ? "bg-blue-600 text-white shadow-lg" : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200"}`}
+                  className={`px-4 py-2 rounded-lg text-xs font-black uppercase whitespace-nowrap transition-all ${activeContractId === c.id ? "bg-blue-600 text-white shadow-lg" : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200"}`}
                 >
                   CONTRATO {idx + 1}
                 </button>
@@ -237,8 +237,8 @@ export default function OfertasPage() {
               </div>
             </div>
 
-            <button onClick={() => window.print()} className="print:hidden bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 text-sm font-black uppercase px-6 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2 whitespace-nowrap">
-              📄 Baixar PDF / Imprimir
+            <button onClick={() => window.print()} className="print:hidden bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 text-[10px] font-black uppercase px-4 py-2 rounded-xl shadow-lg transition-all flex items-center gap-2 whitespace-nowrap">
+              📄 Imprimir
             </button>
           </div>
 
@@ -266,13 +266,13 @@ export default function OfertasPage() {
               }
 
               return (
-                <div className="flex items-center gap-4 min-w-[300px] xl:min-w-[350px] bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
-                  <div className="w-16 h-16 rounded-xl bg-white shadow-sm border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                    {matchedBank?.logo ? <img src={matchedBank.logo} alt="" className="w-full h-full object-cover" /> : <span className="text-2xl">🏛️</span>}
+                <div className="flex items-center gap-3 min-w-[280px] bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
+                  <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {matchedBank?.logo ? <img src={matchedBank.logo} alt="" className="w-full h-full object-cover" /> : <span className="text-xl">🏛️</span>}
                   </div>
                   <div>
-                    <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">INSTITUIÇÃO DE ORIGEM</p>
-                    <p className="text-base font-black text-slate-900 dark:text-white truncate max-w-[180px]">{activeContractData?.banco || "-"}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ORIGEM</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white truncate max-w-[150px]">{activeContractData?.banco || "-"}</p>
                   </div>
                 </div>
               );
@@ -280,27 +280,27 @@ export default function OfertasPage() {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-1 w-full">
               <div>
-                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">SALDO DEVEDOR</p>
-                <p className="text-base font-black text-slate-900 dark:text-white">{activeContractData?.saldoDevedor || "-"}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">SALDO DEVEDOR</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white">{activeContractData?.saldoDevedor || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">PARCELA</p>
-                <p className="text-base font-black text-slate-900 dark:text-white">{activeContractData?.parcela || "-"}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">PARCELA</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white">{activeContractData?.parcela || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">CONVÊNIO</p>
-                <p className="text-base font-black text-slate-900 dark:text-white">{inputData?.agreement || "-"}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">CONVÊNIO</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white">{inputData?.agreement || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">PRAZO RESTANTE</p>
-                <p className="text-base font-black text-slate-900 dark:text-white">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">PRAZO RESTANTE</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white">
                   {activeContractData?.prazoTotal ? `${Math.max(0, parseInt(activeContractData.prazoTotal) - parseInt(activeContractData.parcelasPagas || "0"))} Parcelas` : "-"}
                 </p>
               </div>
             </div>
           </div>
         </div>
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl p-3 rounded-[2.5rem] border border-slate-100 dark:border-white/10 shadow-2xl sticky top-4 z-[40]">
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl p-2 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-2xl sticky top-4 z-[40]">
           <div className="flex flex-col md:flex-row items-center gap-3">
             <div className="flex-1 w-full relative">
               <input type="text" value={filterBank} onChange={(e) => setFilterBank(e.target.value)} className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-3xl pl-14 pr-8 py-3 text-sm font-bold outline-none text-slate-800 dark:text-white" placeholder="Filtrar por Banco..." />
@@ -312,7 +312,7 @@ export default function OfertasPage() {
                 { id: "maior_troco", label: "Troco", icon: "💰" },
                 { id: "menor_taxa", label: "Taxa", icon: "📈" }
               ].map(opt => (
-                <button key={opt.id} onClick={() => setSortBy(opt.id)} className={`px-8 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 uppercase tracking-widest ${sortBy === opt.id ? "bg-white dark:bg-slate-700 text-blue-600 shadow-xl" : "text-slate-500 hover:text-slate-700"}`}>
+                <button key={opt.id} onClick={() => setSortBy(opt.id)} className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 uppercase tracking-widest ${sortBy === opt.id ? "bg-white dark:bg-slate-700 text-blue-600 shadow-xl" : "text-slate-500 hover:text-slate-700"}`}>
                   <span>{opt.icon}</span> {opt.label}
                 </button>
               ))}
@@ -339,29 +339,29 @@ export default function OfertasPage() {
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
               key={h.id}
               onClick={() => h.data && handleAccept(h.data)}
-              className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/10 shadow-xl flex flex-col hover:shadow-2xl cursor-pointer"
-              whileHover={{ y: -10, scale: 1.02, transition: { type: "spring", stiffness: 400 } }}
+              className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl flex flex-col hover:shadow-2xl cursor-pointer"
+              whileHover={{ y: -5, scale: 1.01, transition: { type: "spring", stiffness: 400 } }}
             >
-              <div className="flex items-center justify-between mb-8">
-                <span className={`px-4 py-1.5 ${h.bg} ${h.text} rounded-xl text-xs font-black underline decoration-2 underline-offset-4`}>{h.title}</span>
-                <span className="text-xs font-black text-slate-300 tracking-widest italic">{inputData?.agreement || "CONVÊNIO"}</span>
+              <div className="flex items-center justify-between mb-4">
+                <span className={`px-3 py-1 ${h.bg} ${h.text} rounded-lg text-[9px] font-black underline decoration-2 underline-offset-4`}>{h.title}</span>
+                <span className="text-[9px] font-black text-slate-300 tracking-widest italic">{inputData?.agreement || "CONVÊNIO"}</span>
               </div>
 
-              <div className="flex flex-col xl:flex-row items-center gap-4 mb-8 bg-slate-50 dark:bg-white/5 p-4 rounded-3xl border border-slate-100/50">
-                <div className="w-18 h-18 rounded-2xl overflow-hidden shrink-0 shadow-lg border border-white bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+              <div className="flex flex-col xl:flex-row items-center gap-3 mb-4 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100/50">
+                <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-lg border border-white bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
                   {h.data?.logo_url ? (
                     <img src={getStaticUrl(h.data.logo_url)} className="w-full h-full object-cover" alt="" />
                   ) : (
-                    <span className="text-2xl">😔</span>
+                    <span className="text-xl">🏛️</span>
                   )}
                 </div>
                 <div className="text-center xl:text-left">
-                  <h3 className="text-sm xl:text-lg font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight mt-1">
-                    {h.data?.banco || "NENHUMA SIMULAÇÃO DISPONÍVEL"}
+                  <h3 className="text-xs xl:text-sm font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight mt-1">
+                    {h.data?.banco || "INDISPONÍVEL"}
                   </h3>
-                  <p className="text-xs text-slate-400 font-bold uppercase mt-1 tracking-widest">{h.data?.tabela || "INDISPONÍVEL"} • PRAZO: {h.data?.prazo || "84"}X</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">{h.data?.tabela || "INDISPONÍVEL"} • PRAZO: {h.data?.prazo || "84"}X</p>
                   {h.data && (
-                    <span className="mt-2 inline-flex px-2 py-0.5 bg-blue-600 text-white text-xs font-black rounded-lg uppercase">CONVÊNIO {inputData?.agreement || "INSS"}</span>
+                    <span className="mt-1 inline-flex px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase">CONVÊNIO {inputData?.agreement || "INSS"}</span>
                   )}
                 </div>
               </div>
@@ -381,9 +381,9 @@ export default function OfertasPage() {
                     </div>
                   </div>
                 )}
-                <div className="flex justify-between items-center text-sm font-bold text-slate-400 uppercase tracking-widest">
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   <span>{h.label}</span>
-                  <span className={`text-2xl font-black tracking-tighter ${h.text}`}>{h.metric}</span>
+                  <span className={`text-xl font-black tracking-tighter ${h.text}`}>{h.metric}</span>
                 </div>
                 {h.id === "menor_taxa" && h.data && (
                   <div className="flex justify-between items-center text-sm font-bold text-slate-400 uppercase tracking-widest">
@@ -391,9 +391,9 @@ export default function OfertasPage() {
                     <span className="text-xl font-black tracking-tighter text-emerald-600">{formatCurrency(h.data.valor_liberado)}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center bg-blue-600 text-white p-3 rounded-2xl shadow-lg shadow-blue-500/30">
-                  <span className="text-xs font-black uppercase">Parcela Final</span>
-                  <span className="text-sm font-black italic">{h.data ? formatCurrency(h.data.valor_parcela) : "R$ 0,00"}</span>
+                <div className="flex justify-between items-center bg-blue-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-500/30">
+                  <span className="text-[10px] font-black uppercase">Parcela Final</span>
+                  <span className="text-xs font-black italic">{h.data ? formatCurrency(h.data.valor_parcela) : "R$ 0,00"}</span>
                 </div>
               </div>
             </motion.div>
@@ -413,22 +413,22 @@ export default function OfertasPage() {
               if (!offer) return null;
 
               return (
-                <div key={idx} className="bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-white/10 shadow-lg overflow-hidden transition-all hover:shadow-2xl">
+                <div key={idx} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-lg overflow-hidden transition-all hover:shadow-2xl">
                   <div className="flex flex-col lg:flex-row gap-0 items-stretch">
-                    <div className="bg-slate-50 dark:bg-white/5 p-6 lg:p-8 lg:w-1/3 xl:w-[28%] flex flex-col justify-center gap-6 shrink-0 relative">
-                      <div className="flex items-center gap-4">
-                        <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 shadow-xl border-2 border-white">
+                    <div className="bg-slate-50 dark:bg-white/5 p-5 lg:p-6 lg:w-1/3 xl:w-[28%] flex flex-col justify-center gap-4 shrink-0 relative">
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-xl border-2 border-white">
                           <img src={getStaticUrl(offer.logo_url)} className="w-full h-full object-cover" alt="" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="px-3 py-1 bg-blue-600 text-white text-xs font-black rounded-lg uppercase mb-2 inline-block truncate max-w-full">CONVÊNIO {inputData?.agreement || "INSS"}</span>
-                          <h3 className="text-lg xl:text-xl font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight break-words">{offer.banco}</h3>
-                          <p className="text-xs text-slate-400 font-bold uppercase mt-1 tracking-widest truncate">{offer.tabela} • PRAZO: {offer.prazo || "84"}X</p>
+                          <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase mb-1 inline-block truncate max-w-full">CONVÊNIO {inputData?.agreement || "INSS"}</span>
+                          <h3 className="text-sm xl:text-base font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight break-words">{offer.banco}</h3>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest truncate">{offer.tabela} • {offer.prazo || "84"}X</p>
                         </div>
                       </div>
                       {offers.length > 1 && (
-                        <button onClick={() => nextOffer(banco, offers.length)} className="mx-auto mt-2 text-xs font-black uppercase text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
-                          Ver Próxima <span className="bg-white/20 px-1.5 py-0.5 rounded-md">{currentOfferIdx + 1}/{offers.length}</span> ➔
+                        <button onClick={() => nextOffer(banco, offers.length)} className="mx-auto mt-1 text-[9px] font-black uppercase text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
+                          Ver Próxima <span className="bg-white/20 px-1 py-0.5 rounded-md">{currentOfferIdx + 1}/{offers.length}</span> ➔
                         </button>
                       )}
                     </div>
@@ -443,28 +443,28 @@ export default function OfertasPage() {
                           transition={{ duration: 0.5, type: "spring", bounce: 0.5 }}
                           className="flex flex-col md:flex-row items-center justify-between gap-6 p-8 lg:px-8 xl:px-10 border-l border-slate-50 w-full h-full"
                         >
-                          <div className="space-y-1 w-full md:w-auto text-center md:text-left">
-                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Taxa Port.</p>
-                            <p className="text-3xl font-black text-blue-600 tracking-tighter">{offer.taxa_portabilidade_atual?.toFixed(2)}%</p>
+                          <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa Port.</p>
+                            <p className="text-2xl font-black text-blue-600 tracking-tighter">{offer.taxa_portabilidade_atual?.toFixed(2)}%</p>
                           </div>
-                          <div className="space-y-1 w-full md:w-auto text-center md:text-left">
-                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Taxa Refin da Portabilidade</p>
-                            <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">
+                          <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa Refin</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
                               {offer.taxa_juros?.toFixed(2)}%
-                              <span className="text-xs text-slate-400 ml-1 font-bold">a.m.</span>
+                              <span className="text-[10px] text-slate-400 ml-1 font-bold">a.m.</span>
                             </p>
                           </div>
-                          <div className="space-y-1 bg-emerald-500/10 p-6 rounded-3xl border border-emerald-500/20 flex flex-col justify-center w-full md:w-auto shrink-0 md:min-w-[200px] xl:min-w-[240px] shadow-sm">
-                            <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-1 text-center md:text-left">TROCO LIBERADO</p>
-                            <p className="text-3xl xl:text-4xl font-black text-emerald-600 tracking-tighter whitespace-nowrap text-center md:text-left">{formatCurrency(offer.valor_liberado)}</p>
+                          <div className="space-y-0.5 bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 flex flex-col justify-center w-full md:w-auto shrink-0 md:min-w-[180px] xl:min-w-[210px] shadow-sm">
+                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center md:text-left">TROCO LIBERADO</p>
+                            <p className="text-2xl xl:text-3xl font-black text-emerald-600 tracking-tighter whitespace-nowrap text-center md:text-left">{formatCurrency(offer.valor_liberado)}</p>
                           </div>
                         </motion.div>
                       </AnimatePresence>
                     </div>
 
-                    <div className="p-8 lg:p-10 lg:w-1/5 xl:w-[18%] shrink-0 flex flex-col justify-center gap-3 border-t md:border-t-0 border-slate-50">
-                      <button onClick={() => handleAccept(offer)} className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30 transition-all hover:-translate-y-1">Aceitar</button>
-                      <p className="text-xs text-slate-400 font-bold uppercase text-center tracking-widest opacity-60">Geração de PDF Automática</p>
+                    <div className="p-6 lg:p-8 lg:w-1/5 xl:w-[18%] shrink-0 flex flex-col justify-center gap-2 border-t md:border-t-0 border-slate-50">
+                      <button onClick={() => handleAccept(offer)} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30 transition-all hover:-translate-y-1">Aceitar</button>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase text-center tracking-widest opacity-60">Geração de PDF Automática</p>
                     </div>
                   </div>
                 </div>
@@ -479,24 +479,24 @@ export default function OfertasPage() {
               <span className="w-8 h-[2px] bg-slate-200 dark:bg-white/10"></span>
               Bancos Indisponíveis nesta Simulação
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {data.rejeitados.map((rej, i) => {
                 if (!rej) return null;
                 return (
-                  <div key={i} className="bg-slate-50 dark:bg-white/5 p-5 rounded-2xl border border-slate-100 dark:border-white/5 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className="w-10 h-10 rounded-lg bg-white shadow-sm border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <div key={i} className="bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-slate-100 dark:border-white/5 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
                          {rej?.logo_url ? (
                            <img src={getStaticUrl(rej.logo_url)} className="w-full h-full object-cover" alt={rej?.banco} />
                          ) : (
-                           <span className="text-lg">🏦</span>
+                           <span className="text-base">🏦</span>
                          )}
                       </div>
-                      <span className="font-black text-slate-900 dark:text-white uppercase text-[10px] truncate leading-tight">
+                      <span className="font-black text-slate-900 dark:text-white uppercase text-[9px] truncate leading-tight flex-1">
                         {rej?.banco || "Banco Indeterminado"}
                       </span>
                     </div>
-                    <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight leading-relaxed italic">
+                    <p className="text-[8px] text-red-500 font-bold uppercase tracking-tight leading-relaxed italic">
                       ❌ {rej?.motivo || "Não atende aos requisitos mínimos."}
                     </p>
                   </div>
