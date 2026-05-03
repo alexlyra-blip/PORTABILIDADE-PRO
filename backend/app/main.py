@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 import sqlite3
+
+print("🚀 >>> BACKEND PORTABILIDADE-API TENTANDO CARREGAR MÓDULOS... <<<")
+
 from app.routers import auth, banks, users, admin, pdf, simulacao
 
 # Database Migration Hack (Safe for Windows env)
