@@ -37,45 +37,36 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
         except Exception:
             taxa_portabilidade_calc = 0.0
     
-    # 4. Applying Adjustments from TABLE (Phase 7)
-    port_adj = float(tabela_obj.portability_adjustment or 0.0)
-    # Prioriza a taxa informada pelo usuário (calculadora) sobre o cálculo automático do motor
-    base_port_rate = float(cliente_input.taxa_juros or taxa_portabilidade_calc)
-    nova_taxa_portabilidade = base_port_rate + port_adj
+    # 4. Cálculo da Portabilidade Ajustada (Conforme lógica do Preview)
+    # Portabilidade = Taxa Informada + Ajuste Portabilidade da Tabela
+    taxa_port_base = float(cliente_input.taxa_juros or taxa_portabilidade_calc)
+    ajuste_port = float(tabela_obj.portability_adjustment or 0.0)
+    taxa_port_ajustada = taxa_port_base + ajuste_port
     
-    # 5. Weighted Refinancing Rate Math
-    taxa_convenio_tabela = float(tabela_obj.taxa_convenio or 0.0)
+    # 5. Cálculo da Taxa Final do Refinanciamento (Média Aritmética + Ajuste)
+    # LÓGICA: (Portabilidade Ajustada + Taxa Tabela) / 2 + Ajuste Refin
+    taxa_tabela = float(tabela_obj.taxa_convenio or 0.0)
+    if taxa_tabela <= 0:
+        taxa_tabela = float(coeficiente_obj.interest_rate)
     
-    # Se taxa convenio for zero, usamos o interest_rate do próprio coeficiente como base (Taxa Tabela)
-    base_rate = taxa_convenio_tabela if taxa_convenio_tabela > 0 else float(coeficiente_obj.interest_rate)
+    media_ponderada = (taxa_port_ajustada + taxa_tabela) / 2
+    ajuste_refin = float(tabela_obj.refin_adjustment or 0.0)
+    final_refin_rate = media_ponderada + ajuste_refin
     
-    # FÓRMULA CORRIGIDA: Usa a taxa JÁ AJUSTADA (ex: 1,40%) para a média
-    taxa_refin_ponderada = (nova_taxa_portabilidade + base_rate) / 2
-    
-    refin_adj = float(tabela_obj.refin_adjustment or 0.0)
-    final_refin_rate = taxa_refin_ponderada + refin_adj
-    
-    # 6. Validation: Dual Rate Check (Portability & Refinance)
-    # 6.a Validação Portabilidade: Deve atingir o mínimo específico da tabela (se houver)
-    min_port_limit = float(getattr(tabela_obj, "min_port_rate", 0.0) or 0.0)
-    if min_port_limit > 0 and nova_taxa_portabilidade < (min_port_limit - 0.0001):
-        return False, 0.0, None, f"Taxa Portabilidade ({nova_taxa_portabilidade:.3f}%) abaixo do mínimo da tabela ({min_port_limit:.3f}%)."
-
-    # 6.b Validação Refin: Regra de Vantagem Real (Tabela < Final Refin)
-    # Compara a taxa da tabela (1,55%) diretamente contra o custo final da operação (1,59%)
-    # Se a tabela for mais barata que o custo final, ela é vantajosa.
+    # 6. Validação de Vantagem Real
+    # Se a Taxa da Tabela for maior ou igual ao Resultado Final, a tabela é descartada.
     disable_validation = any(getattr(r, "disable_weighted_rate_validation", False) for r in (banco.rules or []))
     
-    if not disable_validation and base_rate >= final_refin_rate:
-        return False, 0.0, None, f"Taxa da tabela ({base_rate:.3f}%) não é inferior à Taxa Refin Final ({final_refin_rate:.3f}%)"
+    if not disable_validation and taxa_tabela >= final_refin_rate:
+        return False, 0.0, None, f"Taxa da tabela ({taxa_tabela:.3f}%) não é inferior à Taxa Refin Final ({final_refin_rate:.3f}%)"
     
     return True, float(valor_liberado), {
-        "taxa_portabilidade_atual": float(nova_taxa_portabilidade),
+        "taxa_portabilidade_atual": float(taxa_port_ajustada),
         "taxa_refin": float(final_refin_rate),
-        "weighted_refin": float(taxa_refin_ponderada),
-        "port_adj": float(port_adj),
-        "refin_adj": float(refin_adj),
-        "taxa_convenio": float(taxa_convenio_tabela)
+        "weighted_refin": float(media_ponderada),
+        "port_adj": float(ajuste_port),
+        "refin_adj": float(ajuste_refin),
+        "taxa_convenio": float(taxa_tabela)
     }, "Cálculo aprovado"
 
 def resolver_taxa_juros(pv, pmt, n):
