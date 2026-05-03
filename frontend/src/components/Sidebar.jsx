@@ -93,14 +93,14 @@ export default function Sidebar() {
       }}
     >
       {/* Header: Centered Avatar + Branding Row */}
-      <div className="p-6 pb-4 border-b border-white/5 flex flex-col items-center">
+      <div className="p-4 pb-3 border-b border-white/5 flex flex-col items-center">
         {/* Avatar Area */}
         <motion.div
-          className="mb-4 relative"
+          className="mb-3 relative"
           animate={{ y: [0, -5, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white/30 shadow-[0_0_30px_rgba(0,0,0,0.4)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/30 shadow-[0_0_30px_rgba(0,0,0,0.4)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
             {(profileImageUrl && !imgError) ? (
               <img
                 src={profileImageUrl}
@@ -113,7 +113,7 @@ export default function Sidebar() {
               />
             ) : (
               <div
-                className="w-full h-full flex items-center justify-center font-black text-4xl text-white shadow-inner"
+                className="w-full h-full flex items-center justify-center font-black text-3xl text-white shadow-inner"
                 style={{ backgroundColor: user.brand_color || '#3b82f6' }}
               >
                 {user.name?.charAt(0).toUpperCase()}
@@ -128,24 +128,24 @@ export default function Sidebar() {
         </motion.div>
 
         {/* Username Banner */}
-        <div className="mb-3 text-center flex flex-col items-center w-full">
-          <p className="text-[10px] font-black uppercase text-blue-400 tracking-wider opacity-80 mb-0.5 text-center">Bem-vindo(a)</p>
-          <h2 className="text-sm font-black text-white truncate max-w-[180px] drop-shadow-md text-center mx-auto">{user.name}</h2>
+        <div className="mb-2 text-center flex flex-col items-center w-full">
+          <p className="text-[9px] font-black uppercase text-blue-400 tracking-wider opacity-80 mb-0.5 text-center">Bem-vindo(a)</p>
+          <h2 className="text-xs font-black text-white truncate max-w-[180px] drop-shadow-md text-center mx-auto">{user.name}</h2>
         </div>
 
         {/* Branding Row */}
         <div className="flex items-center justify-center gap-1 mt-1 group cursor-pointer text-center relative z-20">
           <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-sm text-white shadow-lg border border-white/30 pointer-events-none"
+            className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-lg border border-white/30 pointer-events-none"
             style={{ backgroundColor: user.brand_color || '#3b82f6' }}
           >
             P
           </div>
-          <span className="text-lg font-black tracking-tighter drop-shadow-lg text-white">
+          <span className="text-base font-black tracking-tighter drop-shadow-lg text-white">
             Portabilidade<span className="pointer-events-none" style={{ color: proColor }}>PRO</span>
           </span>
         </div>
-        <p className="text-[9px] text-white/30 uppercase tracking-[0.2em] font-black mt-1 italic text-center">Simulador Inteligente</p>
+        <p className="text-[8px] text-white/30 uppercase tracking-[0.2em] font-black mt-1 italic text-center">Simulador Inteligente</p>
       </div>
 
       {/* Navigation */}
@@ -159,7 +159,7 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group mt-4 relative overflow-hidden shadow-2xl border-2 cursor-pointer ${isActive
+                className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mt-4 relative overflow-hidden shadow-2xl border-2 cursor-pointer ${isActive
                     ? "border-white/40 opacity-100 scale-105"
                     : "border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
                   }`}
@@ -170,8 +170,8 @@ export default function Sidebar() {
                 }}
               >
                 {!isActive && <div className="absolute inset-0 bg-white/10 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>}
-                <span className="text-2xl transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none">{item.icon}</span>
-                <span className="font-black text-xs uppercase tracking-[0.2em] pointer-events-none">{item.name}</span>
+                <span className="text-xl transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none">{item.icon}</span>
+                <span className="font-black text-[11px] uppercase tracking-[0.2em] pointer-events-none">{item.name}</span>
                 <div className="ml-auto opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all text-sm pointer-events-none">🚀</div>
               </Link>
             );
@@ -181,12 +181,12 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-200 group cursor-pointer ${isActive ? "text-white shadow-lg" : "text-white/50 hover:text-white hover:bg-white/5"
+              className={`flex items-center gap-3 px-4 py-1.5 rounded-xl transition-all duration-200 group cursor-pointer ${isActive ? "text-white shadow-lg" : "text-white/50 hover:text-white hover:bg-white/5"
                 }`}
               style={isActive ? { backgroundColor: user.brand_color || '#2563eb' } : {}}
             >
-              <span className={`text-xl transition-transform group-hover:scale-110 pointer-events-none ${isActive ? "" : "opacity-70"}`}>{item.icon}</span>
-              <span className="font-bold text-sm tracking-tight pointer-events-none">{item.name}</span>
+              <span className={`text-lg transition-transform group-hover:scale-110 pointer-events-none ${isActive ? "" : "opacity-70"}`}>{item.icon}</span>
+              <span className="font-bold text-xs tracking-tight pointer-events-none">{item.name}</span>
             </Link>
           );
         })}
@@ -195,19 +195,19 @@ export default function Sidebar() {
           <div className="pt-6 mt-6 border-t border-white/5 space-y-1">
             <p className="px-4 text-xs font-black text-white/20 uppercase tracking-[0.3em] mb-3 italic">Área Administrativa</p>
             {user.role === 'admin' && (
-              <Link href="/admin" className="flex items-center gap-4 px-4 py-2 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
-                <span className="text-xl opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none">📊</span>
-                <span className="font-bold text-sm tracking-tight pointer-events-none">Painel Admin</span>
+              <Link href="/admin" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
+                <span className="text-lg opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none">📊</span>
+                <span className="font-bold text-xs tracking-tight pointer-events-none">Painel Admin</span>
               </Link>
             )}
-            <Link href="/admin/users" className="flex items-center gap-4 px-4 py-2 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
-              <span className="text-xl opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none">👥</span>
-              <span className="font-bold text-sm tracking-tight pointer-events-none">{user.role === 'promotora' ? 'Usuários' : 'Gestão Usuários'}</span>
+            <Link href="/admin/users" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
+              <span className="text-lg opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none">👥</span>
+              <span className="font-bold text-xs tracking-tight pointer-events-none">{user.role === 'promotora' ? 'Usuários' : 'Gestão Usuários'}</span>
             </Link>
             {user.role === 'promotora' && (
-              <Link href="/admin/promotora-rules" className="flex items-center gap-4 px-4 py-2 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
-                <span className="text-xl opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none">⚙️</span>
-                <span className="font-bold text-sm tracking-tight pointer-events-none">Regra Bancos</span>
+              <Link href="/admin/promotora-rules" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
+                <span className="text-lg opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none">⚙️</span>
+                <span className="font-bold text-xs tracking-tight pointer-events-none">Regra Bancos</span>
               </Link>
             )}
           </div>

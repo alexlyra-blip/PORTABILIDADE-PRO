@@ -471,15 +471,15 @@ export default function SimuladorPage() {
 
       <div className="mb-10 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-white/10 shadow-2xl overflow-hidden animate-fade-in">
         
-        <div className="bg-blue-600 p-6 flex items-center gap-6">
-          <div className="w-12 h-12 rounded-[1.2rem] bg-white/20 backdrop-blur-xl flex items-center justify-center text-white text-2xl shadow-2xl">⚡</div>
+        <div className="bg-blue-600 p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-[1rem] bg-white/20 backdrop-blur-xl flex items-center justify-center text-white text-xl shadow-2xl">⚡</div>
           <div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Simulador PRO</h2>
-            <p className="text-[9px] text-white/70 font-bold uppercase tracking-[0.4em] mt-0.5">Análise de Portabilidade e Elegibilidade</p>
+            <h2 className="text-xl font-black text-white uppercase tracking-tighter">Simulador PRO</h2>
+            <p className="text-[8px] text-white/70 font-bold uppercase tracking-[0.4em] mt-0.5">Análise de Portabilidade e Elegibilidade</p>
           </div>
         </div>
 
-        <form onSubmit={handleSimular} className="p-6 space-y-8">
+        <form onSubmit={handleSimular} className="p-5 space-y-6">
           
           <div className="space-y-10">
             <h3 className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest border-l-8 border-blue-600 pl-4 py-2 bg-blue-50/50 dark:bg-blue-900/20 rounded-r-xl">I. Perfil de Identificação</h3>
@@ -601,21 +601,21 @@ export default function SimuladorPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 py-8 px-10 bg-slate-50 dark:bg-white/5 rounded-[2.5rem] border border-slate-100 dark:border-white/5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6 px-8 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-slate-100 dark:border-white/5">
               {parseInt(formData.idade || 0) >= 60 && (
-                <div className="space-y-5">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block text-center">CLIENTE 60+</label>
-                  <div className="flex p-1.5 bg-slate-200 dark:bg-slate-800 rounded-[1.4rem] w-full shadow-inner">
-                    <button type="button" onClick={() => setFormData({...formData, is_60_plus: false})} className={`flex-1 py-2.5 rounded-[1.1rem] text-[10px] font-black uppercase transition-all ${!formData.is_60_plus ? "bg-white dark:bg-slate-700 text-blue-600 shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Não</button>
-                    <button type="button" onClick={() => setFormData({...formData, is_60_plus: true})} className={`flex-1 py-2.5 rounded-[1.1rem] text-[10px] font-black uppercase transition-all ${formData.is_60_plus ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Sim (60+)</button>
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-center">CLIENTE 60+</label>
+                  <div className="flex p-1 bg-slate-200 dark:bg-slate-800 rounded-[1.2rem] w-full shadow-inner">
+                    <button type="button" onClick={() => setFormData({...formData, is_60_plus: false})} className={`flex-1 py-2 rounded-[1rem] text-[9px] font-black uppercase transition-all ${!formData.is_60_plus ? "bg-white dark:bg-slate-700 text-blue-600 shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Não</button>
+                    <button type="button" onClick={() => setFormData({...formData, is_60_plus: true})} className={`flex-1 py-2 rounded-[1rem] text-[9px] font-black uppercase transition-all ${formData.is_60_plus ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Sim (60+)</button>
                   </div>
                 </div>
               )}
               <div className="space-y-4">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block text-center">Cliente Alfabetizado?</label>
-                <div className="flex p-1.5 bg-slate-200 dark:bg-slate-800 rounded-[1.4rem] w-full shadow-inner">
-                   <button type="button" onClick={() => setFormData({...formData, analfabeto: 'nao'})} className={`flex-1 py-2.5 rounded-[1.1rem] text-[10px] font-black uppercase transition-all ${formData.analfabeto === 'nao' ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Sim</button>
-                   <button type="button" onClick={() => setFormData({...formData, analfabeto: 'sim'})} className={`flex-1 py-2.5 rounded-[1.1rem] text-[10px] font-black uppercase transition-all ${formData.analfabeto === 'sim' ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Não</button>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-center">Cliente Alfabetizado?</label>
+                <div className="flex p-1 bg-slate-200 dark:bg-slate-800 rounded-[1.2rem] w-full shadow-inner">
+                   <button type="button" onClick={() => setFormData({...formData, analfabeto: 'nao'})} className={`flex-1 py-2 rounded-[1rem] text-[9px] font-black uppercase transition-all ${formData.analfabeto === 'nao' ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Sim</button>
+                   <button type="button" onClick={() => setFormData({...formData, analfabeto: 'sim'})} className={`flex-1 py-2 rounded-[1rem] text-[9px] font-black uppercase transition-all ${formData.analfabeto === 'sim' ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Não</button>
                 </div>
               </div>
             </div>

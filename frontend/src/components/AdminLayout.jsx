@@ -11,28 +11,28 @@ const AdminLayout = ({ children }) => {
             Admin Panel
           </h1>
         </div>
-        <nav className="flex-1 px-4 space-y-1">
-          <Link href="/admin" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
+        <nav className="flex-1 px-4 space-y-0.5">
+          <Link href="/admin" className="block p-1.5 rounded-lg hover:bg-slate-700 transition-colors text-xs">
             Painel Geral
           </Link>
-          <Link href="/admin/banks" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/banks" className="block p-1.5 rounded-lg hover:bg-slate-700 transition-colors text-xs">
             Bancos
           </Link>
-          <Link href="/admin/rules" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/rules" className="block p-1.5 rounded-lg hover:bg-slate-700 transition-colors text-xs">
             Regras
           </Link>
-          <Link href="/admin/tables" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/tables" className="block p-1.5 rounded-lg hover:bg-slate-700 transition-colors text-xs">
             Tabelas
           </Link>
-          <Link href="/admin/coefficients" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/coefficients" className="block p-1.5 rounded-lg hover:bg-slate-700 transition-colors text-xs">
             Coeficientes
           </Link>
-          <Link href="/admin/users" className="block p-2.5 rounded-lg hover:bg-slate-700 transition-colors">
+          <Link href="/admin/users" className="block p-1.5 rounded-lg hover:bg-slate-700 transition-colors text-xs">
             Usuários
           </Link>
         </nav>
         <div className="p-4 border-t border-slate-700">
-          <Link href="/simulador" className="block p-2.5 text-center rounded-lg bg-blue-600 hover:bg-blue-500 transition-all font-semibold">
+          <Link href="/simulador" className="block p-1.5 text-center rounded-lg bg-blue-600 hover:bg-blue-500 transition-all font-semibold text-xs">
             Ir para Simulador
           </Link>
         </div>
@@ -40,11 +40,11 @@ const AdminLayout = ({ children }) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-8">
-          <div className="text-slate-400">Manage your simulation system configuration</div>
+        <header className="h-12 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-8">
+          <div className="text-slate-400 text-xs">Manage your simulation system configuration</div>
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">Administrador</span>
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold">A</div>
+            <span className="text-xs font-medium">Administrador</span>
+            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center font-bold text-[10px]">A</div>
           </div>
         </header>
         <div className="p-8 flex-1 overflow-y-auto">

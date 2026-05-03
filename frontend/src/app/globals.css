@@ -35,7 +35,7 @@
     color: var(--foreground) !important;
     background: var(--background) !important;
     transition: background-color 0.3s ease, color 0.3s ease;
-    font-size: 14px;
+    font-size: 13px;
   }
 
   /* Forçar cores em elementos que o Tailwind pode estar travando */
@@ -94,7 +94,7 @@
   }
 
   .input-premium {
-    @apply w-full bg-white dark:bg-[#0f172a]/80 border border-slate-300 dark:border-white/10 rounded-lg px-4 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all;
+    @apply w-full bg-white dark:bg-[#0f172a]/80 border border-slate-300 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all;
   }
 
   .simulator-panel {
@@ -102,11 +102,11 @@
   }
 
   .input-admin {
-    @apply w-full bg-white border border-slate-200 rounded-lg px-4 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all;
+    @apply w-full bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all;
   }
   
   .btn-premium {
-    @apply relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-6 rounded-lg transition-all shadow-lg shadow-blue-500/40 hover:shadow-xl hover:shadow-blue-500/60 hover:-translate-y-0.5 active:translate-y-0;
+    @apply relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-medium py-1.5 px-5 rounded-lg transition-all shadow-lg shadow-blue-500/40 hover:shadow-xl hover:shadow-blue-500/60 hover:-translate-y-0.5 active:translate-y-0 text-xs;
   }
   
   .bg-orb {
