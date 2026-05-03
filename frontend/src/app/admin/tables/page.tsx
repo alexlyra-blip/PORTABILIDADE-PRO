@@ -190,7 +190,9 @@ export default function TablesPage() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-200">
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Banco</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Nome da Tabela</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Prazo</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Convênio</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
@@ -198,40 +200,56 @@ export default function TablesPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={3} className="px-6 py-12 text-center text-slate-400 italic">Carregando tabelas...</td></tr>
+              <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Carregando tabelas...</td></tr>
             ) : !selectedBankId ? (
-              <tr><td colSpan={3} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco para ver as tabelas.</td></tr>
+              <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco para ver as tabelas.</td></tr>
             ) : tables.length === 0 ? (
-              <tr><td colSpan={3} className="px-6 py-12 text-center text-slate-400 italic">Nenhuma tabela cadastrada para este banco.</td></tr>
+              <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Nenhuma tabela cadastrada para este banco.</td></tr>
             ) : (
-              tables.map((table) => (
-                <tr key={table.id} className="hover:bg-blue-50/10 transition-colors group">
-                  <td className="px-6 py-4">
-                    <span className="font-bold text-slate-700">{table.name}</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md text-xs">{table.agreement}</span>
-                    {table.sub_agreement && (
-                      <span className="ml-2 font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded-md text-xs">{table.sub_agreement}</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase ${
-                      table.active 
-                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
-                        : "bg-slate-100 text-slate-500 border border-slate-200"
-                    }`}>
-                      {table.active ? "Ativa" : "Inativa"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => handleOpenModal(table)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-amber-50 rounded-lg transition-all">✏️</button>
-                      <button onClick={() => handleDelete(table.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              tables.map((table) => {
+                const bank = banks.find(b => b.id.toString() === selectedBankId);
+                return (
+                  <tr key={table.id} className="hover:bg-blue-50/10 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        {bank?.logo_url && (
+                          <div className="w-6 h-6 rounded-md overflow-hidden border border-slate-100 bg-white">
+                            <img src={bank.logo_url} className="w-full h-full object-contain" />
+                          </div>
+                        )}
+                        <span className="text-[10px] font-black uppercase text-slate-400">{bank?.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-bold text-slate-700">{table.name}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="font-black text-blue-600 text-xs">{table.term || "84"}x</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md text-xs">{table.agreement}</span>
+                      {table.sub_agreement && (
+                        <span className="ml-2 font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded-md text-xs">{table.sub_agreement}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase ${
+                        table.active 
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
+                          : "bg-slate-100 text-slate-500 border border-slate-200"
+                      }`}>
+                        {table.active ? "Ativa" : "Inativa"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleOpenModal(table)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-amber-50 rounded-lg transition-all">✏️</button>
+                        <button onClick={() => handleDelete(table.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

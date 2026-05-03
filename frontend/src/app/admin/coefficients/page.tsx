@@ -200,17 +200,26 @@ export default function CoefficientsPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Carregando coeficientes...</td></tr>
+              <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">Carregando coeficientes...</td></tr>
             ) : !selectedTableId ? (
-              <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco e uma tabela.</td></tr>
+              <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco e uma tabela.</td></tr>
             ) : coefficients.length === 0 ? (
-              <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Nenhum coeficiente cadastrado para esta tabela.</td></tr>
+              <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">Nenhum coeficiente cadastrado para esta tabela.</td></tr>
             ) : (
-              coefficients.map((coeff) => (
-                <tr key={coeff.id} className="hover:bg-blue-50/10 transition-colors group">
-                  <td className="px-6 py-4">
-                    <span className="font-semibold text-slate-700">{tables.find(t => t.id?.toString() === selectedTableId)?.name || '-'}</span>
-                  </td>
+              coefficients.map((coeff) => {
+                const bank = banks.find(b => b.id.toString() === selectedBankId);
+                return (
+                  <tr key={coeff.id} className="hover:bg-blue-50/10 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        {bank?.logo_url && (
+                          <div className="w-6 h-6 rounded-md overflow-hidden border border-slate-100 bg-white">
+                            <img src={bank.logo_url} className="w-full h-full object-contain" />
+                          </div>
+                        )}
+                        <span className="font-semibold text-slate-700">{tables.find(t => t.id?.toString() === selectedTableId)?.name || '-'}</span>
+                      </div>
+                    </td>
                   <td className="px-6 py-4">
                     <span className="px-2 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase bg-blue-50 text-blue-600 border border-blue-100">
                       {tables.find(t => t.id?.toString() === selectedTableId)?.agreement || '-'}
