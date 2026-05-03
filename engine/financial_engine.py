@@ -59,11 +59,9 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     if min_port_limit > 0 and nova_taxa_portabilidade < (min_port_limit - 0.0001):
         return False, 0.0, None, f"Taxa Portabilidade ({nova_taxa_portabilidade:.3f}%) abaixo do mínimo da tabela ({min_port_limit:.3f}%)."
 
-    # 6.b Validação Refin: Deve atingir o mínimo específico da tabela
-    min_refin_limit = float(tabela_obj.min_rate or coeficiente_obj.interest_rate or 0.0)
-    if final_refin_rate < (min_refin_limit - 0.0001):
-        return False, 0.0, None, f"Taxa Refin final ({final_refin_rate:.3f}%) abaixo do mínimo da tabela ({min_refin_limit:.3f}%)."
-
+    # 6.b Validação Refin: REMOVIDA para permitir taxas menores e vantajosas para o cliente
+    # Anteriormente: bloqueava se final_refin_rate < min_refin_limit
+    
     return True, float(valor_liberado), {
         "taxa_portabilidade_atual": float(nova_taxa_portabilidade),
         "taxa_refin": float(final_refin_rate),
