@@ -17,25 +17,38 @@ app = FastAPI(
 
 # REFORMA DE BANCO - FORÇA BRUTA
 def run_db_fix():
+    print("🛠️ Iniciando run_db_fix()...")
     import psycopg2
     try:
         db_url = os.getenv("DATABASE_URL")
-        if not db_url: return
-        conn = psycopg2.connect(db_url)
+        if not db_url: 
+            print("⚠️ DATABASE_URL não encontrada no ambiente.")
+            return
+        
+        # Garante o driver correto para o psycopg2
+        if db_url.startswith("postgresql+asyncpg://"):
+            db_url = db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        
+        print(f"🔌 Tentando conectar ao banco para reforma: {db_url.split('@')[-1]}")
+        conn = psycopg2.connect(db_url, connect_timeout=5)
         conn.autocommit = True
         cursor = conn.cursor()
-        print("FORCING DB SCHEMA UPDATE...")
+        print("🔨 Executando ALTER COLUMNs...")
         cursor.execute('ALTER TABLE "users" ALTER COLUMN "avatar_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT;')
-        print("DB SCHEMA UPDATED SUCCESSFULLY.")
+        print("✅ Colunas convertidas para TEXT.")
         cursor.close()
         conn.close()
     except Exception as e:
-        print(f"DB FIX WARNING: {e}")
+        print(f"❌ DB FIX ERROR: {e}")
 
-run_db_fix()
+print("🚀 INICIANDO BACKEND PORTABILIDADE-API...")
+try:
+    run_db_fix()
+except Exception as e:
+    print(f"🔥 Erro fatal no run_db_fix: {e}")
 
 @app.middleware("http")
 async def catch_exceptions_middleware(request, call_next):
