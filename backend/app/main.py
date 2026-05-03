@@ -28,6 +28,7 @@ def run_db_fix():
         cursor.execute('ALTER TABLE "users" ALTER COLUMN "avatar_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT;')
+        cursor.execute('ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT;')
         print("DB SCHEMA UPDATED SUCCESSFULLY.")
         cursor.close()
         conn.close()
@@ -84,7 +85,8 @@ async def startup_event():
         reformas = [
             'ALTER TABLE "users" ALTER COLUMN "avatar_url" TYPE TEXT',
             'ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT',
-            'ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT'
+            'ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT',
+            'ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT'
         ]
         for sql in reformas:
             try: 
