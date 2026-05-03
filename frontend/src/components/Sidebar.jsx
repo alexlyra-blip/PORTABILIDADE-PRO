@@ -93,14 +93,14 @@ export default function Sidebar() {
       }}
     >
       {/* Header: Centered Avatar + Branding Row */}
-      <div className="p-4 pb-3 border-b border-white/5 flex flex-col items-center">
+      <div className="p-8 pb-6 border-b border-white/5 flex flex-col items-center">
         {/* Avatar Area */}
         <motion.div
-          className="mb-3 relative"
+          className="mb-5 relative"
           animate={{ y: [0, -5, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/30 shadow-[0_0_30px_rgba(0,0,0,0.4)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
+          <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/30 shadow-[0_0_30px_rgba(0,0,0,0.4)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
             {(profileImageUrl && !imgError) ? (
               <img
                 src={profileImageUrl}
@@ -113,7 +113,7 @@ export default function Sidebar() {
               />
             ) : (
               <div
-                className="w-full h-full flex items-center justify-center font-black text-3xl text-white shadow-inner"
+                className="w-full h-full flex items-center justify-center font-black text-5xl text-white shadow-inner"
                 style={{ backgroundColor: user.brand_color || '#3b82f6' }}
               >
                 {user.name?.charAt(0).toUpperCase()}
@@ -128,24 +128,24 @@ export default function Sidebar() {
         </motion.div>
 
         {/* Username Banner */}
-        <div className="mb-2 text-center flex flex-col items-center w-full">
-          <p className="text-[9px] font-black uppercase text-blue-400 tracking-wider opacity-80 mb-0.5 text-center">Bem-vindo(a)</p>
-          <h2 className="text-xs font-black text-white truncate max-w-[180px] drop-shadow-md text-center mx-auto">{user.name}</h2>
+        <div className="mb-4 text-center flex flex-col items-center w-full">
+          <p className="text-[11px] font-black uppercase text-blue-400 tracking-wider opacity-80 mb-0.5 text-center">Bem-vindo(a)</p>
+          <h2 className="text-base font-black text-white truncate max-w-[180px] drop-shadow-md text-center mx-auto">{user.name}</h2>
         </div>
 
         {/* Branding Row */}
-        <div className="flex items-center justify-center gap-1 mt-1 group cursor-pointer text-center relative z-20">
+        <div className="flex items-center justify-center gap-1.5 mt-2 group cursor-pointer text-center relative z-20">
           <div
-            className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs text-white shadow-lg border border-white/30 pointer-events-none"
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-base text-white shadow-lg border border-white/30 pointer-events-none"
             style={{ backgroundColor: user.brand_color || '#3b82f6' }}
           >
             P
           </div>
-          <span className="text-base font-black tracking-tighter drop-shadow-lg text-white">
+          <span className="text-xl font-black tracking-tighter drop-shadow-lg text-white">
             Portabilidade<span className="pointer-events-none" style={{ color: proColor }}>PRO</span>
           </span>
         </div>
-        <p className="text-[8px] text-white/30 uppercase tracking-[0.2em] font-black mt-1 italic text-center">Simulador Inteligente</p>
+        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-black mt-2 italic text-center">Simulador Inteligente</p>
       </div>
 
       {/* Navigation */}

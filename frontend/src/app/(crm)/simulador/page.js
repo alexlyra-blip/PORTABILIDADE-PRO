@@ -471,11 +471,11 @@ export default function SimuladorPage() {
 
       <div className="mb-10 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-white/10 shadow-2xl overflow-hidden animate-fade-in">
         
-        <div className="bg-blue-600 p-4 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-[1rem] bg-white/20 backdrop-blur-xl flex items-center justify-center text-white text-xl shadow-2xl">⚡</div>
+        <div className="bg-blue-600 p-10 flex items-center gap-6">
+          <div className="w-16 h-16 rounded-[1.5rem] bg-white/20 backdrop-blur-xl flex items-center justify-center text-white text-3xl shadow-2xl">⚡</div>
           <div>
-            <h2 className="text-xl font-black text-white uppercase tracking-tighter">Simulador PRO</h2>
-            <p className="text-[8px] text-white/70 font-bold uppercase tracking-[0.4em] mt-0.5">Análise de Portabilidade e Elegibilidade</p>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Simulador PRO</h2>
+            <p className="text-[10px] text-white/70 font-bold uppercase tracking-[0.4em] mt-1">Análise de Portabilidade e Elegibilidade</p>
           </div>
         </div>
 

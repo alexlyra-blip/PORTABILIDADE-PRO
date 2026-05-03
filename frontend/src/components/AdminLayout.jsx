@@ -40,11 +40,11 @@ const AdminLayout = ({ children }) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        <header className="h-12 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-8">
-          <div className="text-slate-400 text-xs">Manage your simulation system configuration</div>
+        <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-8">
+          <div className="text-slate-400">Manage your simulation system configuration</div>
           <div className="flex items-center gap-4">
-            <span className="text-xs font-medium">Administrador</span>
-            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center font-bold text-[10px]">A</div>
+            <span className="text-sm font-medium text-white">Administrador</span>
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white shadow-lg">A</div>
           </div>
         </header>
         <div className="p-8 flex-1 overflow-y-auto">
