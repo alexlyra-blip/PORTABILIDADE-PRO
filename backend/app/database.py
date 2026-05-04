@@ -6,9 +6,16 @@ import os
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    DATABASE_URL = "sqlite+aiosqlite:///./local_db.sqlite"
+    # Se estivermos rodando no Easypanel (geralmente define PORT ou NODE_ENV)
+    if os.getenv("PORT") or os.getenv("NODE_ENV") == "production":
+        print("❌ ERRO FATAL: DATABASE_URL não configurada no Easypanel!")
+        print("❌ O sistema não pode iniciar sem um banco de dados persistente.")
+        # Forçamos um erro de conexão claro para o Log
+        DATABASE_URL = "postgresql+asyncpg://ERRO_CONFIGURACAO@localhost/VERIFIQUE_DATABASE_URL"
+    else:
+        DATABASE_URL = "sqlite+aiosqlite:///./local_db.sqlite"
 else:
-    # Garante que URLs do Supabase (postgresql://) usem o driver asyncpg
+    # Garante que URLs (Supabase ou Postgres interno) usem o driver asyncpg
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
     elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:

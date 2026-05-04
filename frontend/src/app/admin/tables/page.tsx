@@ -492,9 +492,9 @@ export default function TablesPage() {
                         const refinFinal = (((previewBaseRate || 0) + portFinal) / 2) + (formData.refin_adjustment || 0);
                         const isPortOk = portFinal >= (formData.min_port_rate || 0);
                         const isRefinOk = refinFinal >= (formData.min_rate || 0);
-                        const isNotAboveTable = refinFinal <= (formData.taxa_convenio || 0);
+                        const isAboveTable = refinFinal >= (formData.taxa_convenio || 0);
 
-                        return (isPortOk && isRefinOk && isNotAboveTable)
+                        return (isPortOk && isRefinOk && isAboveTable)
                            ? "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20" 
                            : "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20";
                      })()
@@ -505,11 +505,11 @@ export default function TablesPage() {
                         const refinFinal = (((previewBaseRate || 0) + portFinal) / 2) + (formData.refin_adjustment || 0);
                         const isPortOk = portFinal >= (formData.min_port_rate || 0);
                         const isRefinOk = refinFinal >= (formData.min_rate || 0);
-                        const isNotAboveTable = refinFinal <= (formData.taxa_convenio || 0);
+                        const isAboveTable = refinFinal >= (formData.taxa_convenio || 0);
 
                         if (!isPortOk) return "🔴 BLOQUEADA (TAXA PORT. < MÍNIMA)";
                         if (!isRefinOk) return "🔴 BLOQUEADA (TAXA REFIN < MÍNIMA)";
-                        if (!isNotAboveTable) return "🔴 BLOQUEADA (REFIN > TAXA TABELA)";
+                        if (!isAboveTable) return "🔴 BLOQUEADA (REFIN < TAXA TABELA)";
                         return "🟢 DISPONÍVEL P/ TROCO";
                      })()
                      }
