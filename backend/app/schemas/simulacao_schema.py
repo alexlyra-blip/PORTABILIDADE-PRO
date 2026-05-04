@@ -107,9 +107,11 @@ class BankCreate(BankBase):
 
 class BankResponse(BankBase):
     id: int
-    rules: Optional[List["BankRuleResponse"]] = None
     class Config:
         from_attributes = True
+
+class BankWithRulesResponse(BankResponse):
+    rules: List["BankRuleResponse"] = []
 
 # Bank Rule Schemas
 class BankRuleBase(BaseModel):
