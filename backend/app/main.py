@@ -71,7 +71,15 @@ async def startup_event():
         await conn.run_sync(Base.metadata.create_all)
         print("✅ Estrutura do banco de dados verificada/criada.")
 
-    from app.models.sqlalchemy_models import User
+    # DIAGNÓSTICO DE DADOS
+    from app.models.sqlalchemy_models import Bank
+    async with AsyncSessionLocal() as session:
+        res_banks = await session.execute(select(Bank))
+        banks_count = len(res_banks.scalars().all())
+        res_users = await session.execute(select(User))
+        users_count = len(res_users.scalars().all())
+        print(f"📊 Diagnóstico: Encontrados {banks_count} bancos e {users_count} usuários no banco de dados.")
+
     from app.services.auth_service import get_password_hash
     from sqlalchemy import select
 
