@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from app.database import get_db
 from app.services.admin_service import AdminService
 from app.schemas.simulacao_schema import (
-    BankCreate, BankResponse,
+    BankCreate, BankResponse, BankWithRulesResponse,
     BankRuleCreate, BankRuleResponse,
     BankTableCreate, BankTableResponse,
     CoefficientCreate, CoefficientResponse,
@@ -52,7 +52,7 @@ async def get_active_announcement(db: AsyncSession = Depends(get_db)):
     return await AdminService.get_active_announcement(db)
 
 # Banks
-@router.get("/banks", response_model=List[BankResponse])
+@router.get("/banks", response_model=List[BankWithRulesResponse])
 async def list_banks(db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     # Vendedores and Promotoras might need to see banks for simulator
     return await AdminService.get_all_banks(db)

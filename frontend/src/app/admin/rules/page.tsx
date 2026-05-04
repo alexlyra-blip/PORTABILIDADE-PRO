@@ -257,9 +257,18 @@ export default function RulesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md text-xs">{rule.agreement}</span>
+                      <span className={`px-2 py-1 rounded-md text-xs font-black uppercase tracking-tighter border shadow-sm ${
+                        rule.agreement === 'INSS' ? 'bg-blue-600 text-white border-blue-700' :
+                        rule.agreement === 'SIAPE' ? 'bg-amber-500 text-white border-amber-600' :
+                        rule.agreement === 'FORCAS' ? 'bg-emerald-600 text-white border-emerald-700' :
+                        rule.agreement === 'CLT_PRIVADO' ? 'bg-slate-500 text-white border-slate-600' :
+                        rule.agreement === 'GOV_EST' ? 'bg-indigo-600 text-white border-indigo-700' :
+                        'bg-slate-400 text-white border-slate-500'
+                      }`}>
+                        {rule.agreement === 'GOV_EST' ? 'GOVERNO' : rule.agreement === 'FORCAS' ? 'FORÇAS' : rule.agreement === 'CLT_PRIVADO' ? 'CLT' : rule.agreement}
+                      </span>
                       {rule.sub_agreement && (
-                        <span className="ml-2 font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded-md text-xs">{rule.sub_agreement}</span>
+                        <span className="ml-2 font-bold text-slate-700 bg-slate-100 border border-slate-200 shadow-sm px-2 py-1 rounded-md text-[10px] uppercase tracking-wider">{rule.sub_agreement}</span>
                       )}
                     </td>
                   <td className="px-6 py-4 text-center">
