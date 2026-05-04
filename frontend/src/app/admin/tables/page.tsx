@@ -477,10 +477,10 @@ export default function TablesPage() {
                          <span className="text-emerald-600 block mb-1">Final (Refin)</span>
                          <div className="flex flex-col">
                             <span className="text-[8px] text-emerald-400 font-bold">
-                               (({(previewBaseRate || 0).toFixed(2)} + {(formData.taxa_convenio || 0).toFixed(2)} + {(formData.portability_adjustment || 0).toFixed(2)}) / 2)
+                               (({(previewBaseRate || 0).toFixed(2)} + {((previewBaseRate || 0) + (formData.portability_adjustment || 0)).toFixed(2)}) / 2) + {(formData.refin_adjustment || 0).toFixed(2)}
                             </span>
                             <span className="text-emerald-600 text-sm font-black">
-                               {(((previewBaseRate || 0) + (formData.taxa_convenio || 0) + (formData.portability_adjustment || 0)) / 2).toFixed(2)}%
+                               {((((previewBaseRate || 0) + ((previewBaseRate || 0) + (formData.portability_adjustment || 0))) / 2) + (formData.refin_adjustment || 0)).toFixed(2)}%
                             </span>
                          </div>
                       </div>
@@ -489,7 +489,7 @@ export default function TablesPage() {
                   <div className={`p-3 rounded-xl text-center text-[10px] font-black uppercase tracking-widest border transition-all duration-300 ${
                      (() => {
                         const portFinal = ((previewBaseRate || 0) + (formData.portability_adjustment || 0));
-                        const refinFinal = (((previewBaseRate || 0) + (formData.taxa_convenio || 0) + (formData.portability_adjustment || 0)) / 2);
+                        const refinFinal = (((previewBaseRate || 0) + portFinal) / 2) + (formData.refin_adjustment || 0);
                         const isPortOk = portFinal >= (formData.min_port_rate || 0);
                         const isRefinOk = refinFinal >= (formData.min_rate || 0);
                         const isNotAboveTable = refinFinal <= (formData.taxa_convenio || 0);
@@ -502,7 +502,7 @@ export default function TablesPage() {
                      Status da Tabela: {
                      (() => {
                         const portFinal = ((previewBaseRate || 0) + (formData.portability_adjustment || 0));
-                        const refinFinal = (((previewBaseRate || 0) + (formData.taxa_convenio || 0) + (formData.portability_adjustment || 0)) / 2);
+                        const refinFinal = (((previewBaseRate || 0) + portFinal) / 2) + (formData.refin_adjustment || 0);
                         const isPortOk = portFinal >= (formData.min_port_rate || 0);
                         const isRefinOk = refinFinal >= (formData.min_rate || 0);
                         const isNotAboveTable = refinFinal <= (formData.taxa_convenio || 0);
