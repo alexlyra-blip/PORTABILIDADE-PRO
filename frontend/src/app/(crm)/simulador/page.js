@@ -10,6 +10,7 @@ export default function SimuladorPage() {
   const [dbBanks, setDbBanks] = useState([]);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const [subLogos, setSubLogos] = useState([]);
 
   useEffect(() => {
@@ -193,7 +194,7 @@ export default function SimuladorPage() {
       
       const [results] = await Promise.all([
         Promise.all(promises),
-        new Promise(resolve => setTimeout(resolve, 3000))
+        new Promise(resolve => setTimeout(resolve, 4000))
       ]);
       
       // Combine results correctly. Results is an array of data from the backend.
@@ -219,7 +220,10 @@ export default function SimuladorPage() {
         localStorage.setItem("last_simulation_rate", contracts[0].taxaAtual || "0");
       }
       
-      router.push("/ofertas");
+      setIsExiting(true);
+      setTimeout(() => {
+        router.push("/ofertas");
+      }, 700);
     } catch (err) {
       console.error("Erro na simulação:", err);
       alert("Erro ao processar simulação. Verifique os dados.");
@@ -443,30 +447,30 @@ export default function SimuladorPage() {
     <div className="w-full max-w-[1200px] mx-auto py-6 px-4 relative">
       {/* Calculating Animation Overlay */}
       {loading && (
-        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md animate-fade-in">
+        <div className={`fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white/70 dark:bg-slate-900/70 backdrop-blur-md transition-all duration-700 ease-in-out ${isExiting ? 'opacity-0 scale-110 blur-xl' : 'animate-fade-in opacity-100'}`}>
           <style>{`
             @keyframes carousel-orbit-1 {
               0% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-              33.33% { transform: translateX(90px) scale(0.65); z-index: 10; opacity: 0.5; }
-              66.66% { transform: translateX(-90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              33.33% { transform: translateX(110px) scale(0.65); z-index: 10; opacity: 0.5; }
+              66.66% { transform: translateX(-110px) scale(0.65); z-index: 10; opacity: 0.5; }
               100% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
             }
             @keyframes carousel-orbit-2 {
-              0% { transform: translateX(90px) scale(0.65); z-index: 10; opacity: 0.5; }
-              33.33% { transform: translateX(-90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              0% { transform: translateX(110px) scale(0.65); z-index: 10; opacity: 0.5; }
+              33.33% { transform: translateX(-110px) scale(0.65); z-index: 10; opacity: 0.5; }
               66.66% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-              100% { transform: translateX(90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              100% { transform: translateX(110px) scale(0.65); z-index: 10; opacity: 0.5; }
             }
             @keyframes carousel-orbit-3 {
-              0% { transform: translateX(-90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              0% { transform: translateX(-110px) scale(0.65); z-index: 10; opacity: 0.5; }
               33.33% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-              66.66% { transform: translateX(90px) scale(0.65); z-index: 10; opacity: 0.5; }
-              100% { transform: translateX(-90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              66.66% { transform: translateX(110px) scale(0.65); z-index: 10; opacity: 0.5; }
+              100% { transform: translateX(-110px) scale(0.65); z-index: 10; opacity: 0.5; }
             }
             .carousel-scene-2d {
               position: relative;
-              width: 240px;
-              height: 120px;
+              width: 300px;
+              height: 140px;
               display: flex;
               align-items: center;
               justify-content: center;
@@ -474,8 +478,8 @@ export default function SimuladorPage() {
             }
             .carousel-item-2d {
               position: absolute;
-              width: 80px;
-              height: 80px;
+              width: 100px;
+              height: 100px;
               border-radius: 50%;
               overflow: hidden;
               border: 4px solid white;
@@ -557,9 +561,9 @@ export default function SimuladorPage() {
                   {formData.agreement && (() => {
                     const match = subLogos.find(l => l.name === formData.agreement);
                     return match?.logo_url ? (
-                      <img src={getStaticUrl(match.logo_url)} alt="" className="w-9 h-9 object-contain rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
+                      <img src={getStaticUrl(match.logo_url)} alt="" className="w-11 h-11 object-contain rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
                     ) : (
-                      <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-[10px]">{formData.agreement.substring(0, 3)}</div>
+                      <div className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-[10px]">{formData.agreement.substring(0, 3)}</div>
                     );
                   })()}
                   <select name="agreement" value={formData.agreement} onChange={handleChange} className="input-premium flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold uppercase text-xs py-1.5" required>
@@ -594,9 +598,9 @@ export default function SimuladorPage() {
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">{isForcas ? "Força Armada" : "Estado"}</label>
                     <div className="flex items-center gap-2">
                       {currentLogoUrl ? (
-                        <img src={currentLogoUrl} alt="Logo" className="w-9 h-9 object-cover rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
+                        <img src={currentLogoUrl} alt="Logo" className="w-11 h-11 object-cover rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
                       ) : formData.sub_agreement ? (
-                        <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-[10px]">{formData.sub_agreement.substring(0, 2)}</div>
+                        <div className="w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-[10px]">{formData.sub_agreement.substring(0, 2)}</div>
                       ) : null}
                       <div className="relative flex-1">
                         <input 
