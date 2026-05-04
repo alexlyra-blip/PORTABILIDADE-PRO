@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 import sqlite3
+from sqlalchemy import select, text
+from app.database import engine, Base, AsyncSessionLocal
+from app.models.sqlalchemy_models import User, Bank
 
 from app.routers import auth, banks, users, admin, pdf, simulacao
 
@@ -64,16 +67,12 @@ async def catch_exceptions_middleware(request, call_next):
 
 @app.on_event("startup")
 async def startup_event():
-    from sqlalchemy import select
-    from app.database import engine, Base, AsyncSessionLocal
-    
-    # CRIA AS TABELAS AUTOMATICAMENTE SE NÃO EXISTIREM
+    # 1. CRIA AS TABELAS AUTOMATICAMENTE SE NÃO EXISTIREM
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         print("✅ Estrutura do banco de dados verificada/criada.")
 
-    # DIAGNÓSTICO DE DADOS
-    from app.models.sqlalchemy_models import User, Bank
+    # 2. DIAGNÓSTICO DE DADOS
     async with AsyncSessionLocal() as session:
         res_banks = await session.execute(select(Bank))
         banks_count = len(res_banks.scalars().all())
