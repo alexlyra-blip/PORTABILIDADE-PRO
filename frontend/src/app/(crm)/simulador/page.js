@@ -447,11 +447,11 @@ export default function SimuladorPage() {
           <style>{`
             @keyframes orbit {
               0% { transform: rotateY(0deg); }
-              100% { transform: rotateY(360deg); }
+              100% { transform: rotateY(-360deg); }
             }
             @keyframes counter-orbit {
               0% { transform: rotateY(0deg); }
-              100% { transform: rotateY(-360deg); }
+              100% { transform: rotateY(360deg); }
             }
             .carousel-scene {
               perspective: 800px;
@@ -460,13 +460,14 @@ export default function SimuladorPage() {
               display: flex;
               align-items: center;
               justify-content: center;
+              margin-bottom: 1rem;
             }
             .carousel-spinner {
               width: 80px;
               height: 80px;
               position: relative;
               transform-style: preserve-3d;
-              animation: orbit 3s infinite linear;
+              animation: orbit 3.5s infinite linear;
             }
             .carousel-item {
               position: absolute;
@@ -488,7 +489,7 @@ export default function SimuladorPage() {
               width: 100%;
               height: 100%;
               object-fit: cover;
-              animation: counter-orbit 3s infinite linear;
+              animation: counter-orbit 3.5s infinite linear;
             }
           `}</style>
           
@@ -506,7 +507,7 @@ export default function SimuladorPage() {
              </div>
           </div>
 
-          <div className="mt-12 text-center space-y-4">
+          <div className="mt-8 text-center space-y-4">
              <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter drop-shadow-sm">
                Análise Inteligente <span className="text-blue-600">PortPRO</span>
              </h3>
