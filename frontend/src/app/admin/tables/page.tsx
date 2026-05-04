@@ -477,28 +477,32 @@ export default function TablesPage() {
                          <span className="text-emerald-600 block mb-1">Final (Refin)</span>
                          <div className="flex flex-col">
                             <span className="text-[8px] text-emerald-400 font-bold">
-                               {(formData.taxa_convenio || 0).toFixed(2)}% + {(formData.refin_adjustment || 0).toFixed(2)}%
+                               (({(previewBaseRate || 0).toFixed(2)} + {(formData.taxa_convenio || 0).toFixed(2)} + {(formData.portability_adjustment || 0).toFixed(2)}) / 2)
                             </span>
                             <span className="text-emerald-600 text-sm font-black">
-                               {((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0)).toFixed(2)}%
+                               {(((previewBaseRate || 0) + (formData.taxa_convenio || 0) + (formData.portability_adjustment || 0)) / 2).toFixed(2)}%
                             </span>
                          </div>
                       </div>
                   </div>
 
                   <div className={`p-3 rounded-xl text-center text-[10px] font-black uppercase tracking-widest border transition-all duration-300 ${
-                     (
-                       ((previewBaseRate || 0) + (formData.portability_adjustment || 0)) >= (formData.min_port_rate || 0) &&
-                       ((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0)) >= (formData.min_rate || 0) &&
-                       ((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0)) <= (formData.taxa_convenio || 0)
-                     ) 
-                     ? "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20" 
-                     : "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20"
+                     (() => {
+                        const portFinal = ((previewBaseRate || 0) + (formData.portability_adjustment || 0));
+                        const refinFinal = (((previewBaseRate || 0) + (formData.taxa_convenio || 0) + (formData.portability_adjustment || 0)) / 2);
+                        const isPortOk = portFinal >= (formData.min_port_rate || 0);
+                        const isRefinOk = refinFinal >= (formData.min_rate || 0);
+                        const isNotAboveTable = refinFinal <= (formData.taxa_convenio || 0);
+
+                        return (isPortOk && isRefinOk && isNotAboveTable)
+                           ? "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20" 
+                           : "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20";
+                     })()
                   }`}>
                      Status da Tabela: {
                      (() => {
                         const portFinal = ((previewBaseRate || 0) + (formData.portability_adjustment || 0));
-                        const refinFinal = ((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0));
+                        const refinFinal = (((previewBaseRate || 0) + (formData.taxa_convenio || 0) + (formData.portability_adjustment || 0)) / 2);
                         const isPortOk = portFinal >= (formData.min_port_rate || 0);
                         const isRefinOk = refinFinal >= (formData.min_rate || 0);
                         const isNotAboveTable = refinFinal <= (formData.taxa_convenio || 0);
