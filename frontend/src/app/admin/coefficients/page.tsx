@@ -229,9 +229,21 @@ export default function CoefficientsPage() {
                       <span className="font-semibold text-slate-700">{tables.find(t => t.id?.toString() === selectedTableId)?.name || '-'}</span>
                     </td>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase bg-blue-50 text-blue-600 border border-blue-100">
-                      {tables.find(t => t.id?.toString() === selectedTableId)?.agreement || '-'}
-                    </span>
+                    {(() => {
+                      const agr = tables.find(t => t.id?.toString() === selectedTableId)?.agreement || '-';
+                      return (
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+                          agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                          agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                          agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                          agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                          agr === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                          'bg-slate-50 text-slate-500 border-slate-100'
+                        }`}>
+                          {agr === 'GOV_EST' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className="font-bold text-slate-700">{coeff.term} meses</span>

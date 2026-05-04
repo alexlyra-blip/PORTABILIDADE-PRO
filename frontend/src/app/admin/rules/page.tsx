@@ -257,13 +257,13 @@ export default function RulesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-md text-xs font-black uppercase tracking-tighter border shadow-sm ${
-                        rule.agreement === 'INSS' ? 'bg-blue-600 text-white border-blue-700' :
-                        rule.agreement === 'SIAPE' ? 'bg-amber-500 text-white border-amber-600' :
-                        rule.agreement === 'FORCAS' ? 'bg-emerald-600 text-white border-emerald-700' :
-                        rule.agreement === 'CLT_PRIVADO' ? 'bg-slate-500 text-white border-slate-600' :
-                        rule.agreement === 'GOV_EST' ? 'bg-indigo-600 text-white border-indigo-700' :
-                        'bg-slate-400 text-white border-slate-500'
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+                        rule.agreement === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        rule.agreement === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                        rule.agreement === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        rule.agreement === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                        rule.agreement === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                        'bg-slate-50 text-slate-500 border-slate-100'
                       }`}>
                         {rule.agreement === 'GOV_EST' ? 'GOVERNO' : rule.agreement === 'FORCAS' ? 'FORÇAS' : rule.agreement === 'CLT_PRIVADO' ? 'CLT' : rule.agreement}
                       </span>

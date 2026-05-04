@@ -480,13 +480,13 @@ export default function BanksPage() {
                         Array.from(new Set(bank.rules.map(r => r.agreement))).map(agr => (
                           <span 
                             key={agr} 
-                            className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border shadow-sm ${
-                              agr === 'INSS' ? 'bg-blue-600 text-white border-blue-700' :
-                              agr === 'SIAPE' ? 'bg-amber-500 text-white border-amber-600' :
-                              agr === 'FORCAS' ? 'bg-emerald-600 text-white border-emerald-700' :
-                              agr === 'CLT_PRIVADO' ? 'bg-slate-500 text-white border-slate-600' :
-                              agr === 'GOV_EST' ? 'bg-indigo-600 text-white border-indigo-700' :
-                              'bg-slate-400 text-white border-slate-500'
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+                              agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                              agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                              agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                              agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                              agr === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                              'bg-slate-50 text-slate-500 border-slate-100'
                             }`}
                           >
                             {agr === 'GOV_EST' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}

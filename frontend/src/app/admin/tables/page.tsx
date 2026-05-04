@@ -227,9 +227,18 @@ export default function TablesPage() {
                       <span className="font-black text-blue-600 text-xs">{table.term || "84"}x</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md text-xs">{table.agreement}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+                        table.agreement === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        table.agreement === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                        table.agreement === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        table.agreement === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                        table.agreement === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                        'bg-slate-50 text-slate-500 border-slate-100'
+                      }`}>
+                        {table.agreement === 'GOV_EST' ? 'GOVERNO' : table.agreement === 'FORCAS' ? 'FORÇAS' : table.agreement === 'CLT_PRIVADO' ? 'CLT' : table.agreement}
+                      </span>
                       {table.sub_agreement && (
-                        <span className="ml-2 font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded-md text-xs">{table.sub_agreement}</span>
+                        <span className="ml-2 font-bold text-slate-700 bg-slate-100 border border-slate-200 shadow-sm px-2 py-1 rounded-md text-[10px] uppercase tracking-wider">{table.sub_agreement}</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-center">

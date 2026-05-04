@@ -345,9 +345,21 @@ export default function OfertasPage() {
                     {h.data?.banco || "INDISPONÍVEL"}
                   </h3>
                   <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">{h.data?.tabela || "INDISPONÍVEL"}</p>
-                  {h.data && (
-                    <span className="mt-1 inline-flex px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase">CONVÊNIO {inputData?.agreement || "INSS"}</span>
-                  )}
+                  {h.data && (() => {
+                    const agr = inputData?.agreement || "INSS";
+                    return (
+                      <span className={`mt-1 inline-flex px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm ${
+                        agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                        agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                        agr === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                        'bg-slate-50 text-slate-500 border-slate-100'
+                      }`}>
+                        CONVÊNIO {agr === 'GOV_EST' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -407,7 +419,21 @@ export default function OfertasPage() {
                           <img src={getStaticUrl(offer.logo_url)} className="w-full h-full object-cover" alt="" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase mb-1 inline-block truncate max-w-full">CONVÊNIO {inputData?.agreement || "INSS"}</span>
+                          {(() => {
+                            const agr = inputData?.agreement || "INSS";
+                            return (
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm mb-1 inline-block truncate max-w-full ${
+                                agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                                agr === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                'bg-slate-50 text-slate-500 border-slate-100'
+                              }`}>
+                                CONVÊNIO {agr === 'GOV_EST' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}
+                              </span>
+                            );
+                          })()}
                           <h3 className="text-sm xl:text-base font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight break-words">{offer.banco}</h3>
                           <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest truncate">{offer.tabela}</p>
                         </div>
