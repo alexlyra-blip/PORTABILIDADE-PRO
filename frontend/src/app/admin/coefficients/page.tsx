@@ -190,6 +190,7 @@ export default function CoefficientsPage() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-200">
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Banco</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Tabela</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Convênio</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Prazo</th>
@@ -200,25 +201,32 @@ export default function CoefficientsPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">Carregando coeficientes...</td></tr>
+              <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic">Carregando coeficientes...</td></tr>
             ) : !selectedTableId ? (
-              <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco e uma tabela.</td></tr>
+              <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco e uma tabela.</td></tr>
             ) : coefficients.length === 0 ? (
-              <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">Nenhum coeficiente cadastrado para esta tabela.</td></tr>
+              <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic">Nenhum coeficiente cadastrado para esta tabela.</td></tr>
             ) : (
               coefficients.map((coeff) => {
                 const bank = banks.find(b => b.id.toString() === selectedBankId);
                 return (
                   <tr key={coeff.id} className="hover:bg-blue-50/10 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {bank?.logo_url && (
-                          <div className="w-6 h-6 rounded-md overflow-hidden border border-slate-100 bg-white">
-                            <img src={bank.logo_url} className="w-full h-full object-contain" />
+                      <div className="flex items-center gap-3">
+                        {bank?.logo_url ? (
+                          <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 bg-white shadow-sm flex-shrink-0">
+                            <img src={bank.logo_url} className="w-full h-full object-contain p-1" />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">
+                            {bank?.name?.substring(0, 2) || "BK"}
                           </div>
                         )}
-                        <span className="font-semibold text-slate-700">{tables.find(t => t.id?.toString() === selectedTableId)?.name || '-'}</span>
+                        <span className="font-bold text-slate-900 text-sm">{bank?.name || "-"}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-semibold text-slate-700">{tables.find(t => t.id?.toString() === selectedTableId)?.name || '-'}</span>
                     </td>
                   <td className="px-6 py-4">
                     <span className="px-2 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase bg-blue-50 text-blue-600 border border-blue-100">
