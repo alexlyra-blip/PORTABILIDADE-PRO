@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from "framer-motion";
+import { Calculator, Trophy, LayoutDashboard, FileText, TrendingUp, Settings2, Users, SlidersHorizontal, LogOut, ChevronRight } from "lucide-react";
 
 export default function Sidebar() {
   const router = useRouter();
@@ -58,11 +59,11 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { name: "Nova Simulação", href: "/simulador", icon: "✨", roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
-    { name: "Ofertas", href: "/ofertas", icon: "🏆", roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
-    { name: "Painel Geral", href: "/dashboard", icon: "📊" },
-    { name: "Meus Contratos", href: "/meus-contratos", icon: "📄", roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
-    { name: "Relatórios", href: "/relatorio", icon: "📈", roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Nova Simulação", href: "/simulador", icon: <Calculator size={20} strokeWidth={2.5} />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Ofertas", href: "/ofertas", icon: <Trophy size={20} strokeWidth={2.5} />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Painel Geral", href: "/dashboard", icon: <LayoutDashboard size={20} strokeWidth={2.5} /> },
+    { name: "Meus Contratos", href: "/meus-contratos", icon: <FileText size={20} strokeWidth={2.5} />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Relatórios", href: "/relatorio", icon: <TrendingUp size={20} strokeWidth={2.5} />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
   ].filter(item => !item.roles || item.roles.includes(user.role));
 
   const profileImageUrl = getStaticUrl(user.logo_url || user.avatar_url);
@@ -170,9 +171,9 @@ export default function Sidebar() {
                 }}
               >
                 {!isActive && <div className="absolute inset-0 bg-white/10 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>}
-                <span className="text-xl transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none">{item.icon}</span>
+                <span className="transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none text-white">{item.icon}</span>
                 <span className="font-black text-[11px] uppercase tracking-[0.2em] pointer-events-none">{item.name}</span>
-                <div className="ml-auto opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all text-sm pointer-events-none">🚀</div>
+                <div className="ml-auto opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all text-sm pointer-events-none text-white"><ChevronRight size={16} strokeWidth={3} /></div>
               </Link>
             );
           }
@@ -198,7 +199,7 @@ export default function Sidebar() {
                   transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 />
               )}
-              <span className={`text-xl transition-transform group-hover:scale-110 pointer-events-none relative z-10 ${isActive ? "drop-shadow-md" : "opacity-70 group-hover:opacity-100"}`}>
+              <span className={`transition-transform group-hover:scale-110 pointer-events-none relative z-10 ${isActive ? "drop-shadow-md text-white" : "opacity-70 group-hover:opacity-100"}`}>
                 {item.icon}
               </span>
               <span className={`font-black text-[11px] uppercase tracking-wider pointer-events-none relative z-10 ${isActive ? "" : ""}`}>
@@ -214,17 +215,17 @@ export default function Sidebar() {
             <p className="px-4 text-xs font-black text-white/20 uppercase tracking-[0.3em] mb-3 italic">Área Administrativa</p>
             {user.role === 'admin' && (
               <Link href="/admin" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
-                <span className="text-lg opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none">📊</span>
+                <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><Settings2 size={16} strokeWidth={2} /></span>
                 <span className="font-bold text-xs tracking-tight pointer-events-none">Painel Admin</span>
               </Link>
             )}
             <Link href="/admin/users" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
-              <span className="text-lg opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none">👥</span>
+              <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><Users size={16} strokeWidth={2} /></span>
               <span className="font-bold text-xs tracking-tight pointer-events-none">{user.role === 'promotora' ? 'Usuários' : 'Gestão Usuários'}</span>
             </Link>
             {user.role === 'promotora' && (
               <Link href="/admin/promotora-rules" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
-                <span className="text-lg opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none">⚙️</span>
+                <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><SlidersHorizontal size={16} strokeWidth={2} /></span>
                 <span className="font-bold text-xs tracking-tight pointer-events-none">Regra Bancos</span>
               </Link>
             )}
@@ -238,7 +239,7 @@ export default function Sidebar() {
           onClick={handleLogout}
           className="flex items-center justify-center gap-2 w-full py-2 bg-red-600/10 hover:bg-red-600 text-white/60 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20 cursor-pointer"
         >
-          <span className="text-lg pointer-events-none">🏃</span>
+          <span className="pointer-events-none"><LogOut size={16} strokeWidth={2.5} /></span>
           <span className="pointer-events-none">Encerrar Sessão</span>
         </button>
       </div>

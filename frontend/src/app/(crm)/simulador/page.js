@@ -451,35 +451,35 @@ export default function SimuladorPage() {
           <style>{`
             @keyframes carousel-orbit-1 {
               0% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-              33.33% { transform: translateX(110px) scale(0.65); z-index: 10; opacity: 0.5; }
-              66.66% { transform: translateX(-110px) scale(0.65); z-index: 10; opacity: 0.5; }
+              33.33% { transform: translateX(150px) scale(0.65); z-index: 10; opacity: 0.5; }
+              66.66% { transform: translateX(-150px) scale(0.65); z-index: 10; opacity: 0.5; }
               100% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
             }
             @keyframes carousel-orbit-2 {
-              0% { transform: translateX(110px) scale(0.65); z-index: 10; opacity: 0.5; }
-              33.33% { transform: translateX(-110px) scale(0.65); z-index: 10; opacity: 0.5; }
+              0% { transform: translateX(150px) scale(0.65); z-index: 10; opacity: 0.5; }
+              33.33% { transform: translateX(-150px) scale(0.65); z-index: 10; opacity: 0.5; }
               66.66% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-              100% { transform: translateX(110px) scale(0.65); z-index: 10; opacity: 0.5; }
+              100% { transform: translateX(150px) scale(0.65); z-index: 10; opacity: 0.5; }
             }
             @keyframes carousel-orbit-3 {
-              0% { transform: translateX(-110px) scale(0.65); z-index: 10; opacity: 0.5; }
+              0% { transform: translateX(-150px) scale(0.65); z-index: 10; opacity: 0.5; }
               33.33% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-              66.66% { transform: translateX(110px) scale(0.65); z-index: 10; opacity: 0.5; }
-              100% { transform: translateX(-110px) scale(0.65); z-index: 10; opacity: 0.5; }
+              66.66% { transform: translateX(150px) scale(0.65); z-index: 10; opacity: 0.5; }
+              100% { transform: translateX(-150px) scale(0.65); z-index: 10; opacity: 0.5; }
             }
             .carousel-scene-2d {
               position: relative;
-              width: 300px;
-              height: 140px;
+              width: 400px;
+              height: 200px;
               display: flex;
               align-items: center;
               justify-content: center;
-              margin-bottom: 1rem;
+              margin-bottom: 2rem;
             }
             .carousel-item-2d {
               position: absolute;
-              width: 100px;
-              height: 100px;
+              width: 140px;
+              height: 140px;
               border-radius: 50%;
               overflow: hidden;
               border: 4px solid white;

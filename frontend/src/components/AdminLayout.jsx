@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Calculator, LayoutDashboard, Landmark, Scale, ClipboardList, Percent, Users, LogOut } from "lucide-react";
 
 const AdminLayout = ({ children }) => {
   const [user, setUser] = useState({ name: 'Administrador', logo_url: '', avatar_url: '' });
@@ -68,7 +69,7 @@ const AdminLayout = ({ children }) => {
               boxShadow: `0 4px 8px -2px rgba(37, 99, 235, 0.3)`
             }}
           >
-            <span className="text-base group-hover:scale-125 transition-transform">🚀</span>
+            <span className="group-hover:scale-125 transition-transform"><Calculator size={16} strokeWidth={2.5} /></span>
             <span className="font-black text-[9px] text-white uppercase tracking-[0.1em]">Simulador</span>
           </Link>
 
@@ -79,42 +80,42 @@ const AdminLayout = ({ children }) => {
               boxShadow: `0 4px 8px -2px rgba(37, 99, 235, 0.2)`
             }}
           >
-            <span className="text-base group-hover:scale-125 transition-transform">📊</span>
+            <span className="group-hover:scale-125 transition-transform"><LayoutDashboard size={16} strokeWidth={2.5} /></span>
             <span className="font-black text-[9px] text-white uppercase tracking-[0.1em]">Dashboard</span>
           </Link>
 
           <p className="px-3 text-[7px] font-black text-white/20 uppercase tracking-[0.2em] mb-1 italic mt-2">Configurações</p>
           
-          <Link href="/admin/banks" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">🏦</span>
-            <span className="font-bold text-[9px] tracking-tight uppercase">BANCOS</span>
+          <Link href="/admin/banks" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Landmark size={14} strokeWidth={2.5} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">BANCOS</span>
           </Link>
           
-          <Link href="/admin/rules" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">⚖️</span>
-            <span className="font-bold text-[9px] tracking-tight uppercase">REGRAS</span>
+          <Link href="/admin/rules" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Scale size={14} strokeWidth={2.5} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">REGRAS</span>
           </Link>
           
-          <Link href="/admin/tables" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">📋</span>
-            <span className="font-bold text-[9px] tracking-tight uppercase">TABELAS</span>
+          <Link href="/admin/tables" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><ClipboardList size={14} strokeWidth={2.5} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">TABELAS</span>
           </Link>
           
-          <Link href="/admin/coefficients" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">🔢</span>
-            <span className="font-bold text-[9px] tracking-tight uppercase">COEFICIENTES</span>
+          <Link href="/admin/coefficients" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Percent size={14} strokeWidth={2.5} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">COEFICIENTES</span>
           </Link>
           
-          <Link href="/admin/users" className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="text-sm opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform">👥</span>
-            <span className="font-bold text-[9px] tracking-tight uppercase">USUÁRIOS</span>
+          <Link href="/admin/users" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Users size={14} strokeWidth={2.5} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">USUÁRIOS</span>
           </Link>
         </nav>
 
         {/* Footer: Botão Sair Idêntico à Imagem 1 */}
         <div className="p-4 border-t border-white/5 bg-black/30 relative z-20 text-center">
-          <Link href="/login" className="flex items-center justify-center gap-2 w-full py-2 bg-red-600/10 hover:bg-red-600 text-white/60 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20">
-            <span className="text-lg">🏃</span>
+          <Link href="/login" className="flex items-center justify-center gap-2 w-full py-2.5 bg-red-600/10 hover:bg-red-600 text-white/60 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20">
+            <span><LogOut size={16} strokeWidth={2.5} /></span>
             <span>Encerrar Sessão</span>
           </Link>
         </div>
