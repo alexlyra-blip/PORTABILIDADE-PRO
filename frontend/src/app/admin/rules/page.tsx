@@ -220,6 +220,7 @@ export default function RulesPage() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-200">
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Banco</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Convênio</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Idade (Min-Max)</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Espécies Permitidas</th>
@@ -228,20 +229,39 @@ export default function RulesPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">Carregando regras...</td></tr>
+              <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Carregando regras...</td></tr>
             ) : !selectedBankId ? (
-              <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco para ver as regras.</td></tr>
+              <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco para ver as regras.</td></tr>
             ) : rules.length === 0 ? (
-              <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">Nenhuma regra cadastrada para este banco.</td></tr>
+              <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Nenhuma regra cadastrada para este banco.</td></tr>
             ) : (
-              rules.map((rule) => (
-                <tr key={rule.id} className="hover:bg-blue-50/20 transition-colors group">
-                  <td className="px-6 py-4">
-                    <span className="font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md text-xs">{rule.agreement}</span>
-                    {rule.sub_agreement && (
-                      <span className="ml-2 font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded-md text-xs">{rule.sub_agreement}</span>
-                    )}
-                  </td>
+              rules.map((rule) => {
+                const bank = banks.find(b => b.id.toString() === selectedBankId);
+                return (
+                  <tr key={rule.id} className="hover:bg-blue-50/20 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl overflow-hidden border border-slate-100 bg-white shadow-sm flex-shrink-0">
+                          {bank?.logo_url ? (
+                            <img src={bank.logo_url} className="w-full h-full object-contain" alt={bank.name} />
+                          ) : (
+                            <div className="w-full h-full bg-slate-50 flex items-center justify-center text-[10px] font-bold text-slate-300">
+                              {bank?.name?.substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-slate-700 leading-tight">{bank?.name}</span>
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Instituição</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md text-xs">{rule.agreement}</span>
+                      {rule.sub_agreement && (
+                        <span className="ml-2 font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded-md text-xs">{rule.sub_agreement}</span>
+                      )}
+                    </td>
                   <td className="px-6 py-4 text-center">
                     <span className="text-sm font-medium text-slate-600">{rule.min_age} - {rule.max_age} anos</span>
                   </td>
@@ -269,8 +289,9 @@ export default function RulesPage() {
                       <button onClick={() => handleDelete(rule.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">🗑️</button>
                     </div>
                   </td>
-                </tr>
-              ))
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
