@@ -458,7 +458,14 @@ export default function TablesPage() {
                   <div className="grid grid-cols-3 gap-3 text-center text-[10px] font-bold uppercase tracking-tight">
                      <div className="bg-white p-3 rounded-xl border border-blue-50 shadow-sm">
                         <span className="text-slate-400 block mb-1">Portabilidade</span>
-                        <span className="text-blue-600 font-black">{((previewBaseRate || 0) + (formData.portability_adjustment || 0)).toFixed(2)}%</span>
+                        <div className="flex flex-col">
+                           <span className="text-[8px] text-blue-300 font-bold">
+                              {(previewBaseRate || 0).toFixed(2)}% {formData.portability_adjustment >= 0 ? "+" : ""} {(formData.portability_adjustment || 0).toFixed(2)}%
+                           </span>
+                           <span className="text-blue-600 font-black">
+                              {((previewBaseRate || 0) + (formData.portability_adjustment || 0)).toFixed(2)}%
+                           </span>
+                        </div>
                      </div>
                      <div className="bg-white p-3 rounded-xl border border-amber-100 shadow-sm">
                         <span className="text-slate-400 block mb-1">Taxa Tabela</span>
@@ -466,12 +473,17 @@ export default function TablesPage() {
                            {(formData.taxa_convenio || 0).toFixed(2)}%
                         </span>
                      </div>
-                     <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-200">
-                        <span className="text-emerald-600 block mb-1">Final (Refin)</span>
-                        <span className="text-emerald-600 text-sm font-black">
-                           {((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0)).toFixed(2)}%
-                        </span>
-                     </div>
+                      <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-200">
+                         <span className="text-emerald-600 block mb-1">Final (Refin)</span>
+                         <div className="flex flex-col">
+                            <span className="text-[8px] text-emerald-400 font-bold">
+                               {(formData.taxa_convenio || 0).toFixed(2)}% + {(formData.refin_adjustment || 0).toFixed(2)}%
+                            </span>
+                            <span className="text-emerald-600 text-sm font-black">
+                               {((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0)).toFixed(2)}%
+                            </span>
+                         </div>
+                      </div>
                   </div>
 
                   <div className={`p-3 rounded-xl text-center text-[10px] font-black uppercase tracking-widest border transition-all duration-300 ${
