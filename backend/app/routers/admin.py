@@ -37,13 +37,17 @@ async def ensure_columns_exist():
                 # 1. Garantir coluna de validação (PostgreSQL)
                 await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disable_weighted_rate_validation BOOLEAN DEFAULT FALSE"))
             
-            # 2. Excluir C6 Bank definitivamente
+            # 2. Excluir bancos legados definitivamente
             from app.models.sqlalchemy_models import Bank
-            from sqlalchemy import delete
-            await db.execute(delete(Bank).where(Bank.name.like('%C6%')))
+            from sqlalchemy import delete, or_
+            await db.execute(delete(Bank).where(or_(
+                Bank.name.like('%C6%'),
+                Bank.name.like('%BMG%'),
+                Bank.name.like('%Facta%')
+            )))
             
             await db.commit()
-            print("🚀 Database migration check completed.")
+            print("🚀 Database migration check completed (C6, BMG, Facta removed).")
         except Exception as e:
             print(f"ℹ️ Migration info (can be ignored): {e}")
         break

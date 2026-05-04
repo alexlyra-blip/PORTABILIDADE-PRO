@@ -32,7 +32,7 @@ async def seed():
             print("Admin user created.")
 
         # 2. Banks
-        bank_names = ["BMG", "Facta"]
+        bank_names = []
         for b_name in bank_names:
             res = await session.execute(select(Bank).where(Bank.name == b_name))
             if not res.scalar():
