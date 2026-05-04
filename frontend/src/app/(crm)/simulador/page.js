@@ -443,24 +443,81 @@ export default function SimuladorPage() {
     <div className="w-full max-w-[1200px] mx-auto py-6 px-4 relative">
       {/* Calculating Animation Overlay */}
       {loading && (
-        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white/80 backdrop-blur-md animate-fade-in">
-          <img 
-             src="/logo-icon.png" 
-             className="w-24 h-24 object-contain animate-spin-slow drop-shadow-2xl" 
-             alt="Logo" 
-          />
-          <div className="mt-10 text-center space-y-4">
-             <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter drop-shadow-sm">
+        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md animate-fade-in">
+          <style>{`
+            @keyframes orbit {
+              0% { transform: rotateY(0deg); }
+              100% { transform: rotateY(360deg); }
+            }
+            @keyframes counter-orbit {
+              0% { transform: rotateY(0deg); }
+              100% { transform: rotateY(-360deg); }
+            }
+            .carousel-scene {
+              perspective: 800px;
+              width: 240px;
+              height: 140px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .carousel-spinner {
+              width: 80px;
+              height: 80px;
+              position: relative;
+              transform-style: preserve-3d;
+              animation: orbit 3s infinite linear;
+            }
+            .carousel-item {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 80px;
+              height: 80px;
+              border-radius: 50%;
+              overflow: hidden;
+              border: 4px solid white;
+              box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+              background: white;
+            }
+            .carousel-item:nth-child(1) { transform: rotateY(0deg) translateZ(90px); }
+            .carousel-item:nth-child(2) { transform: rotateY(120deg) translateZ(90px); }
+            .carousel-item:nth-child(3) { transform: rotateY(240deg) translateZ(90px); }
+            
+            .carousel-item img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              animation: counter-orbit 3s infinite linear;
+            }
+          `}</style>
+          
+          <div className="carousel-scene">
+             <div className="carousel-spinner">
+                <div className="carousel-item">
+                   <img src={getLogo(0)} alt="Banco 1" />
+                </div>
+                <div className="carousel-item">
+                   <img src={getLogo(1)} alt="Banco 2" />
+                </div>
+                <div className="carousel-item">
+                   <img src={getLogo(2)} alt="Banco 3" />
+                </div>
+             </div>
+          </div>
+
+          <div className="mt-12 text-center space-y-4">
+             <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter drop-shadow-sm">
                Análise Inteligente <span className="text-blue-600">PortPRO</span>
              </h3>
-             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.5em] max-w-sm mx-auto leading-relaxed">
+             <p className="text-[10px] text-slate-700 dark:text-slate-300 font-bold uppercase tracking-[0.4em] max-w-sm mx-auto leading-relaxed">
                Varrendo as melhores taxas do mercado nacional
              </p>
           </div>
           <div className="mt-10 flex gap-2">
-             <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{animationDelay: '0s'}}></div>
-             <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{animationDelay: '0.2s'}}></div>
-             <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{animationDelay: '0.4s'}}></div>
+             <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce shadow-md shadow-blue-500/50" style={{animationDelay: '0s'}}></div>
+             <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce shadow-md shadow-blue-500/50" style={{animationDelay: '0.15s'}}></div>
+             <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce shadow-md shadow-blue-500/50" style={{animationDelay: '0.3s'}}></div>
           </div>
         </div>
       )}
