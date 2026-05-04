@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Calculator, LayoutDashboard, Landmark, Scale, ClipboardList, Percent, Users, LogOut } from "lucide-react";
