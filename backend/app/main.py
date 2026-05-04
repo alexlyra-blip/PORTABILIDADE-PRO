@@ -64,6 +64,7 @@ async def catch_exceptions_middleware(request, call_next):
 
 @app.on_event("startup")
 async def startup_event():
+    from sqlalchemy import select
     from app.database import engine, Base, AsyncSessionLocal
     
     # CRIA AS TABELAS AUTOMATICAMENTE SE NÃO EXISTIREM
@@ -72,7 +73,7 @@ async def startup_event():
         print("✅ Estrutura do banco de dados verificada/criada.")
 
     # DIAGNÓSTICO DE DADOS
-    from app.models.sqlalchemy_models import Bank
+    from app.models.sqlalchemy_models import User, Bank
     async with AsyncSessionLocal() as session:
         res_banks = await session.execute(select(Bank))
         banks_count = len(res_banks.scalars().all())
@@ -81,7 +82,6 @@ async def startup_event():
         print(f"📊 Diagnóstico: Encontrados {banks_count} bancos e {users_count} usuários no banco de dados.")
 
     from app.services.auth_service import get_password_hash
-    from sqlalchemy import select
 
     async with AsyncSessionLocal() as session:
         # Check for alexlyra@gmail.com
