@@ -489,18 +489,25 @@ export default function TablesPage() {
                   <div className={`p-3 rounded-xl text-center text-[10px] font-black uppercase tracking-widest border transition-all duration-300 ${
                      (
                        ((previewBaseRate || 0) + (formData.portability_adjustment || 0)) >= (formData.min_port_rate || 0) &&
-                       ((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0)) >= (formData.min_rate || 0)
+                       ((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0)) >= (formData.min_rate || 0) &&
+                       ((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0)) <= (formData.taxa_convenio || 0)
                      ) 
                      ? "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20" 
                      : "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20"
                   }`}>
                      Status da Tabela: {
-                     (
-                        ((previewBaseRate || 0) + (formData.portability_adjustment || 0)) >= (formData.min_port_rate || 0) &&
-                        ((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0)) >= (formData.min_rate || 0)
-                     ) 
-                     ? "🟢 DISPONÍVEL P/ TROCO" 
-                     : "🔴 BLOQUEADA (TAXA INSUFICIENTE)"
+                     (() => {
+                        const portFinal = ((previewBaseRate || 0) + (formData.portability_adjustment || 0));
+                        const refinFinal = ((formData.taxa_convenio || 0) + (formData.refin_adjustment || 0));
+                        const isPortOk = portFinal >= (formData.min_port_rate || 0);
+                        const isRefinOk = refinFinal >= (formData.min_rate || 0);
+                        const isNotAboveTable = refinFinal <= (formData.taxa_convenio || 0);
+
+                        if (!isPortOk) return "🔴 BLOQUEADA (TAXA PORT. < MÍNIMA)";
+                        if (!isRefinOk) return "🔴 BLOQUEADA (TAXA REFIN < MÍNIMA)";
+                        if (!isNotAboveTable) return "🔴 BLOQUEADA (REFIN > TAXA TABELA)";
+                        return "🟢 DISPONÍVEL P/ TROCO";
+                     })()
                      }
                   </div>
                 </div>
