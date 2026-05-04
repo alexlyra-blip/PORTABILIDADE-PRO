@@ -518,8 +518,19 @@ class AdminService:
         await db.commit()
         return True
 
+    _dashboard_cache = {}
+    _dashboard_cache_ttl = 300 # 5 minutos
+
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
+        # Check cache
+        cache_key = f"{current_user.id}_{current_user.role}_{days}"
+        now = datetime.utcnow().timestamp()
+        if cache_key in AdminService._dashboard_cache:
+            cache_time, cache_data = AdminService._dashboard_cache[cache_key]
+            if now - cache_time < AdminService._dashboard_cache_ttl:
+                return cache_data
+
         # Base query for simulations
         if current_user.role == "admin":
             sim_query = select(Simulation)
@@ -699,7 +710,7 @@ class AdminService:
                 entry[f"{agr}_valor"] = historical_values.get(d, {}).get(agr, 0.0)
             historical_chart.append(entry)
 
-        return {
+        response_data = {
             "totals": {
                 "banks": total_banks,
                 "tables": total_tables,
@@ -748,6 +759,8 @@ class AdminService:
                 } for s in simulations[:10]
             ]
         }
+        AdminService._dashboard_cache[cache_key] = (now, response_data)
+        return response_data
     @staticmethod
     async def get_active_announcement(db: AsyncSession):
         from app.models.sqlalchemy_models import Announcement
