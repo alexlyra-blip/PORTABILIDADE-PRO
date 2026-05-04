@@ -469,40 +469,51 @@ export default function SimuladorPage() {
               transform-style: preserve-3d;
               animation: orbit 3.5s infinite linear;
             }
-            .carousel-item {
+            .carousel-wrapper {
               position: absolute;
               top: 0;
               left: 0;
               width: 80px;
               height: 80px;
+              transform-style: preserve-3d;
+            }
+            .carousel-pos-1 { transform: rotateY(0deg) translateZ(90px); }
+            .carousel-pos-2 { transform: rotateY(120deg) translateZ(90px); }
+            .carousel-pos-3 { transform: rotateY(240deg) translateZ(90px); }
+            
+            .carousel-item {
+              width: 100%;
+              height: 100%;
               border-radius: 50%;
               overflow: hidden;
               border: 4px solid white;
               box-shadow: 0 10px 25px rgba(0,0,0,0.3);
               background: white;
+              animation: counter-orbit 3.5s infinite linear;
             }
-            .carousel-item:nth-child(1) { transform: rotateY(0deg) translateZ(90px); }
-            .carousel-item:nth-child(2) { transform: rotateY(120deg) translateZ(90px); }
-            .carousel-item:nth-child(3) { transform: rotateY(240deg) translateZ(90px); }
-            
             .carousel-item img {
               width: 100%;
               height: 100%;
               object-fit: cover;
-              animation: counter-orbit 3.5s infinite linear;
             }
           `}</style>
           
           <div className="carousel-scene">
              <div className="carousel-spinner">
-                <div className="carousel-item">
-                   <img src={getLogo(0)} alt="Banco 1" />
+                <div className="carousel-wrapper carousel-pos-1">
+                   <div className="carousel-item">
+                      <img src={getLogo(0)} alt="Banco 1" />
+                   </div>
                 </div>
-                <div className="carousel-item">
-                   <img src={getLogo(1)} alt="Banco 2" />
+                <div className="carousel-wrapper carousel-pos-2">
+                   <div className="carousel-item">
+                      <img src={getLogo(1)} alt="Banco 2" />
+                   </div>
                 </div>
-                <div className="carousel-item">
-                   <img src={getLogo(2)} alt="Banco 3" />
+                <div className="carousel-wrapper carousel-pos-3">
+                   <div className="carousel-item">
+                      <img src={getLogo(2)} alt="Banco 3" />
+                   </div>
                 </div>
              </div>
           </div>
