@@ -445,76 +445,62 @@ export default function SimuladorPage() {
       {loading && (
         <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md animate-fade-in">
           <style>{`
-            @keyframes orbit {
-              0% { transform: rotateY(0deg); }
-              100% { transform: rotateY(-360deg); }
+            @keyframes carousel-orbit-1 {
+              0% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
+              33.33% { transform: translateX(90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              66.66% { transform: translateX(-90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              100% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
             }
-            @keyframes counter-orbit {
-              0% { transform: rotateY(0deg); }
-              100% { transform: rotateY(360deg); }
+            @keyframes carousel-orbit-2 {
+              0% { transform: translateX(90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              33.33% { transform: translateX(-90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              66.66% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
+              100% { transform: translateX(90px) scale(0.65); z-index: 10; opacity: 0.5; }
             }
-            .carousel-scene {
-              perspective: 800px;
+            @keyframes carousel-orbit-3 {
+              0% { transform: translateX(-90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              33.33% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
+              66.66% { transform: translateX(90px) scale(0.65); z-index: 10; opacity: 0.5; }
+              100% { transform: translateX(-90px) scale(0.65); z-index: 10; opacity: 0.5; }
+            }
+            .carousel-scene-2d {
+              position: relative;
               width: 240px;
-              height: 140px;
+              height: 120px;
               display: flex;
               align-items: center;
               justify-content: center;
               margin-bottom: 1rem;
             }
-            .carousel-spinner {
-              width: 80px;
-              height: 80px;
-              position: relative;
-              transform-style: preserve-3d;
-              animation: orbit 3.5s infinite linear;
-            }
-            .carousel-wrapper {
+            .carousel-item-2d {
               position: absolute;
-              top: 0;
-              left: 0;
               width: 80px;
               height: 80px;
-              transform-style: preserve-3d;
-            }
-            .carousel-pos-1 { transform: rotateY(0deg) translateZ(90px); }
-            .carousel-pos-2 { transform: rotateY(120deg) translateZ(90px); }
-            .carousel-pos-3 { transform: rotateY(240deg) translateZ(90px); }
-            
-            .carousel-item {
-              width: 100%;
-              height: 100%;
               border-radius: 50%;
               overflow: hidden;
               border: 4px solid white;
-              box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+              box-shadow: 0 10px 25px rgba(0,0,0,0.15);
               background: white;
-              animation: counter-orbit 3.5s infinite linear;
             }
-            .carousel-item img {
+            .carousel-item-2d img {
               width: 100%;
               height: 100%;
               object-fit: cover;
             }
+            .pos-1 { animation: carousel-orbit-1 4s infinite ease-in-out; }
+            .pos-2 { animation: carousel-orbit-2 4s infinite ease-in-out; }
+            .pos-3 { animation: carousel-orbit-3 4s infinite ease-in-out; }
           `}</style>
           
-          <div className="carousel-scene">
-             <div className="carousel-spinner">
-                <div className="carousel-wrapper carousel-pos-1">
-                   <div className="carousel-item">
-                      <img src={getLogo(0)} alt="Banco 1" />
-                   </div>
-                </div>
-                <div className="carousel-wrapper carousel-pos-2">
-                   <div className="carousel-item">
-                      <img src={getLogo(1)} alt="Banco 2" />
-                   </div>
-                </div>
-                <div className="carousel-wrapper carousel-pos-3">
-                   <div className="carousel-item">
-                      <img src={getLogo(2)} alt="Banco 3" />
-                   </div>
-                </div>
+          <div className="carousel-scene-2d">
+             <div className="carousel-item-2d pos-1">
+                <img src={getLogo(0)} alt="Banco 1" />
+             </div>
+             <div className="carousel-item-2d pos-2">
+                <img src={getLogo(1)} alt="Banco 2" />
+             </div>
+             <div className="carousel-item-2d pos-3">
+                <img src={getLogo(2)} alt="Banco 3" />
              </div>
           </div>
 
