@@ -576,8 +576,8 @@ export default function BanksPage() {
                       <span>📁 Enviar Arquivo</span>
                     </label>
                     {formData.logo_url && (
-                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200">
-                        <img src={getStaticUrl(formData.logo_url) || formData.logo_url} className="w-full h-full object-contain" />
+                      <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-300 bg-white shadow-md flex-shrink-0">
+                        <img src={getStaticUrl(formData.logo_url) || formData.logo_url} className="w-full h-full object-cover" />
                       </div>
                     )}
                   </div>

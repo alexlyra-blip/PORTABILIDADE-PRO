@@ -39,28 +39,31 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     
     # 4. Cálculo da Portabilidade Ajustada (Conforme Frontend)
     taxa_port_base = float(cliente_input.taxa_juros or taxa_portabilidade_calc)
-    taxa_port_ajustada = taxa_port_base + float(tabela_obj.portability_adjustment or 0.0)
+    ajuste_port = float(tabela_obj.portability_adjustment or 0.0)
+    taxa_port_ajustada = taxa_port_base + ajuste_port
     
-    # 5. Cálculo do Teto (Final Refin) - CONFORME CÓDIGO DO FRONTEND
-    # LÓGICA: TAXA TABELA + AJUSTE REFIN (Ignora médias para bater com o preview)
+    # 5. Cálculo do Teto (Final Refin) - CONFORME CÓDIGO DO PREVIEW
+    # Média entre a taxa do cliente e a taxa com ajuste de portabilidade
+    media_taxas = (taxa_port_base + taxa_port_ajustada) / 2
+    ajuste_refin = float(tabela_obj.refin_adjustment or 0.0)
+    final_refin_rate = media_taxas + ajuste_refin
+    
+    # Taxa da Tabela para comparação
     taxa_tabela = float(tabela_obj.taxa_convenio or 0.0)
     if taxa_tabela <= 0:
         taxa_tabela = float(coeficiente_obj.interest_rate)
         
-    final_refin_rate = taxa_tabela + float(tabela_obj.refin_adjustment or 0.0)
-    
-    # 6. Validação de Vantagem Real
-    disable_validation = any(getattr(r, "disable_weighted_rate_validation", False) for r in (banco.rules or []))
-    
-    if not disable_validation and taxa_tabela >= final_refin_rate:
-        return False, 0.0, None, f"Taxa da tabela ({taxa_tabela:.3f}%) não é inferior à Taxa Refin Final ({final_refin_rate:.3f}%)"
+    # 6. Validação de Vantagem Real (Trava de Disponibilidade)
+    # A tabela só fica disponível se a Taxa Refin Final for MAIOR OU IGUAL à taxa da tabela
+    if final_refin_rate < (taxa_tabela - 0.0001):
+        return False, 0.0, None, f"Tabela indisponível: Taxa Refin ({final_refin_rate:.3f}%) menor que Taxa Tabela ({taxa_tabela:.3f}%)"
     
     return True, float(valor_liberado), {
         "taxa_portabilidade_atual": float(taxa_port_ajustada),
         "taxa_refin": float(final_refin_rate),
-        "weighted_refin": float((taxa_port_ajustada + taxa_tabela) / 2),
-        "port_adj": float(tabela_obj.portability_adjustment or 0.0),
-        "refin_adj": float(tabela_obj.refin_adjustment or 0.0),
+        "weighted_refin": float(media_taxas),
+        "port_adj": ajuste_port,
+        "refin_adj": ajuste_refin,
         "taxa_convenio": float(taxa_tabela)
     }, "Cálculo aprovado"
 

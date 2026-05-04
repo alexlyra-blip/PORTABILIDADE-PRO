@@ -318,9 +318,8 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     approved['promotora_priority'] = int(p.get('priority', 99))
                     break
         
-        # Mantém todas as tabelas elegíveis de todos os bancos
-        # Ordena por prioridade da promotora (se houver), depois prioridade global do banco, e por fim valor liberado
-        bancos_aprovados.sort(key=lambda x: (x.get("promotora_priority", 99), x.get("priority", 99), x["valor_liberado"]))
+        # Ordena por prioridade da promotora (se houver), depois prioridade global do banco, e por fim MAIOR valor liberado
+        bancos_aprovados.sort(key=lambda x: (x.get("promotora_priority", 99), x.get("priority", 99), -x["valor_liberado"]))
         resultado_final = bancos_aprovados
                 
         # 6. Salva a simulação no Banco de Dados

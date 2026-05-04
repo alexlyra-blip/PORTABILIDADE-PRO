@@ -214,8 +214,8 @@ export default function CoefficientsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {bank?.logo_url ? (
-                          <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 bg-white shadow-sm flex-shrink-0">
-                            <img src={bank.logo_url} className="w-full h-full object-contain p-1" />
+                          <div className="w-9 h-9 rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm flex-shrink-0">
+                            <img src={bank.logo_url} className="w-full h-full object-cover" />
                           </div>
                         ) : (
                           <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">

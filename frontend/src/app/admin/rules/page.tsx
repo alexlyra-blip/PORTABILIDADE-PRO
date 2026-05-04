@@ -241,9 +241,9 @@ export default function RulesPage() {
                   <tr key={rule.id} className="hover:bg-blue-50/20 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl overflow-hidden border border-slate-100 bg-white shadow-sm flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex-shrink-0">
                           {bank?.logo_url ? (
-                            <img src={bank.logo_url} className="w-full h-full object-contain" alt={bank.name} />
+                            <img src={bank.logo_url} className="w-full h-full object-cover" alt={bank.name} />
                           ) : (
                             <div className="w-full h-full bg-slate-50 flex items-center justify-center text-[10px] font-bold text-slate-300">
                               {bank?.name?.substring(0, 2).toUpperCase()}
