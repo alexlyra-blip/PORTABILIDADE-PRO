@@ -107,6 +107,9 @@ async def startup_event():
             )
             session.add(admin2)
             print("LOG: Default admin user created at startup.")
+        
+        await session.commit()
+        print("✅ Usuários iniciais persistidos com sucesso.")
             
         # Update columns to Text to support Base64
         from sqlalchemy import text
