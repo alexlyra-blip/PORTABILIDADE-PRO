@@ -64,7 +64,13 @@ async def catch_exceptions_middleware(request, call_next):
 
 @app.on_event("startup")
 async def startup_event():
-    from app.database import AsyncSessionLocal
+    from app.database import engine, Base, AsyncSessionLocal
+    
+    # CRIA AS TABELAS AUTOMATICAMENTE SE NÃO EXISTIREM
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        print("✅ Estrutura do banco de dados verificada/criada.")
+
     from app.models.sqlalchemy_models import User
     from app.services.auth_service import get_password_hash
     from sqlalchemy import select
