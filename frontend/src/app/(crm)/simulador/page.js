@@ -443,31 +443,24 @@ export default function SimuladorPage() {
     <div className="w-full max-w-[1200px] mx-auto py-6 px-4 relative">
       {/* Calculating Animation Overlay */}
       {loading && (
-        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white/70 backdrop-blur-xl animate-fade-in">
-          <div className="relative w-full h-80 flex items-center justify-center scale-90">
-             <div className="bank-circle animate-spin-slow shadow-2xl border-4 border-blue-500/20">
-                <img src={getLogo(0)} className="w-full h-full object-cover rounded-full" alt="B1" />
-             </div>
-             <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-32 h-32 bg-white rounded-full shadow-2xl flex items-center justify-center border-4 border-blue-600/10 animate-pulse-subtle">
-                   <img src="/logo-icon.png" className="w-16 h-16 object-contain" alt="Logo" />
-                </div>
-             </div>
-          </div>
-          
+        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white/80 backdrop-blur-md animate-fade-in">
+          <img 
+             src="/logo-icon.png" 
+             className="w-24 h-24 object-contain animate-spin-slow drop-shadow-2xl" 
+             alt="Logo" 
+          />
           <div className="mt-10 text-center space-y-4">
-             <h3 className="text-3xl font-black text-slate-800 uppercase tracking-tighter drop-shadow-sm">
+             <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter drop-shadow-sm">
                Análise Inteligente <span className="text-blue-600">PortPRO</span>
              </h3>
              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.5em] max-w-sm mx-auto leading-relaxed">
                Varrendo as melhores taxas do mercado nacional
              </p>
           </div>
-          
-          <div className="mt-12 flex gap-3">
-             {[1,2,3,4,5].map(i => (
-               <div key={i} className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce shadow-lg shadow-blue-600/30" style={{animationDelay: `${i*0.15}s`}}></div>
-             ))}
+          <div className="mt-10 flex gap-2">
+             <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{animationDelay: '0s'}}></div>
+             <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{animationDelay: '0.2s'}}></div>
+             <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{animationDelay: '0.4s'}}></div>
           </div>
         </div>
       )}
