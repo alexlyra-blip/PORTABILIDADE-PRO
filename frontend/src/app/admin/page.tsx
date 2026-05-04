@@ -21,7 +21,7 @@ export default function AdminPage() {
     historical: []
   });
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+  const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#94a3b8', '#8b5cf6'];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -147,7 +147,8 @@ export default function AdminPage() {
                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
                     />
                     <Area type="monotone" dataKey="INSS" stackId="1" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSim)" strokeWidth={3} />
-                    <Area type="monotone" dataKey="SIAPE" stackId="1" stroke="#10b981" fillOpacity={1} fill="#10b98122" strokeWidth={3} />
+                    <Area type="monotone" dataKey="SIAPE" stackId="1" stroke="#f59e0b" fillOpacity={1} fill="#f59e0b22" strokeWidth={3} />
+                    <Area type="monotone" dataKey="FORCAS" stackId="1" stroke="#10b981" fillOpacity={1} fill="#10b98122" strokeWidth={3} />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (

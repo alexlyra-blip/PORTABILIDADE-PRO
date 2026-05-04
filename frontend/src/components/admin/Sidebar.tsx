@@ -155,15 +155,29 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group cursor-pointer ${
-                isActive ? "text-white shadow-lg" : "text-white/50 hover:text-white hover:bg-white/5"
+              className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${
+                isActive 
+                  ? "text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)] scale-[1.02]" 
+                  : "text-white/50 hover:text-white hover:bg-white/5 hover:translate-x-1"
               }`}
-              style={ isActive ? { backgroundColor: user.brand_color || '#2563eb' } : {} }
+              style={ isActive ? { 
+                backgroundColor: user.brand_color || '#2563eb',
+                backgroundImage: `linear-gradient(135deg, ${user.brand_color || '#2563eb'} 0%, color-mix(in srgb, ${user.brand_color || '#2563eb'} 70%, black) 100%)`
+              } : {} }
             >
-              <span className={`text-2xl transition-transform group-hover:scale-110 pointer-events-none ${isActive ? "" : "opacity-70"}`}>{item.icon}</span>
-              <span className="font-black text-xs uppercase tracking-[0.2em] pointer-events-none">
+              {isActive && (
+                <motion.div 
+                  layoutId="activeTabAdmin"
+                  className="absolute inset-0 bg-white/10"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className={`text-2xl transition-transform group-hover:scale-110 pointer-events-none relative z-10 ${isActive ? "drop-shadow-md" : "opacity-70 group-hover:opacity-100"}`}>{item.icon}</span>
+              <span className="font-black text-[11px] uppercase tracking-wider pointer-events-none relative z-10">
                 {item.name}
               </span>
+              {isActive && <motion.div layoutId="activeIndicatorAdmin" className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_10px_#fff] relative z-10" />}
             </Link>
           );
         })}

@@ -443,27 +443,30 @@ export default function SimuladorPage() {
     <div className="w-full max-w-[1200px] mx-auto py-6 px-4 relative">
       {/* Calculating Animation Overlay */}
       {loading && (
-        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-3xl animate-fade-in">
-          <div className="relative w-full h-80 flex items-center justify-center">
-             <div className="bank-circle animate-bank-1">
-                <img src={getLogo(0)} className="w-full h-full object-cover" alt="B1" />
+        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white/70 backdrop-blur-xl animate-fade-in">
+          <div className="relative w-full h-80 flex items-center justify-center scale-90">
+             <div className="bank-circle animate-spin-slow shadow-2xl border-4 border-blue-500/20">
+                <img src={getLogo(0)} className="w-full h-full object-cover rounded-full" alt="B1" />
              </div>
-             <div className="bank-circle animate-bank-2">
-                <img src={getLogo(1)} className="w-full h-full object-cover" alt="B2" />
-             </div>
-             <div className="bank-circle animate-bank-3">
-                <img src={getLogo(2)} className="w-full h-full object-cover" alt="B3" />
+             <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 bg-white rounded-full shadow-2xl flex items-center justify-center border-4 border-blue-600/10 animate-pulse-subtle">
+                   <img src="/logo-icon.png" className="w-16 h-16 object-contain" alt="Logo" />
+                </div>
              </div>
           </div>
           
-          <div className="mt-16 text-center space-y-4">
-             <h3 className="text-4xl font-black text-white uppercase tracking-tighter drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">Análise Inteligente PortPRO</h3>
-             <p className="text-[11px] text-blue-400 font-bold uppercase tracking-[0.6em] max-w-sm mx-auto leading-relaxed">Varrendo as melhores taxas do mercado nacional</p>
+          <div className="mt-10 text-center space-y-4">
+             <h3 className="text-3xl font-black text-slate-800 uppercase tracking-tighter drop-shadow-sm">
+               Análise Inteligente <span className="text-blue-600">PortPRO</span>
+             </h3>
+             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.5em] max-w-sm mx-auto leading-relaxed">
+               Varrendo as melhores taxas do mercado nacional
+             </p>
           </div>
           
-          <div className="mt-12 flex gap-2">
-             {[1,2,3,4,5,6].map(i => (
-               <div key={i} className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{animationDelay: `${i*0.1}s`}}></div>
+          <div className="mt-12 flex gap-3">
+             {[1,2,3,4,5].map(i => (
+               <div key={i} className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce shadow-lg shadow-blue-600/30" style={{animationDelay: `${i*0.15}s`}}></div>
              ))}
           </div>
         </div>
@@ -526,7 +529,14 @@ export default function SimuladorPage() {
                 const isForcas = formData.agreement === "FORCAS";
                 const options = isForcas 
                   ? ["EXERCITO", "AERONAUTICA", "MARINHA"] 
-                  : ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+                  : [
+                      "AC - ACRE", "AL - ALAGOAS", "AP - AMAPÁ", "AM - AMAZONAS", "BA - BAHIA", "CE - CEARÁ", 
+                      "DF - DISTRITO FEDERAL", "ES - ESPÍRITO SANTO", "GO - GOIÁS", "MA - MARANHÃO", "MT - MATO GROSSO", 
+                      "MS - MATO GROSSO DO SUL", "MG - MINAS GERAIS", "PA - PARÁ", "PB - PARAÍBA", "PR - PARANÁ", 
+                      "PE - PERNAMBUCO", "PI - PIAUÍ", "RJ - RIO DE JANEIRO", "RN - RIO GRANDE DO NORTE", 
+                      "RS - RIO GRANDE DO SUL", "RO - RONDÔNIA", "RR - RORAIMA", "SC - SANTA CATARINA", 
+                      "SP - SÃO PAULO", "SE - SERGIPE", "TO - TOCANTINS"
+                    ];
                 
                 const currentLogoData = formData.sub_agreement ? subLogos.find(l => l.name === formData.sub_agreement) : null;
                 const currentLogoUrl = currentLogoData?.logo_url ? getStaticUrl(currentLogoData.logo_url) : null;
@@ -826,8 +836,23 @@ export default function SimuladorPage() {
           </div>
 
           <div className="pt-16 border-t border-slate-50 dark:border-white/5 flex justify-center">
-             <button type="submit" disabled={loading} className="w-full md:w-3/4 py-7 bg-blue-600 hover:bg-blue-700 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.4em] shadow-2xl shadow-blue-500/40 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50">
-                {loading ? "PROCESSANDO DADOS..." : "EFETUAR SIMULAÇÃO"}
+             <button 
+               type="submit" 
+               disabled={loading} 
+               className="w-full md:w-3/4 py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.4em] shadow-xl shadow-blue-500/20 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 relative overflow-hidden group"
+             >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                {loading ? (
+                  <>
+                    <span className="w-5 h-5 border-4 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    <span>PROCESSANDO...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🚀 EFETUAR SIMULAÇÃO</span>
+                    <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all">✨</span>
+                  </>
+                )}
              </button>
           </div>
         </form>

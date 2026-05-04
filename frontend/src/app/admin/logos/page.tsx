@@ -200,16 +200,41 @@ export default function SubLogosPage() {
                   placeholder="Selecione na lista ou digite..."
                 />
                 <datalist id="logoNames">
-                  {/* Convênios */}
-                  {["INSS", "SIAPE", "GOV_EST", "FORCAS", "CLT_PRIVADO"].map(c => <option key={c} value={c} />)}
-                  {/* Forças */}
-                  <option value="EXERCITO" />
-                  <option value="AERONAUTICA" />
-                  <option value="MARINHA" />
-                  {/* Estados */}
-                  {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(uf => <option key={uf} value={uf} />)}
-                  {/* Bancos de Origem */}
-                  {["AGIBANK", "BANCO BCV", "BANCO ALFA", "BANCO CIFRA", "BANCO DO BRASIL", "BANCO DO ESTADO DO SERGIPE", "BANCO ORIGINAL", "BANCO PINE", "BANCO SEGURO", "BANRISUL", "BARIGUI", "BMG", "BRADESCO S.A.", "BRB", "C6 CONSIGNADO", "CCB BRASIL", "CAIXA", "CREFISA", "DAYCOVAL", "DIGIO", "FACTA", "INBURSA", "ITAÚ CONSIGNADO", "ITAÚ BBA", "ITAÚ UNIBANCO S.A.", "MERCANTIL", "NU FINANCEIRA S.A.", "NBC BANK", "OLÉ CONSIGNADO", "PAGBANK", "PAN", "PARANÁ BANCO", "BNP PARIBAS", "PARATI", "PAULISTA", "PICPAY", "QI SOCIEDADE", "SABEMI", "SAFRA", "SANTANDER", "ZEMA", "OUTROS"].map(b => <option key={b} value={b} />)}
+                  {/* Convênios - Filtrados se já existem */}
+                  {["INSS", "SIAPE", "GOV_EST", "FORCAS", "CLT_PRIVADO"]
+                    .filter(c => !logos.some(l => l.name === c) || (editingLogo && editingLogo.name === c))
+                    .map(c => <option key={c} value={c} />)}
+                  
+                  {/* Forças - Filtradas */}
+                  {["EXERCITO", "AERONAUTICA", "MARINHA"]
+                    .filter(f => !logos.some(l => l.name === f) || (editingLogo && editingLogo.name === f))
+                    .map(f => <option key={f} value={f} />)}
+                  
+                  {/* Estados - Filtrados e com nome completo */}
+                  {[
+                    "AC - ACRE", "AL - ALAGOAS", "AP - AMAPÁ", "AM - AMAZONAS", "BA - BAHIA", "CE - CEARÁ", 
+                    "DF - DISTRITO FEDERAL", "ES - ESPÍRITO SANTO", "GO - GOIÁS", "MA - MARANHÃO", "MT - MATO GROSSO", 
+                    "MS - MATO GROSSO DO SUL", "MG - MINAS GERAIS", "PA - PARÁ", "PB - PARAÍBA", "PR - PARANÁ", 
+                    "PE - PERNAMBUCO", "PI - PIAUÍ", "RJ - RIO DE JANEIRO", "RN - RIO GRANDE DO NORTE", 
+                    "RS - RIO GRANDE DO SUL", "RO - RONDÔNIA", "RR - RORAIMA", "SC - SANTA CATARINA", 
+                    "SP - SÃO PAULO", "SE - SERGIPE", "TO - TOCANTINS"
+                  ]
+                    .filter(uf => !logos.some(l => l.name === uf) || (editingLogo && editingLogo.name === uf))
+                    .map(uf => <option key={uf} value={uf} />)}
+                  
+                  {/* Bancos de Origem - Filtrados */}
+                  {[
+                    "AGIBANK", "BANCO BCV", "BANCO ALFA", "BANCO CIFRA", "BANCO DO BRASIL", 
+                    "BANCO DO ESTADO DO SERGIPE", "BANCO ORIGINAL", "BANCO PINE", "BANCO SEGURO", 
+                    "BANRISUL", "BARIGUI", "BMG", "BRADESCO S.A.", "BRB", "C6 CONSIGNADO", 
+                    "CCB BRASIL", "CAIXA", "CREFISA", "DAYCOVAL", "DIGIO", "FACTA", "INBURSA", 
+                    "ITAÚ CONSIGNADO", "ITAÚ BBA", "ITAÚ UNIBANCO S.A.", "MERCANTIL", 
+                    "NU FINANCEIRA S.A.", "NBC BANK", "OLÉ CONSIGNADO", "PAGBANK", "PAN", 
+                    "PARANÁ BANCO", "BNP PARIBAS", "PARATI", "PAULISTA", "PICPAY", 
+                    "QI SOCIEDADE", "SABEMI", "SAFRA", "SANTANDER", "ZEMA", "OUTROS"
+                  ]
+                    .filter(b => !logos.some(l => l.name === b) || (editingLogo && editingLogo.name === b))
+                    .map(b => <option key={b} value={b} />)}
                 </datalist>
               </div>
               
