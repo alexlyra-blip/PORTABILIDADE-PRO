@@ -25,6 +25,9 @@ const Icons = {
   ChevronDown: ({ size = 16 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
   ),
+  Check: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+  ),
   Sparkles: ({ size = 20 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3 1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3Z" /></svg>
   ),
@@ -43,6 +46,7 @@ export default function SimuladorPage() {
   const [subLogos, setSubLogos] = useState([]);
   const [logoIdx, setLogoIdx] = useState(0);
   const [banksForAnim, setBanksForAnim] = useState([]);
+  const [cpfStatus, setCpfStatus] = useState(null); // 'valid', 'invalid', or null
 
   // Mock de logos caso o DB esteja vazio
   const defaultLogos = [
@@ -181,7 +185,14 @@ export default function SimuladorPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     let val = value;
-    if (name === "cpf") val = maskCPF(value);
+    if (name === "cpf") {
+       val = maskCPF(value);
+       if (val.length === 14) {
+          setCpfStatus(validateCPF(val) ? 'valid' : 'invalid');
+       } else {
+          setCpfStatus(null);
+       }
+    }
     if (name === "idade") val = value.replace(/\D/g, "").slice(0, 3);
     setFormData(prev => ({ ...prev, [name]: val }));
   };
@@ -199,7 +210,7 @@ export default function SimuladorPage() {
 
   const validateCPF = (cpf) => {
     cpf = cpf.replace(/[^\d]+/g, "");
-    if (cpf === "") return true;
+    if (cpf === "") return false;
     if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false;
     let sum = 0, rest;
     for (let i = 1; i <= 9; i++) sum = sum + parseInt(cpf.substring(i - 1, i)) * (11 - i);
@@ -242,7 +253,7 @@ export default function SimuladorPage() {
           taxa_atual: parseFloat((c.taxaAjustada || c.taxaAtual || 0).toString().replace(',', '.')),
           total_term: parseInt(c.prazoTotal),
           remaining_term: parseInt(c.prazoRestante),
-          data_concessao: parseInt(formData.idade || 0) >= 60 ? null : formData.data_concessao, 
+          data_concessao: formData.data_concessao || null, 
           is_60_plus: formData.is_60_plus,
           is_invalidez_60_plus: parseInt(formData.idade || 0) >= 60,
           analfabeto: formData.analfabeto === "sim"
@@ -311,6 +322,7 @@ export default function SimuladorPage() {
 
   const isInvalidezSpecies = ["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species);
   const is60Plus = parseInt(formData.idade || 0) >= 60;
+  const showDataConcessao = formData.agreement === "INSS" && isInvalidezSpecies && !is60Plus;
 
   return (
     <div className="min-h-screen pb-20 animate-in fade-in duration-700">
@@ -330,8 +342,8 @@ export default function SimuladorPage() {
                   }}
                   transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                 >
-                   <div className="w-24 h-24 p-4 bg-white rounded-full shadow-inner border border-blue-100 flex items-center justify-center overflow-hidden">
-                      <img src={getLogo(i)} className="w-full h-full object-contain" />
+                   <div className="w-24 h-24 bg-white rounded-full shadow-2xl border-4 border-white flex items-center justify-center overflow-hidden">
+                      <img src={getLogo(i)} className="w-full h-full object-cover" />
                    </div>
                 </motion.div>
               ))}
@@ -399,9 +411,14 @@ export default function SimuladorPage() {
                       value={formData.cpf}
                       onChange={handleChange}
                       placeholder="000.000.000-00"
-                      className="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-bold text-slate-800"
+                      className={`w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 transition-all outline-none font-bold text-slate-800 ${cpfStatus === 'valid' ? 'border-emerald-500 bg-emerald-50' : cpfStatus === 'invalid' ? 'border-red-500 bg-red-50' : 'border-slate-200 focus:border-blue-500 focus:bg-white'}`}
                       required
                     />
+                    {cpfStatus === 'valid' && (
+                       <div className="absolute right-4 bottom-4 text-emerald-600 animate-in zoom-in">
+                          <Icons.Check size={20} />
+                       </div>
+                    )}
                   </div>
                   <div className="col-span-4 space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idade</label>
@@ -440,6 +457,24 @@ export default function SimuladorPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Campo Data de Concessão (Condicional) */}
+                  {showDataConcessao && (
+                    <div className="space-y-1.5 pt-2 animate-in slide-in-from-top-2 duration-500">
+                      <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                        <Icons.FileText size={12} /> Data de Concessão (Obrigatório)
+                      </label>
+                      <input
+                        type="date"
+                        name="data_concessao"
+                        value={formData.data_concessao}
+                        onChange={handleChange}
+                        className="w-full h-14 px-5 rounded-2xl bg-blue-50 border border-blue-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-bold text-slate-800"
+                        required
+                      />
+                      <p className="text-[9px] font-bold text-blue-400 italic px-2">Necessário para validar regra de invalidez antes dos 60 anos.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -476,8 +511,8 @@ export default function SimuladorPage() {
                       className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between font-black text-slate-800 hover:bg-slate-100 transition-all uppercase text-sm"
                     >
                       <div className="flex items-center gap-3">
-                         {formData.agreement && subLogos.find(l => l.name === formData.agreement)?.logo_url && (
-                           <img src={getStaticUrl(subLogos.find(l => l.name === formData.agreement).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
+                         {formData.agreement && subLogos.find(l => l.name?.toUpperCase() === formData.agreement?.toUpperCase())?.logo_url && (
+                           <img src={getStaticUrl(subLogos.find(l => l.name?.toUpperCase() === formData.agreement?.toUpperCase()).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
                          )}
                          {formData.agreement || "SELECIONAR CONVÊNIO"}
                       </div>
@@ -486,9 +521,9 @@ export default function SimuladorPage() {
                     <AnimatePresence>
                       {dropdownOpen.agreement && (
                         <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
-                           {subLogos.filter(l => !l.parent || l.parent === "principal").length > 0 ? (
-                             subLogos.filter(l => !l.parent || l.parent === "principal").map(l => (
-                               <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: l.name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === l.name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                           {subLogos.filter(l => (l.parent || "principal").toLowerCase() === "principal").length > 0 ? (
+                             subLogos.filter(l => (l.parent || "principal").toLowerCase() === "principal").map(l => (
+                               <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: l.name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement?.toUpperCase() === l.name?.toUpperCase() ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
                                  <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
                                     <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-cover" />
                                  </div>
@@ -496,7 +531,7 @@ export default function SimuladorPage() {
                                </button>
                              ))
                            ) : (
-                             ["INSS", "SIAPE", "EXÉRCITO", "MARINHA", "AERONÁUTICA"].map(name => (
+                             ["INSS", "SIAPE", "EXÉRCITO", "MARINHA", "AERONÁUTICA", "GOVERNO"].map(name => (
                                <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className="p-4 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all">
                                  {name}
                                </button>
@@ -527,8 +562,8 @@ export default function SimuladorPage() {
                           disabled={!formData.agreement}
                         >
                           <div className="flex items-center gap-3">
-                             {formData.sub_agreement && subLogos.find(l => l.name === formData.sub_agreement)?.logo_url && (
-                               <img src={getStaticUrl(subLogos.find(l => l.name === formData.sub_agreement).logo_url)} className="w-8 h-8 rounded-lg object-contain bg-white p-1 border shadow-sm" />
+                             {formData.sub_agreement && subLogos.find(l => l.name?.toUpperCase() === formData.sub_agreement?.toUpperCase())?.logo_url && (
+                               <img src={getStaticUrl(subLogos.find(l => l.name?.toUpperCase() === formData.sub_agreement?.toUpperCase()).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
                              )}
                              {formData.sub_agreement || "SUB-CONVÊNIO"}
                           </div>
@@ -537,14 +572,18 @@ export default function SimuladorPage() {
                         <AnimatePresence>
                           {subDropdownOpen && (
                             <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
-                               {subLogos.filter(l => l.parent === formData.agreement).map(l => (
-                                 <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: l.name })); setSubDropdownOpen(false); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.sub_agreement === l.name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
-                                   <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
-                                      <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-cover" />
-                                   </div>
-                                   <span className="text-[10px] font-black uppercase text-left">{l.name}</span>
-                                 </button>
-                               ))}
+                               {subLogos.filter(l => l.parent?.toUpperCase() === formData.agreement?.toUpperCase()).length > 0 ? (
+                                 subLogos.filter(l => l.parent?.toUpperCase() === formData.agreement?.toUpperCase()).map(l => (
+                                   <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: l.name })); setSubDropdownOpen(false); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.sub_agreement?.toUpperCase() === l.name?.toUpperCase() ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                                     <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
+                                        <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-cover" />
+                                     </div>
+                                     <span className="text-[10px] font-black uppercase text-left">{l.name}</span>
+                                   </button>
+                                 ))
+                               ) : (
+                                  <div className="col-span-2 py-4 text-center text-[10px] font-black text-slate-400 uppercase italic">Nenhum sub-convênio encontrado</div>
+                               )}
                             </motion.div>
                           )}
                         </AnimatePresence>
