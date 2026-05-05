@@ -3,6 +3,35 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api, getStaticUrl } from "@/utils/api";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Ícones SVG nativos (Zero Dependency)
+const Icons = {
+  User: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+  ),
+  FileText: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>
+  ),
+  CreditCard: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
+  ),
+  Plus: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" y2="12" /></svg>
+  ),
+  Trash: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+  ),
+  ChevronDown: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+  ),
+  Sparkles: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3 1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3Z" /></svg>
+  ),
+  Rocket: ({ size = 24 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /><path d="M9 12H4s.5-1 1-4c1.5 0 3 .5 3 .5L12 15Z" /><path d="M15 9h5s1 .5 4 1c0 1.5-.5 3-.5 3L15 9Z" /></svg>
+  )
+};
 
 export default function SimuladorPage() {
   const router = useRouter();
@@ -444,468 +473,406 @@ export default function SimuladorPage() {
   };
 
   return (
-    <div className="w-full max-w-[1200px] mx-auto py-6 px-4 relative">
-      {/* Calculating Animation Overlay */}
+    <div className="min-h-screen pb-20 animate-in fade-in duration-700">
+      {/* Loading Overlay Premium */}
       {loading && (
-        <div className={`fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white/70 dark:bg-slate-900/70 backdrop-blur-md transition-all duration-700 ease-in-out ${isExiting ? 'opacity-0 scale-110 blur-xl' : 'animate-fade-in opacity-100'}`}>
-          <style>{`
-            @keyframes carousel-orbit-1 {
-              0% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-              33.33% { transform: translateX(150px) scale(0.65); z-index: 10; opacity: 0.5; }
-              66.66% { transform: translateX(-150px) scale(0.65); z-index: 10; opacity: 0.5; }
-              100% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-            }
-            @keyframes carousel-orbit-2 {
-              0% { transform: translateX(150px) scale(0.65); z-index: 10; opacity: 0.5; }
-              33.33% { transform: translateX(-150px) scale(0.65); z-index: 10; opacity: 0.5; }
-              66.66% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-              100% { transform: translateX(150px) scale(0.65); z-index: 10; opacity: 0.5; }
-            }
-            @keyframes carousel-orbit-3 {
-              0% { transform: translateX(-150px) scale(0.65); z-index: 10; opacity: 0.5; }
-              33.33% { transform: translateX(0) scale(1); z-index: 30; opacity: 1; }
-              66.66% { transform: translateX(150px) scale(0.65); z-index: 10; opacity: 0.5; }
-              100% { transform: translateX(-150px) scale(0.65); z-index: 10; opacity: 0.5; }
-            }
-            .carousel-scene-2d {
-              position: relative;
-              width: 400px;
-              height: 200px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              margin-bottom: 2rem;
-            }
-            .carousel-item-2d {
-              position: absolute;
-              width: 140px;
-              height: 140px;
-              border-radius: 50%;
-              overflow: hidden;
-              border: 4px solid white;
-              box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-              background: white;
-            }
-            .carousel-item-2d img {
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-            }
-            .pos-1 { animation: carousel-orbit-1 4s infinite ease-in-out; }
-            .pos-2 { animation: carousel-orbit-2 4s infinite ease-in-out; }
-            .pos-3 { animation: carousel-orbit-3 4s infinite ease-in-out; }
-          `}</style>
-          
-          <div className="carousel-scene-2d">
-             <div className="carousel-item-2d pos-1">
-                <img src={getLogo(0)} alt="Banco 1" />
-             </div>
-             <div className="carousel-item-2d pos-2">
-                <img src={getLogo(1)} alt="Banco 2" />
-             </div>
-             <div className="carousel-item-2d pos-3">
-                <img src={getLogo(2)} alt="Banco 3" />
-             </div>
-          </div>
-
-          <div className="mt-8 text-center space-y-4">
-             <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter drop-shadow-sm">
-               Análise Inteligente <span className="text-blue-600">PortPRO</span>
-             </h3>
-             <p className="text-[10px] text-slate-700 dark:text-slate-300 font-bold uppercase tracking-[0.4em] max-w-sm mx-auto leading-relaxed">
-               Varrendo as melhores taxas do mercado nacional
-             </p>
-          </div>
-          <div className="mt-10 flex gap-2">
-             <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce shadow-md shadow-blue-500/50" style={{animationDelay: '0s'}}></div>
-             <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce shadow-md shadow-blue-500/50" style={{animationDelay: '0.15s'}}></div>
-             <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce shadow-md shadow-blue-500/50" style={{animationDelay: '0.3s'}}></div>
-          </div>
+        <div className={`fixed inset-0 z-[1000] flex flex-col items-center justify-center transition-all duration-700 ${isExiting ? "opacity-0 scale-110 blur-2xl" : "bg-black/70 backdrop-blur-md opacity-100"}`}>
+           <div className="relative w-80 h-80 flex items-center justify-center">
+              {/* Círculos 2.5D de Loading */}
+              {[...Array(3)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-40 h-40 rounded-full border-4 border-blue-500/30 flex items-center justify-center bg-white/5 backdrop-blur-xl shadow-[0_0_50px_rgba(37,99,235,0.2)]"
+                  animate={{
+                    x: [Math.cos(i * (2*Math.PI/3)) * 100, Math.cos((i + 1) * (2*Math.PI/3)) * 100, Math.cos((i + 2) * (2*Math.PI/3)) * 100],
+                    scale: [1, 0.7, 1],
+                    zIndex: [10, 0, 10],
+                    opacity: [1, 0.4, 1]
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                >
+                   {/* Logo do Banco (Real ou Fallback) */}
+                   <div className="w-24 h-24 p-4 bg-white rounded-full shadow-inner border border-blue-100 flex items-center justify-center overflow-hidden">
+                      <img src={getLogo(i)} className="w-full h-full object-contain" />
+                   </div>
+                </motion.div>
+              ))}
+              
+              {/* Centro */}
+              <div className="relative z-20 flex flex-col items-center">
+                 <div className="w-20 h-20 bg-blue-600 rounded-3xl shadow-[0_0_40px_rgba(37,99,235,0.6)] flex items-center justify-center mb-6 animate-bounce">
+                    <Icons.Rocket size={40} />
+                 </div>
+                 <h2 className="text-2xl font-black text-white tracking-widest uppercase text-center drop-shadow-lg">Analisando<br/><span className="text-blue-400">Oportunidades</span></h2>
+                 <div className="mt-4 flex gap-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-0"></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
+                    <div className="w-2 h-2 bg-blue-300 rounded-full animate-bounce delay-300"></div>
+                 </div>
+              </div>
+           </div>
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto mb-10 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-white/10 shadow-2xl overflow-hidden animate-fade-in">
+      <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-10 space-y-12">
         
-        <div className="bg-blue-600 p-8 flex items-center gap-6">
-          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-xl flex items-center justify-center text-white text-2xl shadow-2xl">⚡</div>
-          <div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Simulador PRO</h2>
-            <p className="text-[9px] text-white/70 font-bold uppercase tracking-[0.4em] mt-0.5">Análise de Portabilidade e Elegibilidade</p>
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div className="space-y-2">
+            <h1 className="text-5xl font-black text-slate-900 tracking-tighter drop-shadow-sm uppercase">
+              Nova <span className="text-blue-600">Simulação</span>
+            </h1>
+            <p className="text-slate-500 font-bold italic text-sm uppercase tracking-[0.3em]">
+              Portabilidade PRO & Analytics de Crédito
+            </p>
+          </div>
+          <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl shadow-xl border border-slate-100">
+             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-lg">
+                <Icons.Rocket />
+             </div>
+             <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Módulo</p>
+                <p className="text-sm font-black text-slate-800 uppercase leading-none">Inteligência Artificial</p>
+             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSimular} className="p-5 space-y-6">
+        <form onSubmit={handleSimular} className="grid grid-cols-1 xl:grid-cols-12 gap-10">
           
-          <div className="space-y-10">
-            <h3 className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest border-l-8 border-blue-600 pl-4 py-2 bg-blue-50/50 dark:bg-blue-900/20 rounded-r-xl">I. Perfil de Identificação</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Nome Completo</label>
-                <input type="text" name="nome_cliente" value={formData.nome_cliente} onChange={handleChange} className="input-premium w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm py-1.5" placeholder="Digite o nome completo..." />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">CPF</label>
-                <input type="text" name="cpf" value={formData.cpf} onChange={handleChange} className={`input-premium w-full bg-slate-50 dark:bg-slate-800 border-2 ${formData.cpf && !validateCPF(formData.cpf) ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} text-slate-900 dark:text-white focus:border-blue-600 shadow-sm transition-all py-1.5`} placeholder="000.000.000-00" />
-                {formData.cpf && !validateCPF(formData.cpf) && <p className="text-[9px] text-red-500 font-bold uppercase ml-1 animate-pulse">CPF Inválido</p>}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Idade</label>
-                <input type="text" name="idade" value={formData.idade} onChange={handleChange} className="input-premium w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm font-black text-xl py-1" placeholder="65" maxLength={2} required />
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Convênio</label>
-                <div className="flex items-center gap-2">
-                  {formData.agreement && (() => {
-                    const match = subLogos.find(l => l.name === formData.agreement);
-                    return match?.logo_url ? (
-                      <img src={getStaticUrl(match.logo_url)} alt="" className="w-11 h-11 object-contain rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
-                    ) : (
-                      <div className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-[10px]">{formData.agreement.substring(0, 3)}</div>
-                    );
-                  })()}
-                  <select name="agreement" value={formData.agreement} onChange={handleChange} className="input-premium flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold uppercase text-xs py-1.5" required>
-                    <option value="">Selecione o Convênio</option>
-                    <option value="INSS">INSS - PREVIDÊNCIA SOCIAL</option>
-                    <option value="SIAPE">SIAPE - FEDERAL</option>
-                    <option value="GOV_EST">GOVERNO ESTADUAL</option>
-                    <option value="FORCAS">FORÇAS ARMADAS</option>
-                    <option value="CLT_PRIVADO">CLT PRIVADO</option>
-                  </select>
-                </div>
-              </div>
-
-              {(formData.agreement === "FORCAS" || formData.agreement === "GOV_EST") && (() => {
-                const isForcas = formData.agreement === "FORCAS";
-                const options = isForcas 
-                  ? ["EXERCITO", "AERONAUTICA", "MARINHA"] 
-                  : [
-                      "AC - ACRE", "AL - ALAGOAS", "AP - AMAPÁ", "AM - AMAZONAS", "BA - BAHIA", "CE - CEARÁ", 
-                      "DF - DISTRITO FEDERAL", "ES - ESPÍRITO SANTO", "GO - GOIÁS", "MA - MARANHÃO", "MT - MATO GROSSO", 
-                      "MS - MATO GROSSO DO SUL", "MG - MINAS GERAIS", "PA - PARÁ", "PB - PARAÍBA", "PR - PARANÁ", 
-                      "PE - PERNAMBUCO", "PI - PIAUÍ", "RJ - RIO DE JANEIRO", "RN - RIO GRANDE DO NORTE", 
-                      "RS - RIO GRANDE DO SUL", "RO - RONDÔNIA", "RR - RORAIMA", "SC - SANTA CATARINA", 
-                      "SP - SÃO PAULO", "SE - SERGIPE", "TO - TOCANTINS"
-                    ];
-                
-                const currentLogoData = formData.sub_agreement ? subLogos.find(l => l.name === formData.sub_agreement) : null;
-                const currentLogoUrl = currentLogoData?.logo_url ? getStaticUrl(currentLogoData.logo_url) : null;
-
-                return (
-                  <div className="space-y-3 col-span-1 md:col-span-2">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">{isForcas ? "Força Armada" : "Estado"}</label>
-                    <div className="flex items-center gap-2">
-                      {currentLogoUrl ? (
-                        <img src={currentLogoUrl} alt="Logo" className="w-11 h-11 object-cover rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
-                      ) : formData.sub_agreement ? (
-                        <div className="w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 font-bold shrink-0 shadow-md border border-slate-200 dark:border-slate-700 text-[10px]">{formData.sub_agreement.substring(0, 2)}</div>
-                      ) : null}
-                      <div className="relative flex-1">
-                        <input 
-                          type="text" 
-                          value={formData.sub_agreement || ""}
-                          onChange={(e) => {
-                            setFormData({...formData, sub_agreement: e.target.value.toUpperCase()});
-                            setSubDropdownOpen(true);
-                          }} 
-                          onFocus={() => setSubDropdownOpen(true)}
-                          onBlur={() => setTimeout(() => setSubDropdownOpen(false), 200)}
-                          className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm py-1.5" 
-                          placeholder={isForcas ? "Ex: EXERCITO" : "Ex: SP"} 
-                          required 
-                          autoComplete="off"
-                        />
-                        {subDropdownOpen && (
-                          <ul className="absolute z-[60] w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
-                            {options.filter(opt => !formData.sub_agreement || opt.includes(formData.sub_agreement)).map(opt => {
-                              const logoMatch = subLogos.find(l => l.name === opt);
-                              const logoUrl = logoMatch?.logo_url ? getStaticUrl(logoMatch.logo_url) : null;
-                              return (
-                                <li 
-                                  key={opt} 
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    setFormData({...formData, sub_agreement: opt});
-                                    setSubDropdownOpen(false);
-                                  }}
-                                  className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-3 border-b border-slate-50 dark:border-slate-700/50 last:border-0"
-                                >
-                                  {logoUrl ? (
-                                    <img src={logoUrl} alt={opt} className="w-8 h-8 object-contain rounded-md bg-white border border-slate-100" />
-                                  ) : (
-                                    <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-sm">{opt.substring(0,2)}</div>
-                                  )}
-                                  <span className="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase">{opt}</span>
-                                </li>
-                              );
-                            })}
-                            {options.filter(opt => !formData.sub_agreement || opt.includes(formData.sub_agreement)).length === 0 && (
-                              <li className="px-4 py-3 text-xs text-slate-500 italic">Nenhuma opção encontrada.</li>
-                            )}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {formData.agreement === 'INSS' && (
-              <div className="space-y-3 animate-slide-up">
-                <label className="text-[11px] font-black text-blue-600 uppercase tracking-widest ml-1">Espécie do Benefício</label>
-                <select name="benefit_species" value={formData.benefit_species} onChange={handleChange} className="input-premium w-full font-black text-blue-800 dark:text-blue-300 bg-blue-50/20 dark:bg-slate-800 border-2 border-blue-200 dark:border-slate-700 text-xs py-1.5" required>
-                  <option value="">Buscar espécie...</option>
-                  {inssSpecies.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6 px-8 bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-slate-100 dark:border-white/5">
-              {parseInt(formData.idade || 0) >= 60 && (
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-center">CLIENTE 60+</label>
-                  <div className="flex p-1 bg-slate-200 dark:bg-slate-800 rounded-[1.2rem] w-full shadow-inner">
-                    <button type="button" onClick={() => setFormData({...formData, is_60_plus: false})} className={`flex-1 py-2 rounded-[1rem] text-[9px] font-black uppercase transition-all ${!formData.is_60_plus ? "bg-white dark:bg-slate-700 text-blue-600 shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Não</button>
-                    <button type="button" onClick={() => setFormData({...formData, is_60_plus: true})} className={`flex-1 py-2 rounded-[1rem] text-[9px] font-black uppercase transition-all ${formData.is_60_plus ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Sim (60+)</button>
-                  </div>
-                </div>
-              )}
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-center">Cliente Alfabetizado?</label>
-                <div className="flex p-1 bg-slate-200 dark:bg-slate-800 rounded-[1.2rem] w-full shadow-inner">
-                   <button type="button" onClick={() => setFormData({...formData, analfabeto: 'nao'})} className={`flex-1 py-2 rounded-[1rem] text-[9px] font-black uppercase transition-all ${formData.analfabeto === 'nao' ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Sim</button>
-                   <button type="button" onClick={() => setFormData({...formData, analfabeto: 'sim'})} className={`flex-1 py-2 rounded-[1rem] text-[9px] font-black uppercase transition-all ${formData.analfabeto === 'sim' ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-500"}`}>Não</button>
-                </div>
-              </div>
-            </div>
-
-            {formData.agreement === 'INSS' && ["04", "05", "06", "32", "33", "34", "92"].includes(formData.benefit_species) && (() => {
-              const is60Plus = parseInt(formData.idade || 0) >= 60;
-              return (
-                <div className="space-y-6 animate-slide-up">
-                   <div className="flex flex-col md:flex-row items-center justify-between bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-[2.5rem] border border-blue-100 dark:border-white/5 shadow-md">
-                      <span className="text-[11px] font-black text-blue-900 dark:text-blue-400 uppercase tracking-widest block text-center md:text-left mb-4 md:mb-0">INVALIDEZ ACIMA DE 60 ANOS?</span>
-                      <div className="flex p-2 bg-slate-200 dark:bg-slate-800 rounded-[1.8rem] w-full md:w-64 shadow-inner opacity-80">
-                         <button type="button" disabled className={`flex-1 py-3 rounded-[1.4rem] text-[10px] font-black uppercase transition-all ${!is60Plus ? "bg-blue-600 text-white shadow-xl" : "text-slate-400 cursor-not-allowed"}`}>Não</button>
-                         <button type="button" disabled className={`flex-1 py-3 rounded-[1.4rem] text-[10px] font-black uppercase transition-all ${is60Plus ? "bg-emerald-500 text-white shadow-xl" : "text-slate-400 cursor-not-allowed"}`}>Sim (+60)</button>
-                      </div>
-                   </div>
-
-                   {!is60Plus ? (
-                     <div className="p-10 bg-blue-50/50 dark:bg-blue-900/10 rounded-[3rem] border border-blue-100 flex flex-col md:flex-row items-center gap-10 animate-slide-up shadow-2xl">
-                       <div className="w-20 h-20 rounded-[1.8rem] bg-white flex items-center justify-center text-4xl shadow-2xl shadow-blue-500/10 border border-blue-50">🗓️</div>
-                       <div className="flex-1 space-y-4">
-                         <label className="text-[11px] font-black text-blue-900 uppercase tracking-widest">Data de Concessão do Benefício</label>
-                         <input type="date" name="data_concessao" value={formData.data_concessao} onChange={handleChange} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-blue-300 dark:border-slate-700 py-5 font-black text-blue-900 dark:text-white shadow-inner" required />
-                         <p className="text-[10px] text-blue-600 font-bold uppercase tracking-tight italic opacity-70">Necessário para validar carência obrigatória de benefício previdenciário.</p>
-                       </div>
-                     </div>
-                   ) : (
-                     <div className="p-6 bg-emerald-500/10 rounded-[2rem] border border-emerald-500/20 text-center animate-pulse">
-                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">✅ Isenção de carência detectada (Idade {formData.idade} anos)</span>
-                     </div>
-                   )}
-                </div>
-              );
-            })()}
-          </div>
-
-          <div className="space-y-10 pt-10 border-t border-slate-50 dark:border-white/5">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-[11px] font-black text-emerald-600 uppercase tracking-widest border-l-8 border-emerald-600 pl-4 py-2 bg-emerald-50/50 rounded-r-xl">II. Dados do Contrato Atual</h3>
-            </div>
-            
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-              {contracts.map((c, idx) => (
-                <button 
-                  key={c.id} 
-                  type="button"
-                  onClick={() => setActiveContractIndex(idx)}
-                  className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase whitespace-nowrap transition-all ${activeContractIndex === idx ? "bg-blue-600 text-white shadow-lg" : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200"}`}
-                >
-                  CONTRATO {idx + 1}
-                </button>
-              ))}
-              {contracts.length < 5 && (
-                <button type="button" onClick={addContract} className="px-6 py-3 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-200 text-blue-600 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all border border-blue-200 dark:border-blue-900 border-dashed">
-                  + NOVO
-                </button>
-              )}
-            </div>
-
-            {contracts.length > 0 && contracts[activeContractIndex] && (() => {
-              const c = contracts[activeContractIndex];
-              const searchName = c.banco ? (c.banco.includes('-') ? c.banco.split('-')[1].trim().toUpperCase() : c.banco.toUpperCase()) : "";
-              const cBankData = c.banco ? dbBanks.find(b => {
-                const bN = b.name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
-                const sN = searchName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
-                return bN === sN;
-              }) : null;
-              const subMatch = c.banco ? subLogos.find(l => {
-                const lN = l.name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
-                const sN = searchName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
-                return lN === sN;
-              }) : null;
-              const cLogo = subMatch?.logo_url ? getStaticUrl(subMatch.logo_url) : (cBankData?.logo_url ? getStaticUrl(cBankData.logo_url) : null);
+          {/* Lado Esquerdo: Dados do Cliente */}
+          <div className="xl:col-span-4 space-y-8">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/5 rounded-full -mr-20 -mt-20 group-hover:scale-125 transition-transform duration-1000"></div>
               
-              return (
-              <div key={c.id} className="grid grid-cols-1 md:grid-cols-12 gap-8 bg-slate-50 dark:bg-slate-800/50 p-6 lg:p-8 rounded-[2rem] border border-slate-100 dark:border-white/5 relative mt-4 animate-slide-up">
-                {contracts.length > 1 && (
-                  <button type="button" onClick={() => removeContract(c.id)} className="absolute top-4 right-4 text-red-500 hover:bg-red-50 p-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all">Remover</button>
-                )}
-                <div className="md:col-span-7 space-y-3">
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Instituição de Origem (Contrato {activeContractIndex + 1})</label>
-                  <div className="flex items-center gap-2">
-                    {cLogo && (
-                      <img src={cLogo} alt="Logo" className="w-9 h-9 object-cover rounded-lg overflow-hidden shrink-0 shadow-md border border-slate-200 dark:border-slate-700 bg-white" />
-                    )}
-                    <div className="relative flex-1">
-                      <input 
-                        type="text" 
-                        name="banco" 
-                        value={c.banco} 
-                        onChange={(e) => {
-                          handleContractChange(c.id, e);
-                          setDropdownOpen({...dropdownOpen, [c.id]: true});
-                        }} 
-                        onFocus={() => setDropdownOpen({...dropdownOpen, [c.id]: true})}
-                        onBlur={() => setTimeout(() => setDropdownOpen({...dropdownOpen, [c.id]: false}), 200)}
-                        className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm py-1.5" 
-                        placeholder="Ex: 029 - ITAU..." 
-                        required 
-                        autoComplete="off"
-                      />
-                      {dropdownOpen[c.id] && (
-                        <ul className="absolute z-[60] w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
-                          {inssBanks.filter(b => !c.banco || b.label.toLowerCase().includes(c.banco.toLowerCase())).map(b => {
-                            const bName = b.label.includes('-') ? b.label.split('-')[1].trim().toUpperCase() : b.label.toUpperCase();
-                            const dbMatch = dbBanks.find(dbb => {
-                              const dbN = dbb.name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
-                              const bN = bName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
-                              return dbN === bN;
-                            });
-                            
-                            const subMatchList = subLogos.find(sub => {
-                              const subN = sub.name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
-                              const bN = bName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
-                              return subN === bN;
-                            });
-                            const logoUrl = subMatchList?.logo_url ? getStaticUrl(subMatchList.logo_url) : (dbMatch?.logo_url ? getStaticUrl(dbMatch.logo_url) : null);
-                            return (
-                              <li 
-                                key={b.value} 
-                                onMouseDown={(e) => {
-                                  e.preventDefault(); // Prevent input from losing focus immediately
-                                  handleContractChange(c.id, { target: { name: 'banco', value: b.label } });
-                                  setDropdownOpen({...dropdownOpen, [c.id]: false});
-                                }}
-                                className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-3 border-b border-slate-50 dark:border-slate-700/50 last:border-0"
-                              >
-                                {logoUrl ? (
-                                  <img src={logoUrl} className="w-8 h-8 object-cover rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 bg-white" alt="" />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px]">🏛️</div>
-                                )}
-                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase">{b.label}</span>
-                              </li>
-                            );
-                          })}
-                          {inssBanks.filter(b => !c.banco || b.label.toLowerCase().includes(c.banco.toLowerCase())).length === 0 && (
-                             <li className="px-4 py-4 text-xs text-slate-400 font-bold uppercase text-center">Nenhum banco encontrado</li>
-                          )}
-                        </ul>
-                      )}
+              <div className="flex items-center gap-3 mb-8 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 border border-blue-500/20">
+                  <Icons.User />
+                </div>
+                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dados Pessoais</h3>
+              </div>
+
+              <div className="space-y-5 relative z-10">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+                  <input
+                    type="text"
+                    name="nome_cliente"
+                    value={formData.nome_cliente}
+                    onChange={handleChange}
+                    placeholder="DIGITE O NOME DO CLIENTE"
+                    className="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-bold text-slate-800 placeholder:text-slate-300 uppercase"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF</label>
+                    <input
+                      type="text"
+                      name="cpf"
+                      value={formData.cpf}
+                      onChange={handleChange}
+                      placeholder="000.000.000-00"
+                      className="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-bold text-slate-800"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idade</label>
+                    <input
+                      type="text"
+                      name="idade"
+                      value={formData.idade}
+                      onChange={handleChange}
+                      placeholder="80"
+                      className="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-bold text-slate-800"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer group/opt" onClick={() => setFormData({...formData, analfabeto: formData.analfabeto === "sim" ? "nao" : "sim"})}>
+                    <div className="flex items-center gap-3">
+                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${formData.analfabeto === "sim" ? "bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.4)]" : "border-slate-300 group-hover/opt:border-blue-400"}`}>
+                          {formData.analfabeto === "sim" && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
+                       </div>
+                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cliente Analfabeto?</span>
                     </div>
                   </div>
-                  {user && user.role === 'admin' && c.banco && (
-                    <div className="mt-2 text-xs bg-slate-100 dark:bg-slate-800 p-2 rounded-md">
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">UPLOAD LOGO BANCO (ADMIN):</label>
-                      {uploadingLogo ? (
-                        <div className="text-blue-600 font-bold text-[10px] animate-pulse py-1 flex items-center gap-2">
-                           <span className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-                           ENVIANDO LOGO...
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-2">
-                          <input type="file" accept="image/*" onChange={(e) => { setFormData({...formData, banco: c.banco}); handleLogoUpload(e, c.banco); }} className="w-full text-sm" />
-                          {cLogo && cBankData?.id && (
-                             <button type="button" onClick={() => handleLogoDelete(cBankData.id)} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase self-start px-2 py-1 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-100 dark:border-red-900/30 transition-all active:scale-95">
-                               🗑️ Excluir Logo Atual
-                             </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
 
-                <div className="md:col-span-5 space-y-3">
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Valor da Parcela (R$)</label>
-                  <input type="text" name="parcela" value={c.parcela} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm font-black text-xl py-1" placeholder="0,00" required />
-                </div>
-
-                <div className="md:col-span-5 space-y-3">
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Saldo Devedor (R$)</label>
-                  <input type="text" name="saldoDevedor" value={c.saldoDevedor} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-600 shadow-sm font-black text-xl py-1" placeholder="0,00" required />
-                </div>
-
-                <div className="md:col-span-7 grid grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Prazo Contratual</label>
-                    <input type="number" name="prazoTotal" value={c.prazoTotal} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white py-1.5" placeholder="84" required />
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Parcelas Pagas</label>
-                    <input type="number" name="parcelasPagas" value={c.parcelasPagas} onChange={(e) => handleContractChange(c.id, e)} className="input-premium w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white py-1.5" placeholder="Ex: 12" required />
-                  </div>
-                </div>
-
-                <div className="col-span-1 md:col-span-12 space-y-6 pt-6 border-t border-slate-50 dark:border-white/5">
-                  <h4 className="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-2">💹 Cálculo de Taxa & Preview de Motor</h4>
-                  <div className="bg-blue-50/40 dark:bg-blue-900/10 rounded-[2.5rem] p-8 shadow-xl text-slate-800 dark:text-white space-y-6 border border-blue-100 dark:border-white/5 animate-slide-up">
-                    <div className="flex flex-col md:flex-row items-center justify-between border-b border-blue-100 dark:border-white/10 pb-6 gap-4">
-                       <div>
-                          <span className="text-[11px] uppercase font-bold text-blue-600 dark:text-blue-400 block mb-1">Taxa HP-12C Simulada (Cliente)</span>
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer group/opt" onClick={() => setFormData({...formData, is_60_plus: !formData.is_60_plus})}>
+                    <div className="flex items-center gap-3">
+                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${formData.is_60_plus ? "bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.4)]" : "border-slate-300 group-hover/opt:border-blue-400"}`}>
+                          {formData.is_60_plus && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
                        </div>
-                       <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-3 rounded-2xl border border-blue-200 dark:border-white/10 shadow-sm">
-                          <input 
-                             type="text" 
-                             value={c.taxaAjustada || c.taxaAtual || "0.00"} 
-                             onChange={(e) => handleContractChange(c.id, {target: {name: 'taxaAjustada', value: e.target.value.replace(',', '.')}})}
-                             className="w-24 bg-transparent border-none text-blue-600 dark:text-blue-400 font-black text-3xl text-right outline-none tracking-tighter"
-                          />
-                          <span className="text-xl font-black text-blue-300">%</span>
-                       </div>
+                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Invalidez 60+ anos?</span>
                     </div>
                   </div>
                 </div>
               </div>
-              );
-            })()}
-          </div>
+            </div>
 
-          <div className="pt-16 border-t border-slate-50 dark:border-white/5 flex justify-center">
-             <button 
-               type="submit" 
-               disabled={loading} 
-               className="w-full md:w-3/4 py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.4em] shadow-xl shadow-blue-500/20 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 relative overflow-hidden group"
-             >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                {loading ? (
-                  <>
-                    <span className="w-5 h-5 border-4 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    <span>PROCESSANDO...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>🚀 EFETUAR SIMULAÇÃO</span>
-                    <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all">✨</span>
-                  </>
-                )}
-             </button>
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden text-white">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+              <div className="relative z-10 flex flex-col gap-4">
+                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 shadow-xl backdrop-blur-md">
+                    <Icons.Sparkles />
+                 </div>
+                 <h4 className="text-xl font-black uppercase tracking-tighter">Motor de Decisão</h4>
+                 <p className="text-xs text-white/50 font-bold italic leading-relaxed uppercase">Nosso sistema analisa centenas de regras bancárias em tempo real para encontrar a melhor oferta para o seu cliente.<          <div className="xl:col-span-8 space-y-8">
+            
+            {/* Seção Convênio (Visual Premium) */}
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100">
+               <div className="flex items-center gap-3 mb-8">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
+                    <Icons.FileText />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Convênio Origem</h3>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                  <div className="space-y-1.5 relative">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecione o Convênio</label>
+                    <button
+                      type="button"
+                      onClick={() => setDropdownOpen({ ...dropdownOpen, agreement: !dropdownOpen.agreement })}
+                      className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between font-black text-slate-800 hover:bg-slate-100 transition-all uppercase text-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                         {formData.agreement && subLogos.find(l => l.name === formData.agreement)?.logo_url && (
+                           <img src={getStaticUrl(subLogos.find(l => l.name === formData.agreement).logo_url)} className="w-8 h-8 rounded-lg object-contain bg-white p-1 border shadow-sm" />
+                         )}
+                         {formData.agreement || "SELECIONAR CONVÊNIO"}
+                      </div>
+                      <Icons.ChevronDown />
+                    </button>
+                    <AnimatePresence>
+                      {dropdownOpen.agreement && (
+                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
+                           {subLogos.filter(l => l.parent === "principal").map(l => (
+                             <button key={l.id} type="button" onClick={() => { setFormData({ ...formData, agreement: l.name, sub_agreement: "" }); setDropdownOpen({ ...dropdownOpen, agreement: false }); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === l.name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                               <div className="w-10 h-10 bg-white rounded-xl p-1 shrink-0 flex items-center justify-center border shadow-sm">
+                                  <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-contain" />
+                               </div>
+                               <span className="text-[10px] font-black uppercase text-left">{l.name}</span>
+                             </button>
+                           ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {formData.agreement === "INSS" ? (
+                      <>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Espécie do Benefício</label>
+                        <select name="benefit_species" value={formData.benefit_species} onChange={handleChange} className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 font-black text-slate-800 outline-none uppercase text-xs">
+                          <option value="">SELECIONE A ESPÉCIE</option>
+                          {inssSpecies.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </>
+                    ) : (
+                      <div className="relative">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Força / Sub-Convênio</label>
+                        <button
+                          type="button"
+                          onClick={() => setSubDropdownOpen(!subDropdownOpen)}
+                          className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between font-black text-slate-800 hover:bg-slate-100 transition-all uppercase text-sm disabled:opacity-50"
+                          disabled={!formData.agreement}
+                        >
+                          <div className="flex items-center gap-3">
+                             {formData.sub_agreement && subLogos.find(l => l.name === formData.sub_agreement)?.logo_url && (
+                               <img src={getStaticUrl(subLogos.find(l => l.name === formData.sub_agreement).logo_url)} className="w-8 h-8 rounded-lg object-contain bg-white p-1 border shadow-sm" />
+                             )}
+                             {formData.sub_agreement || "SUB-CONVÊNIO"}
+                          </div>
+                          <Icons.ChevronDown />
+                        </button>
+                        <AnimatePresence>
+                          {subDropdownOpen && (
+                            <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
+                               {subLogos.filter(l => l.parent === formData.agreement).map(l => (
+                                 <button key={l.id} type="button" onClick={() => { setFormData({ ...formData, sub_agreement: l.name }); setSubDropdownOpen(false); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.sub_agreement === l.name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                                   <div className="w-10 h-10 bg-white rounded-xl p-1 shrink-0 flex items-center justify-center border shadow-sm">
+                                      <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-contain" />
+                                   </div>
+                                   <span className="text-[10px] font-black uppercase text-left">{l.name}</span>
+                                 </button>
+                               ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
+               </div>
+            </div>
+
+            {/* Seção Contratos (Abas Premium) */}
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100">
+               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-600 border border-orange-500/20">
+                      <Icons.CreditCard />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Contratos Ativos</h3>
+                  </div>
+                  
+                  <button type="button" onClick={addContract} disabled={contracts.length >= 5} className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50">
+                    <Icons.Plus /> Novo Contrato
+                  </button>
+               </div>
+
+               {/* Tabs Navegação */}
+               <div className="flex flex-wrap gap-2 mb-8 bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                  {contracts.map((c, idx) => (
+                    <button 
+                      key={c.id} 
+                      type="button" 
+                      onClick={() => setActiveContractIndex(idx)}
+                      className={`flex items-center gap-3 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeContractIndex === idx ? 'bg-white text-blue-600 shadow-xl border border-slate-100' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'}`}
+                    >
+                      Contrato {idx + 1}
+                      {contracts.length > 1 && (
+                        <div onClick={(e) => { e.stopPropagation(); removeContract(c.id); }} className="hover:text-red-500 transition-colors p-1">
+                           <Icons.Trash size={12} />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+               </div>
+
+               {/* Card do Contrato Ativo */}
+               <AnimatePresence mode="wait">
+                  {contracts[activeContractIndex] && (
+                    <motion.div 
+                      key={contracts[activeContractIndex].id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    >
+                       <div className="space-y-1.5 relative">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Banco Origem</label>
+                          <button
+                            type="button"
+                            onClick={() => setDropdownOpen({ ...dropdownOpen, [contracts[activeContractIndex].id]: !dropdownOpen[contracts[activeContractIndex].id] })}
+                            className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between font-black text-slate-800 hover:bg-slate-100 transition-all uppercase text-[11px]"
+                          >
+                            <div className="flex-1 text-left truncate pr-2">
+                               {contracts[activeContractIndex].banco 
+                                 ? inssBanks.find(b => b.value === contracts[activeContractIndex].banco)?.label 
+                                 : "SELECIONAR BANCO"
+                               }
+                            </div>
+                            <Icons.ChevronDown />
+                          </button>
+                          {dropdownOpen[contracts[activeContractIndex].id] && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-4 z-[100] max-h-[350px] overflow-y-auto">
+                              <div className="grid grid-cols-1 gap-1">
+                                {inssBanks.map(bank => (
+                                  <button
+                                    key={bank.value}
+                                    type="button"
+                                    onClick={() => {
+                                      setContracts(contracts.map((c, i) => i === activeContractIndex ? { ...c, banco: bank.value } : c));
+                                      setDropdownOpen({ ...dropdownOpen, [contracts[activeContractIndex].id]: false });
+                                    }}
+                                    className="w-full px-4 py-3 rounded-xl text-left text-[11px] font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-all uppercase border border-transparent hover:border-blue-100"
+                                  >
+                                    {bank.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                       </div>
+
+                       <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Valor da Parcela</label>
+                          <input
+                            type="text"
+                            name="parcela"
+                            value={contracts[activeContractIndex].parcela}
+                            onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)}
+                            placeholder="R$ 0,00"
+                            className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800"
+                            required
+                          />
+                       </div>
+
+                       <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Saldo Devedor</label>
+                          <input
+                            type="text"
+                            name="saldoDevedor"
+                            value={contracts[activeContractIndex].saldoDevedor}
+                            onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)}
+                            placeholder="R$ 0,00"
+                            className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800"
+                            required
+                          />
+                       </div>
+
+                       <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prazo Total (Meses)</label>
+                          <input
+                            type="text"
+                            name="prazoTotal"
+                            value={contracts[activeContractIndex].prazoTotal}
+                            onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)}
+                            placeholder="84"
+                            className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-center"
+                            required
+                          />
+                       </div>
+
+                       <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Parcelas Pagas</label>
+                          <input
+                            type="text"
+                            name="parcelasPagas"
+                            value={contracts[activeContractIndex].parcelasPagas}
+                            onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)}
+                            placeholder="12"
+                            className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-center"
+                            required
+                          />
+                       </div>
+
+                       <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Taxa Estimada (%)</label>
+                          <div className="w-full h-14 px-6 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center font-black text-blue-600 text-lg shadow-inner">
+                             {contracts[activeContractIndex].taxaAtual ? `${contracts[activeContractIndex].taxaAtual}%` : "0.00%"}
+                          </div>
+                       </div>
+                    </motion.div>
+                  )}
+               </AnimatePresence>
+            </div>
+
+            {/* Ações Finais */}
+            <div className="flex flex-col md:flex-row gap-4 justify-end pt-8">
+               <button type="button" onClick={() => router.back()} className="px-10 py-5 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-[0.2em] text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-xl">
+                  Cancelar
+               </button>
+               <button type="submit" disabled={loading} className="px-12 py-5 rounded-2xl bg-blue-600 text-white font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-700 transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] flex items-center gap-3 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <Icons.Rocket />
+                  )}
+                  {loading ? "PROCESSANDO..." : "INICIAR ANÁLISE MASTER"}
+               </button>
+            </div>
           </div>
         </form>
       </div>
