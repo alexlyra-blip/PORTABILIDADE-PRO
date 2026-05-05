@@ -78,9 +78,10 @@ export default function SimuladorPage() {
         const u = localStorage.getItem('user');
         if (u) setUser(JSON.parse(u));
 
-        // Carregar Logos de Convênio
-        const logos = await api.get('/admin/sub-logos');
-        setSubLogos(logos || []);
+        // Carregar Logos de Convênio (com retry e log)
+        api.get('/admin/sub-logos')
+          .then(logos => setSubLogos(logos || []))
+          .catch(err => console.error("Erro logos:", err));
 
         // Carregar Bancos do DB
         const banks = await api.get("/admin/banks");
@@ -181,7 +182,7 @@ export default function SimuladorPage() {
     const { name, value } = e.target;
     let val = value;
     if (name === "cpf") val = maskCPF(value);
-    if (name === "idade") val = value.replace(/\D/g, "").slice(0, 2);
+    if (name === "idade") val = value.replace(/\D/g, "").slice(0, 3);
     setFormData(prev => ({ ...prev, [name]: val }));
   };
 
@@ -301,8 +302,15 @@ export default function SimuladorPage() {
     { value: "01", label: "01 - PENSÃO POR MORTE ACIDENTE TRABALHO" }, { value: "41", label: "41 - APOSENTADORIA POR IDADE" },
     { value: "42", label: "42 - APOSENTADORIA POR TEMPO DE CONTRIBUIÇÃO" }, { value: "32", label: "32 - APOSENTADORIA POR INVALIDEZ" },
     { value: "21", label: "21 - PENSÃO POR MORTE" }, { value: "88", label: "88 - AMPARO SOCIAL IDOSO (LOAS)" },
-    { value: "87", label: "87 - AMPARO SOCIAL DEFICIENTE (LOAS)" }
+    { value: "87", label: "87 - AMPARO SOCIAL DEFICIENTE (LOAS)" },
+    { value: "04", label: "04 - APOSENTADORIA POR INVALIDEZ ACIDENTE TRABALHO" },
+    { value: "05", label: "05 - APOSENTADORIA POR INVALIDEZ RURAL" },
+    { value: "06", label: "06 - APOSENTADORIA POR INVALIDEZ EMPREGADOR RURAL" },
+    { value: "92", label: "92 - APOSENTADORIA POR INVALIDEZ POR ACIDENTE DE TRABALHO" }
   ];
+
+  const isInvalidezSpecies = ["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species);
+  const is60Plus = parseInt(formData.idade || 0) >= 60;
 
   return (
     <div className="min-h-screen pb-20 animate-in fade-in duration-700">
@@ -418,14 +426,20 @@ export default function SimuladorPage() {
                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cliente Analfabeto?</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer group/opt" onClick={() => setFormData(p => ({...p, is_60_plus: !p.is_60_plus}))}>
-                    <div className="flex items-center gap-3">
-                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${formData.is_60_plus ? "bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.4)]" : "border-slate-300 group-hover/opt:border-blue-400"}`}>
-                          {formData.is_60_plus && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                       </div>
-                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Invalidez 60+ anos?</span>
+                  
+                  {/* Regra Condicional: Invalidez ou 60+ */}
+                  {(isInvalidezSpecies || is60Plus) && (
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer group/opt" onClick={() => setFormData(p => ({...p, is_60_plus: !p.is_60_plus}))}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${formData.is_60_plus ? "bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.4)]" : "border-slate-300 group-hover/opt:border-blue-400"}`}>
+                            {formData.is_60_plus && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
+                        </div>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                           {isInvalidezSpecies ? "Benefício por Invalidez?" : "Cliente 60+ anos?"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -463,7 +477,7 @@ export default function SimuladorPage() {
                     >
                       <div className="flex items-center gap-3">
                          {formData.agreement && subLogos.find(l => l.name === formData.agreement)?.logo_url && (
-                           <img src={getStaticUrl(subLogos.find(l => l.name === formData.agreement).logo_url)} className="w-8 h-8 rounded-lg object-contain bg-white p-1 border shadow-sm" />
+                           <img src={getStaticUrl(subLogos.find(l => l.name === formData.agreement).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
                          )}
                          {formData.agreement || "SELECIONAR CONVÊNIO"}
                       </div>
@@ -475,8 +489,8 @@ export default function SimuladorPage() {
                            {subLogos.filter(l => !l.parent || l.parent === "principal").length > 0 ? (
                              subLogos.filter(l => !l.parent || l.parent === "principal").map(l => (
                                <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: l.name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === l.name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
-                                 <div className="w-10 h-10 bg-white rounded-xl p-1 shrink-0 flex items-center justify-center border shadow-sm">
-                                    <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-contain" />
+                                 <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
+                                    <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-cover" />
                                  </div>
                                  <span className="text-[10px] font-black uppercase text-left">{l.name}</span>
                                </button>
@@ -525,8 +539,8 @@ export default function SimuladorPage() {
                             <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
                                {subLogos.filter(l => l.parent === formData.agreement).map(l => (
                                  <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: l.name })); setSubDropdownOpen(false); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.sub_agreement === l.name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
-                                   <div className="w-10 h-10 bg-white rounded-xl p-1 shrink-0 flex items-center justify-center border shadow-sm">
-                                      <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-contain" />
+                                   <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
+                                      <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-cover" />
                                    </div>
                                    <span className="text-[10px] font-black uppercase text-left">{l.name}</span>
                                  </button>
