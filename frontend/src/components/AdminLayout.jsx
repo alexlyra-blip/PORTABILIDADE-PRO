@@ -1,7 +1,33 @@
-"use client";
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Calculator, LayoutDashboard, Landmark, Scale, ClipboardList, Percent, Users, LogOut } from "lucide-react";
+
+// Ícones SVG nativos para evitar dependências externas (Zero Dependency)
+const Icons = {
+  Calculator: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></svg>
+  ),
+  LayoutDashboard: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
+  ),
+  Landmark: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7 12 2" /></svg>
+  ),
+  Scale: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg>
+  ),
+  ClipboardList: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" /></svg>
+  ),
+  Percent: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" x2="5" y1="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /></svg>
+  ),
+  Users: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="19" cy="11" r="3" /></svg>
+  ),
+  LogOut: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>
+  )
+};
 
 const AdminLayout = ({ children }) => {
   const [user, setUser] = useState({ name: 'Administrador', logo_url: '', avatar_url: '' });
@@ -70,7 +96,7 @@ const AdminLayout = ({ children }) => {
               boxShadow: `0 4px 8px -2px rgba(37, 99, 235, 0.3)`
             }}
           >
-            <span className="group-hover:scale-125 transition-transform"><Calculator size={16} strokeWidth={2.5} /></span>
+            <span className="group-hover:scale-125 transition-transform"><Icons.Calculator /></span>
             <span className="font-black text-[9px] text-white uppercase tracking-[0.1em]">Simulador</span>
           </Link>
 
@@ -81,34 +107,34 @@ const AdminLayout = ({ children }) => {
               boxShadow: `0 4px 8px -2px rgba(37, 99, 235, 0.2)`
             }}
           >
-            <span className="group-hover:scale-125 transition-transform"><LayoutDashboard size={16} strokeWidth={2.5} /></span>
+            <span className="group-hover:scale-125 transition-transform"><Icons.LayoutDashboard /></span>
             <span className="font-black text-[9px] text-white uppercase tracking-[0.1em]">Dashboard</span>
           </Link>
 
           <p className="px-3 text-[7px] font-black text-white/20 uppercase tracking-[0.2em] mb-1 italic mt-2">Configurações</p>
           
           <Link href="/admin/banks" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Landmark size={14} strokeWidth={2.5} /></span>
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.Landmark /></span>
             <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">BANCOS</span>
           </Link>
           
           <Link href="/admin/rules" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Scale size={14} strokeWidth={2.5} /></span>
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.Scale /></span>
             <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">REGRAS</span>
           </Link>
           
           <Link href="/admin/tables" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><ClipboardList size={14} strokeWidth={2.5} /></span>
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.ClipboardList /></span>
             <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">TABELAS</span>
           </Link>
           
           <Link href="/admin/coefficients" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Percent size={14} strokeWidth={2.5} /></span>
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.Percent /></span>
             <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">COEFICIENTES</span>
           </Link>
           
           <Link href="/admin/users" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Users size={14} strokeWidth={2.5} /></span>
+            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.Users /></span>
             <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">USUÁRIOS</span>
           </Link>
         </nav>
@@ -116,7 +142,7 @@ const AdminLayout = ({ children }) => {
         {/* Footer: Botão Sair Idêntico à Imagem 1 */}
         <div className="p-4 border-t border-white/5 bg-black/30 relative z-20 text-center">
           <Link href="/login" className="flex items-center justify-center gap-2 w-full py-2.5 bg-red-600/10 hover:bg-red-600 text-white/60 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20">
-            <span><LogOut size={16} strokeWidth={2.5} /></span>
+            <span><Icons.LogOut /></span>
             <span>Encerrar Sessão</span>
           </Link>
         </div>

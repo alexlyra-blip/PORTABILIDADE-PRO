@@ -4,7 +4,40 @@ import Link from "next/link";
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from "framer-motion";
-import { Calculator, Trophy, LayoutDashboard, FileText, TrendingUp, Settings2, Users, SlidersHorizontal, LogOut, ChevronRight } from "lucide-react";
+
+// Ícones SVG nativos para evitar dependências externas (Zero Dependency)
+const Icons = {
+  Calculator: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></svg>
+  ),
+  Trophy: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg>
+  ),
+  LayoutDashboard: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
+  ),
+  FileText: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>
+  ),
+  TrendingUp: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>
+  ),
+  Settings2: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7h-9" /><path d="M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" /></svg>
+  ),
+  Users: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="19" cy="11" r="3" /></svg>
+  ),
+  SlidersHorizontal: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" /><line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" /><line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" /><line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" /><line x1="16" x2="16" y1="18" y2="22" /></svg>
+  ),
+  LogOut: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>
+  ),
+  ChevronRight: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+  )
+};
 
 export default function Sidebar() {
   const router = useRouter();
@@ -59,11 +92,11 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { name: "Nova Simulação", href: "/simulador", icon: <Calculator size={20} strokeWidth={2.5} />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
-    { name: "Ofertas", href: "/ofertas", icon: <Trophy size={20} strokeWidth={2.5} />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
-    { name: "Painel Geral", href: "/dashboard", icon: <LayoutDashboard size={20} strokeWidth={2.5} /> },
-    { name: "Meus Contratos", href: "/meus-contratos", icon: <FileText size={20} strokeWidth={2.5} />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
-    { name: "Relatórios", href: "/relatorio", icon: <TrendingUp size={20} strokeWidth={2.5} />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Nova Simulação", href: "/simulador", icon: <Icons.Calculator />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Ofertas", href: "/ofertas", icon: <Icons.Trophy />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Painel Geral", href: "/dashboard", icon: <Icons.LayoutDashboard /> },
+    { name: "Meus Contratos", href: "/meus-contratos", icon: <Icons.FileText />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Relatórios", href: "/relatorio", icon: <Icons.TrendingUp />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
   ].filter(item => !item.roles || item.roles.includes(user.role));
 
   const profileImageUrl = getStaticUrl(user.logo_url || user.avatar_url);
@@ -173,7 +206,7 @@ export default function Sidebar() {
                 {!isActive && <div className="absolute inset-0 bg-white/10 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>}
                 <span className="transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none text-white">{item.icon}</span>
                 <span className="font-black text-[11px] uppercase tracking-[0.2em] pointer-events-none">{item.name}</span>
-                <div className="ml-auto opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all text-sm pointer-events-none text-white"><ChevronRight size={16} strokeWidth={3} /></div>
+                <div className="ml-auto opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all text-sm pointer-events-none text-white"><Icons.ChevronRight size={16} /></div>
               </Link>
             );
           }
@@ -215,17 +248,17 @@ export default function Sidebar() {
             <p className="px-4 text-xs font-black text-white/20 uppercase tracking-[0.3em] mb-3 italic">Área Administrativa</p>
             {user.role === 'admin' && (
               <Link href="/admin" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
-                <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><Settings2 size={16} strokeWidth={2} /></span>
+                <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><Icons.Settings2 size={16} /></span>
                 <span className="font-bold text-xs tracking-tight pointer-events-none">Painel Admin</span>
               </Link>
             )}
             <Link href="/admin/users" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
-              <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><Users size={16} strokeWidth={2} /></span>
+              <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><Icons.Users size={16} /></span>
               <span className="font-bold text-xs tracking-tight pointer-events-none">{user.role === 'promotora' ? 'Usuários' : 'Gestão Usuários'}</span>
             </Link>
             {user.role === 'promotora' && (
               <Link href="/admin/promotora-rules" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
-                <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><SlidersHorizontal size={16} strokeWidth={2} /></span>
+                <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><Icons.SlidersHorizontal size={16} /></span>
                 <span className="font-bold text-xs tracking-tight pointer-events-none">Regra Bancos</span>
               </Link>
             )}
@@ -239,7 +272,7 @@ export default function Sidebar() {
           onClick={handleLogout}
           className="flex items-center justify-center gap-2 w-full py-2 bg-red-600/10 hover:bg-red-600 text-white/60 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20 cursor-pointer"
         >
-          <span className="pointer-events-none"><LogOut size={16} strokeWidth={2.5} /></span>
+          <span className="pointer-events-none"><Icons.LogOut size={16} /></span>
           <span className="pointer-events-none">Encerrar Sessão</span>
         </button>
       </div>
