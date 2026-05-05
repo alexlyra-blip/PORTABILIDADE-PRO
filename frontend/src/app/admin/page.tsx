@@ -10,6 +10,28 @@ import {
   AreaChart, Area, PieChart, Pie, Cell, Legend
 } from 'recharts';
 
+// Ícones SVG nativos para o Dashboard Admin
+const Icons = {
+  Bank: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7 12 2" /></svg>
+  ),
+  Table: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><line x1="3" x2="21" y1="9" y2="9" /><line x1="3" x2="21" y1="15" y2="15" /><line x1="9" x2="9" y1="9" y2="21" /><line x1="15" x2="15" y1="9" y2="21" /></svg>
+  ),
+  Users: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="19" cy="11" r="3" /></svg>
+  ),
+  Activity: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+  ),
+  Download: ({ size = 12 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+  ),
+  Shield: ({ size = 24 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+  )
+};
+
 export default function AdminPage() {
   const [role, setRole] = useState("vendedor");
   const [loading, setLoading] = useState(true);
@@ -73,8 +95,8 @@ export default function AdminPage() {
   if (role !== "admin") {
     return (
       <div className="p-12 text-center text-slate-500 animate-in fade-in duration-300">
-        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 border border-red-100 shadow-sm">
-          🚫
+        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100 shadow-sm">
+          <Icons.Shield size={32} />
         </div>
         <h2 className="text-2xl font-bold text-slate-800 mb-2">Painel de Controle Restrito</h2>
         <p className="text-slate-500 text-sm max-w-md mx-auto">Apenas o Administrador Master tem permissão para visualizar o dashboard global da plataforma.</p>
@@ -98,30 +120,30 @@ export default function AdminPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard 
           title="Bancos Cadastrados" 
-          value={data?.totals?.banks || 0} 
-          icon="🏦" 
-          trend="Total" 
+          value={data.totals.banks} 
+          icon={<Icons.Bank />}
+          trend="+12%" 
           trendUp={true} 
         />
         <StatsCard 
-          title="Tabelas de Coeficientes" 
-          value={data?.totals?.tables || 0} 
-          icon="📋" 
+          title="Tabelas de Regras" 
+          value={data.totals.tables} 
+          icon={<Icons.Table />}
           trend="Ativas" 
           trendUp={true} 
         />
         <StatsCard 
-          title="Simulações / Histórico" 
-          value={data?.totals?.simulations || 0} 
-          icon="✨" 
-          trend="Global" 
+          title="Total Simulações" 
+          value={data.totals.simulations} 
+          icon={<Icons.Activity />}
+          trend="+5.4%" 
           trendUp={true} 
         />
         <StatsCard 
-          title="Taxa Média Ofertada" 
-          value={data?.stats?.avg_rate || "0%"} 
-          icon="📈" 
-          trend="Portabilidade" 
+          title="Usuários Ativos" 
+          value={data.totals.users || 0} 
+          icon={<Icons.Users />}
+          trend="Monitorados" 
           trendUp={true} 
         />
       </div>
@@ -244,6 +266,12 @@ export default function AdminPage() {
                       {opt.label}
                     </button>
                   ))}
+                  <button 
+                    onClick={handleExportPDF}
+                    className="px-3 py-1.5 text-[9px] font-black text-white uppercase tracking-widest rounded-lg transition-all bg-red-600 hover:bg-red-700 shadow-md shadow-red-600/30 flex items-center gap-1.5 shrink-0"
+                  >
+                    <Icons.Download /> PDF EXPORT
+                  </button>
                 </div>
               </div>
 

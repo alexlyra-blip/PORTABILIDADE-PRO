@@ -1,7 +1,9 @@
+import { ReactNode } from "react";
+
 interface StatsCardProps {
   title: string;
   value: string | number;
-  icon: string;
+  icon: ReactNode;
   trend?: string;
   trendUp?: boolean;
 }

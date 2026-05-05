@@ -8,6 +8,28 @@ import {
 } from "recharts";
 import { useRouter } from "next/navigation";
 
+// Ícones SVG nativos para o Dashboard
+const Icons = {
+  Bank: ({ size = 24 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7 12 2" /></svg>
+  ),
+  History: ({ size = 24 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" /></svg>
+  ),
+  Table: ({ size = 24 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><line x1="3" x2="21" y1="9" y2="9" /><line x1="3" x2="21" y1="15" y2="15" /><line x1="9" x2="9" y1="9" y2="21" /><line x1="15" x2="15" y1="9" y2="21" /></svg>
+  ),
+  Percent: ({ size = 24 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" x2="5" y1="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /></svg>
+  ),
+  Download: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+  ),
+  Rocket: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /><path d="M9 12H4s.5-1 1-4c1.5 0 3 .5 3 .5L12 15Z" /><path d="M15 9h5s1 .5 4 1c0 1.5-.5 3-.5 3L15 9Z" /></svg>
+  )
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState(null);
@@ -42,10 +64,10 @@ export default function DashboardPage() {
   );
 
   const stats = [
-    { title: "Top Banco", label: "O banco mais indicado", value: data?.stats?.top_bank, img: data?.stats?.top_bank_logo, icon: "🏦", color: "blue" },
-    { title: "Banco Mais Portado", label: "Origem mais frequente", value: data?.stats?.top_origin_bank, img: data?.stats?.top_origin_logo, icon: "🏛️", color: "pink" },
-    { title: "Melhor Tabela", label: "A tabela mais indicada", value: data?.stats?.top_table, img: data?.stats?.top_table_logo, icon: "📜", color: "emerald" },
-    { title: "Taxa Média", label: "A taxa mais indicada", value: data?.stats?.avg_rate, icon: "📉", color: "purple" },
+    { title: "Top Banco", label: "O banco mais indicado", value: data?.stats?.top_bank, img: data?.stats?.top_bank_logo, icon: <Icons.Bank />, color: "blue" },
+    { title: "Banco Mais Portado", label: "Origem mais frequente", value: data?.stats?.top_origin_bank, img: data?.stats?.top_origin_logo, icon: <Icons.History />, color: "pink" },
+    { title: "Melhor Tabela", label: "A tabela mais indicada", value: data?.stats?.top_table, img: data?.stats?.top_table_logo, icon: <Icons.Table />, color: "emerald" },
+    { title: "Taxa Média", label: "A taxa mais indicada", value: data?.stats?.avg_rate, icon: <Icons.Percent />, color: "purple" },
   ];
 
   const handleAccept = async (sim, offer) => {
@@ -169,7 +191,7 @@ export default function DashboardPage() {
                     onClick={handleExportPDF}
                     className="px-3 py-1.5 text-[9px] font-black text-white uppercase tracking-widest rounded-lg transition-all bg-red-500 hover:bg-red-600 shadow-md shadow-red-500/30 flex items-center gap-1 shrink-0"
                   >
-                    📄 PDF
+                    <Icons.Download size={12} /> PDF
                   </button>
                 </div>
               </div>
@@ -347,7 +369,7 @@ export default function DashboardPage() {
                                     </div>
                                  ) : (
                                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-[10px] font-black text-slate-400">
-                                       🏦
+                                       <Icons.Bank size={16} />
                                     </div>
                                  )}
                                  <div>
@@ -368,14 +390,14 @@ export default function DashboardPage() {
                                     className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-500 rounded-xl transition-all border border-transparent hover:border-rose-100 dark:hover:border-rose-500/20"
                                     title="Baixar PDF"
                                  >
-                                    📄
+                                    <Icons.Download size={18} />
                                  </button>
                                  <button 
                                     onClick={() => handleGoToOffers(sim)}
                                     className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-blue-500 rounded-xl transition-all border border-transparent hover:border-blue-100 dark:hover:border-blue-500/20"
                                     title="Ver Ofertas"
                                  >
-                                    🚀
+                                    <Icons.Rocket size={18} />
                                  </button>
                               </div>
                            </td>
