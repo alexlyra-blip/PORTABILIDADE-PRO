@@ -8,28 +8,56 @@ import { motion, AnimatePresence } from "framer-motion";
 // Ícones SVG nativos (Zero Dependency)
 const Icons = {
   User: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
   ),
   FileText: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </svg>
   ),
   CreditCard: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="20" height="14" x="2" y="5" rx="2" />
+      <line x1="2" x2="22" y1="10" y2="10" />
+    </svg>
   ),
   Plus: ({ size = 16 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" y2="12" /></svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" x2="12" y1="5" y2="19" />
+      <line x1="5" x2="19" y1="12" y2="12" />
+    </svg>
   ),
   Trash: ({ size = 16 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    </svg>
   ),
   ChevronDown: ({ size = 16 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
   ),
   Sparkles: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3 1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3Z" /></svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 3 1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l1.912-5.813a2 2 0 0 0-1.275-1.275L21 12l-5.813-1.912a2 2 0 0 0-1.275-1.275L12 3Z" />
+    </svg>
   ),
   Rocket: ({ size = 24 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /><path d="M9 12H4s.5-1 1-4c1.5 0 3 .5 3 .5L12 15Z" /><path d="M15 9h5s1 .5 4 1c0 1.5-.5 3-.5 3L15 9Z" /></svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+      <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+      <path d="M9 12H4s.5-1 1-4c1.5 0 3 .5 3 .5L12 15Z" />
+      <path d="M15 9h5s1 .5 4 1c0 1.5-.5 3-.5 3L15 9Z" />
+    </svg>
   )
 };
 
@@ -53,6 +81,7 @@ export default function SimuladorPage() {
     };
     fetchSubLogos();
   }, []);
+
   const [formData, setFormData] = useState({
     nome_cliente: "",
     cpf: "",
@@ -191,7 +220,6 @@ export default function SimuladorPage() {
       alert("CPF informado é inválido. Por favor, verifique.");
       return;
     }
-    // Validar contratos
     const invalidContracts = contracts.filter(c => !c.banco || !c.parcela || !c.saldoDevedor);
     if (invalidContracts.length > 0) {
       alert("Por favor, preencha todos os campos obrigatórios dos contratos.");
@@ -226,8 +254,6 @@ export default function SimuladorPage() {
         new Promise(resolve => setTimeout(resolve, 4000))
       ]);
       
-      // Combine results correctly. Results is an array of data from the backend.
-      // Usually, data is { ofertas: [], rejeitados: [], ... }. For multiple, we merge them.
       const combinedOfertas = [];
       results.forEach(res => {
         if (res.ofertas) combinedOfertas.push(...res.ofertas.map(o => ({ ...o, _contrato_id: res.contrato_id })));
@@ -244,7 +270,6 @@ export default function SimuladorPage() {
       sessionStorage.setItem("simulation_results", JSON.stringify(finalData));
       sessionStorage.setItem("simulation_input", JSON.stringify({ ...formData, contracts }));
       
-      // Save last rate for admin 
       if (contracts.length > 0) {
         localStorage.setItem("last_simulation_rate", contracts[0].taxaAtual || "0");
       }
@@ -353,7 +378,6 @@ export default function SimuladorPage() {
     { value: "93", label: "93 - PENSÃO POR MORTE POR ACIDENTE DE TRABALHO" }
   ];
 
-  // Loading logos cycling from REAL database banks
   const defaultLogos = [
     "https://logouol.com/itau/itau-logo.png",
     "https://logos-world.net/wp-content/uploads/2021/02/PicPay-Logo.png",
@@ -366,7 +390,6 @@ export default function SimuladorPage() {
   useEffect(() => {
     const u = localStorage.getItem('user');
     if (u) setUser(JSON.parse(u));
-    // Carregar bancos reais para usar as logos na animação
     api.get("/admin/banks")
       .then(list => {
         setDbBanks(list);
@@ -380,78 +403,6 @@ export default function SimuladorPage() {
       })
       .catch(() => {});
   }, []);
-
-  const getCurrentBankData = () => {
-    if (!formData.banco) return null;
-    const searchName = formData.banco.includes('-') ? formData.banco.split('-')[1].trim().toUpperCase() : formData.banco.toUpperCase();
-    return dbBanks.find(b => b.name.toUpperCase() === searchName || b.name.toUpperCase().includes(searchName) || searchName.includes(b.name.toUpperCase()));
-  };
-  const currentBankData = getCurrentBankData();
-  const currentLogo = currentBankData?.logo_url ? getStaticUrl(currentBankData.logo_url) : null;
-
-  const handleLogoUpload = async (e, bankName) => {
-    const file = e.target.files[0];
-    if (!file || !bankName) return;
-    try {
-      setUploadingLogo(true);
-      const searchName = bankName.includes('-') ? bankName.split('-')[1].trim().toUpperCase() : bankName.toUpperCase();
-      const matchedBank = dbBanks.find(b => b.name.toUpperCase() === searchName || b.name.toUpperCase().includes(searchName) || searchName.includes(b.name.toUpperCase()));
-      
-      let bankId = matchedBank?.id;
-      if (!bankId) {
-         const nameToCreate = bankName.includes('-') ? bankName.split('-')[1].trim() : bankName;
-         const newBank = await api.post("/admin/banks", { name: nameToCreate, active: true });
-         bankId = newBank.id;
-      }
-      const formDataObj = new FormData();
-      formDataObj.append('file', file);
-      if (api.postFormData) {
-        await api.postFormData(`/admin/banks/${bankId}/upload-logo`, formDataObj);
-      } else {
-        const token = localStorage.getItem('token');
-        await fetch(`${api.API_BASE_URL || 'http://127.0.0.1:8000/api'}/admin/banks/${bankId}/upload-logo`, {
-          method: 'POST', headers: token ? { 'Authorization': `Bearer ${token}` } : {}, body: formDataObj
-        });
-      }
-      const list = await api.get("/admin/banks");
-      setDbBanks(list);
-      const originBanksToExclude = ["AGIBANK", "BCV", "ALFA", "CIFRA", "PINE", "SEGURO", "BARIGUI", "BRB", "PARANÁ", "PARATI", "PAULISTA", "PICPAY", "QI SOCIEDADE", "SABEMI", "ZEMA"];
-      const active = list.filter(b => 
-        b.logo_url && 
-        b.active && 
-        !originBanksToExclude.some(o => b.name.toUpperCase().includes(o))
-      );
-      setBanksForAnim(active.length > 0 ? active : []);
-      alert("Logo enviada com sucesso!");
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao enviar logo.");
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
-
-  const handleLogoDelete = async (bankId) => {
-    if (!bankId) return;
-    try {
-      setUploadingLogo(true);
-      await api.patch(`/admin/banks/${bankId}`, { logo_url: null });
-      const list = await api.get("/admin/banks");
-      setDbBanks(list);
-      const originBanksToExclude = ["AGIBANK", "BCV", "ALFA", "CIFRA", "PINE", "SEGURO", "BARIGUI", "BRB", "PARANÁ", "PARATI", "PAULISTA", "PICPAY", "QI SOCIEDADE", "SABEMI", "ZEMA"];
-      const active = list.filter(b => 
-        b.logo_url && 
-        b.active && 
-        !originBanksToExclude.some(o => b.name.toUpperCase().includes(o))
-      );
-      setBanksForAnim(active.length > 0 ? active : []);
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao excluir logo.");
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
 
   useEffect(() => {
     let interval;
@@ -474,11 +425,9 @@ export default function SimuladorPage() {
 
   return (
     <div className="min-h-screen pb-20 animate-in fade-in duration-700">
-      {/* Loading Overlay Premium */}
       {loading && (
         <div className={`fixed inset-0 z-[1000] flex flex-col items-center justify-center transition-all duration-700 ${isExiting ? "opacity-0 scale-110 blur-2xl" : "bg-black/70 backdrop-blur-md opacity-100"}`}>
            <div className="relative w-80 h-80 flex items-center justify-center">
-              {/* Círculos 2.5D de Loading */}
               {[...Array(3)].map((_, i) => (
                 <motion.div
                   key={i}
@@ -495,14 +444,12 @@ export default function SimuladorPage() {
                     ease: "linear"
                   }}
                 >
-                   {/* Logo do Banco (Real ou Fallback) */}
                    <div className="w-24 h-24 p-4 bg-white rounded-full shadow-inner border border-blue-100 flex items-center justify-center overflow-hidden">
                       <img src={getLogo(i)} className="w-full h-full object-contain" />
                    </div>
                 </motion.div>
               ))}
               
-              {/* Centro */}
               <div className="relative z-20 flex flex-col items-center">
                  <div className="w-20 h-20 bg-blue-600 rounded-3xl shadow-[0_0_40px_rgba(37,99,235,0.6)] flex items-center justify-center mb-6 animate-bounce">
                     <Icons.Rocket size={40} />
@@ -519,8 +466,6 @@ export default function SimuladorPage() {
       )}
 
       <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-10 space-y-12">
-        
-        {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div className="space-y-2">
             <h1 className="text-5xl font-black text-slate-900 tracking-tighter drop-shadow-sm uppercase">
@@ -542,8 +487,6 @@ export default function SimuladorPage() {
         </div>
 
         <form onSubmit={handleSimular} className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-          
-          {/* Lado Esquerdo: Dados do Cliente */}
           <div className="xl:col-span-4 space-y-8">
             <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/5 rounded-full -mr-20 -mt-20 group-hover:scale-125 transition-transform duration-1000"></div>
@@ -625,9 +568,12 @@ export default function SimuladorPage() {
                     <Icons.Sparkles />
                  </div>
                  <h4 className="text-xl font-black uppercase tracking-tighter">Motor de Decisão</h4>
-                 <p className="text-xs text-white/50 font-bold italic leading-relaxed uppercase">Nosso sistema analisa centenas de regras bancárias em tempo real para encontrar a melhor oferta para o seu cliente.<          <div className="xl:col-span-8 space-y-8">
-            
-            {/* Seção Convênio (Visual Premium) */}
+                 <p className="text-xs text-white/50 font-bold italic leading-relaxed uppercase">Nosso sistema analisa centenas de regras bancárias em tempo real para encontrar a melhor oferta para o seu cliente.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="xl:col-span-8 space-y-8">
             <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100">
                <div className="flex items-center gap-3 mb-8">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
@@ -714,7 +660,6 @@ export default function SimuladorPage() {
                </div>
             </div>
 
-            {/* Seção Contratos (Abas Premium) */}
             <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100">
                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                   <div className="flex items-center gap-3">
@@ -729,7 +674,6 @@ export default function SimuladorPage() {
                   </button>
                </div>
 
-               {/* Tabs Navegação */}
                <div className="flex flex-wrap gap-2 mb-8 bg-slate-50 p-2 rounded-2xl border border-slate-100">
                   {contracts.map((c, idx) => (
                     <button 
@@ -748,7 +692,6 @@ export default function SimuladorPage() {
                   ))}
                </div>
 
-               {/* Card do Contrato Ativo */}
                <AnimatePresence mode="wait">
                   {contracts[activeContractIndex] && (
                     <motion.div 
@@ -858,7 +801,6 @@ export default function SimuladorPage() {
                </AnimatePresence>
             </div>
 
-            {/* Ações Finais */}
             <div className="flex flex-col md:flex-row gap-4 justify-end pt-8">
                <button type="button" onClick={() => router.back()} className="px-10 py-5 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-[0.2em] text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-xl">
                   Cancelar
