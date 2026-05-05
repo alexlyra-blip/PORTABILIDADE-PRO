@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 // Ícones SVG nativos para evitar dependências externas (Zero Dependency)
 const Icons = {
@@ -50,36 +51,43 @@ const AdminLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex">
       {/* Sidebar */}
-      {/* Sidebar - Agora IDENTICA ao Simulador (Imagem 1) */}
-      <aside className="w-72 bg-slate-900 border-r border-white/5 flex flex-col relative z-20 shadow-2xl overflow-hidden"
+      <aside className="w-72 border-r border-white/5 flex flex-col relative z-20 shadow-2xl overflow-hidden"
         style={{ 
-          background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' 
+          background: user.sidebar_color_secondary
+            ? `linear-gradient(135deg, ${user.sidebar_color || '#0f172a'}, ${user.sidebar_color_secondary})`
+            : (user.sidebar_color || '#0f172a')
         }}
       >
-        {/* Header: Centered Avatar (Grande como na Imagem 1) */}
+        {/* Header: Centered Avatar (Padronizado com Simulador) */}
         <div className="p-8 pb-6 border-b border-white/5 flex flex-col items-center">
-          <div className="mb-5 relative">
-            <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10">
+          <motion.div 
+            className="mb-5 relative"
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
               {profileImageUrl ? (
-                <img src={profileImageUrl} className="w-full h-full object-cover" />
+                <img src={profileImageUrl} className="w-full h-full object-cover" alt="Profile" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center font-black text-6xl text-white shadow-inner bg-blue-600">
+                <div className="w-full h-full flex items-center justify-center font-black text-6xl text-white shadow-inner" style={{ backgroundColor: user.brand_color || '#3b82f6' }}>
                   {user.name?.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
-            <div className="absolute inset-0 rounded-xl blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none bg-blue-600"></div>
-          </div>
+            {/* Pulsing Glow */}
+            <div className="absolute inset-0 rounded-xl blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none" style={{ backgroundColor: user.brand_color || '#3b82f6' }}></div>
+          </motion.div>
+
           <div className="mb-4 text-center flex flex-col items-center w-full">
-            <p className="text-[11px] font-black uppercase text-blue-400 tracking-wider opacity-80 mb-0.5">Acesso AdminMaster</p>
+            <p className="text-[11px] font-black uppercase text-blue-400 tracking-wider opacity-80 mb-0.5">Acesso Master</p>
             <h2 className="text-base font-black text-white truncate max-w-[180px] drop-shadow-md uppercase">{user.name}</h2>
           </div>
 
           {/* Branding Row */}
           <div className="flex items-center justify-center gap-1.5 mt-2 text-center relative z-20">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-base text-white shadow-lg border border-white/30 bg-blue-600">P</div>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-base text-white shadow-lg border border-white/30" style={{ backgroundColor: user.brand_color || '#3b82f6' }}>P</div>
             <span className="text-xl font-black tracking-tighter drop-shadow-lg text-white">
-              Portabilidade<span className="text-blue-500">PRO</span>
+              Portabilidade<span style={{ color: user.brand_color || '#3b82f6' }}>PRO</span>
             </span>
           </div>
           <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-black mt-2 italic text-center uppercase">Painel Administrativo</p>
