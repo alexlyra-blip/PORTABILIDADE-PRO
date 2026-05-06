@@ -688,10 +688,10 @@ export default function SimuladorPage() {
                           <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
                              <div className="space-y-1 w-full md:w-auto">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Taxa Portabilidade HP-12C (Cliente)</label>
-                                <p className="text-[9px] text-slate-400 font-bold uppercase italic">Ajuste se necessário antes da simulação</p>
+                                <p className="text-[9px] text-slate-400 font-bold uppercase italic">Cálculo automático baseado nos dados do contrato</p>
                              </div>
                              <div className="relative w-full md:w-48">
-                                <input type="text" name="taxaAjustada" value={contracts[activeContractIndex].taxaAjustada || contracts[activeContractIndex].taxaAtual || ""} onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)} placeholder="0.00" className="w-full h-14 pl-6 pr-12 rounded-2xl bg-white border border-blue-200 focus:border-blue-500 transition-all outline-none font-black text-blue-600 text-xl shadow-inner text-center" />
+                                <input type="text" value={contracts[activeContractIndex].taxaAtual || "0.00"} readOnly className="w-full h-14 pl-6 pr-12 rounded-2xl bg-slate-50 border border-blue-200 transition-all outline-none font-black text-blue-600 text-xl shadow-inner text-center cursor-not-allowed" />
                                 <span className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-blue-400 text-lg">%</span>
                              </div>
                           </div>
