@@ -338,15 +338,30 @@ export default function SimuladorPage() {
               {[...Array(3)].map((_, i) => (
                 <motion.div
                   key={i}
-                  className="absolute w-40 h-40 rounded-full border-4 border-blue-500/30 flex items-center justify-center bg-white/5 backdrop-blur-xl shadow-[0_0_50px_rgba(37,99,235,0.2)]"
+                  className="absolute w-40 h-40 rounded-full border-4 border-white/30 flex items-center justify-center bg-white/10 backdrop-blur-2xl shadow-[0_0_60px_rgba(255,255,255,0.1)]"
                   animate={{
-                    x: [Math.cos(i * (2*Math.PI/3)) * 140, Math.cos((i + 1) * (2*Math.PI/3)) * 140, Math.cos((i + 2) * (2*Math.PI/3)) * 140],
-                    y: [Math.sin(i * (2*Math.PI/3)) * 40, Math.sin((i + 1) * (2*Math.PI/3)) * 40, Math.sin((i + 2) * (2*Math.PI/3)) * 40],
-                    scale: [1, 0.85, 1],
-                    zIndex: [10, 0, 10],
-                    opacity: [1, 0.6, 1]
+                    x: [
+                      Math.cos(i * (2 * Math.PI / 3)) * 200, 
+                      Math.cos((i + 1) * (2 * Math.PI / 3)) * 200, 
+                      Math.cos((i + 2) * (2 * Math.PI / 3)) * 200
+                    ],
+                    scale: [
+                      0.6 + (Math.sin(i * (2 * Math.PI / 3)) + 1) * 0.2,
+                      0.6 + (Math.sin((i + 1) * (2 * Math.PI / 3)) + 1) * 0.2,
+                      0.6 + (Math.sin((i + 2) * (2 * Math.PI / 3)) + 1) * 0.2
+                    ],
+                    zIndex: [
+                      Math.sin(i * (2 * Math.PI / 3)) > 0 ? 10 : 0,
+                      Math.sin((i + 1) * (2 * Math.PI / 3)) > 0 ? 10 : 0,
+                      Math.sin((i + 2) * (2 * Math.PI / 3)) > 0 ? 10 : 0
+                    ],
+                    opacity: [
+                      0.4 + (Math.sin(i * (2 * Math.PI / 3)) + 1) * 0.3,
+                      0.4 + (Math.sin((i + 1) * (2 * Math.PI / 3)) + 1) * 0.3,
+                      0.4 + (Math.sin((i + 2) * (2 * Math.PI / 3)) + 1) * 0.3
+                    ]
                   }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
                 >
                    <div className="w-24 h-24 bg-white rounded-full shadow-2xl border-4 border-white flex items-center justify-center overflow-hidden">
                       <img src={getLogo(i)} className="w-full h-full object-cover" />
