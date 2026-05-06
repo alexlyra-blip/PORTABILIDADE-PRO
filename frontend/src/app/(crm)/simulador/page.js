@@ -84,7 +84,16 @@ export default function SimuladorPage() {
 
         // Carregar Logos de Convênio (com retry e log)
         api.get('/admin/sub-logos')
-          .then(logos => setSubLogos(logos || []))
+          .then(logos => {
+            const mappedLogos = (logos || []).map(l => {
+              if (l.name === "FORCAS") l.name = "FORÇAS ARMADAS";
+              if (l.name === "GOV_EST") l.name = "GOVERNOS";
+              if (l.parent === "FORCAS") l.parent = "FORÇAS ARMADAS";
+              if (l.parent === "GOV_EST") l.parent = "GOVERNOS";
+              return l;
+            });
+            setSubLogos(mappedLogos);
+          })
           .catch(err => console.error("Erro logos:", err));
 
         // Carregar Bancos do DB
@@ -573,22 +582,21 @@ export default function SimuladorPage() {
                     <AnimatePresence>
                       {dropdownOpen.agreement && (
                         <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
-                           {subLogos.filter(l => (l.parent || "principal").toLowerCase() === "principal").length > 0 ? (
-                             subLogos.filter(l => (l.parent || "principal").toLowerCase() === "principal").map(l => (
-                               <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: l.name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement?.toUpperCase() === l.name?.toUpperCase() ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
-                                 <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
-                                    <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-cover" />
-                                 </div>
-                                 <span className="text-[10px] font-black uppercase text-left">{l.name}</span>
-                               </button>
-                             ))
-                           ) : (
-                             ["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS"].map(name => (
-                               <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className="p-4 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all">
-                                 {name}
-                               </button>
-                             ))
-                           )}
+                           {["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS"].map(name => {
+                               const logoObj = subLogos.find(l => l.name?.toUpperCase() === name.toUpperCase());
+                               return (
+                                 <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                                   {logoObj?.logo_url ? (
+                                     <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
+                                        <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" />
+                                     </div>
+                                   ) : (
+                                     <div className="w-10 h-10 bg-white/50 rounded-xl shrink-0 border shadow-sm"></div>
+                                   )}
+                                   <span className="text-[10px] font-black uppercase text-left">{name}</span>
+                                 </button>
+                               );
+                           })}
                         </motion.div>
                       )}
                     </AnimatePresence>
