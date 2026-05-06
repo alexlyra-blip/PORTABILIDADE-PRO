@@ -245,7 +245,7 @@ export default function SimuladorPage() {
           nome_cliente: formData.nome_cliente,
           cpf: formData.cpf.replace(/\D/g, ""),
           idade: parseInt(formData.idade),
-          convenio: formData.agreement,
+          convenio: formData.agreement === "GOVERNOS" ? "GOV_EST" : formData.agreement === "FORÇAS ARMADAS" ? "FORCAS" : formData.agreement,
           sub_convenio: formData.sub_agreement || "",
           benefit_species: formData.benefit_species,
           banco: c.banco,
@@ -315,14 +315,47 @@ export default function SimuladorPage() {
   ];
 
   const inssSpecies = [
-    { value: "01", label: "01 - PENSÃO POR MORTE ACIDENTE TRABALHO" }, { value: "41", label: "41 - APOSENTADORIA POR IDADE" },
-    { value: "42", label: "42 - APOSENTADORIA POR TEMPO DE CONTRIBUIÇÃO" }, { value: "32", label: "32 - APOSENTADORIA POR INVALIDEZ" },
-    { value: "21", label: "21 - PENSÃO POR MORTE" }, { value: "88", label: "88 - AMPARO SOCIAL IDOSO (LOAS)" },
-    { value: "87", label: "87 - AMPARO SOCIAL DEFICIENTE (LOAS)" },
+    { value: "01", label: "01 - PENSÃO POR MORTE ACIDENTE TRABALHO" },
+    { value: "02", label: "02 - PENSÃO POR MORTE ACIDENTE DO TRABALHO RURAL" },
+    { value: "03", label: "03 - PENSÃO POR MORTE EMPREGADOR RURAL" },
     { value: "04", label: "04 - APOSENTADORIA POR INVALIDEZ ACIDENTE TRABALHO" },
     { value: "05", label: "05 - APOSENTADORIA POR INVALIDEZ RURAL" },
     { value: "06", label: "06 - APOSENTADORIA POR INVALIDEZ EMPREGADOR RURAL" },
-    { value: "92", label: "92 - APOSENTADORIA POR INVALIDEZ POR ACIDENTE DE TRABALHO" }
+    { value: "07", label: "07 - APOSENTADORIA POR IDADE RURAL" },
+    { value: "08", label: "08 - APOSENTADORIA POR IDADE EMPREGADOR RURAL" },
+    { value: "19", label: "19 - PENSÃO DE ESTUDANTE (LEI 7004/82)" },
+    { value: "21", label: "21 - PENSÃO POR MORTE PREVIDENCIÁRIA" },
+    { value: "22", label: "22 - PENSÃO POR MORTE ESTATUTÁRIA" },
+    { value: "23", label: "23 - PENSÃO POR MORTE DE EX-COMBATENTE" },
+    { value: "24", label: "24 - PENSÃO ESPECIAL (ATO INSTITUCIONAL)" },
+    { value: "26", label: "26 - PENSÃO ESPECIAL (LEI 593/48)" },
+    { value: "27", label: "27 - PENSÃO POR MORTE SERVIDOR PÚBLICO FEDERAL" },
+    { value: "28", label: "28 - PENSÃO POR MORTE DO REGIME GERAL" },
+    { value: "29", label: "29 - PENSÃO POR MORTE EX-COMBATENTE MARÍTIMO" },
+    { value: "32", label: "32 - APOSENTADORIA POR INVALIDEZ PREVIDENCIÁRIA" },
+    { value: "33", label: "33 - APOSENTADORIA POR INVALIDEZ DE AERONAUTA" },
+    { value: "34", label: "34 - APOSENTADORIA POR INVALIDEZ DE EX-COMBATENTE MARÍTIMO" },
+    { value: "41", label: "41 - APOSENTADORIA POR IDADE" },
+    { value: "42", label: "42 - APOSENTADORIA POR TEMPO DE CONTRIBUIÇÃO" },
+    { value: "43", label: "43 - APOSENTADORIA POR TEMPO DE CONTRIBUIÇÃO DE EX-COMBATENTE" },
+    { value: "44", label: "44 - APOSENTADORIA POR TEMPO DE CONTRIBUIÇÃO DE AERONAUTA" },
+    { value: "45", label: "45 - APOSENTADORIA POR TEMPO DE CONTRIBUIÇÃO DE JORNALISTA PROFISSIONAL" },
+    { value: "46", label: "46 - APOSENTADORIA ESPECIAL" },
+    { value: "49", label: "49 - APOSENTADORIA POR TEMPO DE CONTRIBUIÇÃO ORDINÁRIA" },
+    { value: "51", label: "51 - APOSENTADORIA POR INVALIDEZ ESTATUTÁRIA" },
+    { value: "52", label: "52 - APOSENTADORIA POR IDADE ESTATUTÁRIA" },
+    { value: "54", label: "54 - PENSÃO ESPECIAL VITALÍCIA (LEI 9796/99)" },
+    { value: "55", label: "55 - PENSÃO POR MORTE ESTATUTÁRIA" },
+    { value: "56", label: "56 - PENSÃO POR MORTE ESTATUTÁRIA VITALÍCIA" },
+    { value: "57", label: "57 - APOSENTADORIA POR TEMPO DE CONTRIBUIÇÃO DE PROFESSOR" },
+    { value: "58", label: "58 - APOSENTADORIA POR TEMPO DE CONTRIBUIÇÃO EM NOME DA EXCEPCIONALIDADE" },
+    { value: "59", label: "59 - PENSÃO POR MORTE DE EXCEPCIONAL" },
+    { value: "60", label: "60 - PENSÃO ESPECIAL MENSAL VITALÍCIA" },
+    { value: "87", label: "87 - AMPARO SOCIAL DEFICIENTE (LOAS)" },
+    { value: "88", label: "88 - AMPARO SOCIAL IDOSO (LOAS)" },
+    { value: "89", label: "89 - PENSÃO ESPECIAL AOS DEPENDENTES DE VÍTIMAS DE HEMODIÁLISE" },
+    { value: "92", label: "92 - APOSENTADORIA POR INVALIDEZ POR ACIDENTE DE TRABALHO" },
+    { value: "93", label: "93 - PENSÃO POR MORTE POR ACIDENTE DE TRABALHO" }
   ];
 
   const isInvalidezSpecies = ["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species);
@@ -419,7 +452,6 @@ export default function SimuladorPage() {
                     onChange={handleChange}
                     placeholder="DIGITE O NOME DO CLIENTE"
                     className="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none font-bold text-slate-800 placeholder:text-slate-300 uppercase"
-                    required
                   />
                 </div>
 
@@ -433,7 +465,6 @@ export default function SimuladorPage() {
                       onChange={handleChange}
                       placeholder="000.000.000-00"
                       className={`w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 transition-all outline-none font-bold text-slate-800 ${cpfStatus === 'valid' ? 'border-emerald-500 bg-emerald-50' : cpfStatus === 'invalid' ? 'border-red-500 bg-red-50' : 'border-slate-200 focus:border-blue-500 focus:bg-white'}`}
-                      required
                     />
                     {cpfStatus === 'valid' && (
                        <div className="absolute right-4 bottom-4 text-emerald-600 animate-in zoom-in">
@@ -552,7 +583,7 @@ export default function SimuladorPage() {
                                </button>
                              ))
                            ) : (
-                             ["INSS", "SIAPE", "EXÉRCITO", "MARINHA", "AERONÁUTICA", "GOVERNO"].map(name => (
+                             ["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS"].map(name => (
                                <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className="p-4 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all">
                                  {name}
                                </button>
@@ -602,6 +633,18 @@ export default function SimuladorPage() {
                                      <span className="text-[10px] font-black uppercase text-left">{l.name}</span>
                                    </button>
                                  ))
+                               ) : formData.agreement === "FORÇAS ARMADAS" ? (
+                                  ["EXÉRCITO", "MARINHA", "AERONÁUTICA"].map(name => (
+                                      <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`p-4 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === name ? 'bg-blue-600 text-white' : ''}`}>
+                                        {name}
+                                      </button>
+                                  ))
+                               ) : formData.agreement === "GOVERNOS" ? (
+                                  ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(name => (
+                                      <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`p-4 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === name ? 'bg-blue-600 text-white' : ''}`}>
+                                        {name}
+                                      </button>
+                                  ))
                                ) : (
                                   <div className="col-span-2 py-4 text-center text-[10px] font-black text-slate-400 uppercase italic">Nenhum sub-convênio encontrado</div>
                                )}
@@ -653,7 +696,7 @@ export default function SimuladorPage() {
                       initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}
                       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
-                       <div className="space-y-1.5 relative">
+                       <div className="space-y-1.5 relative md:col-span-2 lg:col-span-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Banco Origem</label>
                           <button
                             type="button"
