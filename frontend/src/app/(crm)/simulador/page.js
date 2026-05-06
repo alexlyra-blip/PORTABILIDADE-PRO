@@ -146,6 +146,7 @@ export default function SimuladorPage() {
     let val = value;
     if (name === "parcela" || name === "saldoDevedor") val = maskCurrency(value);
     if (name === "prazoTotal" || name === "parcelasPagas") val = value.replace(/\D/g, "").slice(0, 3);
+    if (name === "taxaAjustada") val = value.replace(/[^0-9,.]/g, "").replace(",", ".");
     
     setContracts(contracts.map(c => {
       if (c.id !== id) return c;
@@ -679,10 +680,12 @@ export default function SimuladorPage() {
                        </div>
 
                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Taxa Estimada (%)</label>
-                          <div className="w-full h-14 px-6 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center font-black text-blue-600 text-lg shadow-inner">
-                             {contracts[activeContractIndex].taxaAtual ? `${contracts[activeContractIndex].taxaAtual}%` : "0.00%"}
+                          <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1 flex items-center gap-1.5"><Icons.Sparkles size={12}/> Taxa do Cliente (Preview)</label>
+                          <div className="relative">
+                            <input type="text" name="taxaAjustada" value={contracts[activeContractIndex].taxaAjustada || ""} onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)} placeholder="0.00" className="w-full h-14 pl-6 pr-10 rounded-2xl bg-blue-50 border border-blue-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-blue-600 text-lg shadow-inner" />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-blue-400">%</span>
                           </div>
+                          <p className="text-[8px] font-black text-slate-400 uppercase italic px-1">Pode ser ajustada manualmente</p>
                        </div>
                     </motion.div>
                   )}
