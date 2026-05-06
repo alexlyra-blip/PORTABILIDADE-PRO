@@ -88,8 +88,10 @@ export default function SimuladorPage() {
             const mappedLogos = (logos || []).map(l => {
               if (l.name === "FORCAS") l.name = "FORÇAS ARMADAS";
               if (l.name === "GOV_EST") l.name = "GOVERNOS";
+              if (l.name === "CLT_PRIVADO") l.name = "CLT PRIVADO";
               if (l.parent === "FORCAS") l.parent = "FORÇAS ARMADAS";
               if (l.parent === "GOV_EST") l.parent = "GOVERNOS";
+              if (l.parent === "CLT_PRIVADO") l.parent = "CLT PRIVADO";
               return l;
             });
             setSubLogos(mappedLogos);
@@ -254,7 +256,7 @@ export default function SimuladorPage() {
           nome_cliente: formData.nome_cliente,
           cpf: formData.cpf.replace(/\D/g, ""),
           idade: parseInt(formData.idade),
-          convenio: formData.agreement,
+          convenio: formData.agreement === "CLT PRIVADO" ? "CLT_PRIVADO" : formData.agreement,
           sub_convenio: formData.sub_agreement || "",
           benefit_species: formData.benefit_species,
           banco: c.banco,
@@ -582,7 +584,7 @@ export default function SimuladorPage() {
                     <AnimatePresence>
                       {dropdownOpen.agreement && (
                         <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
-                           {["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS"].map(name => {
+                           {["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT PRIVADO"].map(name => {
                                const logoObj = subLogos.find(l => l.name?.toUpperCase() === name.toUpperCase());
                                return (
                                  <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
