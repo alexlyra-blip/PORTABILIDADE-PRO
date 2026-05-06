@@ -336,10 +336,11 @@ export default function SimuladorPage() {
                   key={i}
                   className="absolute w-40 h-40 rounded-full border-4 border-blue-500/30 flex items-center justify-center bg-white/5 backdrop-blur-xl shadow-[0_0_50px_rgba(37,99,235,0.2)]"
                   animate={{
-                    x: [Math.cos(i * (2*Math.PI/3)) * 100, Math.cos((i + 1) * (2*Math.PI/3)) * 100, Math.cos((i + 2) * (2*Math.PI/3)) * 100],
-                    scale: [1, 0.7, 1],
+                    x: [Math.cos(i * (2*Math.PI/3)) * 140, Math.cos((i + 1) * (2*Math.PI/3)) * 140, Math.cos((i + 2) * (2*Math.PI/3)) * 140],
+                    y: [Math.sin(i * (2*Math.PI/3)) * 40, Math.sin((i + 1) * (2*Math.PI/3)) * 40, Math.sin((i + 2) * (2*Math.PI/3)) * 40],
+                    scale: [1, 0.85, 1],
                     zIndex: [10, 0, 10],
-                    opacity: [1, 0.4, 1]
+                    opacity: [1, 0.6, 1]
                   }}
                   transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                 >
@@ -679,13 +680,21 @@ export default function SimuladorPage() {
                           <input type="text" name="parcelasPagas" value={contracts[activeContractIndex].parcelasPagas} onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)} placeholder="12" className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-center" required />
                        </div>
 
-                       <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1 flex items-center gap-1.5"><Icons.Sparkles size={12}/> Taxa do Cliente (Preview)</label>
-                          <div className="relative">
-                            <input type="text" name="taxaAjustada" value={contracts[activeContractIndex].taxaAjustada || ""} onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)} placeholder="0.00" className="w-full h-14 pl-6 pr-10 rounded-2xl bg-blue-50 border border-blue-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-blue-600 text-lg shadow-inner" />
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-blue-400">%</span>
+                       <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-4 pt-4 border-t border-slate-100">
+                          <div className="flex items-center gap-2 mb-4">
+                             <span className="text-lg">🔬</span>
+                             <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Preview de Cálculo (Como o Motor Vai Ler)</h4>
                           </div>
-                          <p className="text-[8px] font-black text-slate-400 uppercase italic px-1">Pode ser ajustada manualmente</p>
+                          <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+                             <div className="space-y-1 w-full md:w-auto">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Taxa Portabilidade HP-12C (Cliente)</label>
+                                <p className="text-[9px] text-slate-400 font-bold uppercase italic">Ajuste se necessário antes da simulação</p>
+                             </div>
+                             <div className="relative w-full md:w-48">
+                                <input type="text" name="taxaAjustada" value={contracts[activeContractIndex].taxaAjustada || contracts[activeContractIndex].taxaAtual || ""} onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)} placeholder="0.00" className="w-full h-14 pl-6 pr-12 rounded-2xl bg-white border border-blue-200 focus:border-blue-500 transition-all outline-none font-black text-blue-600 text-xl shadow-inner text-center" />
+                                <span className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-blue-400 text-lg">%</span>
+                             </div>
+                          </div>
                        </div>
                     </motion.div>
                   )}
