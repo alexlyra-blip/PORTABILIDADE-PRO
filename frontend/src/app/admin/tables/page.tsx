@@ -235,12 +235,12 @@ export default function TablesPage() {
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
                         table.agreement === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                         table.agreement === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                        table.agreement === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        table.agreement === 'FORÇAS ARMADAS' || table.agreement === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                         table.agreement === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                        table.agreement === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                        table.agreement === 'GOVERNOS' || table.agreement === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
                         'bg-slate-50 text-slate-500 border-slate-100'
                       }`}>
-                        {table.agreement === 'GOV_EST' ? 'GOVERNO' : table.agreement === 'FORCAS' ? 'FORÇAS' : table.agreement === 'CLT_PRIVADO' ? 'CLT' : table.agreement}
+                        {table.agreement === 'GOVERNOS' || table.agreement === 'GOV_EST' ? 'GOVERNOS' : table.agreement === 'FORÇAS ARMADAS' || table.agreement === 'FORCAS' ? 'FORÇAS ARMADAS' : table.agreement === 'CLT_PRIVADO' ? 'CLT' : table.agreement}
                       </span>
                       {table.sub_agreement && (
                         <span className="ml-2 font-bold text-slate-700 bg-slate-100 border border-slate-200 shadow-sm px-2 py-1 rounded-md text-[10px] uppercase tracking-wider">{table.sub_agreement}</span>
@@ -303,23 +303,23 @@ export default function TablesPage() {
                   >
                     <option value="INSS">INSS</option>
                     <option value="SIAPE">SIAPE</option>
-                    <option value="GOV_EST">GOVERNO ESTADUAL</option>
-                    <option value="FORCAS">FORÇAS ARMADAS</option>
+                    <option value="GOVERNOS">GOVERNOS</option>
+                    <option value="FORÇAS ARMADAS">FORÇAS ARMADAS</option>
                     <option value="CLT_PRIVADO">CLT PRIVADO</option>
                   </select>
                 </div>
-                {formData.agreement === "FORCAS" && (
+                {formData.agreement === "FORÇAS ARMADAS" && (
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Força (Opcional)</label>
                     <select value={formData.sub_agreement || ""} onChange={(e) => setFormData({...formData, sub_agreement: e.target.value})} className="input-admin !py-2">
                       <option value="">Todas</option>
-                      <option value="EXERCITO">EXÉRCITO</option>
-                      <option value="AERONAUTICA">AERONÁUTICA</option>
+                      <option value="EXÉRCITO">EXÉRCITO</option>
+                      <option value="AERONÁUTICA">AERONÁUTICA</option>
                       <option value="MARINHA">MARINHA</option>
                     </select>
                   </div>
                 )}
-                {formData.agreement === "GOV_EST" && (
+                {formData.agreement === "GOVERNOS" && (
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Estado (Opcional)</label>
                     <select value={formData.sub_agreement || ""} onChange={(e) => setFormData({...formData, sub_agreement: e.target.value})} className="input-admin !py-2">

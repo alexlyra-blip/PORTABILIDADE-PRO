@@ -245,7 +245,7 @@ export default function SimuladorPage() {
           nome_cliente: formData.nome_cliente,
           cpf: formData.cpf.replace(/\D/g, ""),
           idade: parseInt(formData.idade),
-          convenio: formData.agreement === "GOVERNOS" ? "GOV_EST" : formData.agreement === "FORÇAS ARMADAS" ? "FORCAS" : formData.agreement,
+          convenio: formData.agreement,
           sub_convenio: formData.sub_agreement || "",
           benefit_species: formData.benefit_species,
           banco: c.banco,
@@ -634,17 +634,35 @@ export default function SimuladorPage() {
                                    </button>
                                  ))
                                ) : formData.agreement === "FORÇAS ARMADAS" ? (
-                                  ["EXÉRCITO", "MARINHA", "AERONÁUTICA"].map(name => (
-                                      <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`p-4 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === name ? 'bg-blue-600 text-white' : ''}`}>
-                                        {name}
-                                      </button>
-                                  ))
+                                  ["EXÉRCITO", "MARINHA", "AERONÁUTICA"].map(name => {
+                                      const logoObj = subLogos.find(l => l.name?.toUpperCase() === name.toUpperCase());
+                                      return (
+                                        <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === name ? 'bg-blue-600 text-white' : ''}`}>
+                                          {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300"></div>}
+                                          {name}
+                                        </button>
+                                      );
+                                  })
                                ) : formData.agreement === "GOVERNOS" ? (
-                                  ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(name => (
-                                      <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`p-4 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === name ? 'bg-blue-600 text-white' : ''}`}>
-                                        {name}
-                                      </button>
-                                  ))
+                                  [
+                                    { value: "AC", label: "AC - ACRE" }, { value: "AL", label: "AL - ALAGOAS" }, { value: "AP", label: "AP - AMAPÁ" },
+                                    { value: "AM", label: "AM - AMAZONAS" }, { value: "BA", label: "BA - BAHIA" }, { value: "CE", label: "CE - CEARÁ" },
+                                    { value: "DF", label: "DF - DISTRITO FEDERAL" }, { value: "ES", label: "ES - ESPÍRITO SANTO" }, { value: "GO", label: "GO - GOIÁS" },
+                                    { value: "MA", label: "MA - MARANHÃO" }, { value: "MT", label: "MT - MATO GROSSO" }, { value: "MS", label: "MS - MATO GROSSO DO SUL" },
+                                    { value: "MG", label: "MG - MINAS GERAIS" }, { value: "PA", label: "PA - PARÁ" }, { value: "PB", label: "PB - PARAÍBA" },
+                                    { value: "PR", label: "PR - PARANÁ" }, { value: "PE", label: "PE - PERNAMBUCO" }, { value: "PI", label: "PI - PIAUÍ" },
+                                    { value: "RJ", label: "RJ - RIO DE JANEIRO" }, { value: "RN", label: "RN - RIO GRANDE DO NORTE" }, { value: "RS", label: "RS - RIO GRANDE DO SUL" },
+                                    { value: "RO", label: "RO - RONDÔNIA" }, { value: "RR", label: "RR - RORAIMA" }, { value: "SC", label: "SC - SANTA CATARINA" },
+                                    { value: "SP", label: "SP - SÃO PAULO" }, { value: "SE", label: "SE - SERGIPE" }, { value: "TO", label: "TO - TOCANTINS" }
+                                  ].map(state => {
+                                      const logoObj = subLogos.find(l => l.name?.toUpperCase() === state.value.toUpperCase());
+                                      return (
+                                        <button key={state.value} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: state.value })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === state.value ? 'bg-blue-600 text-white' : ''}`}>
+                                          {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300"></div>}
+                                          {state.label}
+                                        </button>
+                                      );
+                                  })
                                ) : (
                                   <div className="col-span-2 py-4 text-center text-[10px] font-black text-slate-400 uppercase italic">Nenhum sub-convênio encontrado</div>
                                )}
@@ -713,11 +731,15 @@ export default function SimuladorPage() {
                           </button>
                           {dropdownOpen[contracts[activeContractIndex].id] && (
                             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-4 z-[100] max-h-[350px] overflow-y-auto">
-                               {inssBanks.map(bank => (
-                                  <button key={bank.value} type="button" onClick={() => { setContracts(contracts.map((c, i) => i === activeContractIndex ? { ...c, banco: bank.value } : c)); setDropdownOpen(p => ({ ...p, [contracts[activeContractIndex].id]: false })); }} className="w-full px-4 py-3 rounded-xl text-left text-[11px] font-bold text-slate-700 hover:bg-blue-50 transition-all uppercase">
-                                    {bank.label}
-                                  </button>
-                               ))}
+                               {inssBanks.map(bank => {
+                                  const dbBank = dbBanks.find(db => bank.label.toUpperCase().includes(db.name.toUpperCase()));
+                                  return (
+                                    <button key={bank.value} type="button" onClick={() => { setContracts(contracts.map((c, i) => i === activeContractIndex ? { ...c, banco: bank.value } : c)); setDropdownOpen(p => ({ ...p, [contracts[activeContractIndex].id]: false })); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-[11px] font-bold text-slate-700 hover:bg-blue-50 transition-all uppercase">
+                                      {dbBank?.logo_url ? <img src={getStaticUrl(dbBank.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300 flex-shrink-0"></div>}
+                                      {bank.label}
+                                    </button>
+                                  );
+                               })}
                             </div>
                           )}
                        </div>
