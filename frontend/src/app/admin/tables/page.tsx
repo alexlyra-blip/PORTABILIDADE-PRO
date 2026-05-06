@@ -115,6 +115,11 @@ export default function TablesPage() {
         term: 84
       });
     }
+    
+    // Refresh rate from simulation
+    const lastRate = localStorage.getItem("last_simulation_rate");
+    if (lastRate) setPreviewBaseRate(parseFloat(lastRate));
+
     setModalOpen(true);
   };
 

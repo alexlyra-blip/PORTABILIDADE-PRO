@@ -255,7 +255,7 @@ export default function SimuladorPage() {
           total_term: parseInt(c.prazoTotal),
           remaining_term: parseInt(c.prazoRestante),
           data_concessao: formData.data_concessao || null, 
-          is_60_plus: formData.is_60_plus,
+          is_60_plus: formData.is_60_plus || (["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species) && parseInt(formData.idade || 0) < 60),
           is_invalidez_60_plus: parseInt(formData.idade || 0) >= 60,
           analfabeto: formData.analfabeto === "sim"
         };
@@ -283,6 +283,10 @@ export default function SimuladorPage() {
 
       sessionStorage.setItem("simulation_results", JSON.stringify(finalData));
       sessionStorage.setItem("simulation_input", JSON.stringify({ ...formData, contracts }));
+      
+      // Sincronizar taxa calculada para o Admin Preview
+      const rateToSync = contracts[0].taxaAjustada || contracts[0].taxaAtual || 0;
+      localStorage.setItem("last_simulation_rate", rateToSync.toString());
       
       setIsExiting(true);
       setTimeout(() => { router.push("/ofertas"); }, 700);
@@ -448,13 +452,13 @@ export default function SimuladorPage() {
                   
                   {/* Regra Condicional: Invalidez ou 60+ */}
                   {(isInvalidezSpecies || is60Plus) && (
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer group/opt" onClick={() => setFormData(p => ({...p, is_60_plus: !p.is_60_plus}))}>
+                    <div className={`flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 transition-colors ${isInvalidezSpecies && !is60Plus ? 'opacity-80 pointer-events-none' : 'hover:border-blue-200 cursor-pointer group/opt'}`} onClick={() => { if (!(isInvalidezSpecies && !is60Plus)) setFormData(p => ({...p, is_60_plus: !p.is_60_plus})) }}>
                       <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${formData.is_60_plus ? "bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.4)]" : "border-slate-300 group-hover/opt:border-blue-400"}`}>
-                            {formData.is_60_plus && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${formData.is_60_plus || (isInvalidezSpecies && !is60Plus) ? "bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.4)]" : "border-slate-300 group-hover/opt:border-blue-400"}`}>
+                            {(formData.is_60_plus || (isInvalidezSpecies && !is60Plus)) && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
                         </div>
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                           {isInvalidezSpecies ? "Benefício por Invalidez?" : "Cliente 60+ anos?"}
+                           {is60Plus ? "Cliente 60+ anos?" : "Benefício por Invalidez"}
                         </span>
                       </div>
                     </div>
