@@ -47,6 +47,7 @@ export default function SimuladorPage() {
   const [logoIdx, setLogoIdx] = useState(0);
   const [banksForAnim, setBanksForAnim] = useState([]);
   const [cpfStatus, setCpfStatus] = useState(null); // 'valid', 'invalid', or null
+  const norm = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
   // Mock de logos caso o DB esteja vazio
   const defaultLogos = [
@@ -585,7 +586,7 @@ export default function SimuladorPage() {
                       {dropdownOpen.agreement && (
                         <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
                            {["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT PRIVADO"].map(name => {
-                               const logoObj = subLogos.find(l => l.name?.toUpperCase() === name.toUpperCase());
+                               const logoObj = subLogos.find(l => norm(l.name) === norm(name));
                                return (
                                  <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
                                    {logoObj?.logo_url ? (
@@ -633,13 +634,12 @@ export default function SimuladorPage() {
                                {formData.sub_agreement || (formData.agreement === "SIAPE" ? "SITUAÇÃO FUNCIONAL" : formData.agreement === "FORÇAS ARMADAS" ? "CATEGORIA" : formData.agreement === "GOVERNOS" ? "ESTADOS" : "SUB-CONVÊNIO")}
                             </div>
                           <Icons.ChevronDown />
-                        </button>
                         <AnimatePresence>
                           {subDropdownOpen && (
                             <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
-                               {subLogos.filter(l => l.parent?.toUpperCase() === formData.agreement?.toUpperCase()).length > 0 ? (
-                                 subLogos.filter(l => l.parent?.toUpperCase() === formData.agreement?.toUpperCase()).map(l => (
-                                   <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: l.name })); setSubDropdownOpen(false); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.sub_agreement?.toUpperCase() === l.name?.toUpperCase() ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                               {subLogos.filter(l => norm(l.parent) === norm(formData.agreement)).length > 0 ? (
+                                 subLogos.filter(l => norm(l.parent) === norm(formData.agreement)).map(l => (
+                                   <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: l.name })); setSubDropdownOpen(false); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${norm(formData.sub_agreement) === norm(l.name) ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
                                      <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
                                         <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-cover" />
                                      </div>
