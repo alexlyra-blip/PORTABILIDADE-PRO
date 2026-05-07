@@ -11,6 +11,7 @@ export default function SubLogosPage() {
   const [formData, setFormData] = useState<any>({ name: "", logo_url: "" });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
   useEffect(() => {
     loadLogos();
@@ -20,7 +21,13 @@ export default function SubLogosPage() {
     try {
       setLoading(true);
       const data = await api.get("/admin/sub-logos");
-      setLogos(data || []);
+      const mapped = (data || []).map((l: any) => {
+        if (l.name === "FORCAS") l.name = "FORÇAS ARMADAS";
+        if (l.name === "GOV_EST") l.name = "GOVERNOS";
+        if (l.name === "CLT_PRIVADO") l.name = "CLT PRIVADO";
+        return l;
+      });
+      setLogos(mapped);
     } catch (error) {
       console.error("Erro ao carregar logos:", error);
     } finally {
@@ -202,12 +209,12 @@ export default function SubLogosPage() {
                 <datalist id="logoNames">
                   {/* Convênios - Filtrados se já existem */}
                   {["INSS", "SIAPE", "GOVERNOS", "FORÇAS ARMADAS", "CLT PRIVADO"]
-                    .filter(c => !logos.some(l => l.name === c) || (editingLogo && editingLogo.name === c))
+                    .filter(c => !logos.some(l => norm(l.name) === norm(c)) || (editingLogo && norm(editingLogo.name) === norm(c)))
                     .map(c => <option key={c} value={c} />)}
                   
                   {/* Forças - Filtradas */}
-                  {["EXERCITO", "AERONAUTICA", "MARINHA"]
-                    .filter(f => !logos.some(l => l.name === f) || (editingLogo && editingLogo.name === f))
+                  {["EXÉRCITO", "AERONÁUTICA", "MARINHA"]
+                    .filter(f => !logos.some(l => norm(l.name) === norm(f)) || (editingLogo && norm(editingLogo.name) === norm(f)))
                     .map(f => <option key={f} value={f} />)}
                   
                   {/* Estados - Filtrados e com nome completo */}
@@ -219,7 +226,7 @@ export default function SubLogosPage() {
                     "RS - RIO GRANDE DO SUL", "RO - RONDÔNIA", "RR - RORAIMA", "SC - SANTA CATARINA", 
                     "SP - SÃO PAULO", "SE - SERGIPE", "TO - TOCANTINS"
                   ]
-                    .filter(uf => !logos.some(l => l.name === uf) || (editingLogo && editingLogo.name === uf))
+                    .filter(uf => !logos.some(l => norm(l.name) === norm(uf)) || (editingLogo && norm(editingLogo.name) === norm(uf)))
                     .map(uf => <option key={uf} value={uf} />)}
                   
                   {/* Bancos de Origem - Filtrados */}
@@ -233,7 +240,7 @@ export default function SubLogosPage() {
                     "PARANÁ BANCO", "BNP PARIBAS", "PARATI", "PAULISTA", "PICPAY", 
                     "QI SOCIEDADE", "SABEMI", "SAFRA", "SANTANDER", "ZEMA", "BANCO INTER", "SICOOB", "OUTROS"
                   ]
-                    .filter(b => !logos.some(l => l.name === b) || (editingLogo && editingLogo.name === b))
+                    .filter(b => !logos.some(l => norm(l.name) === norm(b)) || (editingLogo && norm(editingLogo.name) === norm(b)))
                     .map(b => <option key={b} value={b} />)}
                 </datalist>
               </div>
