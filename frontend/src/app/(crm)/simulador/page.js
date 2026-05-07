@@ -83,6 +83,11 @@ export default function SimuladorPage() {
         const u = localStorage.getItem('user');
         if (u) setUser(JSON.parse(u));
 
+        const cachedLogos = localStorage.getItem('cached_sub_logos');
+        if (cachedLogos) {
+            try { setSubLogos(JSON.parse(cachedLogos)); } catch (e) {}
+        }
+
         // Carregar Logos de Convênio (com retry e log)
         api.get('/admin/sub-logos')
           .then(logos => {
@@ -95,6 +100,7 @@ export default function SimuladorPage() {
               if (l.parent === "CLT_PRIVADO") l.parent = "CLT PRIVADO";
               return l;
             });
+            localStorage.setItem('cached_sub_logos', JSON.stringify(mappedLogos));
             setSubLogos(mappedLogos);
           })
           .catch(err => console.error("Erro logos:", err));
@@ -323,8 +329,15 @@ export default function SimuladorPage() {
     { value: "623", label: "623 - PAN" }, { value: "254", label: "254 - PARANÁ BANCO" }, { value: "752", label: "752 - BNP PARIBAS" },
     { value: "326", label: "326 - PARATI" }, { value: "611", label: "611 - PAULISTA" }, { value: "380", label: "380 - PICPAY" },
     { value: "329", label: "329 - QI SOCIEDADE" }, { value: "966", label: "966 - SABEMI" }, { value: "422", label: "422 - SAFRA" },
-    { value: "033", label: "033 - SANTANDER" }, { value: "359", label: "359 - ZEMA" }, { value: "999", label: "OUTROS" }
-  ];
+    { value: "033", label: "033 - SANTANDER" }, { value: "359", label: "359 - ZEMA" }, { value: "077", label: "077 - BANCO INTER" },
+    { value: "756", label: "756 - SICOOB" }, { value: "999", label: "OUTROS" }
+  ].sort((a, b) => {
+    if (a.value === "999") return 1;
+    if (b.value === "999") return -1;
+    const nameA = a.label.substring(a.label.indexOf('-') + 1).trim();
+    const nameB = b.label.substring(b.label.indexOf('-') + 1).trim();
+    return nameA.localeCompare(nameB);
+  });
 
   const inssSpecies = [
     { value: "01", label: "01 - PENSÃO POR MORTE ACIDENTE TRABALHO" },
