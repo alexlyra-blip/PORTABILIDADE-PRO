@@ -634,6 +634,7 @@ export default function SimuladorPage() {
                                {formData.sub_agreement || (formData.agreement === "SIAPE" ? "SITUAÇÃO FUNCIONAL" : formData.agreement === "FORÇAS ARMADAS" ? "CATEGORIA" : formData.agreement === "GOVERNOS" ? "ESTADOS" : "SUB-CONVÊNIO")}
                             </div>
                           <Icons.ChevronDown />
+                          </button>
                         <AnimatePresence>
                           {subDropdownOpen && (
                             <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2">
