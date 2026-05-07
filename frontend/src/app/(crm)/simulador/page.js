@@ -692,7 +692,10 @@ export default function SimuladorPage() {
                                     { value: "RO", label: "RO - RONDÔNIA" }, { value: "RR", label: "RR - RORAIMA" }, { value: "SC", label: "SC - SANTA CATARINA" },
                                     { value: "SP", label: "SP - SÃO PAULO" }, { value: "SE", label: "SE - SERGIPE" }, { value: "TO", label: "TO - TOCANTINS" }
                                   ].map(state => {
-                                      const logoObj = subLogos.find(l => norm(l.name) === norm(state.value) || norm(l.name) === norm(state.label));
+                                      const logoObj = subLogos.find(l => {
+                                          const nL = norm(l.name);
+                                          return nL && (nL === norm(state.value) || nL === norm(state.label));
+                                      });
                                       return (
                                         <button key={state.value} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: state.value })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === state.value ? 'bg-blue-600 text-white' : ''}`}>
                                           {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300"></div>}
@@ -771,8 +774,11 @@ export default function SimuladorPage() {
                             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-4 z-[100] max-h-[350px] overflow-y-auto">
                                {inssBanks.map(bank => {
                                   const bankName = bank.label.substring(bank.label.indexOf('-') + 1).trim();
-                                  const dbBank = dbBanks.find(db => bank.label.toUpperCase().includes(db.name.toUpperCase()));
-                                  const subLogoObj = subLogos.find(l => norm(l.name) === norm(bankName) || norm(bank.label).includes(norm(l.name)));
+                                  const dbBank = dbBanks.find(db => db.name && bank.label.toUpperCase().includes(db.name.toUpperCase()));
+                                  const subLogoObj = subLogos.find(l => {
+                                    const nL = norm(l.name);
+                                    return nL && (nL === norm(bankName) || norm(bank.label).includes(nL));
+                                  });
                                   const logoUrl = subLogoObj?.logo_url || dbBank?.logo_url;
                                   return (
                                     <button key={bank.value} type="button" onClick={() => { setContracts(contracts.map((c, i) => i === activeContractIndex ? { ...c, banco: bank.value } : c)); setDropdownOpen(p => ({ ...p, [contracts[activeContractIndex].id]: false })); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-[11px] font-bold text-slate-700 hover:bg-blue-50 transition-all uppercase">
