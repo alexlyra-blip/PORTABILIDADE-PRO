@@ -588,8 +588,8 @@ export default function SimuladorPage() {
                       className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between font-black text-slate-800 hover:bg-slate-100 transition-all uppercase text-sm"
                     >
                       <div className="flex items-center gap-3">
-                         {formData.agreement && subLogos.find(l => l.name?.toUpperCase() === formData.agreement?.toUpperCase())?.logo_url && (
-                           <img src={getStaticUrl(subLogos.find(l => l.name?.toUpperCase() === formData.agreement?.toUpperCase()).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
+                         {formData.agreement && subLogos.find(l => { const n = norm(l.name); return n && n === norm(formData.agreement); })?.logo_url && (
+                           <img src={getStaticUrl(subLogos.find(l => { const n = norm(l.name); return n && n === norm(formData.agreement); }).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
                          )}
                          {formData.agreement || "SELECIONAR CONVÊNIO"}
                       </div>
@@ -641,8 +641,8 @@ export default function SimuladorPage() {
                             disabled={!formData.agreement}
                           >
                             <div className="flex items-center gap-3">
-                               {formData.sub_agreement && subLogos.find(l => l.name?.toUpperCase() === formData.sub_agreement?.toUpperCase())?.logo_url && (
-                                 <img src={getStaticUrl(subLogos.find(l => l.name?.toUpperCase() === formData.sub_agreement?.toUpperCase()).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
+                               {formData.sub_agreement && subLogos.find(l => { const n = norm(l.name); return n && n === norm(formData.sub_agreement); })?.logo_url && (
+                                 <img src={getStaticUrl(subLogos.find(l => { const n = norm(l.name); return n && n === norm(formData.sub_agreement); }).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
                                )}
                                {formData.sub_agreement || (formData.agreement === "SIAPE" ? "SITUAÇÃO FUNCIONAL" : formData.agreement === "FORÇAS ARMADAS" ? "CATEGORIA" : formData.agreement === "GOVERNOS" ? "ESTADOS" : "SUB-CONVÊNIO")}
                             </div>
@@ -762,11 +762,21 @@ export default function SimuladorPage() {
                             onClick={() => setDropdownOpen({ ...dropdownOpen, [contracts[activeContractIndex].id]: !dropdownOpen[contracts[activeContractIndex].id] })}
                             className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between font-black text-slate-800 hover:bg-slate-100 transition-all uppercase text-[11px]"
                           >
-                            <div className="flex-1 text-left truncate pr-2">
-                               {contracts[activeContractIndex].banco 
-                                 ? inssBanks.find(b => b.value === contracts[activeContractIndex].banco)?.label 
-                                 : "SELECIONAR BANCO"
-                               }
+                            <div className="flex-1 text-left truncate pr-2 flex items-center gap-3">
+                               {contracts[activeContractIndex].banco ? (() => {
+                                  const selectedBank = inssBanks.find(b => b.value === contracts[activeContractIndex].banco);
+                                  if (!selectedBank) return "SELECIONAR BANCO";
+                                  const bankName = selectedBank.label.substring(selectedBank.label.indexOf('-') + 1).trim();
+                                  const dbBank = dbBanks.find(db => db.name && selectedBank.label.toUpperCase().includes(db.name.toUpperCase()));
+                                  const subLogoObj = subLogos.find(l => { const nL = norm(l.name); return nL && (nL === norm(bankName) || norm(selectedBank.label).includes(nL)); });
+                                  const logoUrl = subLogoObj?.logo_url || dbBank?.logo_url;
+                                  return (
+                                    <>
+                                      {logoUrl && <img src={getStaticUrl(logoUrl)} className="w-6 h-6 rounded-md bg-white object-cover" />}
+                                      {selectedBank.label}
+                                    </>
+                                  );
+                               })() : "SELECIONAR BANCO"}
                             </div>
                             <Icons.ChevronDown />
                           </button>
