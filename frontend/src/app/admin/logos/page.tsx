@@ -201,7 +201,7 @@ export default function SubLogosPage() {
                 />
                 <datalist id="logoNames">
                   {/* Convênios - Filtrados se já existem */}
-                  {["INSS", "SIAPE", "GOV_EST", "FORCAS", "CLT_PRIVADO"]
+                  {["INSS", "SIAPE", "GOVERNOS", "FORÇAS ARMADAS", "CLT PRIVADO"]
                     .filter(c => !logos.some(l => l.name === c) || (editingLogo && editingLogo.name === c))
                     .map(c => <option key={c} value={c} />)}
                   
@@ -231,7 +231,7 @@ export default function SubLogosPage() {
                     "ITAÚ CONSIGNADO", "ITAÚ BBA", "ITAÚ UNIBANCO S.A.", "MERCANTIL", 
                     "NU FINANCEIRA S.A.", "NBC BANK", "OLÉ CONSIGNADO", "PAGBANK", "PAN", 
                     "PARANÁ BANCO", "BNP PARIBAS", "PARATI", "PAULISTA", "PICPAY", 
-                    "QI SOCIEDADE", "SABEMI", "SAFRA", "SANTANDER", "ZEMA", "OUTROS"
+                    "QI SOCIEDADE", "SABEMI", "SAFRA", "SANTANDER", "ZEMA", "BANCO INTER", "SICOOB", "OUTROS"
                   ]
                     .filter(b => !logos.some(l => l.name === b) || (editingLogo && editingLogo.name === b))
                     .map(b => <option key={b} value={b} />)}
