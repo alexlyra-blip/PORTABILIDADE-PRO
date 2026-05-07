@@ -216,6 +216,11 @@ export default function SubLogosPage() {
                   {["EXÉRCITO", "AERONÁUTICA", "MARINHA"]
                     .filter(f => !logos.some(l => norm(l.name) === norm(f)) || (editingLogo && norm(editingLogo.name) === norm(f)))
                     .map(f => <option key={f} value={f} />)}
+
+                  {/* SIAPE - Situação Funcional */}
+                  {["01- ATIVO", "02- APOSENTADO", "03- PENSIONISTA"]
+                    .filter(s => !logos.some(l => norm(l.name) === norm(s)) || (editingLogo && norm(editingLogo.name) === norm(s)))
+                    .map(s => <option key={s} value={s} />)}
                   
                   {/* Estados - Filtrados e com nome completo */}
                   {[

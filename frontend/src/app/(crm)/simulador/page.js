@@ -662,7 +662,7 @@ export default function SimuladorPage() {
                                  ))
                                ) : formData.agreement === "FORÇAS ARMADAS" ? (
                                   ["EXÉRCITO", "MARINHA", "AERONÁUTICA"].map(name => {
-                                      const logoObj = subLogos.find(l => l.name?.toUpperCase() === name.toUpperCase());
+                                      const logoObj = subLogos.find(l => norm(l.name) === norm(name));
                                       return (
                                         <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === name ? 'bg-blue-600 text-white' : ''}`}>
                                           {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300"></div>}
@@ -672,7 +672,7 @@ export default function SimuladorPage() {
                                   })
                                ) : formData.agreement === "SIAPE" ? (
                                   ["01- ATIVO", "02- APOSENTADO", "03- PENSIONISTA"].map(name => {
-                                      const logoObj = subLogos.find(l => l.name?.toUpperCase() === name.toUpperCase());
+                                      const logoObj = subLogos.find(l => norm(l.name) === norm(name));
                                       return (
                                         <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === name ? 'bg-blue-600 text-white' : ''}`}>
                                           {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300"></div>}
