@@ -47,7 +47,7 @@ export default function SimuladorPage() {
   const [logoIdx, setLogoIdx] = useState(0);
   const [banksForAnim, setBanksForAnim] = useState([]);
   const [cpfStatus, setCpfStatus] = useState(null); // 'valid', 'invalid', or null
-  const norm = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const norm = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
   // Mock de logos caso o DB esteja vazio
   const defaultLogos = [
