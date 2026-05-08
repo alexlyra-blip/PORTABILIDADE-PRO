@@ -686,8 +686,10 @@ export default function SimuladorPage() {
                                   ["EXÉRCITO", "MARINHA", "AERONÁUTICA"].map(name => {
                                       const logoObj = subLogos.find(l => norm(l.name) === norm(name));
                                       return (
-                                        <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === name ? 'bg-blue-600 text-white' : ''}`}>
-                                          {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300"></div>}
+                                        <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border font-black text-[10px] uppercase ${formData.sub_agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                                          <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
+                                            {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100"></div>}
+                                          </div>
                                           {name}
                                         </button>
                                       );
@@ -696,8 +698,10 @@ export default function SimuladorPage() {
                                   ["01- ATIVO", "02- APOSENTADO", "03- PENSIONISTA"].map(name => {
                                       const logoObj = subLogos.find(l => norm(l.name) === norm(name));
                                       return (
-                                        <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === name ? 'bg-blue-600 text-white' : ''}`}>
-                                          {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300"></div>}
+                                        <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border font-black text-[10px] uppercase ${formData.sub_agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                                          <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
+                                            {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100"></div>}
+                                          </div>
                                           {name}
                                         </button>
                                       );
@@ -719,8 +723,10 @@ export default function SimuladorPage() {
                                           return nL && (nL === norm(state.value) || nL === norm(state.label));
                                       });
                                       return (
-                                        <button key={state.value} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: state.label })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-500 hover:bg-blue-50 transition-all ${formData.sub_agreement === state.label ? 'border border-blue-500 bg-blue-50 text-slate-700 shadow-sm' : ''}`}>
-                                          {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300"></div>}
+                                        <button key={state.value} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: state.label })); setSubDropdownOpen(false); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border font-black text-[10px] uppercase ${formData.sub_agreement === state.label ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                                          <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
+                                            {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100"></div>}
+                                          </div>
                                           {state.label}
                                         </button>
                                       );
