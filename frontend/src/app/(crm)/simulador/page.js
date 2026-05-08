@@ -84,6 +84,7 @@ function SimuladorPageContent() {
 
   const isInvalidezSpecies = ["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species);
   const is60Plus = parseInt(formData.idade || 0) >= 60;
+  const showDataConcessao = isInvalidezSpecies && !is60Plus;
 
   // Efeito para carregar dados iniciais
   useEffect(() => {
