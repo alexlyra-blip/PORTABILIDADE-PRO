@@ -418,12 +418,29 @@ export default function SimuladorPage() {
     { value: "93", label: "93 - PENSÃO POR MORTE POR ACIDENTE DE TRABALHO" }
   ];
 
-  const isInvalidezSpecies = ["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species);
-  const is60Plus = parseInt(formData.idade || 0) >= 60;
-  const showDataConcessao = formData.agreement === "INSS" && isInvalidezSpecies && !is60Plus;
+  const primaryColor = user?.brand_color || "#2563eb";
 
   return (
     <div className="min-h-screen pb-20 animate-in fade-in duration-700">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .text-blue-600 { color: ${primaryColor} !important; }
+        .text-blue-500 { color: ${primaryColor} !important; }
+        .text-blue-400 { color: ${primaryColor} !important; }
+        .bg-blue-600 { background-color: ${primaryColor} !important; }
+        .bg-blue-500 { background-color: ${primaryColor} !important; }
+        .bg-blue-400 { background-color: ${primaryColor} !important; }
+        .bg-blue-50 { background-color: ${primaryColor}10 !important; }
+        .border-blue-600 { border-color: ${primaryColor} !important; }
+        .border-blue-500 { border-color: ${primaryColor} !important; }
+        .border-blue-200 { border-color: ${primaryColor}40 !important; }
+        .border-blue-500\\/20 { border-color: ${primaryColor}33 !important; }
+        .focus\\:border-blue-500:focus { border-color: ${primaryColor} !important; }
+        .focus\\:ring-blue-500\\/10:focus { --tw-ring-color: ${primaryColor}1a !important; }
+        .hover\\:bg-blue-700:hover { background-color: ${primaryColor} !important; filter: brightness(0.9); }
+        .hover\\:border-blue-300:hover { border-color: ${primaryColor}80 !important; }
+        .shadow-blue-500\\/30 { --tw-shadow-color: ${primaryColor}4d !important; --tw-shadow: var(--tw-shadow-colored) !important; }
+        .shadow-blue-500\\/20 { --tw-shadow-color: ${primaryColor}33 !important; --tw-shadow: var(--tw-shadow-colored) !important; }
+      ` }} />
       {/* Loading Overlay */}
       {loading && (
         <div className={`fixed inset-0 z-[1000] flex flex-col items-center justify-center transition-all duration-700 ${isExiting ? "opacity-0 scale-110 blur-2xl" : "bg-black/80 backdrop-blur-md opacity-100"}`}>

@@ -17,10 +17,13 @@ export default function OfertasPage() {
   const [activeBankIdx, setActiveBankIdx] = useState(0);
   const [activeContractId, setActiveContractId] = useState(null);
   const [bankOfferIdx, setBankOfferIdx] = useState({});
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const storedResults = sessionStorage.getItem("simulation_results");
     const storedInput = sessionStorage.getItem("simulation_input");
+    const u = localStorage.getItem('user');
+    if (u) setUser(JSON.parse(u));
 
     if (storedResults) {
       const parsed = JSON.parse(storedResults);
@@ -229,8 +232,22 @@ export default function OfertasPage() {
 
   const formatCurrency = (value) => `R$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const primaryColor = user?.brand_color || "#2563eb";
+
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .text-blue-600 { color: ${primaryColor} !important; }
+        .bg-blue-600 { background-color: ${primaryColor} !important; }
+        .bg-blue-50 { background-color: ${primaryColor}10 !important; }
+        .border-blue-600 { border-color: ${primaryColor} !important; }
+        .border-blue-100 { border-color: ${primaryColor}33 !important; }
+        .shadow-blue-500\\/30 { --tw-shadow-color: ${primaryColor}4d !important; --tw-shadow: var(--tw-shadow-colored) !important; }
+        .shadow-blue-500\\/20 { --tw-shadow-color: ${primaryColor}33 !important; --tw-shadow: var(--tw-shadow-colored) !important; }
+        .hover\\:bg-blue-700:hover { background-color: ${primaryColor} !important; filter: brightness(0.9); }
+        .decoration-blue-600 { text-decoration-color: ${primaryColor} !important; }
+        .text-blue-400 { color: ${primaryColor}cc !important; }
+      ` }} />
       {/* Remoção da animação antiga para evitar duplicidade com o novo simulador */}
 
 
