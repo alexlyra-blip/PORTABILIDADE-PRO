@@ -82,6 +82,9 @@ function SimuladorPageContent() {
   const [dropdownOpen, setDropdownOpen] = useState({});
   const [subDropdownOpen, setSubDropdownOpen] = useState(false);
 
+  const isInvalidezSpecies = ["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species);
+  const is60Plus = parseInt(formData.idade || 0) >= 60;
+
   // Efeito para carregar dados iniciais
   useEffect(() => {
     const init = async () => {
