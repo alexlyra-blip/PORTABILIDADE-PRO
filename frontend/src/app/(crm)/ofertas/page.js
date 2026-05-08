@@ -131,7 +131,7 @@ export default function OfertasPage() {
   });
 
   const bestTableOffer = firstTablesByBank.length > 0 
-    ? [...firstTablesByBank].sort((a, b) => (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] 
+    ? [...firstTablesByBank].sort((a, b) => (a?.valor_liberado || 0) - (b?.valor_liberado || 0))[0] 
     : null;
 
   const topByTaxa = contractResults.length > 0 
@@ -542,7 +542,7 @@ export default function OfertasPage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {data.rejeitados
-                .filter(rej => rej && !rej.banco?.toUpperCase().includes("C6")) // Filtro definitivo C6
+                .filter(rej => rej)
                 .map((rej, i) => {
                   if (!rej) return null;
                   
