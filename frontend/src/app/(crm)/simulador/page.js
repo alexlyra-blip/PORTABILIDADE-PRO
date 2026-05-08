@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api, getStaticUrl } from "@/utils/api";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 
 // Ícones SVG nativos (Zero Dependency)
 const Icons = {
@@ -36,7 +37,7 @@ const Icons = {
   )
 };
 
-export default function SimuladorPage() {
+function SimuladorPageContent() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [dbBanks, setDbBanks] = useState([]);
@@ -1029,3 +1030,5 @@ export default function SimuladorPage() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(SimuladorPageContent), { ssr: false });

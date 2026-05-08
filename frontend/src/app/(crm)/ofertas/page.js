@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, getStaticUrl } from "@/utils/api";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 
-export default function OfertasPage() {
+function OfertasPageContent() {
   const router = useRouter();
   const [data, setData] = useState(null);
   const [inputData, setInputData] = useState(null);
@@ -645,3 +646,5 @@ export default function OfertasPage() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(OfertasPageContent), { ssr: false });
