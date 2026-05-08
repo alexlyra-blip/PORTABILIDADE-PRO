@@ -647,4 +647,4 @@ function OfertasPageContent() {
   );
 }
 
-export default dynamic(() => Promise.resolve(OfertasPageContent), { ssr: false });
+export default dynamic(() => Promise.resolve({ default: OfertasPageContent }), { ssr: false });

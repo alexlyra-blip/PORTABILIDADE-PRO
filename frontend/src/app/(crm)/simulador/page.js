@@ -1031,4 +1031,4 @@ function SimuladorPageContent() {
   );
 }
 
-export default dynamic(() => Promise.resolve(SimuladorPageContent), { ssr: false });
+export default dynamic(() => Promise.resolve({ default: SimuladorPageContent }), { ssr: false });
