@@ -305,7 +305,7 @@ export default function SimuladorPage() {
         { value: "233", label: "233 - BANCO CIFRA" }, { value: "001", label: "001 - BANCO DO BRASIL" }, { value: "047", label: "047 - BANCO DO ESTADO DO SERGIPE" },
         { value: "212", label: "212 - BANCO ORIGINAL" }, { value: "643", label: "643 - BANCO PINE" }, { value: "081", label: "081 - BANCO SEGURO" },
         { value: "041", label: "041 - BANRISUL" }, { value: "000", label: "000 - BARIGUI" }, { value: "318", label: "318 - BMG" },
-        { value: "237", label: "237 - BRADESCO S.A." }, { value: "070", label: "070 - BRB" }, { value: "318", label: "318 - C6 CONSIGNADO" },
+        { value: "237", label: "237 - BRADESCO S.A." }, { value: "070", label: "070 - BRB" }, { value: "626", label: "626 - C6 CONSIGNADO" },
         { value: "104", label: "104 - CAIXA ECONÔMICA FEDERAL" }, { value: "422", label: "422 - SAFRA" }, { value: "000", label: "000 - CREDCESTA" },
         { value: "000", label: "000 - CTTU" }, { value: "707", label: "707 - DAYCOVAL" }, { value: "000", label: "000 - DEDICARE" },
         { value: "000", label: "000 - EMPRESTA" }, { value: "000", label: "000 - FACTA" }, { value: "000", label: "000 - FIBRA" },

@@ -82,7 +82,8 @@ export default function OfertasPage() {
     if (currentAgreement && offerAgreement) {
       const normCur = currentAgreement.toUpperCase().replace("_", " ");
       const normOff = offerAgreement.toUpperCase().replace("_", " ");
-      if (normOff !== normCur) return false;
+      // Usar includes para ser mais flexível (ex: "SIAPE" em "SIAPE PORTABILIDADE")
+      if (!normOff.includes(normCur) && !normCur.includes(normOff)) return false;
     }
 
     // Filtro por Sub-Convênio (especialmente para Estados/Governos)
