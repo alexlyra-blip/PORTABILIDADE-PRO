@@ -71,7 +71,35 @@ export default function OfertasPage() {
 
   const contracts = inputData?.contracts || [];
   const activeContractData = contracts.find(c => c.id === activeContractId) || contracts[0] || inputData || {};
-  const contractResults = Array.isArray(results) ? results.filter(res => res?._contrato_id === activeContractId || !res?._contrato_id) : [];
+  
+  const currentAgreement = inputData?.agreement;
+  const contractResults = Array.isArray(results) ? results.filter(res => {
+    const isCorrectContract = res?._contrato_id === activeContractId || !res?._contrato_id;
+    if (!isCorrectContract) return false;
+    
+    // Se a oferta tiver o campo convenio ou agreement, deve bater com o selecionado
+    const offerAgreement = res?.convenio || res?.agreement;
+    if (currentAgreement && offerAgreement) {
+      const normCur = currentAgreement.toUpperCase().replace("_", " ");
+      const normOff = offerAgreement.toUpperCase().replace("_", " ");
+      if (normOff !== normCur) return false;
+    }
+
+    // Filtro adicional pelo nome da tabela para garantir
+    if (currentAgreement && res?.tabela) {
+      const tab = res.tabela.toUpperCase();
+      const agr = currentAgreement.toUpperCase();
+      
+      // Se eu selecionei SIAPE, não posso mostrar tabelas que dizem explicitamente INSS
+      if (agr === "SIAPE" && tab.includes("INSS")) return false;
+      // Se eu selecionei INSS, não posso mostrar tabelas que dizem explicitamente SIAPE
+      if (agr === "INSS" && tab.includes("SIAPE")) return false;
+      // E assim por diante para outros convênios se houver distinção clara
+      if (agr === "FORÇAS ARMADAS" && (tab.includes("INSS") || tab.includes("SIAPE"))) return false;
+    }
+
+    return true;
+  }) : [];
 
   const filteredResults = applySort(
     contractResults.filter(res => !filterBank || res?.banco?.toLowerCase().includes(filterBank.toLowerCase())),
