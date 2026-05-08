@@ -43,6 +43,7 @@ export default function SimuladorPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [subLogos, setSubLogos] = useState([]);
   const [logoIdx, setLogoIdx] = useState(0);
   const [banksForAnim, setBanksForAnim] = useState([]);
@@ -331,13 +332,17 @@ export default function SimuladorPage() {
          return { ...c, banco_nome: found ? found.label : c.banco };
       });
       sessionStorage.setItem("simulation_input", JSON.stringify({ ...formData, contracts: mappedContracts }));
+      sessionStorage.setItem("simulation_results", JSON.stringify(finalData));
       
       // Sincronizar taxa calculada para o Admin Preview
       const rateToSync = contracts[0].taxaAjustada || contracts[0].taxaAtual || 0;
       localStorage.setItem("last_simulation_rate", rateToSync.toString());
       
-      setIsExiting(true);
-      setTimeout(() => { router.push("/ofertas"); }, 700);
+      setShowSuccess(true);
+      setTimeout(() => {
+        setIsExiting(true);
+        setTimeout(() => { router.push("/ofertas"); }, 700);
+      }, 1500);
     } catch (err) {
       console.error(err);
       alert("Erro ao processar simulação.");
@@ -430,13 +435,13 @@ export default function SimuladorPage() {
               </div>
            </div>
 
-           {/* Carrossel de Círculos */}
+            {/* Carrossel de Círculos */}
            <div className="relative w-full max-w-lg h-56 flex items-center justify-center">
               {[...Array(3)].map((_, i) => {
                 const animations = [
-                  { x: [0, -120, 120, 0], scale: [1.6, 0.6, 0.6, 1.6], zIndex: [30, 10, 10, 30], opacity: [1, 0.5, 0.5, 1] },
-                  { x: [-120, 120, 0, -120], scale: [0.6, 0.6, 1.6, 0.6], zIndex: [10, 10, 30, 10], opacity: [0.5, 0.5, 1, 0.5] },
-                  { x: [120, 0, -120, 120], scale: [0.6, 1.6, 0.6, 0.6], zIndex: [10, 30, 10, 10], opacity: [0.5, 1, 0.5, 0.5] }
+                  { x: [0, -180, 180, 0], scale: [1.6, 0.6, 0.6, 1.6], zIndex: [30, 10, 10, 30], opacity: [1, 0.5, 0.5, 1] },
+                  { x: [-180, 180, 0, -180], scale: [0.6, 0.6, 1.6, 0.6], zIndex: [10, 10, 30, 10], opacity: [0.5, 0.5, 1, 0.5] },
+                  { x: [180, 0, -180, 180], scale: [0.6, 1.6, 0.6, 0.6], zIndex: [10, 30, 10, 10], opacity: [0.5, 1, 0.5, 0.5] }
                 ];
                 return (
                   <motion.div
@@ -453,7 +458,33 @@ export default function SimuladorPage() {
 
            {/* Texto Embaixo */}
            <div className="relative z-40 flex flex-col items-center mt-12">
-              <h2 className="text-2xl font-black text-white tracking-widest uppercase text-center drop-shadow-lg">Analisando<br/><span className="text-blue-400">Oportunidades</span></h2>
+              <AnimatePresence mode="wait">
+                {!showSuccess ? (
+                  <motion.h2 
+                    key="analyzing"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="text-2xl font-black text-white tracking-widest uppercase text-center drop-shadow-lg"
+                  >
+                    Analisando<br/><span className="text-blue-400">Oportunidades</span>
+                  </motion.h2>
+                ) : (
+                  <motion.div 
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center gap-4"
+                  >
+                    <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.4)]">
+                       <Icons.Check size={40} className="text-white" />
+                    </div>
+                    <h2 className="text-2xl font-black text-white tracking-widest uppercase text-center drop-shadow-lg">
+                      Análise<br/><span className="text-emerald-400">Concluída!</span>
+                    </h2>
+                  </motion.div>
+                )}
+              </AnimatePresence>
            </div>
         </div>
       )}
