@@ -391,47 +391,31 @@ export default function SimuladorPage() {
     <div className="min-h-screen pb-20 animate-in fade-in duration-700">
       {/* Loading Overlay */}
       {loading && (
-        <div className={`fixed inset-0 z-[1000] flex flex-col items-center justify-center transition-all duration-700 ${isExiting ? "opacity-0 scale-110 blur-2xl" : "bg-black/70 backdrop-blur-md opacity-100"}`}>
-           <div className="relative w-80 h-80 flex items-center justify-center">
-              {[...Array(3)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-40 h-40 rounded-full border-4 border-white/30 flex items-center justify-center bg-white/10 backdrop-blur-2xl shadow-[0_0_60px_rgba(255,255,255,0.1)]"
-                  animate={{
-                    x: [
-                      Math.cos(i * (2 * Math.PI / 3)) * 200, 
-                      Math.cos((i + 1) * (2 * Math.PI / 3)) * 200, 
-                      Math.cos((i + 2) * (2 * Math.PI / 3)) * 200
-                    ],
-                    scale: [
-                      0.6 + (Math.sin(i * (2 * Math.PI / 3)) + 1) * 0.2,
-                      0.6 + (Math.sin((i + 1) * (2 * Math.PI / 3)) + 1) * 0.2,
-                      0.6 + (Math.sin((i + 2) * (2 * Math.PI / 3)) + 1) * 0.2
-                    ],
-                    zIndex: [
-                      Math.sin(i * (2 * Math.PI / 3)) > 0 ? 10 : 0,
-                      Math.sin((i + 1) * (2 * Math.PI / 3)) > 0 ? 10 : 0,
-                      Math.sin((i + 2) * (2 * Math.PI / 3)) > 0 ? 10 : 0
-                    ],
-                    opacity: [
-                      0.4 + (Math.sin(i * (2 * Math.PI / 3)) + 1) * 0.3,
-                      0.4 + (Math.sin((i + 1) * (2 * Math.PI / 3)) + 1) * 0.3,
-                      0.4 + (Math.sin((i + 2) * (2 * Math.PI / 3)) + 1) * 0.3
-                    ]
-                  }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                >
-                   <div className="w-24 h-24 bg-white rounded-full shadow-2xl border-4 border-white flex items-center justify-center overflow-hidden">
-                      <img src={getLogo(i)} className="w-full h-full object-cover" />
-                   </div>
-                </motion.div>
-              ))}
-              <div className="relative z-20 flex flex-col items-center">
-                 <div className="w-20 h-20 bg-blue-600 rounded-3xl shadow-[0_0_40px_rgba(37,99,235,0.6)] flex items-center justify-center mb-6 animate-bounce">
-                    <Icons.Rocket size={40} />
-                 </div>
-                 <h2 className="text-2xl font-black text-white tracking-widest uppercase text-center drop-shadow-lg">Analisando<br/><span className="text-blue-400">Oportunidades</span></h2>
+        <div className={`fixed inset-0 z-[1000] flex flex-col items-center justify-center transition-all duration-700 ${isExiting ? "opacity-0 scale-110 blur-2xl" : "bg-black/80 backdrop-blur-md opacity-100"}`}>
+           <div className="relative w-full max-w-lg h-64 flex items-center justify-center">
+              {[...Array(3)].map((_, i) => {
+                const animations = [
+                  { x: [0, -120, 120, 0], scale: [1.2, 0.7, 0.7, 1.2], zIndex: [30, 10, 10, 30], opacity: [1, 0.5, 0.5, 1] },
+                  { x: [-120, 120, 0, -120], scale: [0.7, 0.7, 1.2, 0.7], zIndex: [10, 10, 30, 10], opacity: [0.5, 0.5, 1, 0.5] },
+                  { x: [120, 0, -120, 120], scale: [0.7, 1.2, 0.7, 0.7], zIndex: [10, 30, 10, 10], opacity: [0.5, 1, 0.5, 0.5] }
+                ];
+                return (
+                  <motion.div
+                    key={i}
+                    className="absolute w-28 h-28 rounded-full border-4 border-slate-100 flex items-center justify-center bg-white shadow-2xl overflow-hidden"
+                    animate={animations[i]}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", times: [0, 0.33, 0.66, 1] }}
+                  >
+                     <img src={getLogo(i)} className="w-16 h-16 object-contain" />
+                  </motion.div>
+                );
+              })}
+           </div>
+           <div className="relative z-40 flex flex-col items-center mt-8">
+              <div className="w-16 h-16 bg-blue-600 rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.6)] flex items-center justify-center mb-4 animate-bounce">
+                 <Icons.Rocket size={32} />
               </div>
+              <h2 className="text-2xl font-black text-white tracking-widest uppercase text-center drop-shadow-lg">Analisando<br/><span className="text-blue-400">Oportunidades</span></h2>
            </div>
         </div>
       )}
