@@ -94,7 +94,7 @@ export default function Sidebar() {
   const menuItems = [
     { name: "Nova Simulação", href: "/simulador", icon: <Icons.Calculator />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Ofertas", href: "/ofertas", icon: <Icons.Trophy />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
-    { name: "Painel Geral", href: "/dashboard", icon: <Icons.LayoutDashboard /> },
+    { name: "Simulações", href: "/dashboard", icon: <Icons.LayoutDashboard /> },
     { name: "Meus Contratos", href: "/meus-contratos", icon: <Icons.FileText />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Relatórios", href: "/relatorio", icon: <Icons.TrendingUp />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
   ].filter(item => !item.roles || item.roles.includes(user.role));

@@ -33,6 +33,7 @@ const Icons = {
 export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState(null);
+  const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterDays, setFilterDays] = useState(30);
   const [role, setRole] = useState("vendedor");
@@ -41,7 +42,17 @@ export default function DashboardPage() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (user.role) setRole(user.role);
     loadDashboardStats();
+    loadBanks();
   }, [filterDays]);
+
+  const loadBanks = async () => {
+    try {
+      const res = await api.get("/admin/banks");
+      setBanks(res || []);
+    } catch (err) {
+      console.error("Erro bancos:", err);
+    }
+  };
 
   const loadDashboardStats = async () => {
     try {
@@ -63,9 +74,18 @@ export default function DashboardPage() {
     </div>
   );
 
+  const topOriginBankData = banks.find(b => String(b.code) === String(data?.stats?.top_origin_bank)) || 
+                             banks.find(b => b.name?.toLowerCase().includes(String(data?.stats?.top_origin_bank).toLowerCase()));
+  
+  const topOriginValue = topOriginBankData 
+    ? `${topOriginBankData.code} - ${topOriginBankData.name}` 
+    : data?.stats?.top_origin_bank;
+    
+  const topOriginLogo = topOriginBankData?.logo_secundaria_url || topOriginBankData?.logo_url || data?.stats?.top_origin_logo;
+
   const stats = [
     { title: "Top Banco", label: "O banco mais indicado", value: data?.stats?.top_bank, img: data?.stats?.top_bank_logo, icon: <Icons.Bank />, color: "blue" },
-    { title: "Banco Mais Portado", label: "Origem mais frequente", value: data?.stats?.top_origin_bank, img: data?.stats?.top_origin_logo, icon: <Icons.History />, color: "pink" },
+    { title: "Banco Mais Portado", label: "Origem mais frequente", value: topOriginValue, img: topOriginLogo, icon: <Icons.History />, color: "pink" },
     { title: "Melhor Tabela", label: "A tabela mais indicada", value: data?.stats?.top_table, img: data?.stats?.top_table_logo, icon: <Icons.Table />, color: "emerald" },
     { title: "Taxa Média", label: "A taxa mais indicada", value: data?.stats?.avg_rate, icon: <Icons.Percent />, color: "purple" },
   ];
@@ -140,7 +160,7 @@ export default function DashboardPage() {
     <div className="w-full max-w-[98%] mx-auto px-4 py-6 space-y-8 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight">Dashboard <span className="text-blue-600">Analytics</span></h1>
+        <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight">Dashboard <span className="text-blue-600">Simulações</span></h1>
         <p className="text-slate-500 font-medium">Métricas reais de performance e comportamento dos simuladores.</p>
       </div>
 
@@ -150,7 +170,7 @@ export default function DashboardPage() {
           <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-white/10 shadow-xl hover:scale-[1.02] transition-all">
             <div className={`w-12 h-12 rounded-2xl bg-${s.color}-500/10 flex items-center justify-center text-2xl mb-4 shadow-inner overflow-hidden border border-${s.color}-500/20`}>
               {s.img ? (
-                 <img src={s.img.startsWith('http') || s.img.startsWith('data:') ? s.img : `http://127.0.0.1:8000${s.img.startsWith('/') ? '' : '/'}${s.img}`} className="w-full h-full object-cover" />
+                 <img src={getStaticUrl(s.img)} className="w-full h-full object-cover" />
               ) : (
                  s.icon
               )}
