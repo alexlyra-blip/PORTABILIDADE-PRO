@@ -316,7 +316,9 @@ export default function OfertasPage() {
               const matchedBank = animBanks.find(b => {
                  const bName = b.name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
                  const sName = searchName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
-                 return bName.includes(sName) || sName.includes(bName) || b.name.toUpperCase().includes(sName.slice(0, 5));
+                 // Priorizar nome completo ou partes maiores para evitar erro com "BANCO..."
+                 if (bName.length < 3) return false;
+                 return bName === sName || bName.includes(sName) || sName.includes(bName);
               });
 
               return (
