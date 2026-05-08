@@ -14,6 +14,16 @@ function OfertasPageContent() {
   const [filterBank, setFilterBank] = useState("");
   const [sortBy, setSortBy] = useState("melhor_tabela");
   const [isInitializing, setIsInitializing] = useState(false);
+  const hexToRgb = (hex) => {
+    if (!hex || typeof hex !== 'string') return "37, 99, 235";
+    try {
+      const r = parseInt(hex?.slice(1, 3) || "25", 16);
+      const g = parseInt(hex?.slice(3, 5) || "63", 16);
+      const b = parseInt(hex?.slice(5, 7) || "eb", 16);
+      if (isNaN(r) || isNaN(g) || isNaN(b)) return "37, 99, 235";
+      return `${r}, ${g}, ${b}`;
+    } catch (e) { return "37, 99, 235"; }
+  };
   const [animBanks, setAnimBanks] = useState([]);
   const [activeBankIdx, setActiveBankIdx] = useState(0);
   const [activeContractId, setActiveContractId] = useState(null);
@@ -58,6 +68,13 @@ function OfertasPageContent() {
 
     return () => { };
   }, [router]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const primaryColor = user?.brand_color || "#2563eb";
+    document.documentElement.style.setProperty('--brand-primary', primaryColor);
+    document.documentElement.style.setProperty('--brand-primary-rgb', hexToRgb(primaryColor));
+  }, [user, hexToRgb]);
 
   if (!data || !data.ofertas) return null;
 
@@ -233,23 +250,6 @@ function OfertasPageContent() {
 
   const formatCurrency = (value) => `R$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const primaryColor = user?.brand_color || "#2563eb";
-    document.documentElement.style.setProperty('--brand-primary', primaryColor);
-    document.documentElement.style.setProperty('--brand-primary-rgb', hexToRgb(primaryColor));
-  }, [user]);
-
-  const hexToRgb = (hex) => {
-    if (!hex || typeof hex !== 'string') return "37, 99, 235";
-    try {
-      const r = parseInt(hex?.slice(1, 3) || "25", 16);
-      const g = parseInt(hex?.slice(3, 5) || "63", 16);
-      const b = parseInt(hex?.slice(5, 7) || "eb", 16);
-      if (isNaN(r) || isNaN(g) || isNaN(b)) return "37, 99, 235";
-      return `${r}, ${g}, ${b}`;
-    } catch (e) { return "37, 99, 235"; }
-  };
 
   return (
     <div className="brand-themed">
