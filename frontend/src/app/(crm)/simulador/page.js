@@ -264,7 +264,7 @@ export default function SimuladorPage() {
           cpf: formData.cpf.replace(/\D/g, ""),
           idade: parseInt(formData.idade),
           convenio: formData.agreement === "CLT PRIVADO" ? "CLT_PRIVADO" : formData.agreement,
-          sub_convenio: formData.sub_agreement || "",
+          sub_convenio: formData.sub_agreement ? formData.sub_agreement.split(' - ')[0] : "",
           benefit_species: formData.benefit_species,
           banco: c.banco,
           parcela: parseCurrency(c.parcela),
@@ -299,8 +299,38 @@ export default function SimuladorPage() {
         total_rejeitados: results.reduce((acc, r) => acc + (r.total_rejeitados || 0), 0)
       };
 
-      sessionStorage.setItem("simulation_results", JSON.stringify(finalData));
-      sessionStorage.setItem("simulation_input", JSON.stringify({ ...formData, contracts }));
+      const inssBanks = [
+        { value: "121", label: "121 - AGIBANK" }, { value: "250", label: "250 - BANCO BCV" }, { value: "025", label: "025 - BANCO ALFA" },
+        { value: "233", label: "233 - BANCO CIFRA" }, { value: "001", label: "001 - BANCO DO BRASIL" }, { value: "047", label: "047 - BANCO DO ESTADO DO SERGIPE" },
+        { value: "212", label: "212 - BANCO ORIGINAL" }, { value: "643", label: "643 - BANCO PINE" }, { value: "081", label: "081 - BANCO SEGURO" },
+        { value: "041", label: "041 - BANRISUL" }, { value: "000", label: "000 - BARIGUI" }, { value: "318", label: "318 - BMG" },
+        { value: "237", label: "237 - BRADESCO S.A." }, { value: "070", label: "070 - BRB" }, { value: "318", label: "318 - C6 CONSIGNADO" },
+        { value: "104", label: "104 - CAIXA ECONÔMICA FEDERAL" }, { value: "422", label: "422 - SAFRA" }, { value: "000", label: "000 - CREDCESTA" },
+        { value: "000", label: "000 - CTTU" }, { value: "707", label: "707 - DAYCOVAL" }, { value: "000", label: "000 - DEDICARE" },
+        { value: "000", label: "000 - EMPRESTA" }, { value: "000", label: "000 - FACTA" }, { value: "000", label: "000 - FIBRA" },
+        { value: "000", label: "000 - FINANMAX" }, { value: "000", label: "000 - FINAUDI" }, { value: "000", label: "000 - FINAZAM" },
+        { value: "000", label: "000 - GASPREV" }, { value: "000", label: "000 - GFT" }, { value: "000", label: "000 - IBI" },
+        { value: "000", label: "000 - ICBC" }, { value: "000", label: "000 - IDEAL" }, { value: "000", label: "000 - INBURSA" },
+        { value: "652", label: "652 - ITAÚ CONSIGNADO S.A." }, { value: "341", label: "341 - ITAÚ UNIBANCO S.A." }, { value: "000", label: "000 - KREDILIG" },
+        { value: "000", label: "000 - LECCA" }, { value: "000", label: "000 - LUIZACRED" }, { value: "000", label: "000 - MASTER" },
+        { value: "000", label: "000 - MAXIMA" }, { value: "000", label: "000 - MERCANTIL DO BRASIL" }, { value: "000", label: "000 - NEON" },
+        { value: "000", label: "000 - OLE BONSUCESSO" }, { value: "000", label: "000 - OMNI" }, { value: "000", label: "000 - PAN" },
+        { value: "254", label: "254 - PARANÁ" }, { value: "000", label: "000 - PARATI" }, { value: "000", label: "000 - PAULISTA" },
+        { value: "000", label: "000 - PICPAY" }, { value: "000", label: "000 - PORTO SEGURO" }, { value: "000", label: "000 - QI SOCIEDADE" },
+        { value: "000", label: "000 - QUERO QUERO" }, { value: "000", label: "000 - RENNER" }, { value: "000", label: "000 - SABEMI" },
+        { value: "033", label: "033 - SANTANDER" }, { value: "756", label: "756 - SICOOB" }, { value: "000", label: "000 - SICREDI" },
+        { value: "000", label: "000 - SIM" }, { value: "000", label: "000 - SOROCRED" }, { value: "000", label: "000 - SUPER PAGAMENTOS" },
+        { value: "000", label: "000 - TOPÁZIO" }, { value: "000", label: "000 - TRIÂNGULO" }, { value: "000", label: "000 - TRIBANCO" },
+        { value: "000", label: "000 - UNICRED" }, { value: "000", label: "000 - UNIPRIME" }, { value: "000", label: "000 - UP BRASIL" },
+        { value: "000", label: "000 - VIA CERTA" }, { value: "000", label: "000 - VOTORANTIM" }, { value: "000", label: "000 - ZEMA" },
+        { value: "000", label: "000 - WILL" }, { value: "077", label: "077 - BANCO INTER" }
+      ];
+
+      const mappedContracts = contracts.map(c => {
+         const found = inssBanks.find(b => b.value === c.banco);
+         return { ...c, banco_nome: found ? found.label : c.banco };
+      });
+      sessionStorage.setItem("simulation_input", JSON.stringify({ ...formData, contracts: mappedContracts }));
       
       // Sincronizar taxa calculada para o Admin Preview
       const rateToSync = contracts[0].taxaAjustada || contracts[0].taxaAtual || 0;
@@ -392,29 +422,37 @@ export default function SimuladorPage() {
       {/* Loading Overlay */}
       {loading && (
         <div className={`fixed inset-0 z-[1000] flex flex-col items-center justify-center transition-all duration-700 ${isExiting ? "opacity-0 scale-110 blur-2xl" : "bg-black/80 backdrop-blur-md opacity-100"}`}>
-           <div className="relative w-full max-w-lg h-64 flex items-center justify-center">
+           
+           {/* Foguete no Topo */}
+           <div className="relative z-40 flex flex-col items-center mb-8">
+              <div className="w-16 h-16 bg-blue-600 rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.6)] flex items-center justify-center animate-bounce">
+                 <Icons.Rocket size={32} className="text-white" />
+              </div>
+           </div>
+
+           {/* Carrossel de Círculos */}
+           <div className="relative w-full max-w-lg h-56 flex items-center justify-center">
               {[...Array(3)].map((_, i) => {
                 const animations = [
-                  { x: [0, -120, 120, 0], scale: [1.2, 0.7, 0.7, 1.2], zIndex: [30, 10, 10, 30], opacity: [1, 0.5, 0.5, 1] },
-                  { x: [-120, 120, 0, -120], scale: [0.7, 0.7, 1.2, 0.7], zIndex: [10, 10, 30, 10], opacity: [0.5, 0.5, 1, 0.5] },
-                  { x: [120, 0, -120, 120], scale: [0.7, 1.2, 0.7, 0.7], zIndex: [10, 30, 10, 10], opacity: [0.5, 1, 0.5, 0.5] }
+                  { x: [0, -120, 120, 0], scale: [1.6, 0.6, 0.6, 1.6], zIndex: [30, 10, 10, 30], opacity: [1, 0.5, 0.5, 1] },
+                  { x: [-120, 120, 0, -120], scale: [0.6, 0.6, 1.6, 0.6], zIndex: [10, 10, 30, 10], opacity: [0.5, 0.5, 1, 0.5] },
+                  { x: [120, 0, -120, 120], scale: [0.6, 1.6, 0.6, 0.6], zIndex: [10, 30, 10, 10], opacity: [0.5, 1, 0.5, 0.5] }
                 ];
                 return (
                   <motion.div
                     key={i}
-                    className="absolute w-28 h-28 rounded-full border-4 border-slate-100 flex items-center justify-center bg-white shadow-2xl overflow-hidden"
+                    className="absolute w-28 h-28 rounded-full border-[3px] border-white flex items-center justify-center bg-white shadow-2xl overflow-hidden"
                     animate={animations[i]}
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", times: [0, 0.33, 0.66, 1] }}
                   >
-                     <img src={getLogo(i)} className="w-16 h-16 object-contain" />
+                     <img src={getLogo(i)} className="w-[95%] h-[95%] rounded-full object-contain" />
                   </motion.div>
                 );
               })}
            </div>
-           <div className="relative z-40 flex flex-col items-center mt-8">
-              <div className="w-16 h-16 bg-blue-600 rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.6)] flex items-center justify-center mb-4 animate-bounce">
-                 <Icons.Rocket size={32} />
-              </div>
+
+           {/* Texto Embaixo */}
+           <div className="relative z-40 flex flex-col items-center mt-12">
               <h2 className="text-2xl font-black text-white tracking-widest uppercase text-center drop-shadow-lg">Analisando<br/><span className="text-blue-400">Oportunidades</span></h2>
            </div>
         </div>
@@ -424,7 +462,7 @@ export default function SimuladorPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div className="space-y-2">
             <h1 className="text-5xl font-black text-slate-900 tracking-tighter drop-shadow-sm uppercase">Nova <span className="text-blue-600">Simulação</span></h1>
-            <p className="text-slate-500 font-bold italic text-sm uppercase tracking-[0.3em]">Portabilidade PRO & Analytics de Crédito</p>
+            <p className="text-slate-500 font-bold italic text-sm uppercase tracking-[0.3em]">Portabilidade PRO & Análise de Crédito</p>
           </div>
           <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl shadow-xl border border-slate-100">
              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-lg">
@@ -681,7 +719,7 @@ export default function SimuladorPage() {
                                           return nL && (nL === norm(state.value) || nL === norm(state.label));
                                       });
                                       return (
-                                        <button key={state.value} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: state.value })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-700 hover:bg-blue-50 transition-all ${formData.sub_agreement === state.value ? 'bg-blue-600 text-white' : ''}`}>
+                                        <button key={state.value} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: state.label })); setSubDropdownOpen(false); }} className={`flex items-center gap-2 p-3 bg-slate-50 rounded-2xl font-black text-[10px] uppercase text-slate-500 hover:bg-blue-50 transition-all ${formData.sub_agreement === state.label ? 'border border-blue-500 bg-blue-50 text-slate-700 shadow-sm' : ''}`}>
                                           {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300"></div>}
                                           {state.label}
                                         </button>

@@ -243,7 +243,8 @@ export default function OfertasPage() {
           </div>
           <div className="flex flex-col md:flex-row items-center gap-4">
             {(() => {
-              const searchName = activeContractData?.banco ? (activeContractData.banco.includes('-') ? activeContractData.banco.split('-')[1].trim().toUpperCase() : activeContractData.banco.toUpperCase()) : "";
+              const fullBankName = activeContractData?.banco_nome || activeContractData?.banco || "";
+              const searchName = fullBankName ? (fullBankName.includes('-') ? fullBankName.split('-')[1].trim().toUpperCase() : fullBankName.toUpperCase()) : "";
               const matchedBank = animBanks.find(b => {
                  const bName = b.name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
                  const sName = searchName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '');
@@ -257,7 +258,7 @@ export default function OfertasPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ORIGEM</p>
-                    <p className="text-sm font-black text-slate-900 dark:text-white truncate max-w-[280px]">{activeContractData?.banco || "-"}</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white truncate max-w-[280px]">{fullBankName || "-"}</p>
                   </div>
                 </div>
               );
@@ -286,10 +287,17 @@ export default function OfertasPage() {
           </div>
         </div>
         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl p-2 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-2xl sticky top-4 z-[40]">
-          <div className="flex flex-col md:flex-row items-center gap-3">
+          <div className="flex flex-col md:flex-row items-center gap-3 relative">
             <div className="flex-1 w-full relative">
-              <input type="text" value={filterBank} onChange={(e) => setFilterBank(e.target.value)} className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-3xl pl-14 pr-8 py-3 text-sm font-bold outline-none text-slate-800 dark:text-white" placeholder="Filtrar por Banco..." />
+              <input type="text" value={filterBank} onChange={(e) => setFilterBank(e.target.value)} onFocus={() => document.getElementById('bank-suggestions')?.classList.remove('hidden')} onBlur={() => setTimeout(() => document.getElementById('bank-suggestions')?.classList.add('hidden'), 200)} className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-3xl pl-14 pr-8 py-3 text-sm font-bold outline-none text-slate-800 dark:text-white" placeholder="Filtrar por Banco..." />
               <span className="absolute left-6 top-1/2 -translate-y-1/2 text-lg opacity-40">🔍</span>
+              
+              <div id="bank-suggestions" className="hidden absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/10 shadow-2xl rounded-2xl p-2 z-[50] max-h-60 overflow-y-auto">
+                <button onClick={() => setFilterBank("")} className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest">TODOS OS BANCOS</button>
+                {[...new Set(contractResults.map(r => r.banco).filter(Boolean))].map((bancoName: any) => (
+                   <button key={bancoName} onClick={() => setFilterBank(bancoName)} className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest truncate">{bancoName}</button>
+                ))}
+              </div>
             </div>
             <div className="flex p-1.5 bg-slate-100/80 dark:bg-white/10 rounded-3xl gap-1 shrink-0">
               {[
