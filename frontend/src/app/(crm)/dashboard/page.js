@@ -74,8 +74,13 @@ export default function DashboardPage() {
     </div>
   );
 
-  const topOriginBankData = banks.find(b => String(b.code) === String(data?.stats?.top_origin_bank)) || 
-                             banks.find(b => b.name?.toLowerCase().includes(String(data?.stats?.top_origin_bank).toLowerCase()));
+  // Busca robusta do banco (compara números para ignorar zeros à esquerda)
+  const topOriginBankData = banks.find(b => {
+    const codeA = parseInt(b.code);
+    const codeB = parseInt(data?.stats?.top_origin_bank);
+    if (!isNaN(codeA) && !isNaN(codeB)) return codeA === codeB;
+    return String(b.code).trim() === String(data?.stats?.top_origin_bank).trim();
+  }) || banks.find(b => b.name?.toLowerCase().includes(String(data?.stats?.top_origin_bank).toLowerCase()));
   
   const topOriginValue = topOriginBankData 
     ? `${topOriginBankData.code} - ${topOriginBankData.name}` 
@@ -168,7 +173,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((s, i) => (
           <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-white/10 shadow-xl hover:scale-[1.02] transition-all">
-            <div className={`w-12 h-12 rounded-2xl bg-${s.color}-500/10 flex items-center justify-center text-2xl mb-4 shadow-inner overflow-hidden border border-${s.color}-500/20`}>
+            <div className={`w-12 h-12 rounded-2xl ${s.img ? 'bg-transparent' : `bg-${s.color}-500/10`} flex items-center justify-center text-2xl mb-4 shadow-inner overflow-hidden border border-${s.color}-500/20`}>
               {s.img ? (
                  <img src={getStaticUrl(s.img)} className="w-full h-full object-cover" />
               ) : (
