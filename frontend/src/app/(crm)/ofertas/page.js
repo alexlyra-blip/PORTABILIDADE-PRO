@@ -18,8 +18,10 @@ export default function OfertasPage() {
   const [activeContractId, setActiveContractId] = useState(null);
   const [bankOfferIdx, setBankOfferIdx] = useState({});
   const [user, setUser] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const storedResults = sessionStorage.getItem("simulation_results");
     const storedInput = sessionStorage.getItem("simulation_input");
     const u = localStorage.getItem('user');
@@ -58,6 +60,7 @@ export default function OfertasPage() {
     return () => { };
   }, [router]);
 
+  if (!isMounted) return null;
   if (!data || !data.ofertas) return null;
 
   const results = data?.ofertas || [];
@@ -239,6 +242,7 @@ export default function OfertasPage() {
   }, [user]);
 
   const hexToRgb = (hex) => {
+    if (!hex || typeof hex !== 'string') return "37, 99, 235";
     const r = parseInt(hex?.slice(1, 3) || "25", 16);
     const g = parseInt(hex?.slice(3, 5) || "63", 16);
     const b = parseInt(hex?.slice(5, 7) || "eb", 16);

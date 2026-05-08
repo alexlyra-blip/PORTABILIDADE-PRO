@@ -38,6 +38,7 @@ const Icons = {
 
 export default function SimuladorPage() {
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState(null);
   const [dbBanks, setDbBanks] = useState([]);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -83,6 +84,7 @@ export default function SimuladorPage() {
 
   // Efeito para carregar dados iniciais
   useEffect(() => {
+    setIsMounted(true);
     const init = async () => {
       try {
         const u = localStorage.getItem('user');
@@ -429,11 +431,14 @@ export default function SimuladorPage() {
   }, [user]);
 
   const hexToRgb = (hex) => {
+    if (!hex || typeof hex !== 'string') return "37, 99, 235";
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
     return `${r}, ${g}, ${b}`;
   };
+
+  if (!isMounted) return null;
 
   return (
     <div className="min-h-screen pb-20 animate-in fade-in duration-700 brand-themed">
