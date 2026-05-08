@@ -120,9 +120,27 @@ export default function OfertasPage() {
     setBankOfferIdx(prev => ({ ...prev, [banco]: ((prev[banco] || 0) + 1) % total }));
   };
 
-  const bestTableOffer = contractResults.length > 0 ? [...contractResults].sort((a, b) => (a?.valor_liberado || 0) - (b?.valor_liberado || 0))[0] : null;
-  const topByTaxa = contractResults.length > 0 ? [...contractResults].sort((a, b) => (a?.taxa_juros || 0) - (b?.taxa_juros || 0))[0] : null;
-  const topByTroco = contractResults.length > 0 ? [...contractResults].sort((a, b) => (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] : null;
+  // Lógica para encontrar a "Melhor Tabela" (1ª de cada banco com maior troco)
+  const firstTablesByBank = [];
+  const banksSeen = new Set();
+  contractResults.forEach(res => {
+    if (res && res.banco && !banksSeen.has(res.banco)) {
+      banksSeen.add(res.banco);
+      firstTablesByBank.push(res);
+    }
+  });
+
+  const bestTableOffer = firstTablesByBank.length > 0 
+    ? [...firstTablesByBank].sort((a, b) => (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] 
+    : null;
+
+  const topByTaxa = contractResults.length > 0 
+    ? [...contractResults].sort((a, b) => (a?.taxa_juros || 0) - (b?.taxa_juros || 0) || (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] 
+    : null;
+
+  const topByTroco = contractResults.length > 0 
+    ? [...contractResults].sort((a, b) => (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] 
+    : null;
 
   const baseHighlights = [
     { id: "melhor_tabela", title: "MELHOR TABELA", data: bestTableOffer, icon: "🏆", bg: "bg-blue-600/10", text: "text-blue-600", metric: bestTableOffer ? `R$ ${Number(bestTableOffer?.valor_liberado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00", label: "Liberado" },
@@ -275,8 +293,8 @@ export default function OfertasPage() {
 
               return (
                 <div className="flex items-center gap-3 min-w-[320px] xl:min-w-[400px] bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
-                  <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                    {matchedBank?.logo ? <img src={matchedBank.logo} alt="" className="w-full h-full object-cover" /> : <span className="text-xl">🏛️</span>}
+                  <div className="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {matchedBank?.logo ? <img src={matchedBank.logo} alt="" className="w-full h-full object-cover" /> : <span className="text-lg">🏛️</span>}
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ORIGEM</p>
