@@ -232,21 +232,32 @@ export default function OfertasPage() {
 
   const formatCurrency = (value) => `R$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const primaryColor = user?.brand_color || "#2563eb";
+  useEffect(() => {
+    const primaryColor = user?.brand_color || "#2563eb";
+    document.documentElement.style.setProperty('--brand-primary', primaryColor);
+    document.documentElement.style.setProperty('--brand-primary-rgb', hexToRgb(primaryColor));
+  }, [user]);
+
+  const hexToRgb = (hex) => {
+    const r = parseInt(hex?.slice(1, 3) || "25", 16);
+    const g = parseInt(hex?.slice(3, 5) || "63", 16);
+    const b = parseInt(hex?.slice(5, 7) || "eb", 16);
+    return `${r}, ${g}, ${b}`;
+  };
 
   return (
-    <>
+    <div className="brand-themed">
       <style dangerouslySetInnerHTML={{ __html: `
-        .text-blue-600 { color: ${primaryColor} !important; }
-        .bg-blue-600 { background-color: ${primaryColor} !important; }
-        .bg-blue-50 { background-color: ${primaryColor}10 !important; }
-        .border-blue-600 { border-color: ${primaryColor} !important; }
-        .border-blue-100 { border-color: ${primaryColor}33 !important; }
-        .shadow-blue-500\\/30 { --tw-shadow-color: ${primaryColor}4d !important; --tw-shadow: var(--tw-shadow-colored) !important; }
-        .shadow-blue-500\\/20 { --tw-shadow-color: ${primaryColor}33 !important; --tw-shadow: var(--tw-shadow-colored) !important; }
-        .hover\\:bg-blue-700:hover { background-color: ${primaryColor} !important; filter: brightness(0.9); }
-        .decoration-blue-600 { text-decoration-color: ${primaryColor} !important; }
-        .text-blue-400 { color: ${primaryColor}cc !important; }
+        .brand-themed .text-blue-600 { color: var(--brand-primary) !important; }
+        .brand-themed .bg-blue-600 { background-color: var(--brand-primary) !important; }
+        .brand-themed .bg-blue-50 { background-color: rgba(var(--brand-primary-rgb), 0.1) !important; }
+        .brand-themed .border-blue-600 { border-color: var(--brand-primary) !important; }
+        .brand-themed .border-blue-100 { border-color: rgba(var(--brand-primary-rgb), 0.2) !important; }
+        .brand-themed .shadow-blue-500\\/30 { --tw-shadow-color: rgba(var(--brand-primary-rgb), 0.3) !important; }
+        .brand-themed .shadow-blue-500\\/20 { --tw-shadow-color: rgba(var(--brand-primary-rgb), 0.2) !important; }
+        .brand-themed .hover\\:bg-blue-700:hover { background-color: var(--brand-primary) !important; filter: brightness(0.9); }
+        .brand-themed .decoration-blue-600 { text-decoration-color: var(--brand-primary) !important; }
+        .brand-themed .text-blue-400 { color: rgba(var(--brand-primary-rgb), 0.8) !important; }
       ` }} />
       {/* Remoção da animação antiga para evitar duplicidade com o novo simulador */}
 
@@ -626,6 +637,6 @@ export default function OfertasPage() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
