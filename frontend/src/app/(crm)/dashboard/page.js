@@ -74,27 +74,13 @@ export default function DashboardPage() {
     </div>
   );
 
-  // Busca robusta do banco (compara números para ignorar zeros à esquerda)
-  const topOriginBankData = banks.find(b => {
-    const codeA = parseInt(b.code);
-    const codeB = parseInt(data?.stats?.top_origin_bank);
-    if (!isNaN(codeA) && !isNaN(codeB)) return codeA === codeB;
-    return String(b.code).trim() === String(data?.stats?.top_origin_bank).trim();
-  }) || banks.find(b => {
-    const searchStr = String(data?.stats?.top_origin_bank || "").toLowerCase();
-    return b.name?.toLowerCase().includes(searchStr) || searchStr.includes(b.name?.toLowerCase());
-  });
-  
-  const topOriginValue = topOriginBankData 
-    ? (topOriginBankData.name.includes(topOriginBankData.code) ? topOriginBankData.name : `${topOriginBankData.code} - ${topOriginBankData.name}`)
-    : data?.stats?.top_origin_bank;
-    
-  const topOriginLogo = topOriginBankData?.logo_secundaria_url || topOriginBankData?.logo_url || data?.stats?.top_origin_logo;
+  const topOriginValue = data?.stats?.top_origin_bank;
+  const topOriginLogo = data?.stats?.top_origin_logo;
 
   const stats = [
     { title: "Top Banco", label: "O banco mais indicado", value: data?.stats?.top_bank, img: data?.stats?.top_bank_logo, icon: <Icons.Bank />, color: "blue", isBank: true },
     { title: "Banco Mais Portado", label: "Origem mais frequente", value: topOriginValue, img: topOriginLogo, icon: <Icons.History />, color: "pink", isBank: true },
-    { title: "Melhor Tabela", label: "A tabela mais indicada", value: data?.stats?.top_table, img: data?.stats?.top_table_logo, icon: <Icons.Table />, color: "emerald" },
+    { title: "Melhor Tabela", label: "A tabela mais indicada", value: data?.stats?.top_table, img: data?.stats?.top_table_logo, icon: <Icons.Table />, color: "emerald", isBank: true },
     { title: "Taxa Média", label: "A taxa mais indicada", value: data?.stats?.avg_rate, icon: <Icons.Percent />, color: "purple" },
   ];
 
@@ -176,9 +162,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((s, i) => (
           <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-white/10 shadow-xl hover:scale-[1.02] transition-all">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 overflow-hidden shadow-inner ${s.img ? 'p-0 border border-slate-100' : `bg-${s.color}-500/10 border border-${s.color}-500/20`}`}>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 overflow-hidden shadow-inner ${s.img ? 'p-0 border-none' : `bg-${s.color}-500/10 border border-${s.color}-500/20`}`}>
               {s.img ? (
-                 <img src={getStaticUrl(s.img)} className="w-full h-full object-cover" />
+                 <img src={getStaticUrl(s.img)} className="w-full h-full object-cover block" />
               ) : (
                  <span className={`text-${s.color}-600`}>{s.icon}</span>
               )}
@@ -187,8 +173,8 @@ export default function DashboardPage() {
             <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-tight">{s.label}</p>
             {s.img ? (
               <div className="flex items-center gap-2">
-                <div className={`rounded-xl overflow-hidden border border-slate-100 shadow-sm shrink-0 ${s.isBank ? 'w-10 h-10' : 'w-7 h-7'}`}>
-                  <img src={getStaticUrl(s.img)} className="w-full h-full object-cover" />
+                <div className={`rounded-xl overflow-hidden shadow-sm shrink-0 flex items-center justify-center border-none ${s.isBank ? 'w-10 h-10' : 'w-7 h-7'}`}>
+                  <img src={getStaticUrl(s.img)} className="w-full h-full object-cover block" />
                 </div>
                 <p className={`font-black text-slate-800 dark:text-white leading-tight break-words ${s.isBank ? 'text-sm' : 'text-xs'}`}>{s.value}</p>
               </div>

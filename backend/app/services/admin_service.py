@@ -685,20 +685,28 @@ class AdminService:
         top_table_logo = banks_logo_map.get(top_table_bank_id) if top_table_bank_id else None
 
         top_origin_bank = max(origin_counts, key=origin_counts.get) if origin_counts else "N/A"
-        # Find logo for top origin bank
+        # Find logo and full name for top origin bank
         top_origin_logo = None
+        top_origin_name = top_origin_bank
+        
         if top_origin_bank != "N/A":
             search_name = top_origin_bank.split('-')[1].strip().upper() if '-' in top_origin_bank else top_origin_bank.upper()
+            search_code = top_origin_bank.split('-')[0].strip() if '-' in top_origin_bank else top_origin_bank
+            
             # Try sub-logos first
             for l_name, l_url in sub_logos_map.items():
-                if l_name in search_name or search_name in l_name:
+                # Match by code or name
+                if search_code in l_name or search_name in l_name or l_name in search_name:
                     top_origin_logo = l_url
+                    top_origin_name = l_name # Use the full name from the logo table
                     break
+            
             # Try banks if not found
             if not top_origin_logo:
                 for b_id, b_name in banks_map.items():
                     if b_name.upper() in search_name or search_name in b_name.upper():
                         top_origin_logo = banks_logo_map.get(b_id)
+                        top_origin_name = b_name
                         break
 
         avg_rate = sum(rates) / len(rates) if rates else 0
@@ -727,7 +735,7 @@ class AdminService:
                 "top_bank_logo": top_10_banks[0]["logo"] if top_10_banks else None,
                 "top_table": top_table_name,
                 "top_table_logo": top_table_logo,
-                "top_origin_bank": top_origin_bank,
+                "top_origin_bank": top_origin_name,
                 "top_origin_logo": top_origin_logo,
                 "top_user": top_10_users[0]["name"] if top_10_users else "N/A",
                 "top_user_avatar": top_10_users[0]["avatar"] if top_10_users else None,
