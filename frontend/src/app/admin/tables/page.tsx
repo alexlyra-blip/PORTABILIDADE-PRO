@@ -133,8 +133,23 @@ export default function TablesPage() {
     setIsSubmitting(true);
     try {
       const payload = { 
-        ...formData, 
-        bank_id: parseInt(formData.bank_id)
+        name: formData.name,
+        active: formData.active,
+        agreement: formData.agreement,
+        sub_agreement: formData.sub_agreement || "",
+        bank_id: parseInt(formData.bank_id),
+        taxa_convenio: parseFloat(formData.taxa_convenio) || 0,
+        portability_adjustment: parseFloat(formData.portability_adjustment) || 0,
+        refin_adjustment: parseFloat(formData.refin_adjustment) || 0,
+        min_paid_installments: parseInt(formData.min_paid_installments) || 0,
+        min_ticket: parseFloat(formData.min_ticket) || 0,
+        min_rate: parseFloat(formData.min_rate) || 0,
+        min_port_rate: parseFloat(formData.min_port_rate) || 0,
+        min_installment: parseFloat(formData.min_installment) || 0,
+        max_installment: parseFloat(formData.max_installment) || 0,
+        min_age: parseInt(formData.min_age) || 0,
+        max_age: parseInt(formData.max_age) || 0,
+        term: parseInt(formData.term) || 0
       };
 
       if (editingTable) {

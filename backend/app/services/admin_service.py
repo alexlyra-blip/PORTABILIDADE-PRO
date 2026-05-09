@@ -126,13 +126,18 @@ class AdminService:
 
     @staticmethod
     async def update_table(db: AsyncSession, table_id: int, table_data: dict):
+        print(f"TABLE UPDATE DEBUG: ID={table_id}, DATA={table_data}")
         result = await db.execute(select(BankTable).where(BankTable.id == table_id))
         db_table = result.scalar_one_or_none()
         if db_table:
             for key, value in table_data.items():
-                setattr(db_table, key, value)
+                if hasattr(db_table, key) and key not in ['id', 'bank_id']:
+                    setattr(db_table, key, value)
             await db.commit()
             await db.refresh(db_table)
+            print(f"TABLE {table_id} UPDATED SUCCESSFULLY")
+        else:
+            print(f"TABLE {table_id} NOT FOUND")
         return db_table
 
     @staticmethod
