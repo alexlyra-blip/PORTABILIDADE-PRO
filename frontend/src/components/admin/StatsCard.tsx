@@ -10,21 +10,26 @@ interface StatsCardProps {
 
 export default function StatsCard({ title, value, icon, trend, trendUp }: StatsCardProps) {
   return (
-    <div className="admin-card p-4 transition-all hover:shadow-md">
+    <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl flex flex-col hover:shadow-2xl transition-all duration-300 group cursor-default">
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{title}</p>
-          <h3 className="text-xl font-black text-slate-900">{value}</h3>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1 opacity-70 group-hover:opacity-100 transition-opacity">{title}</p>
+          <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter group-hover:scale-105 transition-transform origin-left">{value}</h3>
           
           {trend && (
-            <div className={`flex items-center gap-1 mt-1 text-[9px] font-black uppercase ${trendUp ? 'text-emerald-600' : 'text-slate-400'}`}>
-              {trendUp ? '↑' : ''} {trend}
-              <span className="text-slate-400 font-bold ml-1">vvs. mês</span>
+            <div className={`flex items-center gap-1.5 mt-2 text-[9px] font-black uppercase tracking-wider ${trendUp ? 'text-emerald-500' : 'text-slate-400'}`}>
+              <span className={`flex items-center justify-center w-4 h-4 rounded-full ${trendUp ? 'bg-emerald-500/10' : 'bg-slate-500/10'}`}>
+                {trendUp ? '↑' : '•'}
+              </span>
+              {trend}
+              <span className="text-slate-400 font-bold ml-1 opacity-60">vs. mês</span>
             </div>
           )}
         </div>
-        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-xl shadow-inner border border-slate-100 shrink-0">
-          {icon}
+        <div className="w-12 h-12 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center text-xl shadow-inner border border-slate-100 dark:border-white/5 shrink-0 group-hover:rotate-12 transition-transform duration-500 group-hover:bg-blue-600/10 group-hover:text-blue-600">
+          <div className="group-hover:scale-110 transition-transform">
+            {icon}
+          </div>
         </div>
       </div>
     </div>

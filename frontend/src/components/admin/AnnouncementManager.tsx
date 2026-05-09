@@ -34,31 +34,32 @@ export default function AnnouncementManager() {
   };
 
   return (
-    <div className="admin-card p-8 border-l-4 border-l-blue-600 bg-white shadow-sm rounded-2xl">
-      <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-        <span className="text-xl">📢</span> Enviar Comunicado Global
+    <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/10 shadow-xl flex flex-col group hover:shadow-2xl transition-all duration-500">
+      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-2">
+        <span className="w-4 h-1 bg-blue-600 rounded-full"></span>
+        Comunicado Global
       </h3>
       
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Título (Opcional)</label>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Título do Alerta</label>
           <input 
             type="text" 
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ex: Atualização de Tabelas"
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+            placeholder="Ex: Atualização Crítica de Tabelas"
+            className="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl text-xs focus:ring-4 focus:ring-blue-500/20 outline-none transition-all font-bold dark:text-white"
           />
         </div>
         
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Mensagem <span className="text-red-500">*</span></label>
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Mensagem do Comunicado <span className="text-red-500">*</span></label>
           <textarea 
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Digite a mensagem que aparecerá para os usuários ao entrarem no sistema..."
-            rows={3}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none font-medium text-slate-700"
+            placeholder="Digite aqui o texto que será exibido para todos os usuários..."
+            rows={4}
+            className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl text-xs focus:ring-4 focus:ring-blue-500/20 outline-none transition-all resize-none font-bold text-slate-700 dark:text-slate-200"
             required
           ></textarea>
         </div>
@@ -66,13 +67,13 @@ export default function AnnouncementManager() {
         <button 
           type="submit"
           disabled={loading || !message}
-          className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+          className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-500 shadow-2xl ${
             success 
-              ? "bg-green-500 text-white" 
-              : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40"
-          } disabled:opacity-50`}
+              ? "bg-emerald-500 text-white shadow-emerald-500/40" 
+              : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/40 hover:-translate-y-1"
+          } disabled:opacity-50 active:scale-95`}
         >
-          {loading ? "Enviando..." : success ? "✓ Comunicado Enviado!" : "Publicar Comunicado"}
+          {loading ? "Processando..." : success ? "✓ Publicado com Sucesso!" : "Publicar Alerta Agora"}
         </button>
       </form>
     </div>

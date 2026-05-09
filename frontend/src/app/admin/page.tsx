@@ -150,8 +150,11 @@ export default function AdminPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Chart */}
-        <div className="lg:col-span-2 admin-card p-6 min-h-[400px] flex flex-col">
-           <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mb-8">Volumetria de Simulações (Últimos Dias Ativos)</h3>
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-white/10 shadow-xl min-h-[400px] flex flex-col group hover:shadow-2xl transition-all duration-500">
+           <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+             <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+             Volumetria de Simulações
+           </h3>
            <div className="flex-1 w-full min-h-[300px]">
               {data.historical.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
@@ -162,15 +165,16 @@ export default function AdminPage() {
                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94A3B8'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94A3B8'}} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.3} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94A3B8', fontWeight: 'bold'}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94A3B8', fontWeight: 'bold'}} />
                     <Tooltip 
-                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
+                       contentStyle={{ borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.5)', background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)', color: '#fff' }} 
+                       itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                     />
-                    <Area type="monotone" dataKey="INSS" stackId="1" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSim)" strokeWidth={3} />
-                    <Area type="monotone" dataKey="SIAPE" stackId="1" stroke="#f59e0b" fillOpacity={1} fill="#f59e0b22" strokeWidth={3} />
-                    <Area type="monotone" dataKey="FORCAS" stackId="1" stroke="#10b981" fillOpacity={1} fill="#10b98122" strokeWidth={3} />
+                    <Area type="monotone" dataKey="INSS" stackId="1" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSim)" strokeWidth={4} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 0 }} />
+                    <Area type="monotone" dataKey="SIAPE" stackId="1" stroke="#f59e0b" fillOpacity={1} fill="#f59e0b11" strokeWidth={4} />
+                    <Area type="monotone" dataKey="FORCAS" stackId="1" stroke="#10b981" fillOpacity={1} fill="#10b98111" strokeWidth={4} />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -180,8 +184,11 @@ export default function AdminPage() {
         </div>
 
         {/* Pie Chart */}
-        <div className="admin-card p-6 flex flex-col">
-           <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mb-8">Distribuição por Convênio</h3>
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-white/10 shadow-xl flex flex-col group hover:shadow-2xl transition-all duration-500">
+           <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+             Por Convênio
+           </h3>
            <div className="flex-1 w-full min-h-[300px]">
               {data.agreements.length > 0 ? (
                  <ResponsiveContainer width="100%" height={260}>
@@ -189,17 +196,20 @@ export default function AdminPage() {
                       <Pie
                         data={data.agreements}
                         cx="50%" cy="50%"
-                        innerRadius={60}
+                        innerRadius={70}
                         outerRadius={100}
-                        paddingAngle={5}
+                        paddingAngle={8}
                         dataKey="value"
+                        stroke="none"
                       >
                         {data.agreements.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '10px', fontWeight: 'bold'}} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.3)', background: '#1e293b', color: '#fff' }}
+                      />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em'}} />
                     </PieChart>
                  </ResponsiveContainer>
               ) : (
@@ -211,21 +221,24 @@ export default function AdminPage() {
 
       <QuickActions />
 
-      <div className="admin-card p-6 min-h-[350px] mb-8 mt-4">
-         <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mb-8">Valor Estimado das Propostas Geradas</h3>
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-white/10 shadow-xl min-h-[350px] mb-8 mt-4 group hover:shadow-2xl transition-all duration-500">
+         <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+            Volume Estimado (Propostas Geradas)
+         </h3>
          <div className="w-full h-[300px]">
             {data.historical && data.historical.length > 0 ? (
                <ResponsiveContainer width="100%" height="100%">
                  <BarChart data={data.historical}>
-                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
-                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94A3B8'}} />
-                   <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94A3B8'}} tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} />
+                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.3} />
+                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94A3B8', fontWeight: 'bold'}} />
+                   <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94A3B8', fontWeight: 'bold'}} tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} />
                    <Tooltip 
                       formatter={(value) => [`R$ ${Number(value).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 'Volume (R$)']}
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
-                      cursor={{fill: '#f1f5f9'}}
+                      contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.5)', background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)', color: '#fff' }} 
+                      cursor={{fill: 'rgba(59, 130, 246, 0.05)', radius: [12, 12, 0, 0]}}
                    />
-                   <Legend iconType="circle" wrapperStyle={{fontSize: '10px'}} />
+                   <Legend iconType="circle" wrapperStyle={{fontSize: '11px', fontWeight: '900', textTransform: 'uppercase'}} />
                    {data?.agreements?.map((agr, idx) => (
                       <Bar 
                         key={agr.name} 
@@ -233,7 +246,8 @@ export default function AdminPage() {
                         name={agr.name}
                         stackId="a" 
                         fill={COLORS[idx % COLORS.length]} 
-                        radius={[idx === data.agreements.length - 1 ? 4 : 0, idx === data.agreements.length - 1 ? 4 : 0, 0, 0]} 
+                        radius={idx === data.agreements.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]} 
+                        barSize={40}
                       />
                    ))}
                  </BarChart>
@@ -245,13 +259,16 @@ export default function AdminPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
-        <div className="admin-card p-6 bg-slate-900 text-white relative overflow-hidden group">
-           <div className="absolute top-0 right-0 w-60 h-60 bg-blue-600/20 rounded-full blur-[80px] -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-700"></div>
-           <div className="relative z-10 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-[9px] font-black text-blue-400 uppercase tracking-[0.3em]">RANKING DE SIMULAÇÕES</h4>
+        <div className="bg-slate-950 p-8 rounded-[2.5rem] text-white relative overflow-hidden group shadow-2xl border border-white/5">
+           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] -mr-20 -mt-20 group-hover:scale-125 transition-transform duration-1000"></div>
+           <div className="relative z-10 flex flex-col gap-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em] flex items-center gap-2">
+                  <span className="w-4 h-1 bg-blue-500 rounded-full"></span>
+                  Ranking de Simulações
+                </h4>
                 
-                <div className="bg-slate-800/80 p-1 rounded-xl flex items-center shadow-inner border border-white/5">
+                <div className="bg-white/5 backdrop-blur-xl p-1.5 rounded-2xl flex items-center shadow-2xl border border-white/10 shrink-0">
                   {[
                     { label: 'Hoje', val: 1 }, 
                     { label: '7D', val: 7 }, 
@@ -261,16 +278,16 @@ export default function AdminPage() {
                     <button
                       key={opt.val}
                       onClick={() => { setLoading(true); setFilterDays(opt.val); }}
-                      className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${filterDays === opt.val ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      className={`px-4 py-2 text-[9px] font-black uppercase tracking-[0.1em] rounded-xl transition-all duration-300 ${filterDays === opt.val ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/40' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
                     >
                       {opt.label}
                     </button>
                   ))}
                   <button 
                     onClick={handleExportPDF}
-                    className="px-3 py-1.5 text-[9px] font-black text-white uppercase tracking-widest rounded-lg transition-all bg-red-600 hover:bg-red-700 shadow-md shadow-red-600/30 flex items-center gap-1.5 shrink-0"
+                    className="ml-2 px-4 py-2 text-[9px] font-black text-white uppercase tracking-widest rounded-xl transition-all bg-red-600/80 hover:bg-red-600 shadow-xl hover:scale-105 active:scale-95 flex items-center gap-2 shrink-0"
                   >
-                    <Icons.Download /> PDF EXPORT
+                    <Icons.Download size={14} /> PDF
                   </button>
                 </div>
               </div>
