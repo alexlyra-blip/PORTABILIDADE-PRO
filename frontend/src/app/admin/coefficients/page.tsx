@@ -188,7 +188,6 @@ export default function CoefficientsPage() {
         </div>
       </div>
 
-      {/* Agrupamento por Tabela/Convênio */}
       <div className="space-y-8">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -233,10 +232,6 @@ export default function CoefficientsPage() {
                 >
                   <span>＋</span> Novo Coeficiente
                 </button>
-             </div>
-                <div className="flex items-center gap-2">
-                   <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter bg-blue-50 px-3 py-1 rounded-full border border-blue-100 shadow-sm">{coefficients.length} Coeficientes Ativos</span>
-                </div>
              </div>
 
              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
