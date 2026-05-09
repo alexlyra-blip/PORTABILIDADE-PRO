@@ -91,59 +91,60 @@ const AdminLayout = ({ children }) => {
             </span>
           </div>
           <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-black mt-2 italic text-center uppercase">Painel Administrativo</p>
-        </div>
-
-        {/* Navigation - Padrão de Botões ULTRA REDUZIDOS */}
-        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-          
-          {/* Botões de Destaque (Versão Compacta) */}
-          <Link href="/simulador" className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-2xl border-2 border-white/30"
-            style={{
-              backgroundColor: '#2563eb',
-              backgroundImage: `linear-gradient(45deg, #3b82f6 0%, #172554 100%)`,
-              boxShadow: `0 4px 8px -2px rgba(37, 99, 235, 0.3)`
-            }}
-          >
-            <span className="group-hover:scale-125 transition-transform"><Icons.Calculator /></span>
-            <span className="font-black text-[9px] text-white uppercase tracking-[0.1em]">Simulador</span>
+        </div>        {/* Navigation - Premium Buttons */}
+        <nav className="flex-1 p-4 space-y-3 overflow-y-auto scrollbar-hide">
+          {/* Botões de Destaque (Versão Premium) */}
+          <Link href="/simulador" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+            backgroundImage: `linear-gradient(45deg, #3b82f6 0%, #172554 100%)`,
+            boxShadow: `0 8px 12px -4px rgba(59,130,246,0.4)`
+          }}>
+            <span className="group-hover:scale-125 transition-transform"><Icons.Calculator size={20} /></span>
+            <span className="font-black text-[10px] text-slate-800 dark:text-white uppercase tracking-[0.1em]">Simulador</span>
           </Link>
 
-          <Link href="/admin" className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 group mb-3 relative overflow-hidden shadow-2xl border-2 border-white/10"
-            style={{
-              backgroundColor: '#2563eb',
-              backgroundImage: `linear-gradient(45deg, #2563eb 0%, #1e3a8a 100%)`,
-              boxShadow: `0 4px 8px -2px rgba(37, 99, 235, 0.2)`
-            }}
-          >
-            <span className="group-hover:scale-125 transition-transform"><Icons.LayoutDashboard /></span>
-            <span className="font-black text-[9px] text-white uppercase tracking-[0.1em]">Dashboard</span>
+          <Link href="/admin" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+            backgroundImage: `linear-gradient(45deg, #2563eb 0%, #1e3a8a 100%)`,
+            boxShadow: `0 8px 12px -4px rgba(37,99,235,0.4)`
+          }}>
+            <span className="group-hover:scale-125 transition-transform"><Icons.LayoutDashboard size={20} /></span>
+            <span className="font-black text-[10px] text-slate-800 dark:text-white uppercase tracking-[0.1em]">Dashboard</span>
           </Link>
 
-          <p className="px-3 text-[7px] font-black text-white/20 uppercase tracking-[0.2em] mb-1 italic mt-2">Configurações</p>
-          
-          <Link href="/admin/banks" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.Landmark /></span>
-            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">BANCOS</span>
+          <p className="px-3 text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-2 italic">Configurações</p>
+
+          <Link href="/admin/banks" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+            backgroundImage: `linear-gradient(45deg, #10b981 0%, #064e3b 100%)`
+          }}>
+            <span className="group-hover:scale-125 transition-transform"><Icons.Landmark size={20} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase text-slate-800 dark:text-white">BANCOS</span>
           </Link>
-          
-          <Link href="/admin/rules" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.Scale /></span>
-            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">REGRAS</span>
+
+          <Link href="/admin/rules" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+            backgroundImage: `linear-gradient(45deg, #22d3ee 0%, #0c4a6e 100%)`
+          }}>
+            <span className="group-hover:scale-125 transition-transform"><Icons.Scale size={20} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase text-slate-800 dark:text-white">REGRAS</span>
           </Link>
-          
-          <Link href="/admin/tables" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.ClipboardList /></span>
-            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">TABELAS</span>
+
+          <Link href="/admin/tables" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+            backgroundImage: `linear-gradient(45deg, #8b5cf6 0%, #4c1d95 100%)`
+          }}>
+            <span className="group-hover:scale-125 transition-transform"><Icons.ClipboardList size={20} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase text-slate-800 dark:text-white">TABELAS</span>
           </Link>
-          
-          <Link href="/admin/coefficients" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.Percent /></span>
-            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">COEFICIENTES</span>
+
+          <Link href="/admin/coefficients" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+            backgroundImage: `linear-gradient(45deg, #f59e0b 0%, #7c2d12 100%)`
+          }}>
+            <span className="group-hover:scale-125 transition-transform"><Icons.Percent size={20} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase text-slate-800 dark:text-white">COEFICIENTES</span>
           </Link>
-          
-          <Link href="/admin/users" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all group">
-            <span className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform"><Icons.Users /></span>
-            <span className="font-bold text-[9px] tracking-tight uppercase mt-0.5">USUÁRIOS</span>
+
+          <Link href="/admin/users" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+            backgroundImage: `linear-gradient(45deg, #f43f5e 0%, #7f1d1d 100%)`
+          }}>
+            <span className="group-hover:scale-125 transition-transform"><Icons.Users size={20} /></span>
+            <span className="font-bold text-[9px] tracking-tight uppercase text-slate-800 dark:text-white">USUÁRIOS</span>
           </Link>
         </nav>
 
@@ -158,13 +159,24 @@ const AdminLayout = ({ children }) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-8">
-          <div className="text-slate-400">Manage your simulation system configuration</div>
+
+        <header className="h-16 bg-white dark:bg-slate-900 bg-opacity-70 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6">
+          <div className="flex items-center gap-3">
+            <Icons.LayoutDashboard size={24} className="text-slate-800 dark:text-white" />
+            <h1 className="text-xl font-black text-slate-900 dark:text-white">Painel Administrativo</h1>
+          </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-white">Administrador</span>
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white shadow-lg">A</div>
+            <span className="text-sm font-medium text-slate-800 dark:text-white">{user.name}</span>
+            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden border border-white/30 shadow-lg">
+              {profileImageUrl ? (
+                <img src={profileImageUrl} className="w-full h-full object-cover" alt="Profile" />
+              ) : (
+                <span className="text-lg font-black text-slate-800 dark:text-white">{user.name?.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
           </div>
         </header>
+
         <div className="p-6 flex-1 overflow-y-auto">
           {children}
         </div>
