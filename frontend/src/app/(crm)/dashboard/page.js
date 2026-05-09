@@ -80,17 +80,20 @@ export default function DashboardPage() {
     const codeB = parseInt(data?.stats?.top_origin_bank);
     if (!isNaN(codeA) && !isNaN(codeB)) return codeA === codeB;
     return String(b.code).trim() === String(data?.stats?.top_origin_bank).trim();
-  }) || banks.find(b => b.name?.toLowerCase().includes(String(data?.stats?.top_origin_bank).toLowerCase()));
+  }) || banks.find(b => {
+    const searchStr = String(data?.stats?.top_origin_bank || "").toLowerCase();
+    return b.name?.toLowerCase().includes(searchStr) || searchStr.includes(b.name?.toLowerCase());
+  });
   
   const topOriginValue = topOriginBankData 
-    ? `${topOriginBankData.code} - ${topOriginBankData.name}` 
+    ? (topOriginBankData.name.includes(topOriginBankData.code) ? topOriginBankData.name : `${topOriginBankData.code} - ${topOriginBankData.name}`)
     : data?.stats?.top_origin_bank;
     
   const topOriginLogo = topOriginBankData?.logo_secundaria_url || topOriginBankData?.logo_url || data?.stats?.top_origin_logo;
 
   const stats = [
-    { title: "Top Banco", label: "O banco mais indicado", value: data?.stats?.top_bank, img: data?.stats?.top_bank_logo, icon: <Icons.Bank />, color: "blue" },
-    { title: "Banco Mais Portado", label: "Origem mais frequente", value: topOriginValue, img: topOriginLogo, icon: <Icons.History />, color: "pink" },
+    { title: "Top Banco", label: "O banco mais indicado", value: data?.stats?.top_bank, img: data?.stats?.top_bank_logo, icon: <Icons.Bank />, color: "blue", isBank: true },
+    { title: "Banco Mais Portado", label: "Origem mais frequente", value: topOriginValue, img: topOriginLogo, icon: <Icons.History />, color: "pink", isBank: true },
     { title: "Melhor Tabela", label: "A tabela mais indicada", value: data?.stats?.top_table, img: data?.stats?.top_table_logo, icon: <Icons.Table />, color: "emerald" },
     { title: "Taxa Média", label: "A taxa mais indicada", value: data?.stats?.avg_rate, icon: <Icons.Percent />, color: "purple" },
   ];
