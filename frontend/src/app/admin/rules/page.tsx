@@ -189,6 +189,13 @@ export default function RulesPage() {
   };
 
   return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Regras de Aceitação</h1>
+          <p className="text-slate-500 text-sm mt-1">Configure as restrições por idade, convênio e espécie para cada banco.</p>
+        </div>
+        
         <div className="flex items-center gap-3 w-full md:w-auto">
           <select 
             value={selectedBankId}
