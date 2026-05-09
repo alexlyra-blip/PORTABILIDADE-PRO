@@ -470,9 +470,9 @@ export default function BanksPage() {
 
               {/* Logo Area */}
               <div className="flex flex-col items-center mb-6 pt-4">
-                <div className="w-20 h-20 rounded-[1.5rem] bg-slate-50 dark:bg-white/5 p-3 shadow-inner border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center relative overflow-hidden">
+                <div className="w-20 h-20 rounded-[1.5rem] bg-slate-50 dark:bg-white/5 p-0 shadow-inner border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center relative overflow-hidden">
                   {bank?.logo_url ? (
-                    <img src={getStaticUrl(bank.logo_url) || ""} alt={bank.name} className="w-full h-full object-contain relative z-10" />
+                    <img src={getStaticUrl(bank.logo_url) || ""} alt={bank.name} className="w-full h-full object-cover relative z-10" />
                   ) : (
                     <span className="text-2xl font-black text-blue-600 relative z-10">{bank?.name?.substring(0, 2).toUpperCase()}</span>
                   )}
@@ -817,7 +817,18 @@ export default function BanksPage() {
                   </div>
                 </div>
 
-                <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-0 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden">
+                      {(() => {
+                        const bank = banks.find(b => b.id.toString() === selectedBankId);
+                        return bank?.logo_url ? (
+                          <img src={getStaticUrl(bank.logo_url)} className="w-full h-full object-cover" alt={bank.name} />
+                        ) : (
+                          <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0) || "B"}</span>
+                        );
+                      })()}
+                   </div>
+
+                <div className="space-y-3 bg-slate-50 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-600">Analfabeto</span>
                     <div className="flex bg-white rounded-lg p-1 border border-slate-200">

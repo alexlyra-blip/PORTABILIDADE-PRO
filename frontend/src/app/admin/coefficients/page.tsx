@@ -206,16 +206,16 @@ export default function CoefficientsPage() {
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
              <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-5">
-                   <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-2 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center">
-                      {(() => {
-                        const bank = banks.find(b => b.id.toString() === selectedBankId);
-                        return bank?.logo_url ? (
-                          <img src={bank.logo_url} className="w-full h-full object-contain" alt={bank.name} />
-                        ) : (
-                          <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0) || "B"}</span>
-                        );
-                      })()}
-                   </div>
+                    <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-0 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden">
+                       {(() => {
+                         const bank = banks.find(b => b.id.toString() === selectedBankId);
+                         return bank?.logo_url ? (
+                           <img src={bank.logo_url} className="w-full h-full object-cover" alt={bank.name} />
+                         ) : (
+                           <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0) || "B"}</span>
+                         );
+                       })()}
+                    </div>
                    <div>
                       <h3 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight leading-none flex items-center gap-2">
                         {banks.find(b => b.id.toString() === selectedBankId)?.name} • {tables.find(t => t.id?.toString() === selectedTableId)?.name}
