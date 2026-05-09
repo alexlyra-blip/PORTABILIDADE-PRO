@@ -311,7 +311,7 @@ export default function UsersPage() {
                   <div className="flex flex-col items-center p-6 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200">
                     <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden shadow-2xl mb-4 relative" style={{ backgroundColor: formData.brand_color }}>
                       {(formData.avatar_url || formData.logo_url) ? (
-                        <img src={getStaticUrl(formData.avatar_url || formData.logo_url) || formData.avatar_url} className="w-full h-full object-cover" />
+                        <img src={getStaticUrl(formData.avatar_url || formData.logo_url) || formData.avatar_url} className="w-full h-full object-cover" style={{ backgroundColor: formData.brand_color }} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center font-black text-2xl text-white">{formData.name?.charAt(0) || '?'}</div>
                       )}

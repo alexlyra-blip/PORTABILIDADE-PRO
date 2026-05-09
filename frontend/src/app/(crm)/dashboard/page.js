@@ -184,10 +184,10 @@ export default function DashboardPage() {
             <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-tight">{s.label}</p>
             {s.img ? (
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl overflow-hidden border border-slate-100 shadow-sm shrink-0">
+                <div className={`rounded-xl overflow-hidden border border-slate-100 shadow-sm shrink-0 ${s.isBank ? 'w-10 h-10' : 'w-7 h-7'}`}>
                   <img src={getStaticUrl(s.img)} className="w-full h-full object-cover" />
                 </div>
-                <p className="text-xs font-black text-slate-800 dark:text-white leading-tight break-words">{s.value}</p>
+                <p className={`font-black text-slate-800 dark:text-white leading-tight break-words ${s.isBank ? 'text-sm' : 'text-xs'}`}>{s.value}</p>
               </div>
             ) : (
               <p className="text-sm font-black text-slate-800 dark:text-white leading-tight break-words">{s.value}</p>

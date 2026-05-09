@@ -55,8 +55,12 @@ export default function BanksPage() {
       min_debt_balance: "",
       use_balance_plus_released: false,
       min_paid_installments: 0,
+      max_term: 84,
+      min_release_amount: 0,
+      literacy_required: false,
       excluded_origin_banks: "",
       origin_banks_min_paid: "",
+      excluded_benefit_types: "",
       accepts_disability: false,
       disability_min_age: "",
       disability_min_benefit_years: "",
@@ -149,6 +153,7 @@ export default function BanksPage() {
       }
     } else {
       setEditingBank(null);
+      setBankRules([]);
       setFormData({ 
         name: "", 
         logo_url: "",
@@ -166,13 +171,17 @@ export default function BanksPage() {
           min_installment_value: "",
           min_debt_balance: "",
           use_balance_plus_released: false,
-          accepts_disability: false,
-          disability_min_age: "",
-          disability_min_benefit_years: "",
-          disability_min_benefit_months: "",
+          min_paid_installments: 0,
+          max_term: 84,
+          min_release_amount: 0,
+          literacy_required: false,
           excluded_origin_banks: "",
           origin_banks_min_paid: "",
           excluded_benefit_types: "",
+          accepts_disability: false,
+          disability_min_age: "",
+          disability_min_benefit_years: "",
+          disability_min_benefit_months: ""
         }
       });
     }
@@ -233,27 +242,27 @@ export default function BanksPage() {
       const rulePayload = {
         agreement: formData.rules.agreement,
         sub_agreement: formData.rules.sub_agreement || "",
-        min_age: formData.rules.min_age || 18,
-        max_age: formData.rules.max_age || 80,
-        max_term: formData.rules.max_term || 84,
-        min_release_amount: formData.rules.min_release_amount || 0,
+        min_age: parseInt(formData.rules.min_age) || 18,
+        max_age: parseInt(formData.rules.max_age) || 80,
+        max_term: parseInt(formData.rules.max_term) || 84,
+        min_release_amount: parseFloat(formData.rules.min_release_amount) || 0,
         allowed_benefit_types: formData.rules.allowed_benefit_types || "",
         literacy_required: formData.rules.literacy_required || false,
         accepts_illiterate: formData.rules.accepts_illiterate || true,
         accepts_60_plus: formData.rules.accepts_60_plus || true,
-        portability_rate_threshold: formData.rules.portability_rate_threshold || null,
-        refin_portability_rate_threshold: formData.rules.refin_portability_rate_threshold || null,
-        min_installment_value: formData.rules.min_installment_value || null,
-        min_debt_balance: formData.rules.min_debt_balance || null,
+        portability_rate_threshold: formData.rules.portability_rate_threshold ? parseFloat(formData.rules.portability_rate_threshold) : null,
+        refin_portability_rate_threshold: formData.rules.refin_portability_rate_threshold ? parseFloat(formData.rules.refin_portability_rate_threshold) : null,
+        min_installment_value: formData.rules.min_installment_value ? parseFloat(formData.rules.min_installment_value) : null,
+        min_debt_balance: formData.rules.min_debt_balance ? parseFloat(formData.rules.min_debt_balance) : null,
         use_balance_plus_released: formData.rules.use_balance_plus_released,
-        min_paid_installments: formData.rules.min_paid_installments || 0,
+        min_paid_installments: parseInt(formData.rules.min_paid_installments) || 0,
         excluded_origin_banks: formData.rules.excluded_origin_banks || "",
         origin_banks_min_paid: formData.rules.origin_banks_min_paid || "",
         excluded_benefit_types: formData.rules.excluded_benefit_types || "",
         accepts_disability: formData.rules.accepts_disability,
-        disability_min_age: formData.rules.disability_min_age || null,
-        disability_min_benefit_years: formData.rules.disability_min_benefit_years || null,
-        disability_min_benefit_months: formData.rules.disability_min_benefit_months || null,
+        disability_min_age: formData.rules.disability_min_age ? parseInt(formData.rules.disability_min_age) : null,
+        disability_min_benefit_years: formData.rules.disability_min_benefit_years ? parseInt(formData.rules.disability_min_benefit_years) : null,
+        disability_min_benefit_months: formData.rules.disability_min_benefit_months ? parseInt(formData.rules.disability_min_benefit_months) : null,
         bank_id: savedBank.id
       };
 
@@ -278,7 +287,7 @@ export default function BanksPage() {
       handleCloseModal();
     } catch (error: any) {
       console.error("Erro ao salvar banco:", error);
-      const detail = error.response?.data?.detail || "Erro ao salvar banco. Verifique os dados e tente novamente.";
+      const detail = error.message || "Erro ao salvar banco. Verifique os dados e tente novamente.";
       alert(detail);
     } finally {
       setIsSubmitting(false);
