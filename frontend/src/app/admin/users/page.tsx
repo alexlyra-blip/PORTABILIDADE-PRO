@@ -205,6 +205,16 @@ export default function UsersPage() {
     }
   };
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
   if (loggedUser.role === 'vendedor' || loggedUser.role === 'corretor') {
     return (
       <div className="p-12 text-center flex flex-col items-center justify-center animate-fade-in">
@@ -217,25 +227,51 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Gestão de Equipe</h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">Administre permissões, limites e identidades visuais dos usuários.</p>
         </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-[10px] uppercase tracking-widest flex items-center gap-3 group"
-        >
-          <span className="text-base group-hover:rotate-90 transition-transform duration-300">👤</span> 
-          Novo Usuário
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-        </button>
+        
+        <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-auto">
+          <div className="relative flex-1 md:w-64 group">
+            <input 
+              type="text" 
+              placeholder="PESQUISAR NOME OU EMAIL..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full py-3.5 pl-12 pr-6 bg-white dark:bg-slate-900 rounded-2xl border-none shadow-xl text-[10px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20 transition-all"
+            />
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">🔍</span>
+          </div>
+
+          <select 
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="w-full md:w-48 py-3.5 px-6 bg-white dark:bg-slate-900 rounded-2xl border-none shadow-xl text-[10px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20 transition-all"
+          >
+            <option value="all">TODOS OS PAPÉIS</option>
+            <option value="admin">ADMINISTRADORES</option>
+            <option value="promotora">PROMOTORAS</option>
+            <option value="corretor">CORRETORES</option>
+            <option value="vendedor">VENDEDORES</option>
+          </select>
+
+          <button 
+            onClick={() => handleOpenModal()}
+            className="w-full md:w-auto relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 group"
+          >
+            <span className="text-base group-hover:rotate-90 transition-transform duration-300">👤</span> 
+            Novo Usuário
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[3rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl">
         <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-           <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Colaboradores Ativos</h3>
-           <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">{users.length} Registrados</span>
+           <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Colaboradores</h3>
+           <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">{filteredUsers.length} Encontrados</span>
         </div>
 
         <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -244,7 +280,11 @@ export default function UsersPage() {
                  <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando usuários...</p>
               </div>
-           ) : users.map(user => (
+           ) : filteredUsers.length === 0 ? (
+              <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-100 rounded-[3rem] m-4">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum colaborador encontrado para os filtros selecionados</p>
+              </div>
+           ) : filteredUsers.map(user => (
               <div key={user.id} className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2.5rem] border border-slate-100 dark:border-white/5 hover:border-blue-500/30 transition-all group relative overflow-hidden">
                  <div className="flex items-start justify-between mb-6">
                     <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border-2 border-white dark:border-slate-800 shadow-xl shadow-slate-200 dark:shadow-none relative">
