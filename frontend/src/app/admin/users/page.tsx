@@ -309,11 +309,11 @@ export default function UsersPage() {
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Personalização</h4>
                   <div className="flex flex-col items-center p-6 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200">
-                    <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden border-4 border-white shadow-2xl mb-4 bg-slate-200">
+                    <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden shadow-2xl mb-4 relative" style={{ backgroundColor: formData.brand_color }}>
                       {(formData.avatar_url || formData.logo_url) ? (
                         <img src={getStaticUrl(formData.avatar_url || formData.logo_url) || formData.avatar_url} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center font-black text-2xl text-white" style={{ backgroundColor: formData.brand_color }}>{formData.name?.charAt(0)}</div>
+                        <div className="w-full h-full flex items-center justify-center font-black text-2xl text-white">{formData.name?.charAt(0) || '?'}</div>
                       )}
                     </div>
                     <label className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-all">

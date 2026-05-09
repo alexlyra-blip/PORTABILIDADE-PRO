@@ -173,16 +173,25 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((s, i) => (
           <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-white/10 shadow-xl hover:scale-[1.02] transition-all">
-            <div className={`w-12 h-12 rounded-2xl ${s.img ? 'bg-transparent' : `bg-${s.color}-500/10`} flex items-center justify-center text-2xl mb-4 shadow-inner overflow-hidden border border-${s.color}-500/20`}>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 overflow-hidden shadow-inner ${s.img ? 'p-0 border border-slate-100' : `bg-${s.color}-500/10 border border-${s.color}-500/20`}`}>
               {s.img ? (
                  <img src={getStaticUrl(s.img)} className="w-full h-full object-cover" />
               ) : (
-                 s.icon
+                 <span className={`text-${s.color}-600`}>{s.icon}</span>
               )}
             </div>
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.title}</h3>
-            <p className="text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tight">{s.label}</p>
-            <p className="text-sm font-black text-slate-800 dark:text-white leading-tight break-words">{s.value}</p>
+            <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-tight">{s.label}</p>
+            {s.img ? (
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl overflow-hidden border border-slate-100 shadow-sm shrink-0">
+                  <img src={getStaticUrl(s.img)} className="w-full h-full object-cover" />
+                </div>
+                <p className="text-xs font-black text-slate-800 dark:text-white leading-tight break-words">{s.value}</p>
+              </div>
+            ) : (
+              <p className="text-sm font-black text-slate-800 dark:text-white leading-tight break-words">{s.value}</p>
+            )}
           </div>
         ))}
       </div>
