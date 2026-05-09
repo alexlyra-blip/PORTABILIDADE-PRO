@@ -79,7 +79,7 @@ export default function DashboardPage() {
 
   const stats = [
     { title: "Top Banco", label: "O banco mais indicado", value: data?.stats?.top_bank, img: data?.stats?.top_bank_logo, icon: <Icons.Bank />, color: "blue", isBank: true },
-    { title: "Banco Mais Portado", label: "Origem mais frequente", value: topOriginValue, img: topOriginLogo, icon: <Icons.History />, color: "pink", isBank: true },
+    { title: "Banco Mais Portado", label: "Origem mais frequente", value: topOriginValue, valueImg: topOriginLogo, icon: <Icons.History />, color: "pink", isBank: true },
     { title: "Melhor Tabela", label: "A tabela mais indicada", value: data?.stats?.top_table, img: data?.stats?.top_table_logo, icon: <Icons.Table />, color: "emerald", isBank: true },
     { title: "Taxa Média", label: "A taxa mais indicada", value: data?.stats?.avg_rate, icon: <Icons.Percent />, color: "purple" },
   ];
@@ -171,10 +171,17 @@ export default function DashboardPage() {
             </div>
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.title}</h3>
             <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-tight">{s.label}</p>
-            {s.img ? (
+            {s.img || s.valueImg ? (
               <div className="flex items-center gap-2">
-                <div className={`rounded-xl overflow-hidden shadow-sm shrink-0 flex items-center justify-center border-none ${s.isBank ? 'w-10 h-10' : 'w-7 h-7'}`}>
-                  <img src={getStaticUrl(s.img)} className="w-full h-full object-cover block" />
+                <div className={`rounded-xl overflow-hidden shadow-sm shrink-0 flex items-center justify-center border-none ${s.isBank ? 'w-10 h-10' : 'w-7 h-7'} bg-slate-50 dark:bg-white/5`}>
+                  <img 
+                    src={getStaticUrl(s.valueImg || s.img)} 
+                    className="w-full h-full object-cover block"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://cdn-icons-png.flaticon.com/512/2830/2830284.png"; // Fallback bank icon
+                    }}
+                  />
                 </div>
                 <p className={`font-black text-slate-800 dark:text-white leading-tight break-words ${s.isBank ? 'text-sm' : 'text-xs'}`}>{s.value}</p>
               </div>
