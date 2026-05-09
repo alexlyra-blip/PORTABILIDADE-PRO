@@ -186,88 +186,66 @@ export default function CoefficientsPage() {
         </div>
       </div>
 
-      <div className="admin-card overflow-hidden shadow-sm border border-slate-200">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-200">
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Banco</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Tabela</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Convênio</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Prazo</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Taxa de Juros (%)</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Valor do Coeficiente</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic">Carregando coeficientes...</td></tr>
-            ) : !selectedTableId ? (
-              <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco e uma tabela.</td></tr>
-            ) : coefficients.length === 0 ? (
-              <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic">Nenhum coeficiente cadastrado para esta tabela.</td></tr>
-            ) : (
-              coefficients.map((coeff) => {
-                const bank = banks.find(b => b.id.toString() === selectedBankId);
-                return (
-                  <tr key={coeff.id} className="hover:bg-blue-50/10 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        {bank?.logo_url ? (
-                          <div className="w-9 h-9 rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm flex-shrink-0">
-                            <img src={bank.logo_url} className="w-full h-full object-cover" />
-                          </div>
-                        ) : (
-                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">
-                            {bank?.name?.substring(0, 2) || "BK"}
-                          </div>
-                        )}
-                        <span className="font-bold text-slate-900 text-sm">{bank?.name || "-"}</span>
+      {/* Agrupamento por Tabela/Convênio */}
+      <div className="space-y-8">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest animate-pulse">Sincronizando Coeficientes...</p>
+          </div>
+        ) : !selectedTableId ? (
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
+             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Selecione uma tabela para visualizar os coeficientes.</p>
+          </div>
+        ) : coefficients.length === 0 ? (
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
+             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Nenhum coeficiente cadastrado para esta tabela.</p>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-xl">
+             <div className="px-8 py-5 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                   <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black shadow-lg shadow-blue-600/30">
+                      {(banks.find(b => b.id.toString() === selectedBankId)?.name?.charAt(0) || "B")}
+                   </div>
+                   <div>
+                      <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest leading-none">
+                        Tabela: {tables.find(t => t.id?.toString() === selectedTableId)?.name}
+                      </h3>
+                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1 italic">
+                        Banco: {banks.find(b => b.id.toString() === selectedBankId)?.name}
+                      </p>
+                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                   <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter bg-blue-50 px-3 py-1 rounded-full border border-blue-100 shadow-sm">{coefficients.length} Coeficientes Ativos</span>
+                </div>
+             </div>
+
+             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {coefficients.sort((a, b) => b.term - a.term).map(coeff => (
+                   <div key={coeff.id} className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-blue-500/50 transition-all group relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-12 h-12 bg-blue-600/5 rounded-full -mr-6 -mt-6 group-hover:scale-150 transition-transform duration-700"></div>
+                      
+                      <div className="flex justify-between items-start mb-3 relative z-10">
+                         <span className="text-blue-600 dark:text-blue-400 font-black text-base">{coeff.term}x</span>
+                         <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{coeff.interest_rate}% AM</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-semibold text-slate-700">{tables.find(t => t.id?.toString() === selectedTableId)?.name || '-'}</span>
-                    </td>
-                  <td className="px-6 py-4">
-                    {(() => {
-                      const agr = tables.find(t => t.id?.toString() === selectedTableId)?.agreement || '-';
-                      return (
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
-                          agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                          agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                          agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                          agr === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                          'bg-slate-50 text-slate-500 border-slate-100'
-                        }`}>
-                          {agr === 'GOV_EST' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}
-                        </span>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="font-bold text-slate-700">{coeff.term} meses</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-sm font-semibold text-slate-600">{coeff.interest_rate}%</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="font-mono text-sm text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-lg">
-                      {coeff.coefficient}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => handleOpenModal(coeff)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-purple-50 rounded-lg transition-all">✏️</button>
-                      <button onClick={() => handleDelete(coeff.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">🗑️</button>
-                    </div>
-                  </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+
+                      <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-white/5 shadow-inner mb-4 relative z-10">
+                         <p className="text-[8px] text-slate-400 font-black uppercase mb-1">Coeficiente</p>
+                         <p className="text-sm font-mono font-black text-slate-800 dark:text-white tracking-tighter">{coeff.coefficient}</p>
+                      </div>
+
+                      <div className="flex gap-2 relative z-10">
+                         <button onClick={() => handleOpenModal(coeff)} className="flex-1 py-2 bg-white dark:bg-white/5 hover:bg-blue-600 hover:text-white text-slate-500 rounded-xl text-[9px] font-black uppercase transition-all border border-slate-200 dark:border-white/5">Editar</button>
+                         <button onClick={() => handleDelete(coeff.id)} className="w-10 h-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all border border-red-500/20 flex items-center justify-center">🗑️</button>
+                      </div>
+                   </div>
+                ))}
+             </div>
+          </div>
+        )}
       </div>
 
       {modalOpen && (

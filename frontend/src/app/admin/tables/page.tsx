@@ -191,82 +191,84 @@ export default function TablesPage() {
         </div>
       </div>
 
-      <div className="admin-card overflow-hidden shadow-sm border border-slate-200">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-200">
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Banco</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Nome da Tabela</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Prazo</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Convênio</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Carregando tabelas...</td></tr>
-            ) : !selectedBankId ? (
-              <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco para ver as tabelas.</td></tr>
-            ) : tables.length === 0 ? (
-              <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">Nenhuma tabela cadastrada para este banco.</td></tr>
-            ) : (
-              tables.map((table) => {
-                const bank = banks.find(b => b.id.toString() === selectedBankId);
-                return (
-                  <tr key={table.id} className="hover:bg-blue-50/10 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {bank?.logo_url && (
-                          <div className="w-6 h-6 rounded-md overflow-hidden border border-slate-100 bg-white">
-                            <img src={bank.logo_url} className="w-full h-full object-contain" />
+      {/* Grouped Tables by Bank */}
+      <div className="space-y-8">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest animate-pulse">Organizando Tabelas...</p>
+          </div>
+        ) : !selectedBankId ? (
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
+             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Selecione uma instituição para gerenciar as tabelas.</p>
+          </div>
+        ) : tables.length === 0 ? (
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
+             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Nenhuma tabela ativa para este banco.</p>
+          </div>
+        ) : (
+          /* Agrupar por Convênio para visual Premium */
+          ["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT_PRIVADO"].map(agr => {
+            const agrTables = tables.filter(t => (t.agreement === agr || (agr === "FORÇAS ARMADAS" && t.agreement === "FORCAS") || (agr === "GOVERNOS" && t.agreement === "GOV_EST")));
+            if (agrTables.length === 0) return null;
+
+            return (
+              <div key={agr} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-xl">
+                <div className="px-8 py-5 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-3">
+                    <span className={`w-3 h-3 rounded-full ${
+                      agr === 'INSS' ? 'bg-blue-500' :
+                      agr === 'SIAPE' ? 'bg-amber-500' :
+                      agr === 'FORÇAS ARMADAS' ? 'bg-emerald-500' :
+                      'bg-slate-500'
+                    }`}></span>
+                    Convênio: {agr}
+                  </h3>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{agrTables.length} Tabelas Ativas</span>
+                </div>
+                
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {agrTables.map(table => (
+                    <div key={table.id} className="bg-slate-50 dark:bg-white/5 p-5 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-blue-500/50 transition-all group">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="min-w-0">
+                          <h4 className="font-black text-slate-800 dark:text-white text-sm truncate uppercase tracking-tight">{table.name}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-blue-600 dark:text-blue-400 font-black text-xs">{table.term || 84}x</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">• {table.taxa_convenio}% AM</span>
                           </div>
-                        )}
-                        <span className="text-[10px] font-black uppercase text-slate-400">{bank?.name}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase ${table.active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-400'}`}>
+                          {table.active ? 'Ativa' : 'Inativa'}
+                        </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-slate-700">{table.name}</span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="font-black text-blue-600 text-xs">{table.term || "84"}x</span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
-                        table.agreement === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                        table.agreement === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                        table.agreement === 'FORÇAS ARMADAS' || table.agreement === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        table.agreement === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                        table.agreement === 'GOVERNOS' || table.agreement === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                        'bg-slate-50 text-slate-500 border-slate-100'
-                      }`}>
-                        {table.agreement === 'GOVERNOS' || table.agreement === 'GOV_EST' ? 'GOVERNOS' : table.agreement === 'FORÇAS ARMADAS' || table.agreement === 'FORCAS' ? 'FORÇAS ARMADAS' : table.agreement === 'CLT_PRIVADO' ? 'CLT' : table.agreement}
-                      </span>
-                      {table.sub_agreement && (
-                        <span className="ml-2 font-bold text-slate-700 bg-slate-100 border border-slate-200 shadow-sm px-2 py-1 rounded-md text-[10px] uppercase tracking-wider">{table.sub_agreement}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase ${
-                        table.active 
-                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
-                          : "bg-slate-100 text-slate-500 border border-slate-200"
-                      }`}>
-                        {table.active ? "Ativa" : "Inativa"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => handleOpenModal(table)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-amber-50 rounded-lg transition-all">✏️</button>
-                        <button onClick={() => handleDelete(table.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">🗑️</button>
+                      
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div className="bg-white dark:bg-slate-800 p-2 rounded-xl text-center border border-slate-100 dark:border-white/5 shadow-sm">
+                          <p className="text-[8px] text-slate-400 font-black uppercase mb-0.5">Ajuste Port</p>
+                          <p className={`text-[10px] font-black ${table.portability_adjustment >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {table.portability_adjustment >= 0 ? '+' : ''}{table.portability_adjustment}%
+                          </p>
+                        </div>
+                        <div className="bg-white dark:bg-slate-800 p-2 rounded-xl text-center border border-slate-100 dark:border-white/5 shadow-sm">
+                          <p className="text-[8px] text-slate-400 font-black uppercase mb-0.5">Ajuste Refin</p>
+                          <p className={`text-[10px] font-black ${table.refin_adjustment >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {table.refin_adjustment >= 0 ? '+' : ''}{table.refin_adjustment}%
+                          </p>
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+
+                      <div className="flex gap-2 pt-4 border-t border-slate-200/50 dark:border-white/5">
+                        <button onClick={() => handleOpenModal(table)} className="flex-1 py-2 bg-white dark:bg-white/5 hover:bg-blue-600 hover:text-white text-slate-500 rounded-xl text-[9px] font-black uppercase transition-all border border-slate-200 dark:border-white/5">Editar</button>
+                        <button onClick={() => handleDelete(table.id)} className="w-10 h-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all border border-red-500/20 flex items-center justify-center">🗑️</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {modalOpen && (

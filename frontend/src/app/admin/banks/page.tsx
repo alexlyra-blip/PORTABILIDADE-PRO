@@ -425,110 +425,102 @@ export default function BanksPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8 animate-in fade-in duration-700 pb-12">
+      {/* Header Premium */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Regras Bancos</h1>
-          <p className="text-slate-500 text-sm mt-1">Configure os logos e as regras de aceitação de cada banco.</p>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Instituições Bancárias</h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">Controle central de ativos, identidades visuais e restrições operacionais.</p>
         </div>
         <button 
           onClick={() => handleOpenModal()}
-          className="btn-premium flex items-center gap-2 !py-2.5 !px-5 !rounded-xl !bg-blue-600 hover:!bg-blue-500 text-sm"
+          className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-3 group"
         >
-          <span className="text-lg">➕</span> Novo Banco
+          <span className="text-lg group-hover:rotate-90 transition-transform duration-300">＋</span> 
+          Novo Banco
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
         </button>
       </div>
 
-      <div className="admin-card overflow-hidden shadow-sm border border-slate-200">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-200">
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Nome do Banco</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Convênio</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr><td colSpan={3} className="px-6 py-12 text-center text-slate-400 italic">Carregando dados...</td></tr>
-            ) : banks.length === 0 ? (
-              <tr><td colSpan={3} className="px-6 py-12 text-center text-slate-400 italic">Nenhum banco encontrado.</td></tr>
-            ) : (
-              banks.map((bank) => (
-                <tr key={bank?.id} className="hover:bg-slate-50/80 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      {bank?.logo_url ? (
-                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white flex items-center justify-center">
-                          <img src={getStaticUrl(bank.logo_url) || ""} alt={bank.name} className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-100 shadow-sm">
-                          {bank?.name ? bank.name.substring(0, 2).toUpperCase() : "BK"}
-                        </div>
-                      )}
-                      <div>
-                        <span className="font-bold text-slate-700 block">{bank?.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">ID: #{bank?.id}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex flex-wrap justify-center gap-1.5">
-                      {bank.rules && bank.rules.length > 0 ? (
-                        Array.from(new Set(bank.rules.map(r => r.agreement))).map(agr => (
-                          <span 
-                            key={agr} 
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
-                              agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                              agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                              agr === 'FORÇAS ARMADAS' || agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                              agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                              agr === 'GOVERNOS' || agr === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                              'bg-slate-50 text-slate-500 border-slate-100'
-                            }`}
-                          >
-                            {agr === 'GOVERNOS' || agr === 'GOV_EST' ? 'GOVERNOS' : agr === 'FORÇAS ARMADAS' || agr === 'FORCAS' ? 'FORÇAS ARMADAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-[10px] text-slate-300 italic font-medium uppercase tracking-widest">Sem Regra</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase ${
-                      bank.active 
-                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
-                        : "bg-slate-100 text-slate-500 border border-slate-200"
-                    }`}>
-                      {bank.active ? "Ativo" : "Inativo"}
+      {/* Grid de Bancos Premium */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {loading ? (
+          <div className="col-span-full flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest animate-pulse">Sincronizando Base de Dados...</p>
+          </div>
+        ) : banks.length === 0 ? (
+          <div className="col-span-full py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
+             <span className="text-4xl block mb-4">🏦</span>
+             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Nenhuma instituição cadastrada.</p>
+          </div>
+        ) : (
+          banks.map((bank) => (
+            <div key={bank?.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 border border-slate-100 dark:border-white/10 shadow-xl hover:shadow-2xl transition-all duration-500 group relative overflow-hidden flex flex-col">
+              {/* Status Badge */}
+              <div className="absolute top-6 right-6">
+                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${
+                    bank.active 
+                      ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
+                      : "bg-slate-500/10 text-slate-400 border border-slate-500/20"
+                  }`}>
+                    {bank.active ? "● Online" : "○ Offline"}
+                 </span>
+              </div>
+
+              {/* Logo Area */}
+              <div className="flex flex-col items-center mb-6 pt-4">
+                <div className="w-20 h-20 rounded-[1.5rem] bg-slate-50 dark:bg-white/5 p-3 shadow-inner border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center relative overflow-hidden">
+                  {bank?.logo_url ? (
+                    <img src={getStaticUrl(bank.logo_url) || ""} alt={bank.name} className="w-full h-full object-contain relative z-10" />
+                  ) : (
+                    <span className="text-2xl font-black text-blue-600 relative z-10">{bank?.name?.substring(0, 2).toUpperCase()}</span>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <h3 className="mt-4 font-black text-slate-800 dark:text-white text-base tracking-tight uppercase group-hover:text-blue-600 transition-colors text-center">{bank?.name}</h3>
+                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1 opacity-60">ID #{bank?.id}</p>
+              </div>
+
+              {/* Convenios Badges */}
+              <div className="flex flex-wrap justify-center gap-1.5 mb-8">
+                {bank.rules && bank.rules.length > 0 ? (
+                  Array.from(new Set(bank.rules.map(r => r.agreement))).map(agr => (
+                    <span 
+                      key={agr} 
+                      className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider border transition-all ${
+                        agr === 'INSS' ? 'bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/20' :
+                        agr === 'SIAPE' ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-500/20' :
+                        agr === 'FORCAS' || agr === 'FORÇAS ARMADAS' ? 'bg-emerald-500 text-white border-emerald-400 shadow-lg shadow-emerald-500/20' :
+                        'bg-slate-800 text-white border-slate-700'
+                      }`}
+                    >
+                      {agr === 'FORCAS' || agr === 'FORÇAS ARMADAS' ? 'FORÇAS' : agr}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                        <button 
-                            onClick={() => handleOpenModal(bank)}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                            title="Editar"
-                        >
-                            ✏️
-                        </button>
-                        <button 
-                            onClick={() => handleDelete(bank.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                            title="Excluir"
-                        >
-                            🗑️
-                        </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  ))
+                ) : (
+                  <span className="text-[9px] text-slate-300 italic font-black uppercase tracking-widest">Sem Regras</span>
+                )}
+              </div>
+
+              {/* Action Footer */}
+              <div className="mt-auto flex gap-2 pt-4 border-t border-slate-50 dark:border-white/5">
+                <button 
+                  onClick={() => handleOpenModal(bank)}
+                  className="flex-1 py-3 bg-slate-50 dark:bg-white/5 hover:bg-blue-600 hover:text-white text-slate-600 dark:text-slate-400 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border border-slate-100 dark:border-white/5 flex items-center justify-center gap-2 group/btn"
+                >
+                  <span className="text-xs group-hover/btn:scale-125 transition-transform">⚙️</span> Configurar
+                </button>
+                <button 
+                  onClick={() => handleDelete(bank.id)}
+                  className="w-12 h-12 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all border border-red-500/20 flex items-center justify-center group/del"
+                >
+                  <span className="text-sm group-hover/del:scale-125 transition-transform">🗑️</span>
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Modal */}

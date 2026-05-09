@@ -216,94 +216,96 @@ export default function RulesPage() {
         </div>
       </div>
 
-      <div className="admin-card overflow-hidden shadow-sm border border-slate-200">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-200">
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Banco</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Convênio</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Idade (Min-Max)</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Espécies Permitidas</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Carregando regras...</td></tr>
-            ) : !selectedBankId ? (
-              <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Selecione um banco para ver as regras.</td></tr>
-            ) : rules.length === 0 ? (
-              <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">Nenhuma regra cadastrada para este banco.</td></tr>
-            ) : (
-              rules.map((rule) => {
-                const bank = banks.find(b => b.id.toString() === selectedBankId);
-                return (
-                  <tr key={rule.id} className="hover:bg-blue-50/20 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex-shrink-0">
-                          {bank?.logo_url ? (
-                            <img src={bank.logo_url} className="w-full h-full object-cover" alt={bank.name} />
-                          ) : (
-                            <div className="w-full h-full bg-slate-50 flex items-center justify-center text-[10px] font-bold text-slate-300">
-                              {bank?.name?.substring(0, 2).toUpperCase()}
-                            </div>
+      {/* Grouped Rules by Agreement */}
+      <div className="space-y-8">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest animate-pulse">Analizando Diretrizes...</p>
+          </div>
+        ) : !selectedBankId ? (
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
+             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Selecione uma instituição para gerenciar as regras de aceitação.</p>
+          </div>
+        ) : rules.length === 0 ? (
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
+             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Nenhuma regra configurada para este banco.</p>
+          </div>
+        ) : (
+          /* Agrupamento por Convênio */
+          ["INSS", "SIAPE", "FORCAS", "GOV_EST", "CLT_PRIVADO"].map(agr => {
+            const agrRules = rules.filter(r => r.agreement === agr);
+            if (agrRules.length === 0) return null;
+
+            return (
+              <div key={agr} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-xl">
+                <div className="px-8 py-5 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-3">
+                    <span className="p-2 bg-blue-600 text-white rounded-lg text-xs">⚖️</span>
+                    {agr === 'GOV_EST' ? 'GOVERNO ESTADUAL' : agr === 'FORCAS' ? 'FORÇAS ARMADAS' : agr === 'CLT_PRIVADO' ? 'CLT PRIVADO' : agr}
+                  </h3>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{agrRules.length} Regras Definidas</span>
+                </div>
+
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {agrRules.map(rule => (
+                    <div key={rule.id} className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2rem] border border-slate-100 dark:border-white/10 hover:border-blue-500/30 transition-all group relative overflow-hidden">
+                       <div className="flex justify-between items-start mb-6">
+                          <div>
+                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Público Alvo</p>
+                             <div className="flex items-center gap-2">
+                                <span className="text-lg font-black text-slate-800 dark:text-white">{rule.min_age} - {rule.max_age}</span>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">ANOS</span>
+                             </div>
+                          </div>
+                          {rule.sub_agreement && (
+                            <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20">
+                              {rule.sub_agreement}
+                            </span>
                           )}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-slate-700 leading-tight">{bank?.name}</span>
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Instituição</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
-                        rule.agreement === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                        rule.agreement === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                        rule.agreement === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        rule.agreement === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                        rule.agreement === 'GOV_EST' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                        'bg-slate-50 text-slate-500 border-slate-100'
-                      }`}>
-                        {rule.agreement === 'GOV_EST' ? 'GOVERNO' : rule.agreement === 'FORCAS' ? 'FORÇAS' : rule.agreement === 'CLT_PRIVADO' ? 'CLT' : rule.agreement}
-                      </span>
-                      {rule.sub_agreement && (
-                        <span className="ml-2 font-bold text-slate-700 bg-slate-100 border border-slate-200 shadow-sm px-2 py-1 rounded-md text-[10px] uppercase tracking-wider">{rule.sub_agreement}</span>
-                      )}
-                    </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-sm font-medium text-slate-600">{rule.min_age} - {rule.max_age} anos</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex flex-col gap-1 items-center">
-                      <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                        {rule.allowed_benefit_types || "Todas"}
-                      </span>
-                      <div className="flex gap-1 flex-wrap justify-center">
-                        {!rule.accepts_disability && (
-                          <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-black">🚫 NO INV</span>
-                        )}
-                        {!rule.accepts_loas && (
-                          <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-black">🚫 NO LOAS</span>
-                        )}
-                        {rule.accepts_disability && (
-                           <span className="text-[9px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-black">♿ INV OK</span>
-                        )}
-                      </div>
+                       </div>
+
+                       <div className="space-y-4 mb-6">
+                          {/* Espécies */}
+                          <div className="flex flex-wrap gap-2">
+                             <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.accepts_disability ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500 opacity-60'}`}>
+                                <span className="text-xs">♿</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest">{rule.accepts_disability ? 'Invalidez OK' : 'Não Invalidez'}</span>
+                             </div>
+                             <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.accepts_loas ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500 opacity-60'}`}>
+                                <span className="text-xs">🤝</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest">{rule.accepts_loas ? 'LOAS OK' : 'Não LOAS'}</span>
+                             </div>
+                             <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.literacy_required ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
+                                <span className="text-xs">📝</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest">{rule.literacy_required ? 'Só Alfabetizado' : 'Aceita Analfabeto'}</span>
+                             </div>
+                          </div>
+
+                          {/* Viabilidade */}
+                          <div className="grid grid-cols-2 gap-3">
+                             <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
+                                <p className="text-[8px] text-slate-400 font-black uppercase mb-1 tracking-widest">Saldo Mínimo</p>
+                                <p className="text-xs font-black text-slate-800 dark:text-white">R$ {rule.min_debt_balance?.toLocaleString() || '0'}</p>
+                             </div>
+                             <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
+                                <p className="text-[8px] text-slate-400 font-black uppercase mb-1 tracking-widest">Troco Mínimo</p>
+                                <p className="text-xs font-black text-blue-600">R$ {rule.min_release_amount?.toLocaleString() || '0'}</p>
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="flex gap-2 pt-4 border-t border-slate-200/50 dark:border-white/5">
+                          <button onClick={() => handleOpenModal(rule)} className="flex-1 py-3 bg-white dark:bg-white/5 hover:bg-blue-600 hover:text-white text-slate-500 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-white/5">Editar Regra</button>
+                          <button onClick={() => handleDelete(rule.id)} className="w-12 h-12 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all border border-red-500/20 flex items-center justify-center">🗑️</button>
+                       </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => handleOpenModal(rule)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">✏️</button>
-                      <button onClick={() => handleDelete(rule.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">🗑️</button>
-                    </div>
-                  </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {modalOpen && (
