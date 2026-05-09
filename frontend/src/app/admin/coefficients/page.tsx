@@ -159,7 +159,7 @@ export default function CoefficientsPage() {
             <select 
                 value={selectedBankId}
                 onChange={(e) => setSelectedBankId(e.target.value)}
-                className="input-admin !py-2 !px-4 !bg-white md:w-48 text-sm"
+                className="input-admin !py-3 !px-6 !bg-white dark:!bg-slate-900 !rounded-2xl border-none shadow-xl text-xs font-black uppercase tracking-widest md:w-48 focus:ring-2 ring-blue-500/20"
             >
                 <option value="">Banco</option>
                 {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -169,7 +169,7 @@ export default function CoefficientsPage() {
                 value={selectedTableId}
                 disabled={!selectedBankId}
                 onChange={(e) => setSelectedTableId(e.target.value)}
-                className="input-admin !py-2 !px-4 !bg-white md:w-48 text-sm"
+                className="input-admin !py-3 !px-6 !bg-white dark:!bg-slate-900 !rounded-2xl border-none shadow-xl text-xs font-black uppercase tracking-widest md:w-48 focus:ring-2 ring-blue-500/20"
             >
                 <option value="">Tabela</option>
                 {tables.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -179,9 +179,11 @@ export default function CoefficientsPage() {
           <button 
             disabled={!selectedTableId}
             onClick={() => handleOpenModal()}
-            className="btn-premium flex items-center justify-center gap-2 !py-2.5 !px-5 !rounded-xl !bg-blue-600 hover:!bg-purple-500 text-sm disabled:opacity-50 w-full md:w-auto"
+            className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-[10px] uppercase tracking-widest flex items-center gap-3 group disabled:opacity-50 disabled:translate-y-0"
           >
-            <span className="text-lg">🔢</span> Novo Coeficiente
+            <span className="text-base group-hover:rotate-90 transition-transform duration-300">🔢</span> 
+            Novo Coeficiente
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
           </button>
         </div>
       </div>
@@ -194,29 +196,44 @@ export default function CoefficientsPage() {
             <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest animate-pulse">Sincronizando Coeficientes...</p>
           </div>
         ) : !selectedTableId ? (
-          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
-             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Selecione uma tabela para visualizar os coeficientes.</p>
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5 shadow-2xl">
+             <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Selecione uma tabela para visualizar os coeficientes.</p>
           </div>
         ) : coefficients.length === 0 ? (
-          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
-             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Nenhum coeficiente cadastrado para esta tabela.</p>
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5 shadow-2xl">
+             <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Nenhum coeficiente cadastrado para esta tabela.</p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-xl">
-             <div className="px-8 py-5 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black shadow-lg shadow-blue-600/30">
-                      {(banks.find(b => b.id.toString() === selectedBankId)?.name?.charAt(0) || "B")}
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+             <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-5">
+                   <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-2 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center">
+                      {(() => {
+                        const bank = banks.find(b => b.id.toString() === selectedBankId);
+                        return bank?.logo_url ? (
+                          <img src={bank.logo_url} className="w-full h-full object-contain" alt={bank.name} />
+                        ) : (
+                          <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0) || "B"}</span>
+                        );
+                      })()}
                    </div>
                    <div>
-                      <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest leading-none">
-                        Tabela: {tables.find(t => t.id?.toString() === selectedTableId)?.name}
+                      <h3 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight leading-none flex items-center gap-2">
+                        {banks.find(b => b.id.toString() === selectedBankId)?.name} • {tables.find(t => t.id?.toString() === selectedTableId)?.name}
                       </h3>
-                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1 italic">
-                        Banco: {banks.find(b => b.id.toString() === selectedBankId)?.name}
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 italic">
+                        Convênio: {tables.find(t => t.id?.toString() === selectedTableId)?.agreement}
                       </p>
                    </div>
                 </div>
+                
+                <button 
+                  onClick={() => handleOpenModal()}
+                  className="py-2.5 px-6 bg-white dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-600 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 dark:border-white/10 transition-all shadow-lg flex items-center gap-2"
+                >
+                  <span>＋</span> Novo Coeficiente
+                </button>
+             </div>
                 <div className="flex items-center gap-2">
                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter bg-blue-50 px-3 py-1 rounded-full border border-blue-100 shadow-sm">{coefficients.length} Coeficientes Ativos</span>
                 </div>

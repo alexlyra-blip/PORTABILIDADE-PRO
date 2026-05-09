@@ -175,18 +175,20 @@ export default function TablesPage() {
           <select 
             value={selectedBankId}
             onChange={(e) => setSelectedBankId(e.target.value)}
-            className="input-admin !py-2 !px-4 !bg-white md:w-64"
+            className="input-admin !py-3 !px-6 !bg-white dark:!bg-slate-900 !rounded-2xl border-none shadow-xl text-xs font-black uppercase tracking-widest md:w-64 focus:ring-2 ring-blue-500/20"
           >
-            <option value="">Selecione um Banco</option>
+            <option value="">Selecione o Banco</option>
             {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
 
           <button 
             disabled={!selectedBankId}
             onClick={() => handleOpenModal()}
-            className="btn-premium flex items-center gap-2 !py-2.5 !px-5 !rounded-xl !bg-blue-600 hover:!bg-amber-500 text-sm disabled:opacity-50"
+            className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-[10px] uppercase tracking-widest flex items-center gap-3 group disabled:opacity-50 disabled:translate-y-0"
           >
-            <span className="text-lg">📋</span> Nova Tabela
+            <span className="text-base group-hover:rotate-90 transition-transform duration-300">📋</span> 
+            Nova Tabela
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
           </button>
         </div>
       </div>
@@ -199,32 +201,45 @@ export default function TablesPage() {
             <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest animate-pulse">Organizando Tabelas...</p>
           </div>
         ) : !selectedBankId ? (
-          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
-             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Selecione uma instituição para gerenciar as tabelas.</p>
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5 shadow-2xl">
+             <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Escolha um banco acima para gerenciar as tabelas.</p>
           </div>
         ) : tables.length === 0 ? (
-          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5">
-             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Nenhuma tabela ativa para este banco.</p>
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5 shadow-2xl">
+             <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Nenhuma tabela ativa para este banco.</p>
           </div>
         ) : (
           /* Agrupar por Convênio para visual Premium */
           ["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT_PRIVADO"].map(agr => {
             const agrTables = tables.filter(t => (t.agreement === agr || (agr === "FORÇAS ARMADAS" && t.agreement === "FORCAS") || (agr === "GOVERNOS" && t.agreement === "GOV_EST")));
             if (agrTables.length === 0) return null;
+            const bank = banks.find(b => b.id.toString() === selectedBankId);
 
             return (
-              <div key={agr} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-xl">
-                <div className="px-8 py-5 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-3">
-                    <span className={`w-3 h-3 rounded-full ${
-                      agr === 'INSS' ? 'bg-blue-500' :
-                      agr === 'SIAPE' ? 'bg-amber-500' :
-                      agr === 'FORÇAS ARMADAS' ? 'bg-emerald-500' :
-                      'bg-slate-500'
-                    }`}></span>
-                    Convênio: {agr}
-                  </h3>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{agrTables.length} Tabelas Ativas</span>
+              <div key={agr} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+                <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-2 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center">
+                      {bank?.logo_url ? (
+                        <img src={bank.logo_url} className="w-full h-full object-contain" alt={bank.name} />
+                      ) : (
+                        <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0)}</span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                        {bank?.name} • {agr}
+                      </h3>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Gestão de Tabelas de Comissão</p>
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={() => handleOpenModal()}
+                    className="py-2.5 px-6 bg-white dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-600 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 dark:border-white/10 transition-all shadow-lg flex items-center gap-2"
+                  >
+                    <span>＋</span> Adicionar Tabela {agr}
+                  </button>
                 </div>
                 
                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
