@@ -244,9 +244,9 @@ export default function RulesPage() {
               <div key={agr} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
                 <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-2 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-0 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden">
                       {bank?.logo_url ? (
-                        <img src={bank.logo_url} className="w-full h-full object-contain" alt={bank.name} />
+                        <img src={bank.logo_url} className="w-full h-full object-cover" alt={bank.name} />
                       ) : (
                         <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0)}</span>
                       )}

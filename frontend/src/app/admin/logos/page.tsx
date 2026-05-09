@@ -66,34 +66,28 @@ export default function SubLogosPage() {
         savedLogo = await api.post("/admin/sub-logos", payload);
       }
 
-      // If there's a file to upload, do it now using the saved ID
       if (selectedFile && savedLogo?.id) {
         const uploadFormData = new FormData();
         uploadFormData.append("file", selectedFile);
         const response = await api.upload(`/admin/sub-logos/${savedLogo.id}/upload-logo`, uploadFormData);
-        
-        // Se o upload retornou o novo logo_url (Base64), atualizamos a lista local
         if (response.logo_url) {
           setLogos(prev => prev.map(l => l.id === savedLogo.id ? { ...l, logo_url: response.logo_url } : l));
         }
       }
 
       handleCloseModal();
-      alert("✅ Logo salvo com sucesso!");
+      loadLogos();
     } catch (error) {
       console.error("Erro ao salvar:", error);
       alert("Erro ao salvar. Verifique se o nome não está duplicado.");
     } finally {
       setIsSubmitting(false);
-      loadLogos();
     }
   };
 
   const handleLogoUpload = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Just store in state and show a local preview
     setSelectedFile(file);
     const localUrl = URL.createObjectURL(file);
     setFormData({ ...formData, logo_url: localUrl });
@@ -110,178 +104,156 @@ export default function SubLogosPage() {
     }
   };
 
+  const categories = [
+    { title: "Convênios", items: ["INSS", "SIAPE", "GOVERNOS", "FORÇAS ARMADAS", "CLT PRIVADO"] },
+    { title: "Forças Armadas", items: ["EXÉRCITO", "AERONÁUTICA", "MARINHA"] },
+    { title: "Situação Funcional (SIAPE)", items: ["01- ATIVO", "02- APOSENTADO", "03- PENSIONISTA"] },
+    { title: "Bancos de Origem", items: [
+      "AGIBANK", "BANCO BCV", "BANCO ALFA", "BANCO CIFRA", "BANCO DO BRASIL", 
+      "BANCO DO ESTADO DO SERGIPE", "BANCO ORIGINAL", "BANCO PINE", "BANCO SEGURO", 
+      "BANRISUL", "BARIGUI", "BMG", "BRADESCO S.A.", "BRB", "C6 CONSIGNADO", 
+      "CCB BRASIL", "CAIXA", "CREFISA", "DAYCOVAL", "DIGIO", "FACTA", "INBURSA", 
+      "ITAÚ CONSIGNADO", "ITAÚ BBA", "ITAÚ UNIBANCO S.A.", "MERCANTIL", 
+      "NU FINANCEIRA S.A.", "NBC BANK", "OLÉ CONSIGNADO", "PAGBANK", "PAN", 
+      "PARANÁ BANCO", "BNP PARIBAS", "PARATI", "PAULISTA", "PICPAY", 
+      "QI SOCIEDADE", "SABEMI", "SAFRA", "SANTANDER", "ZEMA", "BANCO INTER", "SICOOB", "OUTROS"
+    ]},
+    { title: "Estados (Subconvênios)", items: [
+        "AC - ACRE", "AL - ALAGOAS", "AP - AMAPÁ", "AM - AMAZONAS", "BA - BAHIA", "CE - CEARÁ", 
+        "DF - DISTRITO FEDERAL", "ES - ESPÍRITO SANTO", "GO - GOIÁS", "MA - MARANHÃO", "MT - MATO GROSSO", 
+        "MS - MATO GROSSO DO SUL", "MG - MINAS GERAIS", "PA - PARÁ", "PB - PARAÍBA", "PR - PARANÁ", 
+        "PE - PERNAMBUCO", "PI - PIAUÍ", "RJ - RIO DE JANEIRO", "RN - RIO GRANDE DO NORTE", 
+        "RS - RIO GRANDE DO SUL", "RO - RONDÔNIA", "RR - RORAIMA", "SC - SANTA CATARINA", 
+        "SP - SÃO PAULO", "SE - SERGIPE", "TO - TOCANTINS"
+    ]}
+  ];
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-12">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Logos Secundários</h1>
-          <p className="text-slate-500 text-sm mt-1">Configure os logos dos Convênios, Forças Armadas, Governos Estaduais e Instituições de Origem.</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Logos Secundários</h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">Personalize a identidade visual de convênios, estados e instituições.</p>
         </div>
         <button 
           onClick={() => handleOpenModal()}
-          className="btn-premium flex items-center gap-2 !py-2.5 !px-5 !rounded-xl !bg-blue-600 hover:!bg-blue-500 text-sm"
+          className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-[10px] uppercase tracking-widest flex items-center gap-3 group"
         >
-          <span className="text-lg">➕</span> Novo Logo
+          <span className="text-base group-hover:rotate-90 transition-transform duration-300">＋</span> 
+          Novo Logo
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
         </button>
       </div>
 
-      <div className="admin-card overflow-hidden shadow-sm border border-slate-200">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-200">
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Nome (Força, Estado ou Banco Origem)</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr><td colSpan={2} className="px-6 py-12 text-center text-slate-400 italic">Carregando dados...</td></tr>
-            ) : logos.length === 0 ? (
-              <tr><td colSpan={2} className="px-6 py-12 text-center text-slate-400 italic">Nenhum logo cadastrado.</td></tr>
-            ) : (
-              logos.map((logo) => (
-                <tr key={logo.id} className="hover:bg-slate-50/80 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      {logo.logo_url ? (
-                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white flex items-center justify-center">
-                          <img src={getStaticUrl(logo.logo_url) || ""} alt={logo.name} className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-100 shadow-sm">
-                          {logo.name.substring(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <span className="font-bold text-slate-700 block uppercase">{logo.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">ID: #{logo.id}</span>
-                      </div>
+      <div className="grid grid-cols-1 gap-8">
+        {loading ? (
+           <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest animate-pulse">Carregando Logos...</p>
+           </div>
+        ) : categories.map(cat => {
+            const catLogos = logos.filter(l => cat.items.some(item => norm(item) === norm(l.name)));
+            return (
+              <div key={cat.title} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+                <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">{cat.title}</h3>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Configurações de Identidade Visual</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">{catLogos.length} Configurados</span>
+                    <button onClick={() => handleOpenModal()} className="p-2.5 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-600/20 hover:scale-110 transition-transform">＋</button>
+                  </div>
+                </div>
+
+                <div className="p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  {catLogos.length === 0 ? (
+                    <div className="col-span-full py-10 text-center border-2 border-dashed border-slate-100 rounded-[2rem]">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum logo configurado nesta categoria</p>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                        <button 
-                            onClick={() => handleOpenModal(logo)}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                            title="Editar"
-                        >
-                            ✏️
-                        </button>
-                        <button 
-                            onClick={() => handleDelete(logo.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                            title="Excluir"
-                        >
-                            🗑️
-                        </button>
+                  ) : catLogos.map(logo => (
+                    <div key={logo.id} className="group relative bg-slate-50 dark:bg-white/5 p-4 rounded-[2rem] border border-slate-100 dark:border-white/5 hover:border-blue-500/30 transition-all flex flex-col items-center text-center">
+                       <div className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-800 shadow-xl border border-slate-100 dark:border-white/5 overflow-hidden mb-4 group-hover:scale-105 transition-transform">
+                          {logo.logo_url ? (
+                             <img src={getStaticUrl(logo.logo_url)} className="w-full h-full object-cover" />
+                          ) : (
+                             <div className="w-full h-full flex items-center justify-center font-black text-blue-600 text-xl">{logo.name.charAt(0)}</div>
+                          )}
+                       </div>
+                       <h4 className="text-[9px] font-black text-slate-700 dark:text-white uppercase tracking-tight line-clamp-1">{logo.name}</h4>
+                       
+                       <div className="absolute inset-0 bg-blue-600/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all rounded-[2rem] flex flex-col items-center justify-center gap-2">
+                          <button onClick={() => handleOpenModal(logo)} className="w-full px-4 py-2 text-[9px] font-black text-white uppercase tracking-widest hover:bg-white/10 transition-colors">Editar</button>
+                          <div className="h-[1px] w-8 bg-white/20"></div>
+                          <button onClick={() => handleDelete(logo.id)} className="w-full px-4 py-2 text-[9px] font-black text-red-200 uppercase tracking-widest hover:bg-red-500/20 transition-colors">Excluir</button>
+                       </div>
                     </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  ))}
+                </div>
+              </div>
+            );
+        })}
       </div>
 
       {modalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={handleCloseModal}></div>
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-white/20">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-lg">
-                {editingLogo ? "Editar Logo" : "Novo Logo"}
-              </h3>
-              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 text-2xl font-light">×</button>
+          <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-white/20">
+            <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">
+                  {editingLogo ? "Editar Logo" : "Novo Logo"}
+                </h3>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Configuração de Identidade</p>
+              </div>
+              <button onClick={handleCloseModal} className="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm text-slate-400 hover:text-red-500 transition-colors text-2xl">×</button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="p-8 space-y-6">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome (Força, Estado ou Banco) *</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Selecione o Item *</label>
                 <input 
                   type="text" 
                   required
                   list="logoNames"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})}
-                  className="input-admin uppercase"
-                  placeholder="Selecione na lista ou digite..."
+                  className="input-admin !rounded-2xl !bg-slate-50 border-none shadow-inner uppercase font-black text-xs"
+                  placeholder="Ex: INSS, PAN, MARINHA..."
                 />
                 <datalist id="logoNames">
-                  {/* Convênios - Filtrados se já existem */}
-                  {["INSS", "SIAPE", "GOVERNOS", "FORÇAS ARMADAS", "CLT PRIVADO"]
-                    .filter(c => !logos.some(l => norm(l.name) === norm(c)) || (editingLogo && norm(editingLogo.name) === norm(c)))
-                    .map(c => <option key={c} value={c} />)}
-                  
-                  {/* Forças - Filtradas */}
-                  {["EXÉRCITO", "AERONÁUTICA", "MARINHA"]
-                    .filter(f => !logos.some(l => norm(l.name) === norm(f)) || (editingLogo && norm(editingLogo.name) === norm(f)))
-                    .map(f => <option key={f} value={f} />)}
-
-                  {/* SIAPE - Situação Funcional */}
-                  {["01- ATIVO", "02- APOSENTADO", "03- PENSIONISTA"]
-                    .filter(s => !logos.some(l => norm(l.name) === norm(s)) || (editingLogo && norm(editingLogo.name) === norm(s)))
-                    .map(s => <option key={s} value={s} />)}
-                  
-                  {/* Estados - Filtrados e com nome completo */}
-                  {[
-                    "AC - ACRE", "AL - ALAGOAS", "AP - AMAPÁ", "AM - AMAZONAS", "BA - BAHIA", "CE - CEARÁ", 
-                    "DF - DISTRITO FEDERAL", "ES - ESPÍRITO SANTO", "GO - GOIÁS", "MA - MARANHÃO", "MT - MATO GROSSO", 
-                    "MS - MATO GROSSO DO SUL", "MG - MINAS GERAIS", "PA - PARÁ", "PB - PARAÍBA", "PR - PARANÁ", 
-                    "PE - PERNAMBUCO", "PI - PIAUÍ", "RJ - RIO DE JANEIRO", "RN - RIO GRANDE DO NORTE", 
-                    "RS - RIO GRANDE DO SUL", "RO - RONDÔNIA", "RR - RORAIMA", "SC - SANTA CATARINA", 
-                    "SP - SÃO PAULO", "SE - SERGIPE", "TO - TOCANTINS"
-                  ]
-                    .filter(uf => !logos.some(l => norm(l.name) === norm(uf)) || (editingLogo && norm(editingLogo.name) === norm(uf)))
-                    .map(uf => <option key={uf} value={uf} />)}
-                  
-                  {/* Bancos de Origem - Filtrados */}
-                  {[
-                    "AGIBANK", "BANCO BCV", "BANCO ALFA", "BANCO CIFRA", "BANCO DO BRASIL", 
-                    "BANCO DO ESTADO DO SERGIPE", "BANCO ORIGINAL", "BANCO PINE", "BANCO SEGURO", 
-                    "BANRISUL", "BARIGUI", "BMG", "BRADESCO S.A.", "BRB", "C6 CONSIGNADO", 
-                    "CCB BRASIL", "CAIXA", "CREFISA", "DAYCOVAL", "DIGIO", "FACTA", "INBURSA", 
-                    "ITAÚ CONSIGNADO", "ITAÚ BBA", "ITAÚ UNIBANCO S.A.", "MERCANTIL", 
-                    "NU FINANCEIRA S.A.", "NBC BANK", "OLÉ CONSIGNADO", "PAGBANK", "PAN", 
-                    "PARANÁ BANCO", "BNP PARIBAS", "PARATI", "PAULISTA", "PICPAY", 
-                    "QI SOCIEDADE", "SABEMI", "SAFRA", "SANTANDER", "ZEMA", "BANCO INTER", "SICOOB", "OUTROS"
-                  ]
-                    .filter(b => !logos.some(l => norm(l.name) === norm(b)) || (editingLogo && norm(editingLogo.name) === norm(b)))
-                    .map(b => <option key={b} value={b} />)}
+                  {categories.flatMap(c => c.items).map(item => <option key={item} value={item} />)}
                 </datalist>
               </div>
               
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Logo do Convênio</label>
-                <div className="flex items-center gap-3">
-                  <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl border border-dashed border-slate-300 transition-all font-bold text-xs uppercase">
-                    <input type="file" className="hidden" onChange={handleLogoUpload} accept="image/*" />
-                    <span>📁 Selecionar Imagem</span>
-                  </label>
-                  {formData.logo_url && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200">
-                        <img src={getStaticUrl(formData.logo_url) || formData.logo_url} className="w-full h-full object-contain bg-white" />
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Upload da Logo</label>
+                <div className="flex flex-col items-center gap-4 p-6 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
+                  {formData.logo_url ? (
+                    <div className="relative group">
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-xl border-2 border-white">
+                        <img src={getStaticUrl(formData.logo_url) || formData.logo_url} className="w-full h-full object-cover" />
                       </div>
                       <button 
                         type="button" 
-                        onClick={() => {
-                          setFormData({...formData, logo_url: ""});
-                          setSelectedFile(null);
-                        }}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                        title="Remover imagem"
-                      >
-                        🗑️
-                      </button>
+                        onClick={() => { setFormData({...formData, logo_url: ""}); setSelectedFile(null); }}
+                        className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+                      >🗑️</button>
                     </div>
+                  ) : (
+                    <label className="cursor-pointer flex flex-col items-center gap-2">
+                      <div className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-2xl shadow-xl shadow-blue-500/20 animate-bounce">📁</div>
+                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Selecionar Imagem</span>
+                      <input type="file" className="hidden" onChange={handleLogoUpload} accept="image/*" />
+                    </label>
                   )}
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                <button type="button" onClick={handleCloseModal} className="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all">Cancelar</button>
-                <button type="submit" disabled={isSubmitting} className="px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/30">
-                  {isSubmitting ? "Salvando..." : "Salvar Logo"}
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={handleCloseModal} className="flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-400 bg-slate-50 hover:bg-slate-100 transition-all">Cancelar</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/30 disabled:opacity-50">
+                  {isSubmitting ? "Salvando..." : "Salvar Agora"}
                 </button>
               </div>
             </form>
