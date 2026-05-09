@@ -817,17 +817,6 @@ export default function BanksPage() {
                   </div>
                 </div>
 
-                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-0 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden">
-                      {(() => {
-                        const bank = banks.find(b => b.id.toString() === selectedBankId);
-                        return bank?.logo_url ? (
-                          <img src={getStaticUrl(bank.logo_url)} className="w-full h-full object-cover" alt={bank.name} />
-                        ) : (
-                          <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0) || "B"}</span>
-                        );
-                      })()}
-                   </div>
-
                 <div className="space-y-3 bg-slate-50 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-600">Analfabeto</span>
