@@ -703,7 +703,7 @@ class AdminService:
                 "237": ("BRADESCO", "https://logodownload.org/wp-content/uploads/2014/04/bradesco-logo-1.png"),
                 "341": ("ITAU", "https://logodownload.org/wp-content/uploads/2014/04/itau-logo-1.png"),
                 "077": ("INTER", "https://logodownload.org/wp-content/uploads/2018/04/banco-inter-logo-1.png"),
-                "025": ("BANCO ALFA", "https://logodownload.org/wp-content/uploads/2019/08/banco-alfa-logo.png"),
+                "025": ("BANCO ALFA", "https://logodownload.org/wp-content/uploads/2019/08/banco-alfa-logo-1.png"),
                 "626": ("C6 BANK", "https://logodownload.org/wp-content/uploads/2019/08/c6-bank-logo-1.png"),
                 "422": ("SAFRA", "https://logodownload.org/wp-content/uploads/2018/10/banco-safra-logo.png"),
                 "212": ("BANCO ORIGINAL", "https://logodownload.org/wp-content/uploads/2018/04/banco-original-logo.png"),
