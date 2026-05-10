@@ -266,7 +266,12 @@ export default function TablesPage() {
                       <div className="flex justify-between items-start mb-4">
                         <div className="min-w-0">
                           <h4 className="font-black text-slate-800 dark:text-white text-sm truncate uppercase tracking-tight">{table.name}</h4>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            {table.sub_agreement && (
+                              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] font-black rounded-md uppercase tracking-wider">
+                                {table.sub_agreement}
+                              </span>
+                            )}
                             <span className="text-blue-600 dark:text-blue-400 font-black text-xs">{table.term || 84}x</span>
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">• {table.taxa_convenio}% AM</span>
                           </div>
