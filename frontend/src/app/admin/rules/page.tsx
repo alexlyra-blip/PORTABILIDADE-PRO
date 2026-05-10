@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/utils/api";
+import { api, getStaticUrl } from "@/utils/api";
 
 export default function RulesPage() {
   const [banks, setBanks] = useState<any[]>([]);
@@ -40,6 +40,11 @@ export default function RulesPage() {
     sub_agreement: ""
   });
 
+  const [selectedAgreement, setSelectedAgreement] = useState("");
+  const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
+
+  const ESTADOS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"];
+
   useEffect(() => {
     loadBanks();
   }, []);
@@ -47,6 +52,8 @@ export default function RulesPage() {
   useEffect(() => {
     if (selectedBankId) {
       loadRules(selectedBankId);
+      setSelectedAgreement("");
+      setSelectedSubAgreement("");
     } else {
       setRules([]);
     }
@@ -108,7 +115,7 @@ export default function RulesPage() {
       setEditingRule(null);
       setFormData({
         bank_id: selectedBankId,
-        agreement: "INSS",
+        agreement: selectedAgreement === "GOVERNOS" ? "GOV_EST" : selectedAgreement === "FORÇAS ARMADAS" ? "FORCAS" : selectedAgreement === "CLT PRIVADO" ? "CLT_PRIVADO" : selectedAgreement || "INSS",
         min_age: 18,
         max_age: 80,
         max_term: 84,
@@ -131,7 +138,7 @@ export default function RulesPage() {
         portability_rate_threshold: 0,
         use_balance_plus_released: false,
         disable_weighted_rate_validation: false,
-        sub_agreement: ""
+        sub_agreement: selectedSubAgreement || ""
       });
     }
     setModalOpen(true);
@@ -190,30 +197,62 @@ export default function RulesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Regras de Aceitação</h1>
-          <p className="text-slate-500 text-sm mt-1">Configure as restrições por idade, convênio e espécie para cada banco.</p>
+      {/* Header Premium com Filtros Lado a Lado */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-100 dark:border-white/5">
+        <div className="flex-1">
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none mb-1">Regras de Aceitação</h1>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest italic">Configure as restrições por idade e convênio</p>
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <select 
-            value={selectedBankId}
-            onChange={(e) => setSelectedBankId(e.target.value)}
-            className="input-admin !py-3 !px-6 !bg-white dark:!bg-slate-900 !rounded-2xl border-none shadow-xl text-xs font-black uppercase tracking-widest md:w-64 focus:ring-2 ring-blue-500/20"
-          >
-            <option value="">Selecione o Banco</option>
-            {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          {/* Seletor 1: BANCO */}
+          <div className="relative w-full md:w-48">
+            <select 
+              value={selectedBankId}
+              onChange={(e) => setSelectedBankId(e.target.value)}
+              className="w-full py-3.5 px-6 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-[11px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20 transition-all cursor-pointer text-blue-600"
+            >
+              <option value="">BANCO</option>
+              {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+
+          {/* Seletor 2: CONVÊNIO */}
+          <div className="relative w-full md:w-48">
+            <select 
+              value={selectedAgreement}
+              onChange={(e) => setSelectedAgreement(e.target.value)}
+              className="w-full py-3.5 px-6 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-[11px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20 transition-all cursor-pointer text-slate-700 dark:text-white"
+            >
+              <option value="">TODOS CONVÊNIOS</option>
+              <option value="INSS">INSS</option>
+              <option value="SIAPE">SIAPE</option>
+              <option value="FORÇAS ARMADAS">FORÇAS ARMADAS</option>
+              <option value="GOVERNOS">GOVERNOS</option>
+              <option value="CLT PRIVADO">CLT PRIVADO</option>
+            </select>
+          </div>
+
+          {/* Seletor 3: ESTADOS (Sub-Convênio Governos) */}
+          {selectedAgreement === "GOVERNOS" && (
+            <div className="relative w-full md:w-32 animate-in zoom-in duration-300">
+              <select 
+                value={selectedSubAgreement}
+                onChange={(e) => setSelectedSubAgreement(e.target.value)}
+                className="w-full py-3.5 px-6 bg-blue-50 dark:bg-blue-500/10 rounded-2xl border-none shadow-inner text-[11px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20 transition-all cursor-pointer text-blue-600"
+              >
+                <option value="">ESTADOS</option>
+                {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+              </select>
+            </div>
+          )}
 
           <button 
             disabled={!selectedBankId}
             onClick={() => handleOpenModal()}
-            className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-[10px] uppercase tracking-widest flex items-center gap-3 group disabled:opacity-50 disabled:translate-y-0"
+            className="w-full md:w-auto py-3.5 px-8 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
           >
-            <span className="text-base group-hover:rotate-90 transition-transform duration-300">⚖️</span> 
-            Nova Regra
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            <span>⚖️</span> Nova Regra
           </button>
         </div>
       </div>
@@ -234,21 +273,36 @@ export default function RulesPage() {
              <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Nenhuma regra encontrada para este banco.</p>
           </div>
         ) : (
-          /* Agrupamento por Convênio */
-          ["INSS", "SIAPE", "FORCAS", "GOV_EST", "CLT_PRIVADO"].map(agr => {
-            const agrRules = rules.filter(r => r.agreement === agr);
+          /* Agrupar por Convênio para visual Premium */
+          ["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT PRIVADO"].filter(agr => !selectedAgreement || agr === selectedAgreement).map(agr => {
+            const agrRules = rules.filter(r => {
+              const ruleAgr = (r.agreement || "").toUpperCase().replace("_", " ");
+              const filterAgr = agr.toUpperCase();
+              
+              // Verifica se o convênio bate
+              const matchAgr = ruleAgr === filterAgr || (filterAgr === "FORÇAS ARMADAS" && ruleAgr === "FORCAS") || (filterAgr === "GOVERNOS" && ruleAgr === "GOV EST");
+              if (!matchAgr) return false;
+
+              // Verifica se o sub-convênio (Estado) bate, se houver filtro
+              if (selectedSubAgreement) {
+                return r.sub_agreement === selectedSubAgreement;
+              }
+
+              return true;
+            });
+
             if (agrRules.length === 0) return null;
             const bank = banks.find(b => b.id.toString() === selectedBankId);
 
             return (
-              <div key={agr} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+              <div key={agr} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500 mb-8">
                 <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="flex items-center gap-5">
                     <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-0 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden">
                       {bank?.logo_url ? (
-                        <img src={bank.logo_url} className="w-full h-full object-cover" alt={bank.name} />
+                        <img src={getStaticUrl(bank.logo_url)} className="w-full h-full object-cover" alt={bank.name} />
                       ) : (
-                        <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0)}</span>
+                        <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0) || "B"}</span>
                       )}
                     </div>
                     <div>
