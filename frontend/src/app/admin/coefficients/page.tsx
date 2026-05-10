@@ -291,6 +291,26 @@ export default function CoefficientsPage() {
               <h3 className="font-black text-slate-800 dark:text-white text-lg uppercase tracking-tight">{editingCoeff ? "Editar Fator" : "Novo Coeficiente"}</h3>
               <button onClick={handleCloseModal} className="text-slate-400 hover:text-red-500 text-3xl font-light">×</button>
             </div>
+            
+            {/* Identificador da Tabela no Modal */}
+            {selectedTable && (
+              <div className="px-8 pt-6 pb-0">
+                <div className="bg-blue-50 dark:bg-blue-500/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-500/20 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm overflow-hidden shrink-0">
+                    {selectedBank?.logo_url ? (
+                      <img src={getStaticUrl(selectedBank.logo_url)} className="w-full h-full object-cover" alt="Bank" />
+                    ) : (
+                      <span className="text-sm font-black text-blue-600">{selectedBank?.name?.charAt(0)}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.2em] leading-none mb-1">Tabela Selecionada</p>
+                    <h4 className="text-xs font-black text-blue-900 dark:text-blue-100 uppercase tracking-tight truncate">{selectedTable.name}</h4>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div>

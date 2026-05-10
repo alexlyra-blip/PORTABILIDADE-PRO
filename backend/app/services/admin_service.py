@@ -1,3 +1,4 @@
+import re
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
@@ -596,11 +597,9 @@ class AdminService:
         for sim in simulations:
             sim_max_amount = 0.0
 
-            # Origin Bank Stats (Mais Portado) - FILTRO ULTRA RIGOROSO (Apenas lista de bancos reais)
+            # Origin Bank Stats (Mais Portado) - FILTRO DEFINITIVO (Exige padrão 000 - NOME)
             orig = str(sim.current_bank or "").strip().upper()
-            import re
-            # Só aceita se começar com 3 dígitos (código do banco) e tiver mais texto depois
-            if re.match(r'^\d{3}\s*[- ]', orig):
+            if re.match(r'^\d{3}\s*-\s*', orig):
                 origin_counts[orig] = origin_counts.get(orig, 0) + 1
 
             # Agreement Stats
