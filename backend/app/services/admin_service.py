@@ -596,9 +596,11 @@ class AdminService:
         for sim in simulations:
             sim_max_amount = 0.0
 
-            # Origin Bank Stats (Mais Portado)
+            # Origin Bank Stats (Mais Portado) - Filtro rigoroso para apenas bancos reais (3 dígitos)
             orig = sim.current_bank or "N/A"
-            origin_counts[orig] = origin_counts.get(orig, 0) + 1
+            import re
+            if re.match(r'^\d{3}', str(orig)):
+                origin_counts[orig] = origin_counts.get(orig, 0) + 1
 
             # Agreement Stats
             agreement = sim.agreement or "OUTROS"
