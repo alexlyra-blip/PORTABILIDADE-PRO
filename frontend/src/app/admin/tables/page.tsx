@@ -32,7 +32,10 @@ export default function TablesPage() {
     term: 84
   });
 
-  const [previewBaseRate, setPreviewBaseRate] = useState<number>(1.25);
+  const [selectedAgreement, setSelectedAgreement] = useState("");
+  const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
+
+  const ESTADOS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"];
 
   useEffect(() => {
     loadBanks();
@@ -44,6 +47,8 @@ export default function TablesPage() {
   useEffect(() => {
     if (selectedBankId) {
       loadTables(selectedBankId);
+      setSelectedAgreement("");
+      setSelectedSubAgreement("");
     } else {
       setTables([]);
     }
@@ -99,8 +104,8 @@ export default function TablesPage() {
         bank_id: selectedBankId,
         name: "",
         active: true,
-        agreement: "INSS",
-        sub_agreement: "",
+        agreement: selectedAgreement || "INSS",
+        sub_agreement: selectedSubAgreement || "",
         taxa_convenio: 0,
         portability_adjustment: 0,
         refin_adjustment: 0,
@@ -186,15 +191,42 @@ export default function TablesPage() {
           <p className="text-slate-500 text-sm mt-1">Gerencie as tabelas de taxas e prazos disponíveis para cada banco.</p>
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Seletor 1: BANCO */}
           <select 
             value={selectedBankId}
             onChange={(e) => setSelectedBankId(e.target.value)}
-            className="input-admin !py-3 !px-6 !bg-white dark:!bg-slate-900 !rounded-2xl border-none shadow-xl text-xs font-black uppercase tracking-widest md:w-64 focus:ring-2 ring-blue-500/20"
+            className="input-admin !py-3 !px-6 !bg-white dark:!bg-slate-900 !rounded-2xl border-none shadow-xl text-xs font-black uppercase tracking-widest md:w-48 focus:ring-2 ring-blue-500/20"
           >
-            <option value="">Selecione o Banco</option>
+            <option value="">BANCO</option>
             {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
+
+          {/* Seletor 2: CONVÊNIO */}
+          <select 
+            value={selectedAgreement}
+            onChange={(e) => setSelectedAgreement(e.target.value)}
+            className="input-admin !py-3 !px-6 !bg-white dark:!bg-slate-900 !rounded-2xl border-none shadow-xl text-xs font-black uppercase tracking-widest md:w-48 focus:ring-2 ring-blue-500/20"
+          >
+            <option value="">TODOS CONVÊNIOS</option>
+            <option value="INSS">INSS</option>
+            <option value="SIAPE">SIAPE</option>
+            <option value="FORÇAS ARMADAS">FORÇAS ARMADAS</option>
+            <option value="GOVERNOS">GOVERNOS</option>
+            <option value="CLT PRIVADO">CLT PRIVADO</option>
+          </select>
+
+          {/* Seletor 3: ESTADOS (Sub-Convênio Governos) */}
+          {selectedAgreement === "GOVERNOS" && (
+            <select 
+              value={selectedSubAgreement}
+              onChange={(e) => setSelectedSubAgreement(e.target.value)}
+              className="input-admin !py-3 !px-6 !bg-blue-50 dark:!bg-blue-900/30 !rounded-2xl border-none shadow-xl text-xs font-black uppercase tracking-widest md:w-32 focus:ring-2 ring-blue-500/20 text-blue-600 animate-in zoom-in duration-300"
+            >
+              <option value="">ESTADOS</option>
+              {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+            </select>
+          )}
 
           <button 
             disabled={!selectedBankId}
@@ -225,13 +257,28 @@ export default function TablesPage() {
           </div>
         ) : (
           /* Agrupar por Convênio para visual Premium */
-          ["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT_PRIVADO"].map(agr => {
-            const agrTables = tables.filter(t => (t.agreement === agr || (agr === "FORÇAS ARMADAS" && t.agreement === "FORCAS") || (agr === "GOVERNOS" && t.agreement === "GOV_EST")));
+          ["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT PRIVADO"].filter(agr => !selectedAgreement || agr === selectedAgreement).map(agr => {
+            const agrTables = tables.filter(t => {
+              const tableAgr = (t.agreement || "").toUpperCase().replace("_", " ");
+              const filterAgr = agr.toUpperCase();
+              
+              // Verifica se o convênio bate
+              const matchAgr = tableAgr === filterAgr || (filterAgr === "FORÇAS ARMADAS" && tableAgr === "FORCAS") || (filterAgr === "GOVERNOS" && tableAgr === "GOV EST");
+              if (!matchAgr) return false;
+
+              // Verifica se o sub-convênio (Estado) bate, se houver filtro
+              if (selectedSubAgreement) {
+                return t.sub_agreement === selectedSubAgreement;
+              }
+
+              return true;
+            });
+
             if (agrTables.length === 0) return null;
             const bank = banks.find(b => b.id.toString() === selectedBankId);
 
             return (
-              <div key={agr} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+              <div key={agr} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500 mb-8">
                 <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="flex items-center gap-5">
                     <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-0 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden">
