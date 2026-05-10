@@ -529,7 +529,7 @@ class AdminService:
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
         # Check cache
-        cache_key = f"{current_user.id}_{current_user.role}_{days}"
+        cache_key = f"{current_user.id}_{current_user.role}_{days}_v3"
         now = datetime.utcnow().timestamp()
         if cache_key in AdminService._dashboard_cache:
             cache_time, cache_data = AdminService._dashboard_cache[cache_key]
@@ -596,10 +596,11 @@ class AdminService:
         for sim in simulations:
             sim_max_amount = 0.0
 
-            # Origin Bank Stats (Mais Portado) - Filtro rigoroso para apenas bancos reais (3 dígitos)
-            orig = sim.current_bank or "N/A"
+            # Origin Bank Stats (Mais Portado) - FILTRO ULTRA RIGOROSO (Apenas lista de bancos reais)
+            orig = str(sim.current_bank or "").strip().upper()
             import re
-            if re.match(r'^\d{3}', str(orig)):
+            # Só aceita se começar com 3 dígitos (código do banco) e tiver mais texto depois
+            if re.match(r'^\d{3}\s*[- ]', orig):
                 origin_counts[orig] = origin_counts.get(orig, 0) + 1
 
             # Agreement Stats
