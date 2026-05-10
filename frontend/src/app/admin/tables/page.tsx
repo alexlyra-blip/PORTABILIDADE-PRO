@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/utils/api";
+import { api, getStaticUrl } from "@/utils/api";
 
 export default function TablesPage() {
   const [banks, setBanks] = useState<any[]>([]);
@@ -283,9 +283,8 @@ export default function TablesPage() {
                   <div className="flex items-center gap-5">
                     <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-0 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden">
                       {(() => {
-                        const bank = banks.find(b => b.id.toString() === selectedBankId);
                         return bank?.logo_url ? (
-                          <img src={bank.logo_url} className="w-full h-full object-cover" alt={bank.name} />
+                          <img src={getStaticUrl(bank.logo_url)} className="w-full h-full object-cover" alt={bank.name} />
                         ) : (
                           <span className="text-xl font-black text-blue-600">{bank?.name?.charAt(0) || "B"}</span>
                         );
