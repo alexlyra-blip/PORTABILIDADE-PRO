@@ -22,6 +22,11 @@ export default function CoefficientsPage() {
     coefficient: ""
   });
 
+  const [selectedAgreement, setSelectedAgreement] = useState("");
+  const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
+
+  const ESTADOS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"];
+
   useEffect(() => {
     loadBanks();
   }, []);
@@ -29,6 +34,8 @@ export default function CoefficientsPage() {
   useEffect(() => {
     if (selectedBankId) {
       loadTables(selectedBankId);
+      setSelectedAgreement("");
+      setSelectedSubAgreement("");
     } else {
       setTables([]);
       setSelectedTableId("");
@@ -42,6 +49,25 @@ export default function CoefficientsPage() {
       setCoefficients([]);
     }
   }, [selectedTableId]);
+
+  // Filtragem dinâmica das tabelas com base nos seletores de Convênio e Sub-Convênio
+  const filteredTables = tables.filter(t => {
+    const matchAgr = !selectedAgreement || (t.agreement && t.agreement.toUpperCase().includes(selectedAgreement.toUpperCase()));
+    const matchSub = !selectedSubAgreement || (t.sub_agreement && t.sub_agreement.toUpperCase().includes(selectedSubAgreement.toUpperCase()));
+    return matchAgr && matchSub;
+  });
+
+  // Atualiza a tabela selecionada se a lista filtrada mudar e a atual não estiver nela
+  useEffect(() => {
+    if (filteredTables.length > 0) {
+      const exists = filteredTables.find(t => t.id.toString() === selectedTableId);
+      if (!exists) {
+        setSelectedTableId(filteredTables[0].id.toString());
+      }
+    } else {
+      setSelectedTableId("");
+    }
+  }, [filteredTables, selectedTableId]);
 
   const loadBanks = async () => {
     try {
@@ -59,10 +85,6 @@ export default function CoefficientsPage() {
     try {
       const data = await api.get(`/admin/banks/${bankId}/tables`);
       setTables(data);
-      if (data.length > 0) {
-        // Find the first table that actually has coefficients if possible, else just the first one
-        setSelectedTableId(data[0].id.toString());
-      }
     } catch (error) {
       console.error("Erro ao carregar tabelas:", error);
     }
@@ -159,9 +181,9 @@ export default function CoefficientsPage() {
           <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest italic">Gestão de cálculo HP-12C</p>
         </div>
         
-        <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           {/* Seletor 1: BANCO */}
-          <div className="relative w-full md:w-64">
+          <div className="relative w-full md:w-48">
              <select 
                value={selectedBankId}
                onChange={(e) => setSelectedBankId(e.target.value)}
@@ -171,16 +193,46 @@ export default function CoefficientsPage() {
              </select>
           </div>
 
-          {/* Seletor 2: TABELA */}
+          {/* NOVO Seletor 2: CONVÊNIO */}
+          <div className="relative w-full md:w-48">
+             <select 
+               value={selectedAgreement}
+               onChange={(e) => setSelectedAgreement(e.target.value)}
+               className="w-full py-3.5 px-6 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-[11px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20 transition-all cursor-pointer text-slate-700 dark:text-white"
+             >
+               <option value="">TODOS CONVÊNIOS</option>
+               <option value="INSS">INSS</option>
+               <option value="SIAPE">SIAPE</option>
+               <option value="FORÇAS ARMADAS">FORÇAS ARMADAS</option>
+               <option value="GOVERNOS">GOVERNOS</option>
+               <option value="CLT PRIVADO">CLT PRIVADO</option>
+             </select>
+          </div>
+
+          {/* NOVO Seletor 3: SUB-CONVÊNIO (ESTADOS) - Apenas se GOVERNOS selecionado */}
+          {selectedAgreement === "GOVERNOS" && (
+            <div className="relative w-full md:w-32 animate-in zoom-in duration-300">
+               <select 
+                 value={selectedSubAgreement}
+                 onChange={(e) => setSelectedSubAgreement(e.target.value)}
+                 className="w-full py-3.5 px-6 bg-blue-50 dark:bg-blue-500/10 rounded-2xl border-none shadow-inner text-[11px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20 transition-all cursor-pointer text-blue-600"
+               >
+                 <option value="">ESTADOS</option>
+                 {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+               </select>
+            </div>
+          )}
+
+          {/* Seletor 4: TABELA (Filtrada) */}
           <div className="relative w-full md:w-64">
              <select 
                value={selectedTableId}
                onChange={(e) => setSelectedTableId(e.target.value)}
-               disabled={tables.length === 0}
+               disabled={filteredTables.length === 0}
                className="w-full py-3.5 px-6 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-[11px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20 transition-all cursor-pointer text-slate-700 dark:text-white disabled:opacity-50"
              >
-               <option value="">Selecione a Tabela...</option>
-               {tables.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+               <option value="">{filteredTables.length === 0 ? "Nenhuma Tabela" : "Selecione a Tabela..."}</option>
+               {filteredTables.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
              </select>
           </div>
 
