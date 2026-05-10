@@ -224,6 +224,11 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         motivos_tabelas.append(f"Tabela {tabela.name}: Parcela máxima R$ {tabela.max_installment}")
                         continue
                         
+                    # Additional Table Validation: Ticket Mínimo (Saldo Devedor)
+                    if tabela.min_ticket and float(saldo_devedor) < float(tabela.min_ticket):
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Saldo devedor mínimo R$ {tabela.min_ticket}")
+                        continue
+                        
                     # Additional Table Validation: Age limits
                     if tabela.min_age and int(cliente_input.idade or 0) < tabela.min_age:
                         motivos_tabelas.append(f"Tabela {tabela.name}: Idade mínima {tabela.min_age}")
@@ -275,8 +280,12 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         
                         tem_coeficiente_valido = True
                         try:
+                            # Verifica se deve desativar a validação de taxa ponderada para este banco
+                            should_disable_weighted = any(r.disable_weighted_rate_validation for r in regras_aplicaveis)
+                            
                             resultado = calcular_viabilidade_financeira(
-                                cliente_input, banco, coeff_obj, tabela
+                                cliente_input, banco, coeff_obj, tabela,
+                                disable_weighted_validation=should_disable_weighted
                             )
                             
                             viavel = resultado[0]
