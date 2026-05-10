@@ -478,13 +478,13 @@ function SimuladorPageContent() {
                   { x: [180, 0, -180, 180], scale: [0.6, 1.6, 0.6, 0.6], zIndex: [10, 30, 10, 10], opacity: [0.5, 1, 0.5, 0.5] }
                 ];
                 return (
-                  <motion.div
+                    <motion.div
                     key={i}
                     className="absolute w-28 h-28 rounded-full border-[3px] border-white flex items-center justify-center bg-white shadow-2xl overflow-hidden"
                     animate={animations[i]}
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", times: [0, 0.33, 0.66, 1] }}
                   >
-                     <img src={getLogo(i)} className="w-[95%] h-[95%] rounded-full object-contain" />
+                     <img src={getLogo(i)} className="w-full h-full object-cover" />
                   </motion.div>
                 );
               })}
