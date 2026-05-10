@@ -15,6 +15,27 @@ from app.services.admin_service import AdminService
 async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: int):
     # 0. Pre-calculate Simulation Level Metrics
     try:
+        # Normalização de Convênio e Sub-Convênio logo no início para uso em TODO o motor
+        def normalize_agr(name):
+            if not name: return ""
+            n = str(name).strip().upper()
+            mapping = {
+                "FORCAS": "FORÇAS ARMADAS", "FORÇAS ARMADAS": "FORÇAS ARMADAS", "FORCAS ARMADAS": "FORÇAS ARMADAS",
+                "GOV_EST": "GOVERNOS", "GOVERNOS": "GOVERNOS", "GOVERNO": "GOVERNOS",
+                "CLT_PRIVADO": "CLT PRIVADO", "CLT PRIVADO": "CLT PRIVADO"
+            }
+            return mapping.get(n, n)
+
+        def normalize_sub(name):
+            if not name: return ""
+            import unicodedata
+            s = str(name).strip().upper()
+            return "".join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+        # Sobrescreve no input para que todas as funções subsequentes usem o nome normalizado
+        cliente_input.convenio = normalize_agr(cliente_input.convenio)
+        cliente_input.sub_convenio = normalize_sub(cliente_input.sub_convenio)
+
         saldo_devedor = float(cliente_input.saldo_devedor or 0)
         parcela_atual = float(cliente_input.valor_parcela or 0)
         prazo_restante = int(cliente_input.prazo_restante or 0)
@@ -102,17 +123,19 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
         for banco in todos_os_bancos:
             try:
                 # FILTRO: Só processa bancos que tenham ao menos uma tabela para o convênio atual
-                # Se o banco não opera o convênio (não tem tabelas), ele não deve aparecer nem nos rejeitados
                 tem_tabelas_convenio = False
+                convenio_input = cliente_input.convenio
+                sub_input = cliente_input.sub_convenio
+
                 for t in banco.tables:
-                    t_agr = str(t.agreement or "").strip().upper()
-                    # Consideramos compatível se o convênio da tabela bater ou se a tabela for global (sem convênio)
+                    t_agr = normalize_agr(t.agreement)
                     if t.active and (not t_agr or t_agr == convenio_input):
                         tem_tabelas_convenio = True
                         break
                 
                 if not tem_tabelas_convenio:
                     continue
+
                 if not banco.rules:
                     rejeitados.append({
                         "banco": banco.name,
@@ -122,27 +145,8 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         "elegivel": False
                     })
                     continue
-                    
-                # Normalização de Convênio e Sub-Convênio para busca
-                def normalize_agr(name):
-                    if not name: return ""
-                    n = str(name).strip().upper()
-                    mapping = {
-                        "FORCAS": "FORÇAS ARMADAS", "FORÇAS ARMADAS": "FORÇAS ARMADAS", "FORCAS ARMADAS": "FORÇAS ARMADAS",
-                        "GOV_EST": "GOVERNOS", "GOVERNOS": "GOVERNOS", "GOVERNO": "GOVERNOS",
-                        "CLT_PRIVADO": "CLT PRIVADO", "CLT PRIVADO": "CLT PRIVADO"
-                    }
-                    return mapping.get(n, n)
 
-                def normalize_sub(name):
-                    if not name: return ""
-                    import unicodedata
-                    s = str(name).strip().upper()
-                    return "".join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
-
-                convenio_input = normalize_agr(cliente_input.convenio)
-                sub_input = normalize_sub(cliente_input.sub_convenio)
-
+                regras_aplicaveis = []
                 for r in banco.rules:
                     rule_conv = normalize_agr(r.agreement)
                     match_conv = rule_conv == convenio_input or not rule_conv
