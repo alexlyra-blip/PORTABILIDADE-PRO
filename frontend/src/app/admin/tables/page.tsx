@@ -273,7 +273,7 @@ export default function TablesPage() {
                               </span>
                             )}
                             <span className="text-blue-600 dark:text-blue-400 font-black text-xs">{table.term || 84}x</span>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">• {table.taxa_convenio}% AM</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">• {Number(table.taxa_convenio || 0).toFixed(2)}% AM</span>
                           </div>
                         </div>
                         <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase ${table.active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-400'}`}>

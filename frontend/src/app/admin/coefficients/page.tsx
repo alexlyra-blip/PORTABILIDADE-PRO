@@ -259,7 +259,7 @@ export default function CoefficientsPage() {
                                   <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">Parcelas</span>
                                </div>
                                <div className="text-right">
-                                  <span className="text-xs text-slate-800 dark:text-white font-black">{coeff.interest_rate}%</span>
+                                  <span className="text-xs text-slate-800 dark:text-white font-black">{Number(coeff.interest_rate || 0).toFixed(2)}%</span>
                                   <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest block">AM</span>
                                </div>
                             </div>
