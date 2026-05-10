@@ -695,41 +695,22 @@ class AdminService:
             search_code = parts[0].strip() if len(parts) > 0 else top_origin_bank
             search_name = parts[1].strip().upper() if len(parts) > 1 else ""
             
-            # Mapeamento de fallback para códigos comuns se não encontrar no DB
-            common_banks = {
-                "001": ("BANCO DO BRASIL", "https://logodownload.org/wp-content/uploads/2014/05/banco-do-brasil-logo-1.png"),
-                "033": ("SANTANDER", "https://logodownload.org/wp-content/uploads/2014/05/santander-logo-1.png"),
-                "104": ("CAIXA ECONOMICA", "https://logodownload.org/wp-content/uploads/2014/05/caixa-logo-1.png"),
-                "237": ("BRADESCO", "https://logodownload.org/wp-content/uploads/2014/04/bradesco-logo-1.png"),
-                "341": ("ITAU", "https://logodownload.org/wp-content/uploads/2014/04/itau-logo-1.png"),
-                "077": ("INTER", "https://logodownload.org/wp-content/uploads/2018/04/banco-inter-logo-1.png"),
-                "025": ("BANCO ALFA", "https://logodownload.org/wp-content/uploads/2019/08/banco-alfa-logo-1.png"),
-                "626": ("C6 BANK", "https://logodownload.org/wp-content/uploads/2019/08/c6-bank-logo-1.png"),
-                "422": ("SAFRA", "https://logodownload.org/wp-content/uploads/2018/10/banco-safra-logo.png"),
-                "212": ("BANCO ORIGINAL", "https://logodownload.org/wp-content/uploads/2018/04/banco-original-logo.png"),
-                "041": ("BANRISUL", "https://logodownload.org/wp-content/uploads/2014/05/banrisul-logo-1.png"),
-                "707": ("DAYCOVAL", "https://logodownload.org/wp-content/uploads/2019/09/banco-daycoval-logo.png"),
-                "655": ("VOTORANTIM", "https://logodownload.org/wp-content/uploads/2018/04/banco-votorantim-logo.png"),
-                "623": ("PAN", "https://logodownload.org/wp-content/uploads/2018/04/banco-pan-logo.png"),
-                "069": ("BPN", "https://logodownload.org/wp-content/uploads/2018/04/bpn-logo.png"),
-            }
-
-            # 1. Tentar no SubAgreementLogos (Nomes mais amigáveis)
+            # 1. Busca agressiva nas Logos Secundárias (Tabela sub_agreement_logos) do sistema
+            search_code_clean = search_code.lstrip('0') if search_code.isdigit() else ""
+            
             for l_name, l_url in sub_logos_map.items():
-                if search_code in l_name or (search_name and search_name in l_name):
+                l_name_up = l_name.upper()
+                # Verifica se o código (025), o código limpo (25) ou o nome (ALFA) estão no registro
+                if (search_code in l_name_up) or (search_code_clean and search_code_clean in l_name_up) or (search_name and search_name in l_name_up):
                     top_origin_logo = l_url
                     top_origin_name = l_name
                     break
             
-            # 2. Tentar no mapping de fallback
-            if not top_origin_logo and search_code in common_banks:
-                top_origin_name, top_origin_logo = common_banks[search_code]
-                top_origin_name = f"{search_code} - {top_origin_name}"
-
-            # 3. Tentar nos bancos cadastrados
+            # 2. Se não encontrou nas logos secundárias, tenta nos bancos cadastrados (Tabela banks)
             if not top_origin_logo:
                 for b_id, b_name in banks_map.items():
-                    if search_code in b_name or (search_name and search_name in b_name.upper()):
+                    b_name_up = b_name.upper()
+                    if (search_code in b_name_up) or (search_code_clean and search_code_clean in b_name_up) or (search_name and search_name in b_name_up):
                         top_origin_logo = banks_logo_map.get(b_id)
                         top_origin_name = b_name
                         break
