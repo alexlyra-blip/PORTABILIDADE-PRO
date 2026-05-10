@@ -406,9 +406,19 @@ function OfertasPageContent() {
               )}
               
               <div id="bank-suggestions" className="hidden absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/10 shadow-2xl rounded-2xl p-2 z-[50] max-h-60 overflow-y-auto">
-                <button onClick={() => setFilterBank("")} className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest">TODOS OS BANCOS</button>
+                <button onMouseDown={() => setFilterBank("")} className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest">TODOS OS BANCOS</button>
                 {[...new Set(contractResults.map(r => r.banco).filter(Boolean))].map((bancoName) => (
-                   <button key={bancoName} onClick={() => setFilterBank(bancoName)} className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest truncate">{bancoName}</button>
+                   <button 
+                    key={bancoName} 
+                    onMouseDown={() => {
+                      setFilterBank(bancoName);
+                      // Forçar fechamento manual para garantir
+                      document.getElementById('bank-suggestions')?.classList.add('hidden');
+                    }} 
+                    className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest truncate"
+                   >
+                     {bancoName}
+                   </button>
                 ))}
               </div>
             </div>
