@@ -155,7 +155,9 @@ function OfertasPageContent() {
   // Lógica para encontrar a "Melhor Tabela" (1ª de cada banco com maior troco)
   const firstTablesByBank = [];
   const banksSeen = new Set();
-  contractResults.forEach(res => {
+  
+  // AQUI: Usar filteredResults em vez de contractResults para que os destaques respeitem o filtro
+  filteredResults.forEach(res => {
     if (res && res.banco && !banksSeen.has(res.banco)) {
       banksSeen.add(res.banco);
       firstTablesByBank.push(res);
@@ -163,15 +165,15 @@ function OfertasPageContent() {
   });
 
   const bestTableOffer = firstTablesByBank.length > 0 
-    ? [...firstTablesByBank].sort((a, b) => (a?.valor_liberado || 0) - (b?.valor_liberado || 0))[0] 
+    ? [...firstTablesByBank].sort((a, b) => (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] 
     : null;
 
-  const topByTaxa = contractResults.length > 0 
-    ? [...contractResults].sort((a, b) => (a?.taxa_juros || 0) - (b?.taxa_juros || 0) || (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] 
+  const topByTaxa = filteredResults.length > 0 
+    ? [...filteredResults].sort((a, b) => (a?.taxa_juros || 0) - (b?.taxa_juros || 0) || (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] 
     : null;
 
-  const topByTroco = contractResults.length > 0 
-    ? [...contractResults].sort((a, b) => (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] 
+  const topByTroco = filteredResults.length > 0 
+    ? [...filteredResults].sort((a, b) => (b?.valor_liberado || 0) - (a?.valor_liberado || 0))[0] 
     : null;
 
   const baseHighlights = [
@@ -603,7 +605,7 @@ function OfertasPageContent() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {data.rejeitados
-                .filter(rej => rej)
+                .filter(rej => rej && (!filterBank || rej.banco?.toLowerCase().includes(filterBank.toLowerCase())))
                 .map((rej, i) => {
                   if (!rej) return null;
                   
