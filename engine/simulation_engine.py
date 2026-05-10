@@ -123,17 +123,32 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     })
                     continue
                     
-                # Buscar todas as regras aplicáveis (pelo convênio ou genéricas)
-                regras_aplicaveis = []
-                convenio_input = str(cliente_input.convenio or "").strip().upper()
-                sub_input = str(cliente_input.sub_convenio or "").strip().upper()
+                # Normalização de Convênio e Sub-Convênio para busca
+                def normalize_agr(name):
+                    if not name: return ""
+                    n = str(name).strip().upper()
+                    mapping = {
+                        "FORCAS": "FORÇAS ARMADAS", "FORÇAS ARMADAS": "FORÇAS ARMADAS", "FORCAS ARMADAS": "FORÇAS ARMADAS",
+                        "GOV_EST": "GOVERNOS", "GOVERNOS": "GOVERNOS", "GOVERNO": "GOVERNOS",
+                        "CLT_PRIVADO": "CLT PRIVADO", "CLT PRIVADO": "CLT PRIVADO"
+                    }
+                    return mapping.get(n, n)
+
+                def normalize_sub(name):
+                    if not name: return ""
+                    import unicodedata
+                    s = str(name).strip().upper()
+                    return "".join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+                convenio_input = normalize_agr(cliente_input.convenio)
+                sub_input = normalize_sub(cliente_input.sub_convenio)
 
                 for r in banco.rules:
-                    rule_conv = str(r.agreement or "").strip().upper()
+                    rule_conv = normalize_agr(r.agreement)
                     match_conv = rule_conv == convenio_input or not rule_conv
                     
                     match_sub = True
-                    rule_sub = str(r.sub_agreement or "").strip().upper()
+                    rule_sub = normalize_sub(r.sub_agreement)
                     if rule_sub and sub_input:
                         match_sub = rule_sub == sub_input
                     elif rule_sub and not sub_input:
@@ -178,13 +193,13 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         continue
                     
                     # Additional Table Validation: Agreement Matching (INSS, SIAPE, etc.)
-                    t_conv = str(tabela.agreement or "").strip().upper()
+                    t_conv = normalize_agr(tabela.agreement)
                     if t_conv and t_conv != convenio_input:
                         motivos_tabelas.append(f"Tabela {tabela.name}: Convênio {t_conv} diferente de {convenio_input}")
                         continue
                         
                     # Additional Table Validation: Sub-Agreement
-                    t_sub = str(tabela.sub_agreement or "").strip().upper()
+                    t_sub = normalize_sub(tabela.sub_agreement)
                     if t_sub:
                         if not sub_input or t_sub != sub_input:
                             motivos_tabelas.append(f"Tabela {tabela.name}: Sub-convênio {t_sub} não coincide")
