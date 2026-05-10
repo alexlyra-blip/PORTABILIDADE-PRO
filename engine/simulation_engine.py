@@ -101,6 +101,18 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
         
         for banco in todos_os_bancos:
             try:
+                # FILTRO: Só processa bancos que tenham ao menos uma tabela para o convênio atual
+                # Se o banco não opera o convênio (não tem tabelas), ele não deve aparecer nem nos rejeitados
+                tem_tabelas_convenio = False
+                for t in banco.tables:
+                    t_agr = str(t.agreement or "").strip().upper()
+                    # Consideramos compatível se o convênio da tabela bater ou se a tabela for global (sem convênio)
+                    if t.active and (not t_agr or t_agr == convenio_input):
+                        tem_tabelas_convenio = True
+                        break
+                
+                if not tem_tabelas_convenio:
+                    continue
                 if not banco.rules:
                     rejeitados.append({
                         "banco": banco.name,

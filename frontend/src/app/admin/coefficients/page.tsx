@@ -221,6 +221,11 @@ export default function CoefficientsPage() {
                       <span className="px-3 py-1 bg-slate-900 text-white text-[9px] font-black uppercase rounded-lg tracking-widest">
                          CONVÊNIO: {selectedTable?.agreement || "N/A"}
                       </span>
+                      {selectedTable?.sub_agreement && (
+                        <span className="px-3 py-1 bg-blue-100 text-blue-600 text-[9px] font-black uppercase rounded-lg tracking-widest">
+                           {selectedTable.sub_agreement}
+                        </span>
+                      )}
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                          Taxa: {selectedTable?.taxa_convenio}%
                       </span>
