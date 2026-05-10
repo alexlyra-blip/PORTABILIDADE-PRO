@@ -146,20 +146,26 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     })
                     continue
 
-                regras_aplicaveis = []
+                # FILTRO DE REGRAS: Prioridade para regra específica do convênio
+                regras_especificas = []
+                regras_globais = []
+                
                 for r in banco.rules:
                     rule_conv = normalize_agr(r.agreement)
-                    match_conv = rule_conv == convenio_input or not rule_conv
-                    
-                    match_sub = True
                     rule_sub = normalize_sub(r.sub_agreement)
-                    if rule_sub and sub_input:
-                        match_sub = rule_sub == sub_input
-                    elif rule_sub and not sub_input:
-                        match_sub = False 
                     
-                    if match_conv and match_sub:
-                        regras_aplicaveis.append(r)
+                    # 1. Tenta match exato de Convênio + Sub-Convênio
+                    if rule_conv == convenio_input and rule_sub == sub_input:
+                        regras_especificas.append(r)
+                    # 2. Tenta match de Convênio (sem sub-convênio na regra)
+                    elif rule_conv == convenio_input and not rule_sub:
+                        regras_especificas.append(r)
+                    # 3. Regra Global (sem convênio nem sub-convênio)
+                    elif not rule_conv and not rule_sub:
+                        regras_globais.append(r)
+                
+                # A hierarquia é: Regras Específicas > Regras Globais
+                regras_aplicaveis = regras_especificas if regras_especificas else regras_globais
                 
                 if not regras_aplicaveis:
                     rejeitados.append({
