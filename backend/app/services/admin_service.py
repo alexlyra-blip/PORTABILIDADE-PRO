@@ -692,48 +692,45 @@ class AdminService:
         top_origin_name = top_origin_bank
         
         if top_origin_bank != "N/A":
-            # Extrair código e nome da string (ex: "025 - ALFA" ou apenas "025")
-            parts = top_origin_bank.split('-')
-            search_code = parts[0].strip() if len(parts) > 0 else top_origin_bank
-            search_name = parts[1].strip().upper() if len(parts) > 1 else ""
+            # Extrair código e nome da string (ex: "047 - BANCO DO ESTADO DO SERGIPE")
+            import re
+            match = re.match(r'^(\d{3})\s*-\s*(.*)', str(top_origin_bank))
+            if match:
+                search_code = match.group(1).strip()
+                search_name = match.group(2).strip().upper()
+            else:
+                search_code = str(top_origin_bank)[:3].strip() if str(top_origin_bank)[:3].isdigit() else ""
+                search_name = str(top_origin_bank).upper()
             
-            # Mapeamento fixo de códigos para nomes para garantir a busca no banco de dados
+            # Mapeamento fixo de códigos conhecidos (backup)
             code_to_name = {
                 "001": "BANCO DO BRASIL", "033": "SANTANDER", "104": "CAIXA", "237": "BRADESCO",
                 "341": "ITAU", "077": "INTER", "025": "ALFA", "626": "C6", "422": "SAFRA",
                 "041": "BANRISUL", "707": "DAYCOVAL", "655": "VOTORANTIM", "623": "PAN",
-                "069": "BPN", "212": "ORIGINAL", "422": "SAFRA"
+                "069": "BPN", "212": "ORIGINAL", "047": "BANESE"
             }
-            
-            # Se vier apenas o código (ex: "025"), tentamos descobrir o nome para a busca
             if not search_name and search_code in code_to_name:
                 search_name = code_to_name[search_code]
 
-            # 1. Busca agressiva nas Logos Secundárias (Tabela sub_agreement_logos) do sistema
+            # 1. Busca agressiva nas Logos Secundárias (Tabela sub_agreement_logos)
             search_code_clean = search_code.lstrip('0') if search_code.isdigit() else ""
             
             for l_name, l_url in sub_logos_map.items():
                 l_name_up = l_name.upper()
-                if (search_code in l_name_up) or (search_code_clean and search_code_clean in l_name_up) or (search_name and search_name in l_name_up):
+                # Verifica se o código de 3 dígitos está no nome ou se o nome limpo bate
+                if (search_code and search_code in l_name_up) or \
+                   (search_code_clean and search_code_clean in l_name_up) or \
+                   (search_name and search_name in l_name_up):
                     top_origin_logo = l_url
                     top_origin_name = l_name
                     break
             
-            # 2. Se não encontrou, tenta por ID direto (Ex: Código 025 -> Banco ID 25)
-            if not top_origin_logo and search_code_clean.isdigit():
-                try:
-                    bank_id = int(search_code_clean)
-                    if bank_id in banks_logo_map:
-                        top_origin_logo = banks_logo_map[bank_id]
-                        top_origin_name = banks_map.get(bank_id, f"Banco {search_code}")
-                except:
-                    pass
-
-            # 3. Se ainda não encontrou, tenta nos bancos por nome
+            # 2. Se não encontrou, busca nos Bancos Principais (comparando nome ou se o nome do banco contém o código)
             if not top_origin_logo:
                 for b_id, b_name in banks_map.items():
                     b_name_up = b_name.upper()
-                    if (search_code in b_name_up) or (search_code_clean and search_code_clean in b_name_up) or (search_name and search_name in b_name_up):
+                    if (search_code and search_code in b_name_up) or \
+                       (search_name and search_name in b_name_up):
                         top_origin_logo = banks_logo_map.get(b_id)
                         top_origin_name = b_name
                         break
