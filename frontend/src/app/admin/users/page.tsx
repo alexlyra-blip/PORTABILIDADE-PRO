@@ -272,8 +272,16 @@ export default function UsersPage() {
                 {/* Actions */}
                 <div className="flex gap-2">
                   <button onClick={() => handleOpenModal(user)} className="flex-1 py-2.5 bg-white dark:bg-white/5 hover:bg-blue-600 hover:text-white text-slate-500 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-white/5">Configurar</button>
-                  <button onClick={() => handleToggleBlock(user)} className={`w-10 h-10 rounded-2xl transition-all border flex items-center justify-center ${isBlocked ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white border-emerald-200' : 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-white border-amber-200'}`}>
-                    {isBlocked ? <Icons.Unlock /> : <Icons.Lock />}
+                  <button 
+                    onClick={() => handleToggleBlock(user)} 
+                    className={`w-10 h-10 rounded-2xl transition-all border flex items-center justify-center ${
+                      isBlocked 
+                        ? 'bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border-red-200' 
+                        : 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white border-emerald-200'
+                    }`}
+                    title={isBlocked ? "Desbloquear Usuário" : "Bloquear Usuário"}
+                  >
+                    {isBlocked ? <Icons.Lock /> : <Icons.Unlock />}
                   </button>
                   <button onClick={() => handleDelete(user.id)} className="w-10 h-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all border border-red-500/20 flex items-center justify-center">
                     <Icons.Trash />
