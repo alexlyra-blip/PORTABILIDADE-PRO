@@ -525,7 +525,7 @@ class AdminService:
         return True
 
     _dashboard_cache = {}
-    _dashboard_cache_ttl = 300 # 5 minutos
+    _dashboard_cache_ttl = 30 # Reduzido para 30 segundos para maior fluidez no teste
 
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
@@ -783,7 +783,7 @@ class AdminService:
                     "agreement": s.agreement,
                     "user_name": s.user.name if s.user else "Removido",
                     "user_avatar": (s.user.logo_url or s.user.avatar_url) if s.user else None,
-                    "created_at": s.created_at.strftime("%Y-%m-%d %H:%M"),
+                    "created_at": s.created_at.strftime("%d/%m/%Y %H:%M") if s.created_at else "N/A",
                     "results": [
                         {
                             "bank_id": r.bank_id,

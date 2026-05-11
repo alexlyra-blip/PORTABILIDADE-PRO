@@ -115,8 +115,8 @@ export default function DashboardPage() {
 
   const handleGoToOffers = (sim) => {
     // Mimic the simulation result state to show the specific offers
-    const mockResults = sim.results.map(r => ({
-        banco: `Banco ${r.bank_id}`,
+    const mockResults = (sim.results || []).map(r => ({
+        banco: r.bank_name || `Banco ${r.bank_id}`,
         bank_id: r.bank_id,
         tabela: r.table_name,
         taxa_juros: r.offered_rate,
@@ -234,7 +234,7 @@ export default function DashboardPage() {
                        {data.stats.top_3_banks && data.stats.top_3_banks.slice(0, 10).map((b, i) => (
                          <div key={i} className="flex items-center gap-3">
                            <div className="w-10 h-10 rounded-full overflow-hidden bg-white flex items-center justify-center shrink-0 border-2 border-slate-200 dark:border-slate-700 shadow-sm">
-                             {b.logo ? <img src={b.logo.startsWith('http') || b.logo.startsWith('data:') ? b.logo : `http://127.0.0.1:8000${b.logo.startsWith('/') ? '' : '/'}${b.logo}`} className="w-full h-full object-cover"/> : <span className="text-slate-800 text-sm font-black">{b.name.charAt(0)}</span>}
+                             {b.logo ? <img src={getStaticUrl(b.logo)} className="w-full h-full object-cover"/> : <span className="text-slate-800 text-sm font-black">{b.name.charAt(0)}</span>}
                            </div>
                            <div className="flex-1 min-w-0">
                               <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{b.name}</p>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
                        {data.stats.top_3_users && data.stats.top_3_users.slice(0, 10).map((u, i) => (
                          <div key={i} className="flex items-center gap-3">
                            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border-2 border-slate-200 dark:border-slate-700 shadow-sm">
-                             {u.avatar ? <img src={u.avatar.startsWith('http') || u.avatar.startsWith('data:') ? u.avatar : `http://127.0.0.1:8000${u.avatar.startsWith('/') ? '' : '/'}${u.avatar}`} className="w-full h-full object-cover"/> : <span className="text-slate-800 dark:text-white text-sm font-black">{u.name.charAt(0)}</span>}
+                             {u.avatar ? <img src={getStaticUrl(u.avatar)} className="w-full h-full object-cover"/> : <span className="text-slate-800 dark:text-white text-sm font-black">{u.name?.charAt(0) || "?"}</span>}
                            </div>
                            <div className="flex-1 min-w-0">
                               <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{u.name}</p>
@@ -382,9 +382,9 @@ export default function DashboardPage() {
                                <div className="flex items-center gap-3">
                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-lg overflow-hidden border border-slate-200 dark:border-slate-700">
                                     {sim.user_avatar ? (
-                                        <img src={sim.user_avatar.startsWith('http') || sim.user_avatar.startsWith('data:') ? sim.user_avatar : `http://127.0.0.1:8000${sim.user_avatar.startsWith('/') ? '' : '/'}${sim.user_avatar}`} className="w-full h-full object-cover"/>
+                                        <img src={getStaticUrl(sim.user_avatar)} className="w-full h-full object-cover"/>
                                     ) : (
-                                        sim.user_name.charAt(0)
+                                        sim.user_name?.charAt(0) || "?"
                                     )}
                                  </div>
                                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{sim.user_name}</span>
