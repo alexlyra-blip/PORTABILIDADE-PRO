@@ -10,6 +10,8 @@ export default function MeusContratosPage() {
    const [dbBanks, setDbBanks] = useState([]);
    const [subLogos, setSubLogos] = useState([]);
    const [currentUser, setCurrentUser] = useState(null);
+   const [editingId, setEditingId] = useState(null);
+   const [editData, setEditData] = useState({ cliente: "", cpf: "", numero_proposta: "" });
 
    useEffect(() => {
       const userStr = localStorage.getItem('user');
@@ -104,6 +106,37 @@ export default function MeusContratosPage() {
       localStorage.setItem("accepted_contracts", JSON.stringify(updated));
    };
 
+   const startEditing = (contract) => {
+      setEditingId(contract.id);
+      setEditData({
+         cliente: contract.cliente || "",
+         cpf: contract.cpf || "",
+         numero_proposta: contract.numero_proposta || ""
+      });
+   };
+
+   const cancelEditing = () => {
+      setEditingId(null);
+      setEditData({ cliente: "", cpf: "", numero_proposta: "" });
+   };
+
+   const saveEdit = (id) => {
+      const updated = contracts.map(c => {
+         if (c.id === id) {
+            return {
+               ...c,
+               cliente: editData.cliente,
+               cpf: editData.cpf,
+               numero_proposta: editData.numero_proposta
+            };
+         }
+         return c;
+      });
+      setContracts(updated);
+      localStorage.setItem("accepted_contracts", JSON.stringify(updated));
+      setEditingId(null);
+   };
+
    const formatCurrencyLocal = (value) => {
       return `R$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
    };
@@ -166,7 +199,8 @@ export default function MeusContratosPage() {
             (c.cliente && c.cliente.toLowerCase().includes(q)) ||
             (c.cpf && c.cpf.includes(q)) ||
             (c.banco && c.banco.toLowerCase().includes(q)) ||
-            (c.instituicao_origem && c.instituicao_origem.toLowerCase().includes(q))
+            (c.instituicao_origem && c.instituicao_origem.toLowerCase().includes(q)) ||
+            (c.numero_proposta && c.numero_proposta.includes(q))
          );
       });
    };
@@ -375,8 +409,64 @@ export default function MeusContratosPage() {
                                           </span>
                                        );
                                     })()}
-                                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight break-words">{contract.cliente}</h3>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-widest truncate">CPF: {contract.cpf}</p>
+                                    {editingId === contract.id ? (
+                                       <div className="space-y-3 mt-2">
+                                          <div className="space-y-1">
+                                             <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Nome do Cliente</label>
+                                             <input
+                                                type="text"
+                                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-500/30 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                                value={editData.cliente}
+                                                onChange={(e) => setEditData({ ...editData, cliente: e.target.value })}
+                                             />
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                             <div className="space-y-1">
+                                                <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">CPF</label>
+                                                <input
+                                                   type="text"
+                                                   className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-500/30 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                                   value={editData.cpf}
+                                                   onChange={(e) => setEditData({ ...editData, cpf: e.target.value })}
+                                                />
+                                             </div>
+                                             <div className="space-y-1">
+                                                <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Nº Proposta</label>
+                                                <input
+                                                   type="text"
+                                                   className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-500/30 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                                   placeholder="Ex: 123456"
+                                                   value={editData.numero_proposta}
+                                                   onChange={(e) => setEditData({ ...editData, numero_proposta: e.target.value })}
+                                                />
+                                             </div>
+                                          </div>
+                                          <div className="flex gap-2 pt-2">
+                                             <button
+                                                onClick={() => saveEdit(contract.id)}
+                                                className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all"
+                                             >
+                                                💾 Salvar
+                                             </button>
+                                             <button
+                                                onClick={cancelEditing}
+                                                className="px-4 py-2.5 bg-slate-100 text-slate-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                             >
+                                                Cancelar
+                                             </button>
+                                          </div>
+                                       </div>
+                                    ) : (
+                                       <>
+                                          <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight break-words">{contract.cliente}</h3>
+                                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-widest truncate">CPF: {contract.cpf}</p>
+                                          {contract.numero_proposta && (
+                                             <p className="text-[10px] text-blue-600 font-black uppercase mt-1 tracking-widest">
+                                                Nº PROPOSTA: {contract.numero_proposta}
+                                             </p>
+                                          )}
+                                       </>
+                                    )}
                                  </div>
                               </div>
                            </div>
@@ -385,13 +475,22 @@ export default function MeusContratosPage() {
                         {/* Detalhes do Banco e Oferta (Split View) */}
                         <div className="flex-1 flex flex-col p-4 lg:p-6 border-t xl:border-t-0 xl:border-l border-slate-100 gap-4 relative">
                            {(currentUser?.role === 'admin' || contract.user_id === currentUser?.id) && (
-                              <button
-                                 onClick={() => deleteContract(contract.id)}
-                                 className="absolute top-4 right-4 text-slate-400 hover:text-red-600 transition-all text-lg p-2 hover:scale-110 z-[50] flex items-center justify-center w-10 h-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-full shadow-md"
-                                 title="Excluir Proposta"
-                              >
-                                 🗑️
-                              </button>
+                              <div className="absolute top-4 right-4 flex gap-2 z-[50]">
+                                 <button
+                                    onClick={() => startEditing(contract)}
+                                    className="text-slate-400 hover:text-blue-600 transition-all text-lg p-2 hover:scale-110 flex items-center justify-center w-10 h-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-full shadow-md"
+                                    title="Editar Proposta"
+                                 >
+                                    ✏️
+                                 </button>
+                                 <button
+                                    onClick={() => deleteContract(contract.id)}
+                                    className="text-slate-400 hover:text-red-600 transition-all text-lg p-2 hover:scale-110 flex items-center justify-center w-10 h-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-full shadow-md"
+                                    title="Excluir Proposta"
+                                 >
+                                    🗑️
+                                 </button>
+                              </div>
                            )}
                            {/* PORTABILIDADE (Linha de cima) */}
                            <div className="space-y-3 bg-slate-50/50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-white/5">

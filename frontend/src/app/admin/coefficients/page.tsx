@@ -265,6 +265,7 @@ export default function CoefficientsPage() {
                      <span className="text-3xl font-black text-blue-600">{selectedBank?.name?.charAt(0)}</span>
                    )}
                 </div>
+                </div>
                 <div className="text-center md:text-left flex-1">
                    <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter mb-1">
                       {selectedBank?.name} • {selectedTable?.name}
