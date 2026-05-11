@@ -36,8 +36,24 @@ export default function UsersPage() {
     name: "", email: "", role: "corretor", password: "",
     seller_limit: 0, brand_color: "#2563eb", sidebar_color: "#0f172a",
     sidebar_color_secondary: "", logo_url: "", avatar_url: "",
-    is_temporary_password: true, active: true, phone: ""
+  is_temporary_password: true, active: true, phone: ""
   });
+  
+  // Ícones Premium SVG
+  const Icons = {
+    Lock: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+    ),
+    Unlock: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></svg>
+    ),
+    Trash: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+    ),
+    Search: () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+    )
+  };
 
   useEffect(() => { loadUsers(); }, []);
 
@@ -147,8 +163,10 @@ export default function UsersPage() {
         <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-auto">
           <div className="relative flex-1 md:w-64 group">
             <input type="text" placeholder="PESQUISAR..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full py-3.5 pl-12 pr-6 bg-white dark:bg-slate-900 rounded-2xl border-none shadow-xl text-[10px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20" />
-            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+              className="w-full py-3.5 pl-14 pr-6 bg-white dark:bg-slate-900 rounded-2xl border-none shadow-xl text-[10px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20" />
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+              <Icons.Search />
+            </span>
           </div>
           <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
             className="w-full md:w-48 py-3.5 px-6 bg-white dark:bg-slate-900 rounded-2xl border-none shadow-xl text-[10px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20">
@@ -254,10 +272,12 @@ export default function UsersPage() {
                 {/* Actions */}
                 <div className="flex gap-2">
                   <button onClick={() => handleOpenModal(user)} className="flex-1 py-2.5 bg-white dark:bg-white/5 hover:bg-blue-600 hover:text-white text-slate-500 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-white/5">Configurar</button>
-                  <button onClick={() => handleToggleBlock(user)} className={`w-10 h-10 rounded-2xl transition-all border flex items-center justify-center text-sm ${isBlocked ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white border-emerald-200' : 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-white border-amber-200'}`}>
-                    {isBlocked ? '🔓' : '🔒'}
+                  <button onClick={() => handleToggleBlock(user)} className={`w-10 h-10 rounded-2xl transition-all border flex items-center justify-center ${isBlocked ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white border-emerald-200' : 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-white border-amber-200'}`}>
+                    {isBlocked ? <Icons.Unlock /> : <Icons.Lock />}
                   </button>
-                  <button onClick={() => handleDelete(user.id)} className="w-10 h-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all border border-red-500/20 flex items-center justify-center">🗑️</button>
+                  <button onClick={() => handleDelete(user.id)} className="w-10 h-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all border border-red-500/20 flex items-center justify-center">
+                    <Icons.Trash />
+                  </button>
                 </div>
               </div>
             );
