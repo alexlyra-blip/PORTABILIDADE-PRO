@@ -116,18 +116,23 @@ function SimuladorPageContent() {
           .catch(err => console.error("Erro logos:", err));
 
         // Carregar Bancos do DB
-        const banks = await api.get("/admin/banks");
-        setDbBanks(banks || []);
-        
-        const originBanksToExclude = ["AGIBANK", "BCV", "ALFA", "CIFRA", "PINE", "SEGURO", "BARIGUI", "BRB", "PARANÁ", "PARATI", "PAULISTA", "PICPAY", "QI SOCIEDADE", "SABEMI", "ZEMA"];
-        const active = (banks || []).filter(b => 
-          b.logo_url && 
-          b.active && 
-          !originBanksToExclude.some(o => b.name.toUpperCase().includes(o))
-        );
-        setBanksForAnim(active.length > 0 ? active : []);
+        try {
+          const banks = await api.get("/admin/banks");
+          const safeBanks = banks || [];
+          setDbBanks(safeBanks);
+          
+          const originBanksToExclude = ["BCV", "ALFA", "CIFRA", "PINE", "SEGURO", "BARIGUI", "BRB", "PARANÁ", "PARATI", "PAULISTA", "PICPAY", "QI SOCIEDADE", "SABEMI", "ZEMA"];
+          const active = safeBanks.filter(b => 
+            b.active && 
+            !originBanksToExclude.some(o => (b.name || "").toUpperCase().includes(o))
+          );
+          setBanksForAnim(active.length > 0 ? active : []);
+        } catch (err) {
+          console.error("Erro ao carregar bancos:", err);
+          setDbBanks([]);
+        }
       } catch (err) {
-        console.error("Erro na inicialização:", err);
+        console.error("Erro na inicialização do simulador:", err);
       }
     };
     init();
@@ -931,14 +936,18 @@ function SimuladorPageContent() {
                                {contracts[activeContractIndex].banco ? (() => {
                                   const selectedBank = inssBanks.find(b => b.value === contracts[activeContractIndex].banco);
                                   if (!selectedBank) return "SELECIONAR BANCO";
-                                  const bankName = selectedBank.label.substring(selectedBank.label.indexOf('-') + 1).trim();
-                                  const dbBank = dbBanks.find(db => db.name && selectedBank.label.toUpperCase().includes(db.name.toUpperCase()));
-                                  const subLogoObj = subLogos.find(l => { const nL = norm(l.name); return nL && (nL === norm(bankName) || norm(selectedBank.label).includes(nL)); });
+                                  const bankLabel = selectedBank.label || "";
+                                  const bankName = bankLabel.includes('-') ? bankLabel.substring(bankLabel.indexOf('-') + 1).trim() : bankLabel;
+                                  const dbBank = dbBanks.find(db => db.name && bankLabel.toUpperCase().includes(db.name.toUpperCase()));
+                                  const subLogoObj = subLogos.find(l => { 
+                                    const nL = norm(l.name); 
+                                    return nL && (nL === norm(bankName) || norm(bankLabel).includes(nL)); 
+                                  });
                                   const logoUrl = subLogoObj?.logo_url || dbBank?.logo_url;
                                   return (
                                     <>
                                       {logoUrl && <img src={getStaticUrl(logoUrl)} className="w-6 h-6 rounded-md bg-white object-cover" />}
-                                      {selectedBank.label}
+                                      {bankLabel}
                                     </>
                                   );
                                })() : "SELECIONAR BANCO"}
