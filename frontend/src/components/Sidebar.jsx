@@ -134,12 +134,13 @@ export default function Sidebar() {
           animate={{ y: [0, -5, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
+          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
             {(profileImageUrl && !imgError) ? (
               <img
                 src={profileImageUrl}
                 className="w-full h-full object-cover"
                 alt="Profile"
+                style={{ backgroundColor: user.brand_color }}
                 onError={() => setImgError(true)}
                 fetchPriority="high"
                 loading="eager"
@@ -156,7 +157,7 @@ export default function Sidebar() {
           </div>
           {/* Pulsing Glow */}
           <div
-            className="absolute inset-0 rounded-xl blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none"
+            className="absolute inset-0 rounded-full blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none"
             style={{ backgroundColor: user.brand_color || '#3b82f6' }}
           ></div>
         </motion.div>

@@ -309,11 +309,11 @@ export default function UsersPage() {
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Personalização</h4>
                   <div className="flex flex-col items-center p-6 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200">
-                    <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden shadow-2xl mb-4 relative" style={{ backgroundColor: formData.brand_color }}>
+                    <div className="w-28 h-28 rounded-full overflow-hidden shadow-2xl mb-4 relative border-4 border-white dark:border-slate-800" style={{ backgroundColor: formData.brand_color }}>
                       {(formData.avatar_url || formData.logo_url) ? (
                         <img src={getStaticUrl(formData.avatar_url || formData.logo_url) || formData.avatar_url} className="w-full h-full object-cover" style={{ backgroundColor: formData.brand_color }} />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center font-black text-2xl text-white">{formData.name?.charAt(0) || '?'}</div>
+                        <div className="w-full h-full flex items-center justify-center font-black text-3xl text-white">{formData.name?.charAt(0) || '?'}</div>
                       )}
                     </div>
                     <label className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-all">
@@ -321,10 +321,17 @@ export default function UsersPage() {
                     </label>
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Cor Principal</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Cor Principal (Botões e Destaques)</label>
                     <div className="flex gap-3">
                       <input type="color" value={formData.brand_color} onChange={(e) => setFormData({...formData, brand_color: e.target.value})} className="w-12 h-12 rounded-2xl p-1 bg-white shadow-sm border-none cursor-pointer" />
                       <input type="text" value={formData.brand_color} onChange={(e) => setFormData({...formData, brand_color: e.target.value})} className="input-admin flex-1 !rounded-2xl !bg-slate-50 border-none shadow-inner font-mono text-xs" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Cor Secundária (Menu Lateral)</label>
+                    <div className="flex gap-3">
+                      <input type="color" value={formData.sidebar_color_secondary || formData.sidebar_color} onChange={(e) => setFormData({...formData, sidebar_color_secondary: e.target.value})} className="w-12 h-12 rounded-2xl p-1 bg-white shadow-sm border-none cursor-pointer" />
+                      <input type="text" value={formData.sidebar_color_secondary || ""} onChange={(e) => setFormData({...formData, sidebar_color_secondary: e.target.value})} className="input-admin flex-1 !rounded-2xl !bg-slate-50 border-none shadow-inner font-mono text-xs" placeholder="Ex: #0f172a" />
                     </div>
                   </div>
                   <button type="button" onClick={() => setFormData({...formData, active: !formData.active})}
