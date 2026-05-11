@@ -164,7 +164,7 @@ export default function DashboardPage() {
           <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-white/10 shadow-xl hover:scale-[1.02] transition-all">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 overflow-hidden shadow-inner ${s.img ? 'p-0 border-none' : `bg-${s.color}-500/10 border border-${s.color}-500/20`}`}>
               {s.img ? (
-                 <img src={getStaticUrl(s.img)} className="w-full h-full object-cover block" />
+                 <img src={getStaticUrl(s.img)} className="w-full h-full object-contain p-1 block" />
               ) : (
                  <span className={`text-${s.color}-600`}>{s.icon}</span>
               )}
@@ -173,10 +173,10 @@ export default function DashboardPage() {
             <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-tight">{s.label}</p>
             {s.img || s.valueImg ? (
               <div className="flex items-center gap-2">
-                <div className={`rounded-xl overflow-hidden shadow-sm shrink-0 flex items-center justify-center border-none ${s.isBank ? 'w-10 h-10' : 'w-7 h-7'} bg-slate-50 dark:bg-white/5`}>
+                <div className={`rounded-xl overflow-hidden shadow-sm shrink-0 flex items-center justify-center border-none ${s.isBank ? 'w-10 h-10 p-1.5' : 'w-7 h-7 p-1'} bg-white dark:bg-white/90`}>
                   <img 
                     src={getStaticUrl(s.valueImg || s.img)} 
-                    className="w-full h-full object-cover block"
+                    className="w-full h-full object-contain block"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = "https://cdn-icons-png.flaticon.com/512/2830/2830284.png"; // Fallback bank icon
@@ -394,8 +394,8 @@ export default function DashboardPage() {
                            <td className="py-4 px-4">
                               <div className="flex items-center gap-3">
                                  {bestResult?.bank_logo ? (
-                                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 bg-white">
-                                       <img src={getStaticUrl(bestResult.bank_logo)} alt="Logo" className="w-full h-full object-cover" />
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-100 bg-white p-1.5 shadow-sm">
+                                       <img src={getStaticUrl(bestResult.bank_logo)} alt="Logo" className="w-full h-full object-contain" />
                                     </div>
                                  ) : (
                                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-[10px] font-black text-slate-400">
