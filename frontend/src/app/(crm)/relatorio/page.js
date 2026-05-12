@@ -13,7 +13,7 @@ export default function RelatorioPage() {
   const [dailyData, setDailyData] = useState([]);
   const [convenioData, setConvenioData] = useState([]);
   const [totals, setTotals] = useState({ qtd: 0, valor: 0, troco: 0, cipHojeQtd: 0, cipHojeValor: 0 });
-  const [meta, setMeta] = useState({ tipo: 'mensal', valor: 100000, progresso: 0 });
+  const [meta, setMeta] = useState({ tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000, progresso: 0 });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,7 +66,20 @@ export default function RelatorioPage() {
 
   const updateMeta = (updates) => {
     const newMeta = { ...meta, ...updates };
-    localStorage.setItem("meta_config", JSON.stringify({ tipo: newMeta.tipo, valor: Number(newMeta.valor) }));
+    
+    // Recalcula o valor alvo com base no tipo selecionado
+    let calculatedAlvo = Number(newMeta.valor_diario);
+    if (newMeta.tipo === 'semanal') calculatedAlvo = Number(newMeta.valor_diario) * 5;
+    if (newMeta.tipo === 'mensal') calculatedAlvo = Number(newMeta.valor_diario) * 22;
+    
+    newMeta.valor_alvo = calculatedAlvo;
+    
+    localStorage.setItem("meta_config", JSON.stringify({ 
+      tipo: newMeta.tipo, 
+      valor_diario: newMeta.valor_diario,
+      valor_alvo: calculatedAlvo
+    }));
+    
     setMeta(newMeta);
     processChartData(contracts, newMeta);
   };
@@ -91,17 +104,23 @@ export default function RelatorioPage() {
       totalValor += (item.valor_contrato || 0);
       totalTroco += (item.valor_troco || 0);
 
-      // Verificação CIP de Hoje
-      if (item.status === 'AG. RETORNO CIP' && item.data_cip === todayStr) {
+      // Verificação CIP de Hoje (Saldos Retornados)
+      if (item.status === 'AG. RETORNO CIP' || item.data_cip === todayStr) {
          expectedCipTodayCount++;
          expectedCipTodayValue += (item.valor_contrato || 0);
       }
 
       // Check Meta Progresso ('PAGO')
-      if (item.status === 'PAGO' && item.data_aceite) {
-         const itemDate = new Date(item.data_aceite + "T12:00:00");
+      const itemDate = item.data_aceite ? new Date(item.data_aceite + "T12:00:00") : null;
+      if (item.status === 'PAGO' && itemDate) {
          if (currentMeta.tipo === 'mensal') {
             if (itemDate.getMonth() === today.getMonth() && itemDate.getFullYear() === today.getFullYear()) {
+               pagoProgress += (item.valor_contrato || 0);
+            }
+         } else if (currentMeta.tipo === 'semanal') {
+            // Verifica se está na semana atual (simplificado)
+            const diff = today.getTime() - itemDate.getTime();
+            if (diff >= 0 && diff < 7 * 24 * 60 * 60 * 1000) {
                pagoProgress += (item.valor_contrato || 0);
             }
          } else if (currentMeta.tipo === 'diaria') {
@@ -111,25 +130,32 @@ export default function RelatorioPage() {
          }
       }
 
-      // Daily stats
+      // Daily stats para o gráfico de barras
       const date = item.data_aceite || "N/A";
       if (!dailyMap[date]) {
-         dailyMap[date] = { date, quantidade: 0, valor: 0 };
+         dailyMap[date] = { date, digitado: 0, pago: 0, reprovado: 0 };
       }
-      dailyMap[date].quantidade++;
-      dailyMap[date].valor += (item.valor_contrato || 0);
+      dailyMap[date].digitado += (item.valor_contrato || 0);
+      if (item.status === 'PAGO') dailyMap[date].pago += (item.valor_contrato || 0);
+      if (item.status === 'REPROVADO') dailyMap[date].reprovado += (item.valor_contrato || 0);
 
       // Convenio stats
       const conv = item.convenio || "Outros";
       if (!convenioMap[conv]) {
          convenioMap[conv] = { name: conv, value: 0 };
       }
-      convenioMap[conv].value++;
+      convenioMap[conv].value += (item.valor_contrato || 0); // Usar valor para representar % financeiro
     });
+
+    const totalFinanceiro = Object.values(convenioMap).reduce((acc, curr) => acc + curr.value, 0);
+    const cData = Object.values(convenioMap).map(c => ({
+      ...c,
+      percent: totalFinanceiro > 0 ? ((c.value / totalFinanceiro) * 100).toFixed(1) : 0
+    }));
 
     const dData = Object.values(dailyMap).sort((a,b) => a.date.localeCompare(b.date));
     setDailyData(dData);
-    setConvenioData(Object.values(convenioMap));
+    setConvenioData(cData);
     setTotals({ qtd: totalQtd, valor: totalValor, troco: totalTroco, cipHojeQtd: expectedCipTodayCount, cipHojeValor: expectedCipTodayValue });
     setMeta(prev => ({ ...prev, progresso: pagoProgress }));
   };
@@ -268,24 +294,28 @@ export default function RelatorioPage() {
                    <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Meta de Produção (Vendas Pagas)</h3>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Acompanhe seus fechamentos reais</p>
                 </div>
-                <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700">
-                   <select 
-                      className="bg-transparent text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase outline-none cursor-pointer"
-                      value={meta.tipo}
-                      onChange={(e) => updateMeta({ tipo: e.target.value })}
-                   >
-                      <option value="diaria">Meta Diária</option>
-                      <option value="mensal">Meta Mensal</option>
-                   </select>
-                   <div className="h-6 w-px bg-slate-300 dark:bg-slate-600"></div>
-                   <input 
-                      type="number" 
-                      className="bg-transparent w-28 text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase outline-none"
-                      placeholder="Valor Alvo"
-                      value={meta.valor}
-                      onChange={(e) => updateMeta({ valor: e.target.value })}
-                   />
-                </div>
+                 <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <select 
+                       className="bg-transparent text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase outline-none cursor-pointer"
+                       value={meta.tipo}
+                       onChange={(e) => updateMeta({ tipo: e.target.value })}
+                    >
+                       <option value="diaria">Meta Diária</option>
+                       <option value="semanal">Meta Semanal</option>
+                       <option value="mensal">Meta Mensal</option>
+                    </select>
+                    <div className="h-6 w-px bg-slate-300 dark:bg-slate-600"></div>
+                    <div className="flex flex-col">
+                       <span className="text-[8px] font-black text-slate-400 uppercase">Valor Alvo</span>
+                       <input 
+                          type="number" 
+                          className="bg-transparent w-24 text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase outline-none"
+                          placeholder="Valor Alvo"
+                          value={meta.valor_alvo}
+                          onChange={(e) => updateMeta({ valor_alvo: e.target.value })}
+                       />
+                    </div>
+                 </div>
              </div>
 
              <div className="relative pt-4">
@@ -294,16 +324,16 @@ export default function RelatorioPage() {
                       <span className="text-4xl font-black text-blue-600">{formatCurrency(meta.progresso)}</span>
                       <span className="text-sm font-bold text-slate-400 ml-2">atingidos</span>
                    </div>
-                   <div className="text-right">
-                      <span className="text-sm font-black text-slate-800 dark:text-white">{((meta.progresso / (meta.valor || 1)) * 100).toFixed(1)}%</span>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">de {formatCurrency(meta.valor)}</p>
-                   </div>
+                    <div className="text-right">
+                       <span className="text-sm font-black text-slate-800 dark:text-white">{((meta.progresso / (meta.valor_alvo || 1)) * 100).toFixed(1)}%</span>
+                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">de {formatCurrency(meta.valor_alvo)}</p>
+                    </div>
                 </div>
                 <div className="w-full h-6 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner border border-slate-200 dark:border-slate-700 relative">
-                   <div 
-                      className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-1000 ease-in-out relative"
-                      style={{ width: `${Math.min((meta.progresso / (meta.valor || 1)) * 100, 100)}%` }}
-                   >
+                    <div 
+                       className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-1000 ease-in-out relative"
+                       style={{ width: `${Math.min((meta.progresso / (meta.valor_alvo || 1)) * 100, 100)}%` }}
+                    >
                      {/* Gloss effect */}
                      <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20"></div>
                    </div>
@@ -320,13 +350,13 @@ export default function RelatorioPage() {
                </div>
                <div className="h-72 w-full">
                  <ResponsiveContainer width="100%" height="100%">
-                   <LineChart data={dailyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                     <XAxis dataKey="date" tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} />
-                     <YAxis tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} allowDecimals={false} />
-                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                     <Line type="monotone" dataKey="quantidade" name="Contratos" stroke="#2563eb" strokeWidth={4} dot={{ r: 6, strokeWidth: 2 }} activeDot={{ r: 8 }} />
-                   </LineChart>
+                    <LineChart data={dailyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="date" tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} />
+                      <YAxis tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                      <Line type="monotone" dataKey="quantidade" name="Vendas Firmadas" stroke="#2563eb" strokeWidth={4} dot={{ r: 6, strokeWidth: 2 }} activeDot={{ r: 8 }} />
+                    </LineChart>
                  </ResponsiveContainer>
                </div>
             </div>
@@ -339,13 +369,16 @@ export default function RelatorioPage() {
                </div>
                <div className="h-72 w-full">
                  <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={dailyData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                     <XAxis dataKey="date" tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} />
-                     <YAxis tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} tickFormatter={(val) => `R$ ${val/1000}k`} />
-                     <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                     <Bar dataKey="valor" name="Valor Bruto" fill="#10b981" radius={[8, 8, 0, 0]} />
-                   </BarChart>
+                    <BarChart data={dailyData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="date" tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} />
+                      <YAxis tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} tickFormatter={(val) => `R$ ${val/1000}k`} />
+                      <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '10px' }} />
+                      <Bar dataKey="digitado" name="Volume Digitado" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                      <Bar dataKey="pago" name="Volume Pago" fill="#10b981" radius={[8, 8, 0, 0]} />
+                      <Bar dataKey="reprovado" name="Volume Reprovado" fill="#ef4444" radius={[8, 8, 0, 0]} />
+                    </BarChart>
                  </ResponsiveContainer>
                </div>
             </div>
@@ -361,13 +394,16 @@ export default function RelatorioPage() {
                <div className="h-64 w-full flex justify-center">
                  <ResponsiveContainer width="100%" height="100%">
                    <PieChart>
-                     <Pie data={convenioData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value" stroke="none">
-                       {convenioData.map((entry, index) => (
-                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                       ))}
-                     </Pie>
-                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                     <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                      <Pie data={convenioData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value" stroke="none">
+                        {convenioData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value, name, props) => [formatCurrency(value) + ` (${props.payload.percent}%)`, name]}
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
                    </PieChart>
                  </ResponsiveContainer>
                </div>

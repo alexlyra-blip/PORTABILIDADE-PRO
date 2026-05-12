@@ -535,7 +535,7 @@ function SimuladorPageContent() {
             <p className="text-slate-500 font-bold italic text-sm uppercase tracking-[0.3em]">Portabilidade PRO & Análise de Crédito</p>
           </div>
           <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl shadow-xl border border-slate-100">
-             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-lg">
+             <div className="w-10 h-10 rounded-[1.25rem] bg-blue-600 flex items-center justify-center text-white shadow-lg">
                 <Icons.Rocket />
              </div>
              <div>
