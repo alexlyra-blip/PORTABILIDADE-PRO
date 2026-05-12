@@ -238,7 +238,16 @@ export default function RelatorioPage() {
             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Análise de Produção Consignado</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm">
+             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meta Diária:</span>
+             <input 
+                type="number" 
+                className="bg-transparent w-20 text-sm font-black text-blue-600 outline-none"
+                value={meta.valor_diario}
+                onChange={(e) => updateMeta({ valor_diario: e.target.value })}
+             />
+          </div>
           <button onClick={downloadReport} className="px-6 py-4 bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-600/30 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all flex items-center gap-2"><span>📥</span> Baixar Relatório CIP</button>
           <Link href="/meus-contratos" className="px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all">Contratos</Link>
           <Link href="/simulador" className="px-8 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-blue-500/30 hover:scale-105 transition-all">Nova Simulação</Link>

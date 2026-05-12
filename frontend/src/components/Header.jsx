@@ -12,17 +12,33 @@ export default function Header() {
   const fileInputRef = useRef(null);
   const settingsRef = useRef(null);
 
+  const [metaConfig, setMetaConfig] = useState({ valor_diario: 5000 });
+
   useEffect(() => {
     const loadUser = () => {
       const savedUser = localStorage.getItem('user');
       if (savedUser) {
         setUser(JSON.parse(savedUser));
       }
+      
+      const savedMeta = localStorage.getItem('meta_config');
+      if (savedMeta) {
+         setMetaConfig(JSON.parse(savedMeta));
+      }
+
       // Buscar dados para a meta
       api.get('/admin/dashboard-stats?days=1').then(res => setApiData(res)).catch(() => {});
     };
     
     loadUser();
+    
+    // Escuta mudanças na meta em outras janelas/páginas
+    const handleStorageChange = (e) => {
+       if (e.key === 'meta_config') {
+          setMetaConfig(JSON.parse(e.newValue));
+       }
+    };
+    window.addEventListener('storage', handleStorageChange);
     window.addEventListener('user-updated', loadUser);
     
     const handleClickOutside = (e) => {
@@ -41,6 +57,18 @@ export default function Header() {
   const getInitials = (name) => {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  };
+
+  const updateMetaDiaria = (newVal) => {
+    const updated = { ...metaConfig, valor_diario: Number(newVal) };
+    
+    // Calcula o valor alvo padrão se for mensal (x22)
+    updated.valor_alvo = updated.tipo === 'semanal' ? updated.valor_diario * 5 : updated.valor_diario * 22;
+    
+    setMetaConfig(updated);
+    localStorage.setItem('meta_config', JSON.stringify(updated));
+    // Dispara evento para outras abas/componentes
+    window.dispatchEvent(new Event('storage'));
   };
 
   const handleLogout = () => {
@@ -91,16 +119,25 @@ export default function Header() {
       </div>
 
       <div className="flex items-center space-x-6 relative">
-        <div className="hidden md:flex items-center bg-slate-50 dark:bg-white/5 rounded-full px-4 py-2 border border-slate-200 dark:border-white/10 shadow-sm">
-          <span className="text-[10px] uppercase font-black text-slate-400 mr-2 tracking-widest">Meta Diária:</span>
-          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-            {(() => {
-               const todayStr = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-               const todayData = apiData?.historical?.find(d => d.name === todayStr);
-               const valor = Number(todayData?.valor_propostas || 0);
-               return `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 0})}`;
-            })()} / 100k
-          </span>
+        <div className="hidden md:flex items-center bg-slate-50 dark:bg-white/5 rounded-2xl px-4 py-2 border border-slate-200 dark:border-white/10 shadow-sm gap-2">
+          <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Meta Diária:</span>
+          <div className="flex items-center gap-1 font-black text-sm">
+            <span className="text-emerald-600 dark:text-emerald-400">
+              {(() => {
+                 const todayStr = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+                 const todayData = apiData?.historical?.find(d => d.name === todayStr);
+                 const valor = Number(todayData?.valor_propostas || 0);
+                 return `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 0})}`;
+              })()}
+            </span>
+            <span className="text-slate-400">/</span>
+            <input 
+              type="number" 
+              value={metaConfig.valor_diario}
+              onChange={(e) => updateMetaDiaria(e.target.value)}
+              className="bg-transparent w-16 text-blue-600 outline-none border-b border-transparent hover:border-blue-300 focus:border-blue-500 transition-all text-center"
+            />
+          </div>
         </div>
         
 
@@ -110,8 +147,8 @@ export default function Header() {
             className="flex items-center space-x-3 pl-4 border-l border-slate-200 dark:border-white/10 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => setShowSettings(!showSettings)}
           >
-            <div className="w-11 h-11 rounded-xl p-0.5 shadow-xl border border-slate-200 dark:border-white/20" style={{ backgroundColor: user.brand_color || '#3b82f6' }}>
-              <div className="w-full h-full rounded-lg bg-white dark:bg-[#1e293b] flex items-center justify-center overflow-hidden">
+            <div className="w-11 h-11 rounded-2xl p-0.5 shadow-xl border border-slate-200 dark:border-white/20" style={{ backgroundColor: user.brand_color || '#3b82f6' }}>
+              <div className="w-full h-full rounded-xl bg-white dark:bg-[#1e293b] flex items-center justify-center overflow-hidden">
                 {user.avatar_url || user.logo_url ? (
                   <img src={getStaticUrl(user.avatar_url || user.logo_url)} alt={user.name} className="w-full h-full object-cover" />
                 ) : (
@@ -134,16 +171,16 @@ export default function Header() {
           {showSettings && (
             <div className="absolute right-0 mt-4 w-60 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-in slide-in-from-top-2">
               <div className="p-4 border-b border-slate-100 dark:border-slate-700 text-center">
-                 <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-blue-500 to-emerald-400 p-0.5 mb-2 shadow-md cursor-pointer relative group" onClick={() => fileInputRef.current?.click()}>
+                 <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-blue-500 to-emerald-400 p-0.5 mb-2 shadow-md cursor-pointer relative group" onClick={() => fileInputRef.current?.click()}>
                    <input type="file" ref={fileInputRef} onChange={handleAvatarChange} accept="image/*" className="hidden" />
-                   <div className="w-full h-full rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
+                   <div className="w-full h-full rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                      {user.avatar_url ? (
                        <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                      ) : (
                        <span className="text-xl font-bold text-slate-400 dark:text-slate-500">{getInitials(user.name)}</span>
                      )}
                    </div>
-                   <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                   <div className="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <span className="text-xs text-white font-semibold">Mudar Foto</span>
                    </div>
                  </div>
