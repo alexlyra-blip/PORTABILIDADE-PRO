@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import StatsCard from "@/components/admin/StatsCard";
 import QuickActions from "@/components/admin/QuickActions";
 import AnnouncementManager from "@/components/admin/AnnouncementManager";
-import { api } from "@/utils/api";
+import { api, getStaticUrl } from "@/utils/api";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   AreaChart, Area, PieChart, Pie, Cell, Legend
@@ -54,8 +54,16 @@ export default function AdminPage() {
           setRole(parsedUser.role);
           
           if (parsedUser.role === 'admin') {
-            const stats = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
-            setData(stats);
+            const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
+            const stats = res.data || res;
+            setData(prev => ({
+              ...prev,
+              ...stats,
+              totals: stats.totals || prev.totals,
+              stats: stats.stats || prev.stats,
+              historical: stats.historical || prev.historical,
+              agreements: stats.agreements || prev.agreements
+            }));
           }
         }
       } catch(e) {
