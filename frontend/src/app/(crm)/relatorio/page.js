@@ -17,8 +17,22 @@ export default function RelatorioPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const savedMeta = JSON.parse(localStorage.getItem("meta_config") || '{"tipo":"mensal","valor":100000}');
-      setMeta(savedMeta);
+      const savedMetaRaw = localStorage.getItem("meta_config");
+      let savedMeta = { tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000 };
+      
+      if (savedMetaRaw) {
+         try {
+            const parsed = JSON.parse(savedMetaRaw);
+            // Migração de formato antigo se necessário
+            savedMeta = {
+               tipo: parsed.tipo || 'mensal',
+               valor_diario: parsed.valor_diario || (parsed.valor / 22) || 5000,
+               valor_alvo: parsed.valor_alvo || parsed.valor || 110000
+            };
+         } catch(e) {}
+      }
+      
+      setMeta(prev => ({ ...prev, ...savedMeta }));
 
       try {
         // Busca simulações reais do banco de dados
@@ -67,17 +81,18 @@ export default function RelatorioPage() {
   const updateMeta = (updates) => {
     const newMeta = { ...meta, ...updates };
     
-    // Recalcula o valor alvo com base no tipo selecionado
-    let calculatedAlvo = Number(newMeta.valor_diario);
-    if (newMeta.tipo === 'semanal') calculatedAlvo = Number(newMeta.valor_diario) * 5;
-    if (newMeta.tipo === 'mensal') calculatedAlvo = Number(newMeta.valor_diario) * 22;
-    
-    newMeta.valor_alvo = calculatedAlvo;
+    // Só recalcula o valor alvo se a mudança for no tipo ou no valor diário
+    if (updates.tipo || updates.valor_diario) {
+       let calculatedAlvo = Number(newMeta.valor_diario);
+       if (newMeta.tipo === 'semanal') calculatedAlvo = Number(newMeta.valor_diario) * 5;
+       if (newMeta.tipo === 'mensal') calculatedAlvo = Number(newMeta.valor_diario) * 22;
+       newMeta.valor_alvo = calculatedAlvo;
+    }
     
     localStorage.setItem("meta_config", JSON.stringify({ 
       tipo: newMeta.tipo, 
       valor_diario: newMeta.valor_diario,
-      valor_alvo: calculatedAlvo
+      valor_alvo: newMeta.valor_alvo
     }));
     
     setMeta(newMeta);
@@ -239,15 +254,6 @@ export default function RelatorioPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm">
-             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meta Diária:</span>
-             <input 
-                type="number" 
-                className="bg-transparent w-20 text-sm font-black text-blue-600 outline-none"
-                value={meta.valor_diario}
-                onChange={(e) => updateMeta({ valor_diario: e.target.value })}
-             />
-          </div>
           <button onClick={downloadReport} className="px-6 py-4 bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-600/30 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all flex items-center gap-2"><span>📥</span> Baixar Relatório CIP</button>
           <Link href="/meus-contratos" className="px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all">Contratos</Link>
           <Link href="/simulador" className="px-8 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-blue-500/30 hover:scale-105 transition-all">Nova Simulação</Link>
@@ -315,10 +321,10 @@ export default function RelatorioPage() {
                     </select>
                     <div className="h-6 w-px bg-slate-300 dark:bg-slate-600"></div>
                     <div className="flex flex-col">
-                       <span className="text-[8px] font-black text-slate-400 uppercase">Valor Alvo</span>
+                       <span className="text-[8px] font-black text-slate-400 uppercase">Valor do Alvo ({meta.tipo})</span>
                        <input 
                           type="number" 
-                          className="bg-transparent w-24 text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase outline-none"
+                          className="bg-transparent w-32 text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase outline-none border-b border-blue-500/20 focus:border-blue-500"
                           placeholder="Valor Alvo"
                           value={meta.valor_alvo}
                           onChange={(e) => updateMeta({ valor_alvo: e.target.value })}
