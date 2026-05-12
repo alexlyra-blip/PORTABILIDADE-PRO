@@ -126,6 +126,7 @@ export default function RelatorioPage() {
     processChartData(contracts, newMeta);
   };
 
+  const processChartData = (data, currentMeta) => {
     const dailyMap = {}; // Para o financeiro (Barras)
     const quantityMap = {}; // Para as quantidades por convênio (Linhas)
     const convenioMap = {};
