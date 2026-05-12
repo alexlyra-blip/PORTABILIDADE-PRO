@@ -27,23 +27,24 @@ export default function RelatorioPage() {
   const [meta, setMeta] = useState({ tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000, progresso: 0 });
 
   useEffect(() => {
+    // Carrega meta do storage no topo do escopo do useEffect
+    const savedMetaRaw = localStorage.getItem("meta_config");
+    let currentMeta = { tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000 };
+    if (savedMetaRaw) {
+      try {
+        const parsed = JSON.parse(savedMetaRaw);
+        currentMeta = {
+          tipo: parsed.tipo || 'mensal',
+          valor_diario: parsed.valor_diario || 5000,
+          valor_alvo: parsed.valor_alvo || 110000
+        };
+      } catch(e) {}
+    }
+
     const loadInitialData = () => {
-      // Carrega meta do storage
-      const savedMetaRaw = localStorage.getItem("meta_config");
-      let currentMeta = { tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000 };
-      if (savedMetaRaw) {
-        try {
-          const parsed = JSON.parse(savedMetaRaw);
-          currentMeta = {
-            tipo: parsed.tipo || 'mensal',
-            valor_diario: parsed.valor_diario || 5000,
-            valor_alvo: parsed.valor_alvo || 110000
-          };
-        } catch(e) {}
-      }
       setMeta(prev => ({ ...prev, ...currentMeta }));
 
-      // Processa contratos locais IMEDIATAMENTE para ser rápido
+      // Processa contratos locais IMEDIATAMENTE
       const localDataRaw = localStorage.getItem("accepted_contracts");
       if (localDataRaw) {
         try {
@@ -83,21 +84,24 @@ export default function RelatorioPage() {
         });
 
         setContracts(formattedContracts);
-        processChartData(formattedContracts, savedMeta);
+        processChartData(formattedContracts, currentMeta);
       } catch (error) {
         console.error("Erro ao carregar relatório:", error);
         
         // Fallback para localStorage se a API falhar
         const saved = localStorage.getItem("accepted_contracts");
         if (saved) {
-           let parsed = JSON.parse(saved);
-           setContracts(parsed);
-           processChartData(parsed, savedMeta);
+           try {
+              let parsed = JSON.parse(saved);
+              setContracts(parsed);
+              processChartData(parsed, currentMeta);
+           } catch(e) {}
         }
       }
     };
 
-    fetchData();
+    loadInitialData();
+    fetchServerData();
   }, []);
 
   const updateMeta = (updates) => {
@@ -124,6 +128,7 @@ export default function RelatorioPage() {
   const processChartData = (data, currentMeta) => {
     const dailyMap = {};
     const convenioMap = {};
+    const allConveniosSet = new Set();
     let totalQtd = 0;
     let totalValor = 0;
     let totalTroco = 0;
@@ -153,7 +158,7 @@ export default function RelatorioPage() {
       const vContrato = Number(item.valor_contrato || 0);
       const vTroco = Number(item.valor_troco || 0);
       const conv = item.convenio || "Outros";
-      allConvenios.add(conv);
+      allConveniosSet.add(conv);
 
       // Totals
       totalQtd++;
@@ -209,7 +214,7 @@ export default function RelatorioPage() {
     const dData = Object.values(dailyMap).sort((a,b) => new Date(a.date) - new Date(b.date));
     setDailyData(dData);
     setConvenioData(cData);
-    setAvailableConvenios(Array.from(allConvenios));
+    setAvailableConvenios(Array.from(allConveniosSet));
     setTotals({ qtd: totalQtd, valor: totalValor, troco: totalTroco, cipHojeQtd: expectedCipTodayCount, cipHojeValor: expectedCipTodayValue });
     setMeta(prev => ({ ...prev, progresso: pagoProgress }));
   };
