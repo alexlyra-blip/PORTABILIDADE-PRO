@@ -113,16 +113,33 @@ export default function RelatorioPage() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
-    data.forEach(item => {
+    // Tenta carregar as propostas de "Meus Contratos" (LocalStorage)
+    // No futuro, isso deve vir de uma API de Propostas no Banco de Dados
+    const savedContracts = localStorage.getItem("accepted_contracts");
+    let allData = data; // Fallback para dados da API de simulações se não houver contratos
+
+    if (savedContracts) {
+       try {
+          const parsed = JSON.parse(savedContracts);
+          if (parsed && parsed.length > 0) {
+             allData = parsed;
+          }
+       } catch(e) {}
+    }
+
+    allData.forEach(item => {
+      const vContrato = Number(item.valor_contrato || 0);
+      const vTroco = Number(item.valor_troco || 0);
+
       // Totals
       totalQtd++;
-      totalValor += (item.valor_contrato || 0);
-      totalTroco += (item.valor_troco || 0);
+      totalValor += vContrato;
+      totalTroco += vTroco;
 
       // Verificação CIP de Hoje (Saldos Retornados)
       if (item.status === 'AG. RETORNO CIP' || item.data_cip === todayStr) {
          expectedCipTodayCount++;
-         expectedCipTodayValue += (item.valor_contrato || 0);
+         expectedCipTodayValue += vContrato;
       }
 
       // Check Meta Progresso ('PAGO')
@@ -130,17 +147,16 @@ export default function RelatorioPage() {
       if (item.status === 'PAGO' && itemDate) {
          if (currentMeta.tipo === 'mensal') {
             if (itemDate.getMonth() === today.getMonth() && itemDate.getFullYear() === today.getFullYear()) {
-               pagoProgress += (item.valor_contrato || 0);
+               pagoProgress += vContrato;
             }
          } else if (currentMeta.tipo === 'semanal') {
-            // Verifica se está na semana atual (simplificado)
             const diff = today.getTime() - itemDate.getTime();
             if (diff >= 0 && diff < 7 * 24 * 60 * 60 * 1000) {
-               pagoProgress += (item.valor_contrato || 0);
+               pagoProgress += vContrato;
             }
          } else if (currentMeta.tipo === 'diaria') {
             if (itemDate.toDateString() === today.toDateString()) {
-               pagoProgress += (item.valor_contrato || 0);
+               pagoProgress += vContrato;
             }
          }
       }
@@ -150,16 +166,16 @@ export default function RelatorioPage() {
       if (!dailyMap[date]) {
          dailyMap[date] = { date, digitado: 0, pago: 0, reprovado: 0 };
       }
-      dailyMap[date].digitado += (item.valor_contrato || 0);
-      if (item.status === 'PAGO') dailyMap[date].pago += (item.valor_contrato || 0);
-      if (item.status === 'REPROVADO') dailyMap[date].reprovado += (item.valor_contrato || 0);
+      dailyMap[date].digitado += vContrato;
+      if (item.status === 'PAGO') dailyMap[date].pago += vContrato;
+      if (item.status === 'REPROVADO') dailyMap[date].reprovado += vContrato;
 
       // Convenio stats
       const conv = item.convenio || "Outros";
       if (!convenioMap[conv]) {
          convenioMap[conv] = { name: conv, value: 0 };
       }
-      convenioMap[conv].value += (item.valor_contrato || 0); // Usar valor para representar % financeiro
+      convenioMap[conv].value += vContrato; 
     });
 
     const totalFinanceiro = Object.values(convenioMap).reduce((acc, curr) => acc + curr.value, 0);
@@ -345,10 +361,10 @@ export default function RelatorioPage() {
                     </div>
                 </div>
                 <div className="w-full h-6 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner border border-slate-200 dark:border-slate-700 relative">
-                    <div 
-                       className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-1000 ease-in-out relative"
-                       style={{ width: `${Math.min((meta.progresso / (meta.valor_alvo || 1)) * 100, 100)}%` }}
-                    >
+                   <div 
+                      className="h-full bg-blue-600 rounded-full transition-all duration-1000 ease-in-out relative shadow-[0_0_15px_rgba(37,99,235,0.4)]"
+                      style={{ width: `${Math.min((meta.progresso / (meta.valor_alvo || 1)) * 100, 100)}%` }}
+                   >
                      {/* Gloss effect */}
                      <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20"></div>
                    </div>
