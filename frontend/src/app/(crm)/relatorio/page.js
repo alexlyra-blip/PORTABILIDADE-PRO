@@ -8,10 +8,21 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from "recharts";
 
+const CONVENIO_COLORS = {
+  'INSS': '#2563eb',
+  'SIAPE': '#10b981',
+  'FGTS': '#f59e0b',
+  'GOVERNO': '#8b5cf6',
+  'OUTROS': '#64748b'
+};
+
+const RANDOM_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+
 export default function RelatorioPage() {
   const [contracts, setContracts] = useState([]);
   const [dailyData, setDailyData] = useState([]);
   const [convenioData, setConvenioData] = useState([]);
+  const [availableConvenios, setAvailableConvenios] = useState([]);
   const [totals, setTotals] = useState({ qtd: 0, valor: 0, troco: 0, cipHojeQtd: 0, cipHojeValor: 0 });
   const [meta, setMeta] = useState({ tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000, progresso: 0 });
 
@@ -130,13 +141,15 @@ export default function RelatorioPage() {
     allData.forEach(item => {
       const vContrato = Number(item.valor_contrato || 0);
       const vTroco = Number(item.valor_troco || 0);
+      const conv = item.convenio || "Outros";
+      allConvenios.add(conv);
 
       // Totals
       totalQtd++;
       totalValor += vContrato;
       totalTroco += vTroco;
 
-      // Verificação CIP de Hoje (Saldos Retornados)
+      // Verificação CIP de Hoje
       if (item.status === 'AG. RETORNO CIP' || item.data_cip === todayStr) {
          expectedCipTodayCount++;
          expectedCipTodayValue += vContrato;
@@ -161,17 +174,15 @@ export default function RelatorioPage() {
          }
       }
 
-      // Daily stats para o gráfico de barras
+      // Daily stats por Convênio
       const date = item.data_aceite || "N/A";
       if (!dailyMap[date]) {
-         dailyMap[date] = { date, digitado: 0, pago: 0, reprovado: 0 };
+         dailyMap[date] = { date };
       }
-      dailyMap[date].digitado += vContrato;
-      if (item.status === 'PAGO') dailyMap[date].pago += vContrato;
-      if (item.status === 'REPROVADO') dailyMap[date].reprovado += vContrato;
+      if (!dailyMap[date][conv]) dailyMap[date][conv] = 0;
+      dailyMap[date][conv] += vContrato;
 
-      // Convenio stats
-      const conv = item.convenio || "Outros";
+      // Convenio stats para Pizza
       if (!convenioMap[conv]) {
          convenioMap[conv] = { name: conv, value: 0 };
       }
@@ -184,9 +195,10 @@ export default function RelatorioPage() {
       percent: totalFinanceiro > 0 ? ((c.value / totalFinanceiro) * 100).toFixed(1) : 0
     }));
 
-    const dData = Object.values(dailyMap).sort((a,b) => a.date.localeCompare(b.date));
+    const dData = Object.values(dailyMap).sort((a,b) => new Date(a.date) - new Date(b.date));
     setDailyData(dData);
     setConvenioData(cData);
+    setAvailableConvenios(Array.from(allConvenios));
     setTotals({ qtd: totalQtd, valor: totalValor, troco: totalTroco, cipHojeQtd: expectedCipTodayCount, cipHojeValor: expectedCipTodayValue });
     setMeta(prev => ({ ...prev, progresso: pagoProgress }));
   };
@@ -398,20 +410,43 @@ export default function RelatorioPage() {
                   <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Volume Financeiro Diário</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Valor Bruto do Contrato</p>
                </div>
-               <div className="h-72 w-full">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailyData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+               <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dailyData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="date" tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} />
+                      <XAxis 
+                        dataKey="date" 
+                        tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tickFormatter={(val) => {
+                           if (!val || val === 'N/A') return 'N/A';
+                           const d = new Date(val + "T12:00:00");
+                           return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+                        }}
+                      />
                       <YAxis tick={{fontSize: 10, fill: '#64748b', fontWeight: 'bold'}} axisLine={false} tickLine={false} tickFormatter={(val) => `R$ ${val/1000}k`} />
-                      <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                      <Tooltip 
+                        formatter={(value) => formatCurrency(value)} 
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
+                      />
                       <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '10px' }} />
-                      <Bar dataKey="digitado" name="Volume Digitado" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-                      <Bar dataKey="pago" name="Volume Pago" fill="#10b981" radius={[8, 8, 0, 0]} />
-                      <Bar dataKey="reprovado" name="Volume Reprovado" fill="#ef4444" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                 </ResponsiveContainer>
-               </div>
+                      
+                      {availableConvenios.map((conv, idx) => (
+                         <Line 
+                            key={conv}
+                            type="monotone" 
+                            dataKey={conv} 
+                            name={conv} 
+                            stroke={CONVENIO_COLORS[conv?.toUpperCase()] || RANDOM_COLORS[idx % RANDOM_COLORS.length]} 
+                            strokeWidth={3}
+                            dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                            activeDot={{ r: 6, strokeWidth: 0 }}
+                         />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
             </div>
           </div>
 
