@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { api } from "@/utils/api";
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -15,26 +16,52 @@ export default function RelatorioPage() {
   const [meta, setMeta] = useState({ tipo: 'mensal', valor: 100000, progresso: 0 });
 
   useEffect(() => {
-    const saved = localStorage.getItem("accepted_contracts");
-    const savedMeta = JSON.parse(localStorage.getItem("meta_config") || '{"tipo":"mensal","valor":100000}');
-    setMeta(savedMeta);
+    const fetchData = async () => {
+      const savedMeta = JSON.parse(localStorage.getItem("meta_config") || '{"tipo":"mensal","valor":100000}');
+      setMeta(savedMeta);
 
-    if (saved) {
-       let parsed = JSON.parse(saved);
-       const userStr = localStorage.getItem('user');
-       const user = userStr ? JSON.parse(userStr) : null;
-       
-       if (user && user.role !== 'admin') {
-          if (user.role === 'promotora') {
-             parsed = parsed.filter(c => c.user_id === user.id || c.broker_id === user.id || !c.user_id);
-          } else {
-             parsed = parsed.filter(c => c.user_id === user.id);
-          }
-       }
-       
-       setContracts(parsed);
-       processChartData(parsed, savedMeta);
-    }
+      try {
+        // Busca simulações reais do banco de dados
+        const simulations = await api.get("/admin/simulations");
+        
+        // Mapeia o formato da API para o formato esperado pelo dashboard
+        const formattedContracts = simulations.map(sim => {
+          // Pega o melhor resultado aprovado (maior valor liberado)
+          const bestResult = sim.results
+            ?.filter(r => r.is_approved)
+            ?.sort((a, b) => (b.release_amount || 0) - (a.release_amount || 0))[0];
+
+          return {
+            id: sim.id,
+            cliente: sim.client_name,
+            cpf: sim.client_cpf,
+            banco: bestResult?.bank_name || "N/A",
+            convenio: sim.agreement,
+            valor_contrato: (sim.debt_balance || 0) + (bestResult?.release_amount || 0),
+            valor_troco: bestResult?.release_amount || 0,
+            parcela: sim.installment_value || 0,
+            status: 'PAGO', // Simplificado para o dashboard de resultados
+            data_aceite: sim.created_at?.split('T')[0],
+            user_id: sim.user_id
+          };
+        });
+
+        setContracts(formattedContracts);
+        processChartData(formattedContracts, savedMeta);
+      } catch (error) {
+        console.error("Erro ao carregar relatório:", error);
+        
+        // Fallback para localStorage se a API falhar
+        const saved = localStorage.getItem("accepted_contracts");
+        if (saved) {
+           let parsed = JSON.parse(saved);
+           setContracts(parsed);
+           processChartData(parsed, savedMeta);
+        }
+      }
+    };
+
+    fetchData();
   }, []);
 
   const updateMeta = (updates) => {

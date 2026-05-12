@@ -70,7 +70,7 @@ export default function AdminPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/export-stats-pdf?days=${filterDays}`;
+      const url = `${getStaticUrl('/admin/export-stats-pdf')}?days=${filterDays}`;
       const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
       if (!response.ok) throw new Error("Erro ao gerar PDF");
       const blob = await response.blob();
@@ -300,7 +300,7 @@ export default function AdminPage() {
                        {data.stats.top_banks && data.stats.top_banks.slice(0, 10).map((b, i) => (
                          <div key={i} className="flex items-center gap-2">
                            <div className="w-8 h-8 rounded-full overflow-hidden bg-white flex items-center justify-center shrink-0 border border-slate-700 shadow-md">
-                             {b.logo ? <img src={b.logo.startsWith('http') || b.logo.startsWith('data:') ? b.logo : `http://127.0.0.1:8000${b.logo.startsWith('/') ? '' : '/'}${b.logo}`} className="w-full h-full object-cover"/> : <span className="text-slate-800 text-[10px] font-black">{b.name.charAt(0)}</span>}
+                             {b.logo ? <img src={getStaticUrl(b.logo)} className="w-full h-full object-cover"/> : <span className="text-slate-800 text-[10px] font-black">{b.name.charAt(0)}</span>}
                            </div>
                            <div className="flex-1 min-w-0">
                               <p className="text-xs font-bold text-white truncate leading-tight">{b.name}</p>
@@ -318,7 +318,7 @@ export default function AdminPage() {
                        {data.stats.top_users && data.stats.top_users.slice(0, 10).map((u, i) => (
                          <div key={i} className="flex items-center gap-2">
                            <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700 shadow-md">
-                             {u.avatar ? <img src={u.avatar.startsWith('http') || u.avatar.startsWith('data:') ? u.avatar : `http://127.0.0.1:8000${u.avatar.startsWith('/') ? '' : '/'}${u.avatar}`} className="w-full h-full object-cover"/> : <span className="text-white text-[10px] font-black">{u.name.charAt(0)}</span>}
+                             {u.avatar ? <img src={getStaticUrl(u.avatar)} className="w-full h-full object-cover"/> : <span className="text-white text-[10px] font-black">{u.name.charAt(0)}</span>}
                            </div>
                            <div className="flex-1 min-w-0">
                               <p className="text-xs font-bold text-blue-400 truncate leading-tight">{u.name}</p>
