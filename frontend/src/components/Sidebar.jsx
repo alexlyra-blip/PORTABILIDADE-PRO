@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from "framer-motion";
+import { getStaticUrl } from "@/utils/api";
 
 // Ícones SVG nativos para evitar dependências externas (Zero Dependency)
 const Icons = {
@@ -83,13 +84,6 @@ export default function Sidebar() {
     router.push('/login');
   };
 
-  const getStaticUrl = (path) => {
-    if (!path || path === "null" || path === "undefined") return null;
-    if (path.startsWith('http')) return path;
-    if (path.startsWith('data:image')) return path;
-    const base = "http://localhost:8000";
-    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
-  };
 
   const menuItems = [
     { name: "Nova Simulação", href: "/simulador", icon: <Icons.Calculator />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },

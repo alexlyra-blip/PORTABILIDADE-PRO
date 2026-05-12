@@ -58,7 +58,8 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
-      setData(res);
+      const stats = res.data || res;
+      setData(stats);
     } catch (err) {
       console.error("Erro ao carregar dashboard:", err);
     } finally {
@@ -95,9 +96,12 @@ export default function DashboardPage() {
         prazo: 0 
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/pdf/generate-proposal`, {
+      const response = await fetch(`${window.location.origin}/api/pdf/generate-proposal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify(payload)
       });
 
@@ -132,9 +136,8 @@ export default function DashboardPage() {
 
   const handleExportPDF = async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
-      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/export-stats-pdf?days=${filterDays}`;
+      const url = `${window.location.origin}/api/admin/export-stats-pdf?days=${filterDays}`;
       const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
       if (!response.ok) throw new Error("Erro ao gerar PDF");
       const blob = await response.blob();

@@ -78,7 +78,7 @@ export default function AdminPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const url = `${getStaticUrl('/admin/export-stats-pdf')}?days=${filterDays}`;
+      const url = `${window.location.origin}/api/admin/export-stats-pdf?days=${filterDays}`;
       const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
       if (!response.ok) throw new Error("Erro ao gerar PDF");
       const blob = await response.blob();
