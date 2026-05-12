@@ -27,31 +27,42 @@ export default function RelatorioPage() {
   const [meta, setMeta] = useState({ tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000, progresso: 0 });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadInitialData = () => {
+      // Carrega meta do storage
       const savedMetaRaw = localStorage.getItem("meta_config");
-      let savedMeta = { tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000 };
-      
+      let currentMeta = { tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000 };
       if (savedMetaRaw) {
-         try {
-            const parsed = JSON.parse(savedMetaRaw);
-            // Migração de formato antigo se necessário
-            savedMeta = {
-               tipo: parsed.tipo || 'mensal',
-               valor_diario: parsed.valor_diario || (parsed.valor / 22) || 5000,
-               valor_alvo: parsed.valor_alvo || parsed.valor || 110000
-            };
-         } catch(e) {}
+        try {
+          const parsed = JSON.parse(savedMetaRaw);
+          currentMeta = {
+            tipo: parsed.tipo || 'mensal',
+            valor_diario: parsed.valor_diario || 5000,
+            valor_alvo: parsed.valor_alvo || 110000
+          };
+        } catch(e) {}
       }
-      
-      setMeta(prev => ({ ...prev, ...savedMeta }));
+      setMeta(prev => ({ ...prev, ...currentMeta }));
 
+      // Processa contratos locais IMEDIATAMENTE para ser rápido
+      const localDataRaw = localStorage.getItem("accepted_contracts");
+      if (localDataRaw) {
+        try {
+          const localData = JSON.parse(localDataRaw);
+          if (localData && localData.length > 0) {
+            setContracts(localData);
+            processChartData(localData, currentMeta);
+          }
+        } catch(e) {}
+      }
+    };
+
+    const fetchServerData = async () => {
       try {
-        // Busca simulações reais do banco de dados
-        const simulations = await api.get("/admin/simulations");
+        const res = await api.get('/admin/simulations');
+        const serverData = res.data || res;
         
         // Mapeia o formato da API para o formato esperado pelo dashboard
-        const formattedContracts = simulations.map(sim => {
-          // Pega o melhor resultado aprovado (maior valor liberado)
+        const formattedContracts = serverData.map(sim => {
           const bestResult = sim.results
             ?.filter(r => r.is_approved)
             ?.sort((a, b) => (b.release_amount || 0) - (a.release_amount || 0))[0];
