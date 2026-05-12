@@ -56,7 +56,8 @@ const handleResponse = async (response, endpoint, method) => {
 
 export const api = {
   async get(endpoint) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${API_BASE_URL}${cleanEndpoint}`;
     if (!url || url.includes('undefined')) {
       throw new Error("Configuração de API pendente ou URL inválida");
     }

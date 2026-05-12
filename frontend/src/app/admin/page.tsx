@@ -56,13 +56,24 @@ export default function AdminPage() {
           if (parsedUser.role === 'admin') {
             const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
             const stats = res.data || res;
+            
+            // Mapeamento ultra-robusto para aceitar variações de chaves do backend
             setData(prev => ({
               ...prev,
-              ...stats,
-              totals: stats.totals || prev.totals,
-              stats: stats.stats || prev.stats,
-              historical: stats.historical || prev.historical,
-              agreements: stats.agreements || prev.agreements
+              totals: {
+                banks: Number(stats.totals?.banks || stats.banks || prev.totals.banks),
+                tables: Number(stats.totals?.tables || stats.tables || prev.totals.tables),
+                simulations: Number(stats.totals?.simulations || stats.simulations || prev.totals.simulations),
+                users: Number(stats.totals?.users || stats.users || prev.totals.users || 0)
+              },
+              stats: {
+                ...prev.stats,
+                ...stats.stats,
+                top_banks: stats.stats?.top_banks || stats.stats?.top_10_banks || stats.stats?.top_3_banks || stats.top_banks || [],
+                top_users: stats.stats?.top_users || stats.stats?.top_10_users || stats.stats?.top_3_users || stats.top_users || []
+              },
+              historical: stats.historical || prev.historical || [],
+              agreements: stats.agreements || prev.agreements || []
             }));
           }
         }
