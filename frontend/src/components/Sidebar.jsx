@@ -134,7 +134,7 @@ export default function Sidebar() {
           animate={{ y: [0, -5, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="w-24 h-24 rounded-3xl overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
+          <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
             {(profileImageUrl && !imgError) ? (
               <img
                 src={profileImageUrl}
@@ -157,7 +157,7 @@ export default function Sidebar() {
           </div>
           {/* Pulsing Glow */}
           <div
-            className="absolute inset-0 rounded-3xl blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none"
+            className="absolute inset-0 rounded-xl blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none"
             style={{ backgroundColor: user.brand_color || '#3b82f6' }}
           ></div>
         </motion.div>
@@ -169,18 +169,18 @@ export default function Sidebar() {
         </div>
 
         {/* Branding Row */}
-        <div className="flex items-center justify-center gap-1.5 mt-2 group cursor-pointer text-center relative z-20">
+        <div className="flex items-center justify-center gap-1.5 mt-2 text-center relative z-20">
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-base text-white shadow-lg border border-white/30 pointer-events-none"
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-base text-white shadow-lg border border-white/30"
             style={{ backgroundColor: user.brand_color || '#3b82f6' }}
           >
             P
           </div>
           <span className="text-xl font-black tracking-tighter drop-shadow-lg text-white">
-            Portabilidade<span className="pointer-events-none" style={{ color: proColor }}>PRO</span>
+            Portabilidade<span style={{ color: user.brand_color || '#3b82f6' }}>PRO</span>
           </span>
         </div>
-        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-black mt-2 italic text-center">Simulador Inteligente</p>
+        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-black mt-2 italic text-center uppercase">Simulador Inteligente</p>
       </div>
 
       {/* Navigation */}
