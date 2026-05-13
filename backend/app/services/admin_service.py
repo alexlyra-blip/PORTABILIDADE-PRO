@@ -589,10 +589,14 @@ class AdminService:
         origin_counts = {} # current_bank_name -> count
 
         # Get sub-logos for origin bank matching
-        from app.models.sqlalchemy_models import SubAgreementLogo
-        sub_logos_res = await db.execute(select(SubAgreementLogo))
-        sub_logos = sub_logos_res.scalars().all()
-        sub_logos_map = {l.name.upper(): l.logo_url for l in sub_logos}
+        sub_logos_map = {}
+        try:
+            from app.models.sqlalchemy_models import SubAgreementLogo
+            sub_logos_res = await db.execute(select(SubAgreementLogo))
+            sub_logos = sub_logos_res.scalars().all()
+            sub_logos_map = {l.name.upper(): l.logo_url for l in sub_logos}
+        except Exception as e:
+            print(f"SubAgreementLogo table missing or error: {e}")
 
         for sim in simulations:
             sim_max_amount = 0.0
