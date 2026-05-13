@@ -109,6 +109,19 @@ export default function DashboardPage() {
     { title: "Taxa Média", desc: "Geral", value: data.stats.avg_rate, icon: <Icons.Percent />, color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
   ];
 
+  const getFullOriginBankName = (orig) => {
+    if (!orig) return 'N/A';
+    const map = {
+       "001": "BANCO DO BRASIL", "033": "SANTANDER", "104": "CAIXA", "237": "BRADESCO",
+       "341": "ITAU", "077": "INTER", "025": "ALFA", "626": "C6", "422": "SAFRA",
+       "041": "BANRISUL", "707": "DAYCOVAL", "655": "VOTORANTIM", "623": "PAN",
+       "069": "BPN", "212": "ORIGINAL", "047": "BANESE", "935": "FACTA", "012": "INBURSA", "000": "BVC"
+    };
+    const code = String(orig).trim().substring(0,3);
+    if(map[code]) return `${code} - ${map[code]}`;
+    return orig;
+  };
+
   return (
     <div className="w-full max-w-[98%] mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700">
       
@@ -279,7 +292,7 @@ export default function DashboardPage() {
                     <div className="border-l border-slate-100 dark:border-white/10 pl-4">
                       <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase truncate">{sim.agreement || "S/ CONVÊNIO"}</h4>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5 max-w-[150px] truncate" title={sim.current_bank}>
-                        Portado: {sim.current_bank || "N/A"}
+                        Portado: {getFullOriginBankName(sim.current_bank)}
                       </p>
                     </div>
 
