@@ -55,11 +55,28 @@ export default function AdminPage() {
           
           if (parsedUser.role === 'admin') {
             const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
-            setData(res.data || res);
+            const d = res.data || res;
+            setData({
+              ...d,
+              totals: d?.totals || { banks: 0, tables: 0, simulations: 0, simulations_period: 0 },
+              stats: {
+                top_banks: Array.isArray(d?.stats?.top_banks) ? d.stats.top_banks : [],
+                top_users: Array.isArray(d?.stats?.top_users) ? d.stats.top_users : [],
+                ...(d?.stats || {})
+              },
+              agreements: Array.isArray(d?.agreements) ? d.agreements : [],
+              historical: Array.isArray(d?.historical) ? d.historical : []
+            });
           }
         }
       } catch(e) {
         console.error("Dashboard error:", e);
+        setData({
+          totals: { banks: 0, tables: 0, simulations: 0, simulations_period: 0 },
+          stats: { top_bank: "N/A", top_table: "N/A", top_user: "N/A", top_user_count: 0, avg_rate: "0%", top_banks: [], top_users: [] },
+          agreements: [],
+          historical: []
+        });
       }
       setLoading(false);
     };

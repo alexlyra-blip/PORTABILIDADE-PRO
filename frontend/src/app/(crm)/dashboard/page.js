@@ -58,9 +58,27 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
-      setData(res.data || res);
+      const d = res.data || res;
+      
+      setData({
+        ...d,
+        stats: {
+           top_banks: Array.isArray(d?.stats?.top_banks) ? d.stats.top_banks : [],
+           top_users: Array.isArray(d?.stats?.top_users) ? d.stats.top_users : [],
+           ...(d?.stats || {})
+        },
+        agreements: Array.isArray(d?.agreements) ? d.agreements : [],
+        recent_simulations: Array.isArray(d?.recent_simulations) ? d.recent_simulations : [],
+        historical: Array.isArray(d?.historical) ? d.historical : []
+      });
     } catch (err) {
       console.error("Erro ao carregar dashboard:", err);
+      setData({
+         stats: { top_bank: "N/A", top_banks: [], top_users: [], avg_rate: "0%" },
+         agreements: [],
+         recent_simulations: [],
+         historical: []
+      });
     } finally {
       setLoading(false);
     }
