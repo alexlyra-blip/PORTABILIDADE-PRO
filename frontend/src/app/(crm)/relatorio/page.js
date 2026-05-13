@@ -191,49 +191,48 @@ export default function RelatorioPage() {
          expectedCipTodayValue += vContrato;
       }
 
-      // Meta Progresso (Bruto Produzido no Período)
+      // Filtro de Período (Para a Barra de Meta e todos os Gráficos)
+      let isInPeriod = false;
       const itemDate = item.data_aceite ? new Date(item.data_aceite + "T12:00:00") : null;
       if (item.data_aceite) {
          if (currentMeta.tipo === 'mensal') {
             const itemMonth = item.data_aceite.substring(0, 7);
             const todayMonth = todayStr.substring(0, 7);
-            if (itemMonth === todayMonth) {
-               pagoProgress += vContrato;
-            }
+            if (itemMonth === todayMonth) isInPeriod = true;
          } else if (currentMeta.tipo === 'semanal' && itemDate) {
             const diff = today.getTime() - itemDate.getTime();
             // Permite 1 dia de folga no futuro para compensar UTC
-            if (diff >= -86400000 && diff < 7 * 24 * 60 * 60 * 1000) {
-               pagoProgress += vContrato;
-            }
+            if (diff >= -86400000 && diff < 7 * 24 * 60 * 60 * 1000) isInPeriod = true;
          } else if (currentMeta.tipo === 'diaria') {
-            if (item.data_aceite === todayStr) {
-               pagoProgress += vContrato;
-            }
+            if (item.data_aceite === todayStr) isInPeriod = true;
          }
       }
 
-      // 1. Financeiro Diário (Para o BarChart)
-      const date = item.data_aceite || "N/A";
-      if (!dailyMap[date]) {
-         dailyMap[date] = { date, digitado: 0, pago: 0, reprovado: 0 };
-      }
-      dailyMap[date].digitado += vContrato;
-      if (item.status === 'PAGO') dailyMap[date].pago += vContrato;
-      if (item.status === 'REPROVADO') dailyMap[date].reprovado += vContrato;
+      if (isInPeriod) {
+         pagoProgress += vContrato;
 
-      // 2. Quantidade Diária por Convênio (Para o LineChart)
-      if (!quantityMap[date]) {
-         quantityMap[date] = { date };
-      }
-      if (!quantityMap[date][conv]) quantityMap[date][conv] = 0;
-      quantityMap[date][conv] += 1;
+         // 1. Financeiro Diário (Para o BarChart)
+         const date = item.data_aceite || "N/A";
+         if (!dailyMap[date]) {
+            dailyMap[date] = { date, digitado: 0, pago: 0, reprovado: 0 };
+         }
+         dailyMap[date].digitado += vContrato;
+         if (item.status === 'PAGO') dailyMap[date].pago += vContrato;
+         if (item.status === 'REPROVADO') dailyMap[date].reprovado += vContrato;
 
-      // 3. Distribuição (Pizza)
-      if (!convenioMap[conv]) {
-         convenioMap[conv] = { name: conv, value: 0 };
+         // 2. Quantidade Diária por Convênio (Para o LineChart)
+         if (!quantityMap[date]) {
+            quantityMap[date] = { date };
+         }
+         if (!quantityMap[date][conv]) quantityMap[date][conv] = 0;
+         quantityMap[date][conv] += 1;
+
+         // 3. Distribuição (Pizza)
+         if (!convenioMap[conv]) {
+            convenioMap[conv] = { name: conv, value: 0 };
+         }
+         convenioMap[conv].value += 1;
       }
-      convenioMap[conv].value += 1; // Quantidade para a rosca
     });
 
     const totalFinanceiro = Object.values(convenioMap).reduce((acc, curr) => acc + curr.value, 0);
