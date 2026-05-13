@@ -169,9 +169,9 @@ export default function RelatorioPage() {
          expectedCipTodayValue += vContrato;
       }
 
-      // Meta Progresso (PAGO)
+      // Meta Progresso (Bruto Produzido no Período)
       const itemDate = item.data_aceite ? new Date(item.data_aceite + "T12:00:00") : null;
-      if (item.status === 'PAGO' && itemDate) {
+      if (itemDate) {
          if (currentMeta.tipo === 'mensal') {
             if (itemDate.getMonth() === today.getMonth() && itemDate.getFullYear() === today.getFullYear()) {
                pagoProgress += vContrato;
@@ -360,8 +360,8 @@ export default function RelatorioPage() {
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl">
              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
                 <div className="pl-4 border-l-4 border-blue-600">
-                   <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Meta de Produção (Vendas Pagas)</h3>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Acompanhe seus fechamentos reais</p>
+                   <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Meta de Produção (Bruto Produzido)</h3>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Acompanhe sua produtividade total no período</p>
                 </div>
                  <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700">
                     <select 
