@@ -252,7 +252,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* Coluna 2: Banco Ofertado */}
+                    {/* Coluna 2: Banco Ofertado e Tabela */}
                     <div className="flex items-center gap-3 border-l border-slate-100 dark:border-white/10 pl-4">
                       {bestResult ? (
                         <>
@@ -264,24 +264,28 @@ export default function DashboardPage() {
                             )}
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Top Oferta</p>
-                            <h4 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase truncate">{bestResult.bank_name}</h4>
+                            <h4 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase truncate max-w-[130px]">{bestResult.bank_name}</h4>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5 max-w-[130px] truncate" title={bestResult.table_name}>
+                              {bestResult.table_name || "S/ Tabela"}
+                            </p>
                           </div>
                         </>
                       ) : (
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">S/ Oferta</div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sem Oferta</div>
                       )}
                     </div>
 
-                    {/* Coluna 3: Convênio e Cliente */}
+                    {/* Coluna 3: Convênio e Banco Portado */}
                     <div className="border-l border-slate-100 dark:border-white/10 pl-4">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Convênio: {sim.agreement}</p>
-                      <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase truncate max-w-[150px]">{sim.client_name || "Cliente S/N"}</h4>
+                      <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase truncate">{sim.agreement || "S/ CONVÊNIO"}</h4>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5 max-w-[150px] truncate" title={sim.current_bank}>
+                        Portado: {sim.current_bank || "N/A"}
+                      </p>
                     </div>
 
                     {/* Coluna 4: Prazo e Parcela */}
                     <div className="border-l border-slate-100 dark:border-white/10 pl-4">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Prazo: {bestResult?.term || 84}x</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Prazo: {bestResult?.term || 0}x</p>
                       <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase">
                         Parc: R$ {(bestResult?.installment || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}
                       </h4>

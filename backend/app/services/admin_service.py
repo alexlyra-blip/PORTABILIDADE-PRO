@@ -768,6 +768,7 @@ class AdminService:
                     "id": s.id,
                     "client_name": s.client_name,
                     "agreement": s.agreement,
+                    "current_bank": s.current_bank,
                     "user_name": s.user.name if s.user else "Removido",
                     "user_avatar": (s.user.logo_url or s.user.avatar_url) if s.user else None,
                     "created_at": s.created_at.strftime("%d/%m/%Y %H:%M") if s.created_at else "N/A",
