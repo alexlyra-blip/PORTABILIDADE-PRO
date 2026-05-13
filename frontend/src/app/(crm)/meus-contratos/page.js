@@ -155,6 +155,32 @@ export default function MeusContratosPage() {
       }).length;
    };
 
+   const formatCPF = (cpf) => {
+      if (!cpf) return "";
+      let val = cpf.replace(/\D/g, "");
+      if (val.length > 11) val = val.slice(0, 11);
+      if (val.length > 9) val = val.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+      else if (val.length > 6) val = val.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+      else if (val.length > 3) val = val.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+      return val;
+   };
+
+   const getFullOriginBankName = (orig) => {
+      if (!orig) return 'BANCO BVC';
+      const map = {
+         "001": "BANCO DO BRASIL", "033": "SANTANDER", "104": "CAIXA", "237": "BRADESCO",
+         "341": "ITAU", "077": "INTER", "025": "ALFA", "626": "C6", "422": "SAFRA",
+         "041": "BANRISUL", "707": "DAYCOVAL", "655": "VOTORANTIM", "623": "PAN",
+         "069": "BPN", "212": "ORIGINAL", "047": "BANESE", "935": "FACTA", "012": "INBURSA"
+      };
+      const codeMatch = orig.match(/^(\d{3})/);
+      if (codeMatch && !orig.includes('-')) {
+         const code = codeMatch[1];
+         if (map[code]) return `${code} - ${map[code]}`;
+      }
+      return orig;
+   };
+
    const getStats = () => {
       const total = contracts.length;
       const totalValue = contracts.reduce((acc, c) => acc + Number(c.valor_contrato || c.parcela || 0), 0);
@@ -427,7 +453,7 @@ export default function MeusContratosPage() {
                                                    type="text"
                                                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-500/30 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                                                    value={editData.cpf}
-                                                   onChange={(e) => setEditData({ ...editData, cpf: e.target.value })}
+                                                   onChange={(e) => setEditData({ ...editData, cpf: formatCPF(e.target.value) })}
                                                 />
                                              </div>
                                              <div className="space-y-1">
@@ -460,7 +486,7 @@ export default function MeusContratosPage() {
                                     ) : (
                                        <>
                                           <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight break-words">{contract.cliente}</h3>
-                                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-widest truncate">CPF: {contract.cpf}</p>
+                                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-widest truncate">CPF: {formatCPF(contract.cpf)}</p>
                                           {contract.numero_proposta && (
                                              <p className="text-[10px] text-blue-600 font-black uppercase mt-1 tracking-widest">
                                                 Nº PROPOSTA: {contract.numero_proposta}
@@ -557,7 +583,7 @@ export default function MeusContratosPage() {
                                              <span className="text-lg">🏛️</span>
                                           );
                                        })()}
-                                       <p className="text-sm font-black text-slate-900 dark:text-white uppercase">{contract.instituicao_origem || 'BANCO BVC'}</p>
+                                       <p className="text-sm font-black text-slate-900 dark:text-white uppercase">{getFullOriginBankName(contract.instituicao_origem)}</p>
                                     </div>
                                  </div>
                                  <div className="md:col-span-3 space-y-1 md:text-right md:pr-6">
