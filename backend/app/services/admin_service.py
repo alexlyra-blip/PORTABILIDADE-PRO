@@ -529,14 +529,6 @@ class AdminService:
 
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
-        # Check cache
-        cache_key = f"{current_user.id}_{current_user.role}_{days}_v3"
-        now = datetime.utcnow().timestamp()
-        if cache_key in AdminService._dashboard_cache:
-            cache_time, cache_data = AdminService._dashboard_cache[cache_key]
-            if now - cache_time < AdminService._dashboard_cache_ttl:
-                return cache_data
-
         # Base query for simulations
         if current_user.role == "admin":
             sim_query = select(Simulation)
@@ -584,7 +576,7 @@ class AdminService:
         
         # Historical data
         thirty_days_ago = period_ago
-        historical = {} # date -> {agreement -> count}
+        historical = {} # date -> {agreement -> count, "total": count}
         historical_values = {} # date -> {agreement -> sum_amount}
         origin_counts = {} # current_bank_name -> count
 
@@ -596,14 +588,14 @@ class AdminService:
             sub_logos = sub_logos_res.scalars().all()
             sub_logos_map = {l.name.upper(): l.logo_url for l in sub_logos}
         except Exception as e:
-            print(f"SubAgreementLogo table missing or error: {e}")
+            pass # Silently handle missing table
 
         for sim in simulations:
             sim_max_amount = 0.0
 
-            # Origin Bank Stats (Mais Portado) - FILTRO DEFINITIVO (Exige padrão 000 - NOME)
+            # Origin Bank Stats (Mais Portado)
             orig = str(sim.current_bank or "").strip().upper()
-            if re.match(r'^\d{3}\s*-\s*', orig):
+            if orig and len(orig) > 2:
                 origin_counts[orig] = origin_counts.get(orig, 0) + 1
 
             # Agreement Stats
@@ -616,11 +608,12 @@ class AdminService:
                 user_counts[uid] = {
                     "name": sim.user.name if sim.user else "Usuário Removido",
                     "avatar": (sim.user.logo_url or sim.user.avatar_url) if sim.user else None,
-                    "count": 0
+                    "count": 0,
+                    "role": sim.user.role if sim.user else "N/A"
                 }
             user_counts[uid]["count"] += 1
             
-            # Historical (last 30 days)
+            # Historical 
             if sim.created_at:
                 try:
                     created_dt = sim.created_at
@@ -629,47 +622,48 @@ class AdminService:
                         
                     if created_dt > thirty_days_ago:
                         date_str = created_dt.strftime("%d/%m")
-                        if date_str not in historical: historical[date_str] = {}
+                        if date_str not in historical: 
+                            historical[date_str] = {"total": 0}
                         historical[date_str][agreement] = historical[date_str].get(agreement, 0) + 1
+                        historical[date_str]["total"] += 1
                 except Exception as e:
-                    print("Date parse error:", e)
+                    pass
 
-            # Result Stats
+            # Result Stats (Contamos até resultados não aprovados para volume total processado)
             for res in sim.results:
-                if res.is_approved:
-                    bid = res.bank_id
-                    if bid not in bank_counts:
-                        bank_counts[bid] = {
-                            "name": banks_map.get(bid, f"Banco {bid}"),
-                            "logo": banks_logo_map.get(bid),
-                            "count": 0,
-                            "total_volume": 0.0
-                        }
-                    bank_counts[bid]["count"] += 1
+                bid = res.bank_id
+                if bid not in bank_counts:
+                    bank_counts[bid] = {
+                        "name": banks_map.get(bid, f"Banco {bid}"),
+                        "logo": banks_logo_map.get(bid),
+                        "count": 0,
+                        "total_volume": 0.0
+                    }
+                bank_counts[bid]["count"] += 1
+                
+                try:
+                    contract_val = float(sim.debt_balance or 0) + float(res.release_amount or 0)
+                    bank_counts[bid]["total_volume"] += contract_val
+                except ValueError:
+                    pass
+                
+                if res.table_name:
+                    if res.table_name not in table_counts:
+                        table_counts[res.table_name] = {"count": 0, "bank_id": bid}
+                    table_counts[res.table_name]["count"] += 1
+                
+                if res.offered_rate is not None and res.offered_rate > 0:
                     try:
-                        contract_val = float(sim.debt_balance or 0) + float(res.release_amount or 0)
-                        bank_counts[bid]["total_volume"] += contract_val
+                        rates.append(float(res.offered_rate))
                     except ValueError:
                         pass
-                    
-                    if res.table_name:
-                        if res.table_name not in table_counts:
-                            table_counts[res.table_name] = {"count": 0, "bank_id": bid}
-                        table_counts[res.table_name]["count"] += 1
-                    
-                    
-                    if res.offered_rate is not None:
-                        try:
-                            rates.append(float(res.offered_rate))
-                        except ValueError:
-                            pass
-                            
-                    if res.release_amount is not None:
-                        try:
-                            sim_max_amount = max(sim_max_amount, float(res.release_amount))
-                        except ValueError:
-                            pass
-                            
+                        
+                if res.release_amount is not None:
+                    try:
+                        sim_max_amount = max(sim_max_amount, float(res.release_amount))
+                    except ValueError:
+                        pass
+                        
             if sim_max_amount > 0 and sim.created_at:
                 try:
                     created_dt = sim.created_at
@@ -680,7 +674,7 @@ class AdminService:
                         if date_str not in historical_values: historical_values[date_str] = {}
                         historical_values[date_str][agreement] = historical_values[date_str].get(agreement, 0.0) + sim_max_amount
                 except Exception as e:
-                    print("Values sum error:", e)
+                    pass
 
         # Top Values
         top_10_banks = sorted(bank_counts.values(), key=lambda x: x.get("total_volume", 0.0), reverse=True)[:10]
@@ -691,12 +685,10 @@ class AdminService:
         top_table_logo = banks_logo_map.get(top_table_bank_id) if top_table_bank_id else None
 
         top_origin_bank = max(origin_counts, key=origin_counts.get) if origin_counts else "N/A"
-        # Find logo and full name for top origin bank
         top_origin_logo = None
         top_origin_name = top_origin_bank
         
         if top_origin_bank != "N/A":
-            # Extrair código e nome da string (ex: "047 - BANCO DO ESTADO DO SERGIPE")
             import re
             match = re.match(r'^(\d{3})\s*-\s*(.*)', str(top_origin_bank))
             if match:
@@ -706,7 +698,6 @@ class AdminService:
                 search_code = str(top_origin_bank)[:3].strip() if str(top_origin_bank)[:3].isdigit() else ""
                 search_name = str(top_origin_bank).upper()
             
-            # Mapeamento fixo de códigos conhecidos (backup)
             code_to_name = {
                 "001": "BANCO DO BRASIL", "033": "SANTANDER", "104": "CAIXA", "237": "BRADESCO",
                 "341": "ITAU", "077": "INTER", "025": "ALFA", "626": "C6", "422": "SAFRA",
@@ -716,12 +707,10 @@ class AdminService:
             if not search_name and search_code in code_to_name:
                 search_name = code_to_name[search_code]
 
-            # 1. Busca agressiva nas Logos Secundárias (Tabela sub_agreement_logos)
             search_code_clean = search_code.lstrip('0') if search_code.isdigit() else ""
             
             for l_name, l_url in sub_logos_map.items():
                 l_name_up = l_name.upper()
-                # Verifica se o código de 3 dígitos está no nome ou se o nome limpo bate
                 if (search_code and search_code in l_name_up) or \
                    (search_code_clean and search_code_clean in l_name_up) or \
                    (search_name and search_name in l_name_up):
@@ -729,7 +718,6 @@ class AdminService:
                     top_origin_name = l_name
                     break
             
-            # 2. Se não encontrou, busca nos Bancos Principais (comparando nome ou se o nome do banco contém o código)
             if not top_origin_logo:
                 for b_id, b_name in banks_map.items():
                     b_name_up = b_name.upper()
@@ -741,13 +729,10 @@ class AdminService:
 
         avg_rate = sum(rates) / len(rates) if rates else 0
 
-        # Format historical for Recharts
-        # Ensure all agreements exist in each entry for stacking/multi-line
         agreements_list = list(agreement_counts.keys())
         historical_chart = []
-        # Sort by date (this is simplified as it's DD/MM, but good enough for demo)
         for d in sorted(historical.keys()):
-            entry = {"name": d}
+            entry = {"date": d, "simulations": historical[d].get("total", 0)}
             for agr in agreements_list:
                 entry[agr] = historical[d].get(agr, 0)
                 entry[f"{agr}_valor"] = historical_values.get(d, {}).get(agr, 0.0)
@@ -772,14 +757,12 @@ class AdminService:
                 "top_user_count": top_10_users[0]["count"] if top_10_users else 0,
                 "top_banks": top_10_banks,
                 "top_users": top_10_users,
-                "top_3_banks": top_10_banks, # Fallback
-                "top_3_users": top_10_users, # Fallback
                 "avg_rate": f"{avg_rate:.2f}%"
             },
             "agreements": [
                 {"name": name, "value": count} for name, count in agreement_counts.items()
             ],
-            "historical": historical_chart[-7:], # Last 7 active days
+            "historical": historical_chart[-7:], 
             "recent_simulations": [
                 {
                     "id": s.id,
@@ -802,7 +785,6 @@ class AdminService:
                 } for s in simulations[:10]
             ]
         }
-        AdminService._dashboard_cache[cache_key] = (now, response_data)
         return response_data
     @staticmethod
     async def get_active_announcement(db: AsyncSession):
