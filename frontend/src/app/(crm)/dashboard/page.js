@@ -58,22 +58,7 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
-      const stats = res.data || res;
-      
-      // Mapeamento ultra-robusto
-      setData({
-        ...stats,
-        stats: {
-          ...stats.stats,
-          top_10_banks: stats.stats?.top_10_banks || stats.stats?.top_banks || stats.stats?.top_3_banks || stats.top_banks || [],
-          top_10_users: stats.stats?.top_10_users || stats.stats?.top_users || stats.stats?.top_3_users || stats.top_users || [],
-          top_bank: stats.stats?.top_bank || "...",
-          top_bank_logo: stats.stats?.top_bank_logo || null,
-          avg_rate: stats.stats?.avg_rate || "0%"
-        },
-        historical: stats.historical || [],
-        agreements: stats.agreements || []
-      });
+      setData(res.data || res);
     } catch (err) {
       console.error("Erro ao carregar dashboard:", err);
     } finally {
