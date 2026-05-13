@@ -103,6 +103,27 @@ export default function RelatorioPage() {
 
     loadInitialData();
     fetchServerData();
+
+    // Sincronização em tempo real com o Header
+    const handleStorageChange = () => {
+       const savedMetaRaw = localStorage.getItem("meta_config");
+       if (savedMetaRaw) {
+          try {
+             const parsed = JSON.parse(savedMetaRaw);
+             setMeta(prev => {
+                if (prev.valor_diario === parsed.valor_diario) return prev;
+                const newMeta = { ...prev, valor_diario: parsed.valor_diario };
+                let calculatedAlvo = Number(newMeta.valor_diario);
+                if (newMeta.tipo === 'semanal') calculatedAlvo = Number(newMeta.valor_diario) * 5;
+                if (newMeta.tipo === 'mensal') calculatedAlvo = Number(newMeta.valor_diario) * 22;
+                newMeta.valor_alvo = calculatedAlvo;
+                return newMeta;
+             });
+          } catch(e) {}
+       }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const updateMeta = (updates) => {
@@ -121,6 +142,7 @@ export default function RelatorioPage() {
       valor_diario: newMeta.valor_diario,
       valor_alvo: newMeta.valor_alvo
     }));
+    window.dispatchEvent(new Event('storage'));
     
     setMeta(newMeta);
     processChartData(contracts, newMeta);
@@ -377,14 +399,14 @@ export default function RelatorioPage() {
                        <option value="mensal">Meta Mensal</option>
                     </select>
                     <div className="h-6 w-px bg-slate-300 dark:bg-slate-600"></div>
-                    <div className="flex flex-col">
+                     <div className="flex flex-col">
                        <span className="text-[8px] font-black text-slate-400 uppercase">Valor do Alvo ({meta.tipo})</span>
                        <input 
                           type="number" 
                           className="bg-transparent w-32 text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase outline-none border-b border-blue-500/20 focus:border-blue-500"
                           placeholder="Valor Alvo"
                           value={meta.valor_alvo}
-                          onChange={(e) => updateMeta({ valor_alvo: e.target.value })}
+                          readOnly
                        />
                     </div>
                  </div>
