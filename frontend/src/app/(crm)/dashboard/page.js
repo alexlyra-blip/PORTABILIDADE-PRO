@@ -233,7 +233,7 @@ export default function DashboardPage() {
                  <div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase mb-4 tracking-widest border-b border-slate-200 dark:border-white/10 pb-2">Top 10 Bancos</p>
                     <div className="space-y-4">
-                       {data.stats.top_10_banks && data.stats.top_10_banks.slice(0, 10).map((b, i) => (
+                       {data?.stats?.top_banks && data.stats.top_banks.slice(0, 10).map((b, i) => (
                          <div key={i} className="flex items-center gap-3">
                            <div className="w-10 h-10 rounded-full overflow-hidden bg-white flex items-center justify-center shrink-0 border-2 border-slate-200 dark:border-slate-700 shadow-sm">
                              {b.logo ? <img src={getStaticUrl(b.logo)} className="w-full h-full object-cover"/> : <span className="text-slate-800 text-sm font-black">{b.name?.charAt(0) || "B"}</span>}
@@ -252,7 +252,7 @@ export default function DashboardPage() {
                  <div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase mb-4 tracking-widest border-b border-slate-200 dark:border-white/10 pb-2">Top 10 Corretores</p>
                     <div className="space-y-4">
-                       {data.stats.top_10_users && data.stats.top_10_users.slice(0, 10).map((u, i) => (
+                       {data?.stats?.top_users && data.stats.top_users.slice(0, 10).map((u, i) => (
                          <div key={i} className="flex items-center gap-3">
                            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border-2 border-slate-200 dark:border-slate-700 shadow-sm">
                              {u.avatar ? <img src={getStaticUrl(u.avatar)} className="w-full h-full object-cover"/> : <span className="text-slate-800 dark:text-white text-sm font-black">{u.name?.charAt(0) || "U"}</span>}

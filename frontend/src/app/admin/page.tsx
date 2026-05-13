@@ -297,7 +297,7 @@ export default function AdminPage() {
                  <div>
                     <p className="text-[10px] text-slate-400 font-black uppercase mb-3 tracking-widest border-b border-white/10 pb-1.5">Top 10 Bancos</p>
                     <div className="space-y-3">
-                       {data.stats.top_banks && data.stats.top_banks.slice(0, 10).map((b, i) => (
+                       {data?.stats?.top_banks && data.stats.top_banks.slice(0, 10).map((b, i) => (
                          <div key={i} className="flex items-center gap-2">
                            <div className="w-8 h-8 rounded-full overflow-hidden bg-white flex items-center justify-center shrink-0 border border-slate-700 shadow-md">
                              {b.logo ? <img src={getStaticUrl(b.logo)} className="w-full h-full object-cover"/> : <span className="text-slate-800 text-[10px] font-black">{b.name.charAt(0)}</span>}
@@ -315,7 +315,7 @@ export default function AdminPage() {
                  <div>
                     <p className="text-[10px] text-slate-400 font-black uppercase mb-3 tracking-widest border-b border-white/10 pb-1.5">Top 10 Corretores</p>
                     <div className="space-y-3">
-                       {data.stats.top_users && data.stats.top_users.slice(0, 10).map((u, i) => (
+                       {data?.stats?.top_users && data.stats.top_users.slice(0, 10).map((u, i) => (
                          <div key={i} className="flex items-center gap-2">
                            <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700 shadow-md">
                              {u.avatar ? <img src={getStaticUrl(u.avatar)} className="w-full h-full object-cover"/> : <span className="text-white text-[10px] font-black">{u.name.charAt(0)}</span>}
