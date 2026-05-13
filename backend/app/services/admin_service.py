@@ -779,6 +779,9 @@ class AdminService:
                             "table_name": r.table_name,
                             "offered_rate": r.offered_rate,
                             "release_amount": float(r.release_amount) if r.release_amount is not None else 0.0,
+                            "term": r.term if getattr(r, 'term', None) else 84,
+                            "installment": float(r.installment_value) if getattr(r, 'installment_value', None) else 0.0,
+                            "contract_value": float(s.debt_balance or 0) + float(r.release_amount or 0),
                             "is_approved": r.is_approved
                         } for r in s.results
                     ]

@@ -290,10 +290,10 @@ export default function AdminPage() {
                 {data.stats.top_banks.map((bank, index) => (
                   <div key={index} className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all">
                     <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 font-black text-slate-300 flex items-center justify-center">#{index + 1}</div>
-                      <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center p-1.5 overflow-hidden">
+                      <div className="w-8 h-8 font-black text-slate-300 flex items-center justify-center shrink-0">#{index + 1}</div>
+                      <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center p-0 overflow-hidden shrink-0">
                         {bank.logo ? (
-                          <img src={getStaticUrl(bank.logo)} className="w-full h-full object-contain" alt={bank.name} />
+                          <img src={getStaticUrl(bank.logo)} className="w-full h-full object-cover" alt={bank.name} />
                         ) : (
                           <span className="text-lg font-black text-blue-600">{bank.name?.charAt(0)}</span>
                         )}
@@ -326,9 +326,13 @@ export default function AdminPage() {
                 {data.stats.top_users.map((user, index) => (
                   <div key={index} className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all">
                     <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 font-black text-slate-300 flex items-center justify-center">#{index + 1}</div>
-                      <div className="w-12 h-12 bg-gradient-to-tr from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg">
-                        {user.name?.charAt(0) || "U"}
+                      <div className="w-8 h-8 font-black text-slate-300 flex items-center justify-center shrink-0">#{index + 1}</div>
+                      <div className="w-12 h-12 bg-gradient-to-tr from-blue-500 to-indigo-500 rounded-xl overflow-hidden flex items-center justify-center text-white font-black text-lg shadow-lg shrink-0 border border-slate-100 dark:border-white/10">
+                        {user.avatar ? (
+                          <img src={getStaticUrl(user.avatar)} className="w-full h-full object-cover" alt={user.name} />
+                        ) : (
+                          user.name?.charAt(0) || "U"
+                        )}
                       </div>
                       <div>
                         <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase truncate max-w-[150px]">{user.name}</h4>

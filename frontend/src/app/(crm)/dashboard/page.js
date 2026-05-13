@@ -105,12 +105,12 @@ export default function DashboardPage() {
   const statCards = [
     { title: "Top Banco", desc: "Mais indicado", value: data.stats.top_bank, img: data.stats.top_bank_logo, icon: <Icons.Bank />, color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
     { title: "Mais Portado", desc: "Origem frequente", value: data.stats.top_origin_bank, img: data.stats.top_origin_logo, icon: <Icons.History />, color: "bg-pink-500/10 text-pink-600 border-pink-500/20" },
-    { title: "Melhor Tabela", desc: "Mais agressiva", value: data.stats.top_table, icon: <Icons.Table />, color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+    { title: "Tabela Campeã", desc: "Tabela Mais Indicada", value: data.stats.top_table, img: data.stats.top_table_logo, icon: <Icons.Table />, color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
     { title: "Taxa Média", desc: "Geral", value: data.stats.avg_rate, icon: <Icons.Percent />, color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700">
+    <div className="w-full max-w-[98%] mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700">
       
       {/* Premium Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 to-slate-800 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden">
@@ -138,24 +138,24 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats Cards (Fail-Safe Render) */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((card, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group relative overflow-hidden">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 ${card.img ? 'bg-transparent p-0' : card.color} border shadow-inner`}>
+          <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group relative overflow-hidden flex flex-col justify-between">
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 overflow-hidden border shadow-inner shrink-0 ${card.img ? 'bg-white border-slate-200 dark:border-white/10' : card.color}`}>
               {card.img ? (
-                 <img src={getStaticUrl(card.img)} className="w-full h-full object-contain p-2" alt={card.title} />
+                 <img src={getStaticUrl(card.img)} className="w-full h-full object-cover" alt={card.title} />
               ) : (
                  card.icon
               )}
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{card.desc}</p>
-              <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight mt-1 truncate" title={card.value}>
+              <h3 className="text-[13px] leading-tight font-black text-slate-800 dark:text-white uppercase tracking-tight mt-1" title={card.value}>
                 {card.value || "—"}
               </h3>
             </div>
-            <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+            <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                {card.icon}
             </div>
           </div>
@@ -219,44 +219,91 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Simulacoes Recentes (Fail-Safe List) */}
+      {/* Simulacoes Recentes (Mesa de Operações) */}
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-white/5">
-           <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Últimas Simulações</h3>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monitoramento em Tempo Real</p>
+           <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Mesa de Operações</h3>
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Últimas Simulações Detalhadas</p>
         </div>
-        <div className="p-2">
+        <div className="p-2 overflow-x-auto">
           {data.recent_simulations.length > 0 ? (
-            <div className="divide-y divide-slate-50 dark:divide-white/5">
-              {data.recent_simulations.slice(0, 10).map((sim, i) => (
-                <div key={i} className="flex flex-col md:flex-row items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all">
-                  <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-xl flex items-center justify-center font-black">
-                      {sim.client_name ? sim.client_name.charAt(0) : "C"}
+            <div className="min-w-[1000px] divide-y divide-slate-50 dark:divide-white/5">
+              {data.recent_simulations.slice(0, 10).map((sim, i) => {
+                // Get the best result to show in the table (highest release amount)
+                const results = sim.results || [];
+                const bestResult = results.length > 0 
+                  ? results.reduce((prev, current) => (prev.release_amount > current.release_amount) ? prev : current)
+                  : null;
+
+                return (
+                  <div key={i} className="grid grid-cols-5 gap-4 items-center p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all">
+                    {/* Coluna 1: Consultor */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
+                        {sim.user_avatar ? (
+                          <img src={getStaticUrl(sim.user_avatar)} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-black text-blue-600">{sim.user_name.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Consultor</p>
+                        <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase truncate">{sim.user_name}</h4>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase truncate max-w-[200px]">{sim.client_name || "CLIENTE NÃO IDENTIFICADO"}</h4>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{sim.agreement || "INSS"} • {sim.created_at || "Hoje"}</p>
+
+                    {/* Coluna 2: Banco Ofertado */}
+                    <div className="flex items-center gap-3 border-l border-slate-100 dark:border-white/10 pl-4">
+                      {bestResult ? (
+                        <>
+                          <div className="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-100 overflow-hidden flex items-center justify-center shrink-0">
+                            {bestResult.bank_logo ? (
+                              <img src={getStaticUrl(bestResult.bank_logo)} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-sm font-black text-blue-600">{bestResult.bank_name.charAt(0)}</span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Top Oferta</p>
+                            <h4 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase truncate">{bestResult.bank_name}</h4>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">S/ Oferta</div>
+                      )}
                     </div>
+
+                    {/* Coluna 3: Convênio e Cliente */}
+                    <div className="border-l border-slate-100 dark:border-white/10 pl-4">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Convênio: {sim.agreement}</p>
+                      <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase truncate max-w-[150px]">{sim.client_name || "Cliente S/N"}</h4>
+                    </div>
+
+                    {/* Coluna 4: Prazo e Parcela */}
+                    <div className="border-l border-slate-100 dark:border-white/10 pl-4">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Prazo: {bestResult?.term || 84}x</p>
+                      <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase">
+                        Parc: R$ {(bestResult?.installment || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}
+                      </h4>
+                    </div>
+
+                    {/* Coluna 5: Valores */}
+                    <div className="border-l border-slate-100 dark:border-white/10 pl-4 text-right">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                        Contrato: R$ {(bestResult?.contract_value || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}
+                      </p>
+                      <h4 className="text-sm font-black text-emerald-600 uppercase bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded inline-block">
+                        Troco: R$ {(bestResult?.release_amount || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}
+                      </h4>
+                    </div>
+
                   </div>
-                  <div className="flex gap-4 mt-4 md:mt-0 w-full md:w-auto justify-between md:justify-end">
-                     <div className="text-center md:text-right px-4 border-r border-slate-100 dark:border-white/10">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Bancos</p>
-                        <p className="text-sm font-black text-slate-700 dark:text-slate-300">{(sim.results || []).length}</p>
-                     </div>
-                     <div className="text-center md:text-right px-4">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Maior Liberação</p>
-                        <p className="text-sm font-black text-emerald-600">
-                          R$ {Math.max(0, ...(sim.results || []).map(r => r.release_amount || 0)).toLocaleString()}
-                        </p>
-                     </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="py-12 flex items-center justify-center">
-               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhuma simulação no radar</p>
+               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhuma operação na mesa</p>
             </div>
           )}
         </div>
