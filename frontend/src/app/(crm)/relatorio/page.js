@@ -153,7 +153,7 @@ export default function RelatorioPage() {
     }
 
     allData.forEach(item => {
-      const vContrato = Number(item.valor_contrato || 0);
+      const vContrato = Number(item.valor_contrato || item.parcela || 0);
       const vTroco = Number(item.valor_troco || 0);
       const conv = item.convenio || "Outros";
       allConveniosSet.add(conv);
@@ -171,18 +171,21 @@ export default function RelatorioPage() {
 
       // Meta Progresso (Bruto Produzido no Período)
       const itemDate = item.data_aceite ? new Date(item.data_aceite + "T12:00:00") : null;
-      if (itemDate) {
+      if (item.data_aceite) {
          if (currentMeta.tipo === 'mensal') {
-            if (itemDate.getMonth() === today.getMonth() && itemDate.getFullYear() === today.getFullYear()) {
+            const itemMonth = item.data_aceite.substring(0, 7);
+            const todayMonth = todayStr.substring(0, 7);
+            if (itemMonth === todayMonth) {
                pagoProgress += vContrato;
             }
-         } else if (currentMeta.tipo === 'semanal') {
+         } else if (currentMeta.tipo === 'semanal' && itemDate) {
             const diff = today.getTime() - itemDate.getTime();
-            if (diff >= 0 && diff < 7 * 24 * 60 * 60 * 1000) {
+            // Permite 1 dia de folga no futuro para compensar UTC
+            if (diff >= -86400000 && diff < 7 * 24 * 60 * 60 * 1000) {
                pagoProgress += vContrato;
             }
          } else if (currentMeta.tipo === 'diaria') {
-            if (itemDate.toDateString() === today.toDateString()) {
+            if (item.data_aceite === todayStr) {
                pagoProgress += vContrato;
             }
          }
