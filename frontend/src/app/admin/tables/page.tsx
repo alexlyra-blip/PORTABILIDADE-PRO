@@ -286,7 +286,7 @@ export default function TablesPage() {
 
             let finalTables = [...agrTables];
             if (sortAlphabetically) {
-               finalTables.sort((a, b) => a.name.localeCompare(b.name));
+               finalTables.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
             }
 
             const shouldGroup = agr === "FORÇAS ARMADAS" || agr === "GOVERNOS";
@@ -297,7 +297,7 @@ export default function TablesPage() {
                   if (!groupedTables[sub]) groupedTables[sub] = [];
                   groupedTables[sub].push(t);
                });
-               groupedTables = Object.keys(groupedTables).sort().reduce((acc, key) => {
+               groupedTables = Object.keys(groupedTables).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).reduce((acc, key) => {
                   acc[key] = groupedTables[key];
                   return acc;
                }, {} as Record<string, any[]>);
