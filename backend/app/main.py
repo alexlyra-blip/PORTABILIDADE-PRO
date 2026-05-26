@@ -72,6 +72,19 @@ async def startup_event():
         await conn.run_sync(Base.metadata.create_all)
         print("✅ Estrutura do banco de dados verificada/criada.")
 
+    # Migração SQLite Local para nova coluna abater_margem_hp12c
+    try:
+        import sqlite3
+        if os.path.exists('./local_db.sqlite'):
+            conn_sq = sqlite3.connect('./local_db.sqlite')
+            try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN abater_margem_hp12c BOOLEAN DEFAULT 0")
+            except: pass
+            conn_sq.commit()
+            conn_sq.close()
+            print("✅ Coluna abater_margem_hp12c verificada/criada no SQLite local.")
+    except Exception as e:
+        print(f"SQLite migration log: {e}")
+
     # 2. DIAGNÓSTICO DE DADOS
     async with AsyncSessionLocal() as session:
         res_banks = await session.execute(select(Bank))

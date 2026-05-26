@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabela_obj, disable_weighted_validation=False):
+def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabela_obj, disable_weighted_validation=False, abate_hp12c=False):
     """
     Realiza os cálculos financeiros baseados no coeficiente e novas regras de tabela (Phase 5).
     """
@@ -37,9 +37,10 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
         taxa_portabilidade_calc = provided_rate
     else:
         try:
+            pmt_para_rate = parcela_para_calculo if abate_hp12c else parcela_atual
             taxa_portabilidade_calc = resolver_taxa_juros(
                 float(saldo_devedor), 
-                float(parcela_atual), 
+                float(pmt_para_rate), 
                 int(cliente_input.prazo_restante)
             )
         except Exception:

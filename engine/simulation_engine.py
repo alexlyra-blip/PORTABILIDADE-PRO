@@ -288,10 +288,12 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         try:
                             # Verifica se deve desativar a validação de taxa ponderada para este banco
                             should_disable_weighted = any(r.disable_weighted_rate_validation for r in regras_aplicaveis)
+                            should_abate_hp12c = any(getattr(r, "abater_margem_hp12c", False) for r in regras_aplicaveis)
                             
                             resultado = calcular_viabilidade_financeira(
                                 cliente_input, banco, coeff_obj, tabela,
-                                disable_weighted_validation=should_disable_weighted
+                                disable_weighted_validation=should_disable_weighted,
+                                abate_hp12c=should_abate_hp12c
                             )
                             
                             viavel = resultado[0]
