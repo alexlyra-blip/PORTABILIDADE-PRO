@@ -35,7 +35,7 @@ async def ensure_columns_exist():
             
             if not is_sqlite:
                 await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disable_weighted_rate_validation BOOLEAN DEFAULT FALSE"))
-                await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS abater_margem_hp12c BOOLEAN DEFAULT FALSE"))
+                await db.execute(text("ALTER TABLE bank_tables ADD COLUMN IF NOT EXISTS abater_margem_hp12c BOOLEAN DEFAULT FALSE"))
             
             await db.commit()
             print("🚀 Database migration check completed.")

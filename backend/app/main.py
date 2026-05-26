@@ -77,7 +77,7 @@ async def startup_event():
         import sqlite3
         if os.path.exists('./local_db.sqlite'):
             conn_sq = sqlite3.connect('./local_db.sqlite')
-            try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN abater_margem_hp12c BOOLEAN DEFAULT 0")
+            try: conn_sq.execute("ALTER TABLE bank_tables ADD COLUMN abater_margem_hp12c BOOLEAN DEFAULT 0")
             except: pass
             conn_sq.commit()
             conn_sq.close()

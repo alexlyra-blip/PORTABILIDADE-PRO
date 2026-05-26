@@ -141,7 +141,6 @@ class BankRuleBase(BaseModel):
     origin_banks_min_paid: Optional[str] = None
     excluded_benefit_types: Optional[str] = None
     disable_weighted_rate_validation: bool = False
-    abater_margem_hp12c: bool = False
 
 class BankRuleCreate(BankRuleBase):
     pass
@@ -170,6 +169,7 @@ class BankTableBase(BaseModel):
     taxa_convenio: float = 0.0
     portability_adjustment: float = 0.0
     refin_adjustment: float = 0.0
+    abater_margem_hp12c: bool = False
 
 class BankTableCreate(BankTableBase):
     pass

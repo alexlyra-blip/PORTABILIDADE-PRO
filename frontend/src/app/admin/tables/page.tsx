@@ -29,7 +29,8 @@ export default function TablesPage() {
     max_installment: 0,
     min_age: 0,
     max_age: 0,
-    term: 84
+    term: 84,
+    abater_margem_hp12c: false
   });
 
   const [selectedAgreement, setSelectedAgreement] = useState("");
@@ -98,7 +99,8 @@ export default function TablesPage() {
         max_installment: table.max_installment || 0,
         min_age: table.min_age || 0,
         max_age: table.max_age || 0,
-        term: table.term || 84
+        term: table.term || 84,
+        abater_margem_hp12c: table.abater_margem_hp12c || false
       });
     } else {
       setEditingTable(null);
@@ -119,7 +121,8 @@ export default function TablesPage() {
         max_installment: 0,
         min_age: 0,
         max_age: 0,
-        term: 84
+        term: 84,
+        abater_margem_hp12c: false
       });
     }
     
@@ -156,7 +159,8 @@ export default function TablesPage() {
         max_installment: parseFloat(formData.max_installment) || 0,
         min_age: parseInt(formData.min_age) || 0,
         max_age: parseInt(formData.max_age) || 0,
-        term: parseInt(formData.term) || 0
+        term: parseInt(formData.term) || 0,
+        abater_margem_hp12c: formData.abater_margem_hp12c || false
       };
 
       if (editingTable) {
@@ -312,6 +316,11 @@ export default function TablesPage() {
                       {table.sub_agreement && (
                         <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] font-black rounded-md uppercase tracking-wider">
                           {table.sub_agreement}
+                        </span>
+                      )}
+                      {table.abater_margem_hp12c && (
+                        <span className="px-2 py-0.5 bg-blue-500/10 text-blue-600 text-[8px] font-black rounded-md uppercase tracking-wider">
+                          🧮 Abate HP-12C
                         </span>
                       )}
                       <span className="text-blue-600 dark:text-blue-400 font-black text-xs">{table.term || 84}x</span>
@@ -563,6 +572,18 @@ export default function TablesPage() {
                         className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-amber-500 cursor-pointer"
                       />
                       <span className="text-[10px] font-bold text-slate-500">Ativa?</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-blue-600 uppercase mb-1">Abatimento HP-12C</label>
+                    <div className="flex items-center gap-2 h-8">
+                       <input 
+                        type="checkbox" 
+                        checked={formData.abater_margem_hp12c || false}
+                        onChange={(e) => setFormData({...formData, abater_margem_hp12c: e.target.checked})}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <span className="text-[10px] font-bold text-blue-600">Abater Margem?</span>
                     </div>
                   </div>
                 </div>

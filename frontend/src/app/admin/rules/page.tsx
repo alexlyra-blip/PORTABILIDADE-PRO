@@ -37,7 +37,6 @@ export default function RulesPage() {
     portability_rate_threshold: 0,
     use_balance_plus_released: false,
     disable_weighted_rate_validation: false,
-    abater_margem_hp12c: false,
     sub_agreement: ""
   });
 
@@ -110,7 +109,6 @@ export default function RulesPage() {
         portability_rate_threshold: rule.portability_rate_threshold || 0,
         use_balance_plus_released: rule.use_balance_plus_released || false,
         disable_weighted_rate_validation: rule.disable_weighted_rate_validation || false,
-        abater_margem_hp12c: rule.abater_margem_hp12c || false,
         sub_agreement: rule.sub_agreement || ""
       });
     } else {
@@ -140,7 +138,6 @@ export default function RulesPage() {
         portability_rate_threshold: 0,
         use_balance_plus_released: false,
         disable_weighted_rate_validation: false,
-        abater_margem_hp12c: false,
         sub_agreement: selectedSubAgreement || ""
       });
     }
@@ -357,12 +354,6 @@ export default function RulesPage() {
                                 <span className="text-xs">📝</span>
                                 <span className="text-[9px] font-black uppercase tracking-widest">{rule.literacy_required ? 'Só Alfabetizado' : 'Aceita Analfabeto'}</span>
                              </div>
-                             {rule.abater_margem_hp12c && (
-                                <div className="px-3 py-1.5 rounded-xl border bg-blue-500/10 border-blue-500/20 text-blue-600 flex items-center gap-2">
-                                   <span className="text-xs">🧮</span>
-                                   <span className="text-[9px] font-black uppercase tracking-widest">Abate HP-12C</span>
-                                </div>
-                             )}
                           </div>
 
                           {/* Viabilidade */}
@@ -615,20 +606,6 @@ export default function RulesPage() {
                     <div className="leading-tight">
                        <label htmlFor="disable_w" className="text-sm font-bold text-red-700 cursor-pointer select-none">DESATIVAR Validação de Taxa Ponderada?</label>
                        <p className="text-[10px] text-slate-500 font-medium italic">Se marcado, o sistema NÃO irá validar se a taxa da tabela é menor que a taxa final da operação para este banco.</p>
-                    </div>
-                 </div>
-
-                 <div className="flex items-center gap-3 pt-2 border-t border-blue-100/50">
-                    <input 
-                      type="checkbox" 
-                      id="abater_margem_hp12c" 
-                      checked={formData.abater_margem_hp12c} 
-                      onChange={(e) => setFormData({...formData, abater_margem_hp12c: e.target.checked})} 
-                      className="w-5 h-5 rounded border-slate-300 text-blue-600 cursor-pointer" 
-                    />
-                    <div className="leading-tight">
-                       <label htmlFor="abater_margem_hp12c" className="text-sm font-bold text-blue-700 cursor-pointer select-none">Abater Margem Consignado no HP-12C?</label>
-                       <p className="text-[10px] text-slate-500 font-medium">Se marcado, o abatimento da margem dos 2 cartões ativos ocorrerá antes de verificar a viabilidade na calculadora HP-12C e na taxa ponderada.</p>
                     </div>
                  </div>
               </div>

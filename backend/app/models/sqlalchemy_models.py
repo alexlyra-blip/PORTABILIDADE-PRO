@@ -129,7 +129,6 @@ class BankRule(Base):
 
     # Validation Toggles
     disable_weighted_rate_validation = Column(Boolean, default=False)
-    abater_margem_hp12c = Column(Boolean, default=False)
 
     bank = relationship("Bank", back_populates="rules")
 
@@ -157,6 +156,7 @@ class BankTable(Base):
     term = Column(Integer, nullable=True)
     min_rate = Column(Float, nullable=True) # Taxa Mínima Refin
     min_port_rate = Column(Float, nullable=True) # Taxa Mínima Portabilidade
+    abater_margem_hp12c = Column(Boolean, default=False)
 
     bank = relationship("Bank", back_populates="tables")
     coefficients = relationship("Coefficient", back_populates="table", cascade="all, delete-orphan")
