@@ -33,7 +33,7 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     # 3. Automated Portability Rate Calculation (i)
     # Prioritizes Front-End provided rate (e.g. manual adjustment) over HP-12C recalculation
     provided_rate = getattr(cliente_input, "taxa_juros", 0.0)
-    if provided_rate and provided_rate > 0:
+    if provided_rate and provided_rate > 0 and not abate_hp12c:
         taxa_portabilidade_calc = provided_rate
     else:
         try:
@@ -47,7 +47,7 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
             taxa_portabilidade_calc = 0.0
     
     # 4. Cálculo da Portabilidade Ajustada (Conforme Frontend)
-    taxa_port_base = float(cliente_input.taxa_juros or taxa_portabilidade_calc)
+    taxa_port_base = float(taxa_portabilidade_calc)
     ajuste_port = float(tabela_obj.portability_adjustment or 0.0)
     taxa_port_ajustada = taxa_port_base + ajuste_port
     
