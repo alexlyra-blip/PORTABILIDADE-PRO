@@ -78,9 +78,17 @@ function SimuladorPageContent() {
   const [contracts, setContracts] = useState([{
     id: 1, banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: "", taxaAtual: "", taxaAjustada: ""
   }]);
+  const [possuiDoisCartoes, setPossuiDoisCartoes] = useState("nao");
+  const [valorMargemNegativa, setValorMargemNegativa] = useState("R$ 81,05");
   const [activeContractIndex, setActiveContractIndex] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState({});
   const [subDropdownOpen, setSubDropdownOpen] = useState(false);
+  
+  useEffect(() => {
+    if (formData.agreement !== "INSS" || !formData.benefit_species) {
+      setPossuiDoisCartoes("nao");
+    }
+  }, [formData.agreement, formData.benefit_species]);
 
   const isInvalidezSpecies = ["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species);
   const is60Plus = parseInt(formData.idade || 0) >= 60;
@@ -290,7 +298,9 @@ function SimuladorPageContent() {
           data_concessao: formData.data_concessao || null, 
           is_60_plus: formData.is_60_plus || (["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species) && parseInt(formData.idade || 0) < 60),
           is_invalidez_60_plus: parseInt(formData.idade || 0) >= 60,
-          analfabeto: formData.analfabeto === "sim"
+          analfabeto: formData.analfabeto === "sim",
+          possui_dois_cartoes: possuiDoisCartoes === "sim",
+          valor_margem_negativa: possuiDoisCartoes === "sim" ? parseCurrency(valorMargemNegativa) : 0.0
         };
         return api.post('/simular', payload).then(res => ({ contrato_id: c.id, ...res }));
       });
@@ -343,9 +353,19 @@ function SimuladorPageContent() {
 
       const mappedContracts = contracts.map(c => {
          const found = inssBanks.find(b => b.value === c.banco);
-         return { ...c, banco_nome: found ? found.label : c.banco };
+         let finalParcela = c.parcela;
+         if (possuiDoisCartoes === "sim") {
+            const reduced = Math.max(0, parseCurrency(c.parcela) - parseCurrency(valorMargemNegativa));
+            finalParcela = maskCurrency(reduced.toFixed(2));
+         }
+         return { ...c, banco_nome: found ? found.label : c.banco, parcela: finalParcela, original_parcela: c.parcela };
       });
-      sessionStorage.setItem("simulation_input", JSON.stringify({ ...formData, contracts: mappedContracts }));
+      sessionStorage.setItem("simulation_input", JSON.stringify({ 
+        ...formData, 
+        possui_dois_cartoes: possuiDoisCartoes === "sim",
+        valor_margem_negativa: possuiDoisCartoes === "sim" ? parseCurrency(valorMargemNegativa) : 0.0,
+        contracts: mappedContracts 
+      }));
       sessionStorage.setItem("simulation_results", JSON.stringify(finalData));
       
       // Sincronizar taxa calculada para o Admin Preview
@@ -644,6 +664,61 @@ function SimuladorPageContent() {
                       <p className="text-[9px] font-bold text-blue-400 italic px-2">Necessário para validar regra de invalidez antes dos 60 anos.</p>
                     </div>
                   )}
+
+                  {/* Novo campo: Cliente possui 2 cartões ativos? (Exclusivo INSS + espécie selecionada) */}
+                  {formData.agreement === "INSS" && formData.benefit_species && (
+                    <div className="pt-4 border-t border-slate-100 space-y-3 animate-in slide-in-from-top-2 duration-500">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                          Cliente possui 2 cartões ativos?
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setPossuiDoisCartoes("sim")}
+                            className={`h-12 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition-all flex items-center justify-center gap-2 ${
+                              possuiDoisCartoes === "sim"
+                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100 cursor-pointer"
+                            }`}
+                          >
+                            {possuiDoisCartoes === "sim" && <Icons.Check size={14} />}
+                            Sim
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPossuiDoisCartoes("nao")}
+                            className={`h-12 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition-all flex items-center justify-center gap-2 ${
+                              possuiDoisCartoes === "nao"
+                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100 cursor-pointer"
+                            }`}
+                          >
+                            {possuiDoisCartoes === "nao" && <Icons.Check size={14} />}
+                            Não
+                          </button>
+                        </div>
+                      </div>
+
+                      {possuiDoisCartoes === "sim" && (
+                        <div className="space-y-1.5 pt-2 animate-in slide-in-from-top-2 duration-300">
+                          <label className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-1">
+                            Valor da Margem Negativa do Beneficiário
+                          </label>
+                          <input
+                            type="text"
+                            value={valorMargemNegativa}
+                            onChange={(e) => setValorMargemNegativa(maskCurrency(e.target.value))}
+                            className="w-full h-14 px-5 rounded-2xl bg-red-50/50 border border-red-200 focus:border-red-500 focus:bg-white transition-all outline-none font-black text-red-600 text-lg shadow-sm"
+                          />
+                          <p className="text-[9px] font-bold text-red-400 italic px-2">
+                            Esse abatimento será deduzido do valor da parcela no cálculo do troco e Refin.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>

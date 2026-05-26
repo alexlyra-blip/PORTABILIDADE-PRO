@@ -245,7 +245,7 @@ function OfertasPageContent() {
         instituicao_origem: activeContractData?.banco || "BANCO BVC",
         saldo_devedor: activeContractData?.saldoDevedor ? (typeof activeContractData.saldoDevedor === 'string' ? parseFloat(activeContractData.saldoDevedor.replace(/[^\d,]/g, '').replace(',', '.')) : activeContractData.saldoDevedor) : 5000.00,
         prazo_restante: activeContractData?.prazoTotal ? (Math.max(0, parseInt(activeContractData.prazoTotal) - parseInt(activeContractData.parcelasPagas || "0"))) : 56,
-        orig_parcela: parseFloat(activeContractData?.parcela) || parseFloat(inputData?.parcela) || offer.valor_parcela || 0
+        orig_parcela: activeContractData?.original_parcela ? (typeof activeContractData.original_parcela === 'string' ? parseFloat(activeContractData.original_parcela.replace(/[^\d,]/g, '').replace(',', '.')) : activeContractData.original_parcela) : (parseFloat(activeContractData?.parcela) || parseFloat(inputData?.parcela) || offer.valor_parcela || 0)
 
       });
       localStorage.setItem('accepted_contracts', JSON.stringify(existingContracts));
@@ -611,6 +611,11 @@ function OfertasPageContent() {
                               <span className="text-[10px] text-slate-400 ml-1 font-bold">a.m.</span>
                             </p>
                             <p className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mt-1">Prazo: {offer.prazo || "84"}X</p>
+                          </div>
+                          <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Parcela Final</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(offer.valor_parcela)}</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Deduções inclusas</p>
                           </div>
                           <div className="space-y-0.5 bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 flex flex-col justify-center w-full md:w-auto shrink-0 md:min-w-[180px] xl:min-w-[210px] shadow-sm">
                             <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center md:text-left">TROCO LIBERADO</p>

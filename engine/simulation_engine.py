@@ -331,7 +331,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                                 "taxa_convenio": float(stats["taxa_convenio"]) if stats else 0.0,
                                 "valor_liberado": troco,
                                 "valor_total_contrato": troco + saldo_devedor,
-                                "valor_parcela": parcela_atual,
+                                "valor_parcela": float(stats["valor_parcela"]) if stats and "valor_parcela" in stats else parcela_atual,
                                 "prazo": current_term,
                                 "priority": getattr(banco, 'priority', 99),
                                 "elegivel": True

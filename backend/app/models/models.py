@@ -27,6 +27,8 @@ class SimulacaoInput(BaseModel):
     # New Phase 5 Fields
     is_60_plus: bool = Field(False, description="Cliente 60+")
     is_invalidez_60_plus: bool = Field(False, description="Invalidez acima de 60 anos")
+    possui_dois_cartoes: bool = Field(False, description="Cliente possui 2 cartões ativos?")
+    valor_margem_negativa: float = Field(0.0, description="Valor da margem negativa do beneficiário")
 
     class Config:
         populate_by_name = True

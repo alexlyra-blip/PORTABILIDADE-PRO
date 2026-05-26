@@ -10,8 +10,16 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     saldo_devedor = Decimal(str(cliente_input.saldo_devedor))
     parcela_atual = Decimal(str(cliente_input.valor_parcela))
     
-    # Capacidade máxima de financiamento com a parcela atual
-    capacidade_financiamento = parcela_atual / coeficiente_valor
+    # Subtração da margem negativa para cálculo do troco se cliente possuir 2 cartões ativos
+    possui_dois_cartoes = getattr(cliente_input, "possui_dois_cartoes", False)
+    margem_negativa = Decimal(str(getattr(cliente_input, "valor_margem_negativa", 0.0) or 0.0))
+    
+    parcela_para_calculo = parcela_atual
+    if possui_dois_cartoes:
+        parcela_para_calculo = max(Decimal('0.0'), parcela_atual - margem_negativa)
+        
+    # Capacidade máxima de financiamento com a parcela final (com abatimento, se houver)
+    capacidade_financiamento = parcela_para_calculo / coeficiente_valor
     valor_liberado = capacidade_financiamento - saldo_devedor
     
     if valor_liberado <= 0:
@@ -65,7 +73,8 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
         "weighted_refin": float(media_taxas),
         "port_adj": ajuste_port,
         "refin_adj": ajuste_refin,
-        "taxa_convenio": float(taxa_tabela)
+        "taxa_convenio": float(taxa_tabela),
+        "valor_parcela": float(parcela_para_calculo)
     }, "Cálculo aprovado"
 
 def resolver_taxa_juros(pv, pmt, n):
