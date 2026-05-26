@@ -676,8 +676,9 @@ function OfertasPageContent() {
                       <p className="text-[9px] text-slate-400 font-bold uppercase text-center tracking-widest opacity-60">Geração de PDF Automática</p>
                     </div>
                   </div>
-                );
-              })
+                </div>
+              );
+            })
           )}
         </div>
 
