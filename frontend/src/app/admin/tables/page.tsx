@@ -37,6 +37,7 @@ export default function TablesPage() {
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
   const [sortAlphabetically, setSortAlphabetically] = useState(false);
   const [previewBaseRate, setPreviewBaseRate] = useState<number>(1.25);
+  const [termFilters, setTermFilters] = useState<Record<string, number | null>>({});
 
   const ESTADOS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"];
 
@@ -288,7 +289,14 @@ export default function TablesPage() {
             if (agrTables.length === 0) return null;
             const bank = banks.find(b => b.id.toString() === selectedBankId);
 
+            const filterKey = `${selectedBankId}-${agr}`;
+            const activeTerm = termFilters[filterKey] ?? null;
+
             let finalTables = [...agrTables];
+            if (activeTerm !== null) {
+              finalTables = finalTables.filter(t => (t.term || 84) === activeTerm);
+            }
+
             if (sortAlphabetically) {
                finalTables.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
             }
@@ -409,6 +417,35 @@ export default function TablesPage() {
                 </div>
                 
                 <div className="p-4">
+                  {/* Filtro de Prazo Premium */}
+                  {(() => {
+                    const availableTerms = Array.from(new Set(agrTables.map(t => t.term || 84))).sort((a, b) => a - b);
+                    if (availableTerms.length <= 1) return null;
+                    return (
+                      <div className="flex flex-wrap items-center gap-2 mb-6 p-2 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5 w-full">
+                        <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mx-3">Filtrar por Prazo:</span>
+                        <button
+                          onClick={() => setTermFilters({ ...termFilters, [filterKey]: null })}
+                          className={`py-2 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTerm === null ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-100 dark:border-white/5'}`}
+                        >
+                          Todos ({agrTables.length})
+                        </button>
+                        {availableTerms.map(term => {
+                          const termCount = agrTables.filter(t => (t.term || 84) === term).length;
+                          return (
+                            <button
+                              key={term}
+                              onClick={() => setTermFilters({ ...termFilters, [filterKey]: term })}
+                              className={`py-2 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTerm === term ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-100 dark:border-white/5'}`}
+                            >
+                              {term}X ({termCount})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
                   {shouldGroup ? (
                     Object.entries(groupedTables).map(([sub, tList]) => (
                       <div key={sub} className="mb-8 last:mb-2">

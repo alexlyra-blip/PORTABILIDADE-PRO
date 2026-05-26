@@ -24,6 +24,7 @@ export default function CoefficientsPage() {
 
   const [selectedAgreement, setSelectedAgreement] = useState("");
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
+  const [selectedTermFilter, setSelectedTermFilter] = useState<number | null>(null);
 
   const ESTADOS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"];
 
@@ -45,6 +46,7 @@ export default function CoefficientsPage() {
   useEffect(() => {
     if (selectedTableId) {
       loadCoefficients(selectedTableId);
+      setSelectedTermFilter(null);
     } else {
       setCoefficients([]);
     }
@@ -302,47 +304,93 @@ export default function CoefficientsPage() {
                       <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest">Nenhum fator de cálculo nesta tabela.</p>
                    </div>
                 ) : (
-                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                      {coefficients.sort((a, b) => b.term - a.term).map(coeff => (
-                         <div key={coeff.id} className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2.5rem] border border-slate-100 dark:border-white/5 hover:border-blue-500/40 hover:bg-white transition-all shadow-sm group">
-                            <div className="flex justify-between items-start mb-6">
-                               <div className="flex flex-col">
-                                  <span className="text-blue-600 dark:text-blue-400 font-black text-2xl leading-none tracking-tighter">{coeff.term}x</span>
-                                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">Parcelas</span>
-                               </div>
-                               <div className="text-right">
-                                  <span className="text-xs text-slate-800 dark:text-white font-black">{Number(coeff.interest_rate || 0).toFixed(2)}%</span>
-                                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest block">AM</span>
-                               </div>
+                   <div className="space-y-6">
+                      {/* Interactive Term Tabs */}
+                      {(() => {
+                         const uniqueTerms = Array.from(new Set(coefficients.map(c => c.term))).sort((a, b) => a - b);
+                         if (uniqueTerms.length <= 1) return null;
+                         return (
+                            <div className="flex flex-wrap items-center gap-2 mb-6 p-2 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5 w-full">
+                               <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mx-3">Prazos Disponíveis:</span>
+                               <button
+                                 onClick={() => setSelectedTermFilter(null)}
+                                 className={`py-2 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === null ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-100 dark:border-white/5'}`}
+                               >
+                                 Todos ({coefficients.length})
+                               </button>
+                               {uniqueTerms.map(term => {
+                                 const termCount = coefficients.filter(c => c.term === term).length;
+                                 return (
+                                   <button
+                                     key={term}
+                                     onClick={() => setSelectedTermFilter(term)}
+                                     className={`py-2 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === term ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-100 dark:border-white/5'}`}
+                                   >
+                                     {term}X ({termCount})
+                                   </button>
+                                 );
+                               })}
                             </div>
+                         );
+                      })()}
 
-                            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-inner mb-6">
-                               <p className="text-[9px] text-slate-400 font-black uppercase mb-1.5 tracking-[0.1em]">Fator de Cálculo</p>
-                               <p className="text-base font-mono font-black text-slate-900 dark:text-white tracking-tighter">{coeff.coefficient}</p>
-                            </div>
+                      {/* Coefficient Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                         {(() => {
+                            const filteredCoeffs = selectedTermFilter !== null 
+                               ? coefficients.filter(c => c.term === selectedTermFilter) 
+                               : coefficients;
+                            
+                            if (filteredCoeffs.length === 0) {
+                               return (
+                                  <div className="col-span-full py-10 text-center">
+                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum coeficiente correspondente a este prazo.</p>
+                                  </div>
+                               );
+                            }
 
-                            {/* Action Footer Premium */}
-                            <div className="mt-auto flex gap-3 pt-5 border-t border-slate-100 dark:border-white/5">
-                              <button 
-                                onClick={() => handleOpenModal(coeff)}
-                                className="flex-1 py-3 bg-gradient-to-b from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 hover:from-blue-600 hover:to-indigo-600 text-slate-600 dark:text-slate-300 hover:text-white rounded-[1.25rem] text-[9px] font-black uppercase tracking-widest transition-all duration-300 border border-slate-200 dark:border-slate-700/50 hover:border-transparent hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 flex items-center justify-center gap-2.5 group/btn relative overflow-hidden"
-                              >
-                                <svg className="w-4 h-4 text-slate-400 group-hover/btn:text-white transition-colors group-hover/btn:rotate-90 duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                Configurar
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
-                              </button>
-                              
-                              <button 
-                                onClick={() => handleDelete(coeff.id)}
-                                className="w-[46px] h-[46px] bg-rose-50/50 dark:bg-rose-900/10 hover:bg-gradient-to-br hover:from-rose-500 hover:to-red-600 text-rose-500 hover:text-white rounded-[1.25rem] transition-all duration-300 border border-rose-100 dark:border-rose-500/20 hover:border-transparent hover:shadow-xl hover:shadow-red-500/30 hover:-translate-y-0.5 flex items-center justify-center shrink-0 group/del relative overflow-hidden"
-                                title="Excluir Coeficiente"
-                              >
-                                <svg className="w-4 h-4 transition-transform group-hover/del:scale-110 group-hover/del:-rotate-12 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/del:translate-x-full transition-transform duration-700"></div>
-                              </button>
-                            </div>
-                         </div>
-                      ))}
+                            return filteredCoeffs.sort((a, b) => b.term - a.term).map(coeff => (
+                               <div key={coeff.id} className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2.5rem] border border-slate-100 dark:border-white/5 hover:border-blue-500/40 hover:bg-white transition-all shadow-sm group">
+                                  <div className="flex justify-between items-start mb-6">
+                                     <div className="flex flex-col">
+                                        <span className="text-blue-600 dark:text-blue-400 font-black text-2xl leading-none tracking-tighter">{coeff.term}x</span>
+                                        <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">Parcelas</span>
+                                     </div>
+                                     <div className="text-right">
+                                        <span className="text-xs text-slate-800 dark:text-white font-black">{Number(coeff.interest_rate || 0).toFixed(2)}%</span>
+                                        <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest block">AM</span>
+                                     </div>
+                                  </div>
+
+                                  <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-inner mb-6">
+                                     <p className="text-[9px] text-slate-400 font-black uppercase mb-1.5 tracking-[0.1em]">Fator de Cálculo</p>
+                                     <p className="text-base font-mono font-black text-slate-900 dark:text-white tracking-tighter">{coeff.coefficient}</p>
+                                  </div>
+
+                                  {/* Action Footer Premium */}
+                                  <div className="mt-auto flex gap-3 pt-5 border-t border-slate-100 dark:border-white/5">
+                                    <button 
+                                      onClick={() => handleOpenModal(coeff)}
+                                      className="flex-1 py-3 bg-gradient-to-b from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 hover:from-blue-600 hover:to-indigo-600 text-slate-600 dark:text-slate-300 hover:text-white rounded-[1.25rem] text-[9px] font-black uppercase tracking-widest transition-all duration-300 border border-slate-200 dark:border-slate-700/50 hover:border-transparent hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 flex items-center justify-center gap-2.5 group/btn relative overflow-hidden"
+                                    >
+                                      <svg className="w-4 h-4 text-slate-400 group-hover/btn:text-white transition-colors group-hover/btn:rotate-90 duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                      Configurar
+                                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
+                                    </button>
+                                    
+                                    <button 
+                                      onClick={() => handleDelete(coeff.id)}
+                                      className="w-[46px] h-[46px] bg-rose-50/50 dark:bg-rose-900/10 hover:bg-gradient-to-br hover:from-rose-500 hover:to-red-600 text-rose-500 hover:text-white rounded-[1.25rem] transition-all duration-300 border border-rose-100 dark:border-rose-500/20 hover:border-transparent hover:shadow-xl hover:shadow-red-500/30 hover:-translate-y-0.5 flex items-center justify-center shrink-0 group/del relative overflow-hidden"
+                                      title="Excluir Coeficiente"
+                                    >
+                                      <svg className="w-4 h-4 transition-transform group-hover/del:scale-110 group-hover/del:-rotate-12 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/del:translate-x-full transition-transform duration-700"></div>
+                                    </button>
+                                  </div>
+                               </div>
+                            ));
+                         })()}
+                      </div>
                    </div>
                 )}
              </div>
