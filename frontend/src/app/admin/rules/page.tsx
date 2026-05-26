@@ -346,7 +346,6 @@ export default function RulesPage() {
                           {/* Espécies */}
                           <div className="flex flex-wrap gap-2">
                              <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.accepts_disability ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500 opacity-60'}`}>
-{...}
                                 <span className="text-xs">♿</span>
                                 <span className="text-[9px] font-black uppercase tracking-widest">{rule.accepts_disability ? 'Invalidez OK' : 'Não Invalidez'}</span>
                              </div>
