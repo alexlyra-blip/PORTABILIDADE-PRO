@@ -315,108 +315,108 @@ export default function CoefficientsPage() {
         </div>
       </div>
 
-      <div className="space-y-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {loading && Object.keys(allCoefficients).length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl">
+          <div className="col-span-full flex flex-col items-center justify-center py-20 gap-4 bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl">
              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
              <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest animate-pulse">Carregando Coeficientes...</p>
           </div>
         ) : displayedWindows.length === 0 ? (
-          <div className="py-24 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5 shadow-xl animate-in fade-in duration-500">
+          <div className="col-span-full py-24 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5 shadow-xl animate-in fade-in duration-500">
              <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Nenhuma janela correspondente aos filtros.</p>
           </div>
         ) : (
           displayedWindows.map((w) => {
             return (
-              <div key={w.key} className="bg-white dark:bg-slate-900 rounded-[3.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-8 duration-700 mb-10">
-                 <div className="px-10 py-8 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center gap-8">
-                    <div className="w-20 h-20 rounded-3xl bg-white shadow-2xl border-4 border-white dark:border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
-                       {selectedBank?.logo_url ? (
-                          <img src={getStaticUrl(selectedBank.logo_url)} className="w-full h-full object-cover" alt={selectedBank.name} />
-                       ) : (
-                          <span className="text-3xl font-black text-blue-600">{selectedBank?.name?.charAt(0)}</span>
-                       )}
-                    </div>
-                    <div className="text-center md:text-left flex-1">
-                       <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter mb-1 leading-tight flex flex-wrap items-center gap-3 justify-center md:justify-start">
-                          <span>{selectedBank?.name} • {w.table.name}</span>
-                          {w.term !== null && (
-                            <span className="px-3.5 py-1.5 bg-blue-600 dark:bg-blue-500 text-white text-[10px] font-black uppercase rounded-xl tracking-widest shadow-md shadow-blue-500/20">
-                               {w.term}X
-                            </span>
+              <div key={w.key} className="bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-8 duration-700 flex flex-col h-full">
+                 <div className="px-6 py-5 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                       <div className="w-12 h-12 rounded-2xl bg-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
+                          {selectedBank?.logo_url ? (
+                             <img src={getStaticUrl(selectedBank.logo_url)} className="w-full h-full object-cover" alt={selectedBank.name} />
+                          ) : (
+                             <span className="text-xl font-black text-blue-600">{selectedBank?.name?.charAt(0)}</span>
                           )}
-                       </h2>
-                       <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-2">
-                          <span className="px-3 py-1 bg-slate-900 text-white text-[9px] font-black uppercase rounded-lg tracking-widest">
-                             CONVÊNIO: {w.table.agreement || "N/A"}
-                          </span>
-                          {w.table.sub_agreement && (
-                            <span className="px-3 py-1 bg-blue-100 text-blue-600 text-[9px] font-black uppercase rounded-lg tracking-widest">
-                               {w.table.sub_agreement}
-                            </span>
-                          )}
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                             Taxa Tabela: {w.table.taxa_convenio}%
-                          </span>
+                       </div>
+                       <div className="min-w-0">
+                          <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight leading-none flex items-center gap-2 flex-wrap">
+                             <span className="truncate">{selectedBank?.name} • {w.table.name}</span>
+                             {w.term !== null && (
+                               <span className="px-2 py-0.5 bg-blue-600 dark:bg-blue-500 text-white text-[9px] font-black uppercase rounded-lg tracking-wider shrink-0 shadow-sm">
+                                  {w.term}X
+                               </span>
+                             )}
+                          </h2>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                             <span className="px-2 py-0.5 bg-slate-900 text-white text-[8px] font-black uppercase rounded tracking-wider">
+                                {w.table.agreement || "N/A"}
+                             </span>
+                             {w.table.sub_agreement && (
+                               <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[8px] font-black uppercase rounded tracking-wider">
+                                  {w.table.sub_agreement}
+                               </span>
+                             )}
+                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">
+                                Taxa: {w.table.taxa_convenio}%
+                             </span>
+                          </div>
                        </div>
                     </div>
                     <button 
                       onClick={() => handleOpenModal(null, w.table.id.toString(), w.term)}
-                      className="py-3 px-8 bg-white dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-500 dark:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-2 shrink-0 hover:-translate-y-0.5"
+                      className="py-2 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-md flex items-center gap-1 shrink-0 hover:-translate-y-0.5 active:scale-95"
                     >
-                      <span>＋</span> Novo Coeficiente
+                      <span>＋</span> Novo
                     </button>
                  </div>
 
-                 <div className="p-10">
+                 <div className="p-6 flex-1 flex flex-col justify-between">
                     {w.coefficients.length === 0 ? (
-                       <div className="py-16 text-center border-4 border-dashed border-slate-50 dark:border-white/5 rounded-[3rem]">
-                          <p className="text-[11px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest mb-4">Nenhum fator de cálculo nesta tabela.</p>
+                       <div className="py-12 text-center border-2 border-dashed border-slate-100 dark:border-white/5 rounded-2xl flex-1 flex flex-col items-center justify-center">
+                          <p className="text-[10px] font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest mb-3">Nenhum fator nesta tabela.</p>
                           <button
                             onClick={() => handleOpenModal(null, w.table.id.toString(), 84)}
-                            className="py-2.5 px-6 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md flex items-center gap-2 mx-auto"
+                            className="py-2 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-md flex items-center gap-1 mx-auto"
                           >
-                            Adicionar Primeiro Coeficiente
+                            Adicionar
                           </button>
                        </div>
                     ) : (
-                       <div className="space-y-6">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                       <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
                              {w.coefficients.sort((a, b) => a.interest_rate - b.interest_rate).map(coeff => (
-                                <div key={coeff.id} className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2.5rem] border border-slate-100 dark:border-white/5 hover:border-blue-500/40 hover:bg-white dark:hover:bg-slate-800/50 transition-all shadow-sm group flex flex-col justify-between">
-                                   <div className="flex justify-between items-start mb-6">
+                                <div key={coeff.id} className="bg-slate-50/50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-blue-500/30 hover:bg-white dark:hover:bg-slate-800/40 transition-all shadow-sm flex flex-col justify-between">
+                                   <div className="flex justify-between items-center mb-3">
                                       <div className="flex flex-col">
-                                         <span className="text-blue-600 dark:text-blue-400 font-black text-2xl leading-none tracking-tighter">{coeff.term}x</span>
-                                         <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">Parcelas</span>
+                                         <span className="text-blue-600 dark:text-blue-400 font-black text-base leading-none tracking-tight">{coeff.term}x</span>
+                                         <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider mt-0.5">Prazo</span>
                                       </div>
                                       <div className="text-right">
-                                         <span className="text-xs text-slate-800 dark:text-white font-black">{Number(coeff.interest_rate || 0).toFixed(2)}%</span>
-                                         <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest block">AM</span>
+                                         <span className="text-[11px] text-slate-800 dark:text-white font-black">{Number(coeff.interest_rate || 0).toFixed(2)}%</span>
+                                         <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider block leading-none">AM</span>
                                       </div>
                                    </div>
 
-                                   <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-inner mb-6">
-                                      <p className="text-[9px] text-slate-400 font-black uppercase mb-1.5 tracking-[0.1em]">Fator de Cálculo</p>
-                                      <p className="text-base font-mono font-black text-slate-900 dark:text-white tracking-tighter">{coeff.coefficient}</p>
+                                   <div className="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-inner mb-3">
+                                      <p className="text-[8px] text-slate-400 font-black uppercase mb-1 tracking-wider leading-none">Fator</p>
+                                      <p className="text-xs font-mono font-black text-slate-900 dark:text-white tracking-tighter">{coeff.coefficient}</p>
                                    </div>
 
-                                   <div className="mt-auto flex gap-3 pt-5 border-t border-slate-100 dark:border-white/5">
+                                   <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
                                      <button 
                                        onClick={() => handleOpenModal(coeff)}
-                                       className="flex-1 py-3 bg-gradient-to-b from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 hover:from-blue-600 hover:to-indigo-600 text-slate-600 dark:text-slate-300 hover:text-white rounded-[1.25rem] text-[9px] font-black uppercase tracking-widest transition-all duration-300 border border-slate-200 dark:border-slate-700/50 hover:border-transparent hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 flex items-center justify-center gap-2.5 group/btn relative overflow-hidden"
+                                       className="flex-1 py-2 bg-gradient-to-b from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 hover:from-blue-600 hover:to-indigo-600 text-slate-600 dark:text-slate-300 hover:text-white rounded-xl text-[8px] font-black uppercase tracking-widest transition-all duration-300 border border-slate-200 dark:border-slate-700/50 hover:border-transparent flex items-center justify-center gap-1.5"
                                      >
-                                       <svg className="w-4 h-4 text-slate-400 group-hover/btn:text-white transition-colors group-hover/btn:rotate-90 duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                       Configurar
-                                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
+                                       <svg className="w-3.5 h-3.5 text-slate-400 hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                       Config.
                                      </button>
                                      
                                      <button 
                                        onClick={() => handleDelete(coeff.id)}
-                                       className="w-[46px] h-[46px] bg-rose-50/50 dark:bg-rose-900/10 hover:bg-gradient-to-br hover:from-rose-500 hover:to-red-600 text-rose-500 hover:text-white rounded-[1.25rem] transition-all duration-300 border border-rose-100 dark:border-rose-500/20 hover:border-transparent hover:shadow-xl hover:shadow-red-500/30 hover:-translate-y-0.5 flex items-center justify-center shrink-0 group/del relative overflow-hidden"
-                                       title="Excluir Coeficiente"
+                                       className="w-[32px] h-[32px] bg-rose-50/50 dark:bg-rose-900/10 hover:bg-gradient-to-br hover:from-rose-500 hover:to-red-600 text-rose-500 hover:text-white rounded-xl transition-all duration-300 border border-rose-100 dark:border-rose-500/20 hover:border-transparent flex items-center justify-center shrink-0"
+                                       title="Excluir"
                                      >
-                                       <svg className="w-4 h-4 transition-transform group-hover/del:scale-110 group-hover/del:-rotate-12 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/del:translate-x-full transition-transform duration-700"></div>
+                                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                      </button>
                                   </div>
                                </div>
