@@ -540,7 +540,11 @@ export default function CoefficientsPage() {
                   className="input-admin !py-3"
                 >
                   <option value="">Selecione a Tabela...</option>
-                  {filteredTables.map(t => <option key={t.id} value={t.id}>{t.name} ({t.agreement})</option>)}
+                  {filteredTables.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.agreement}) - {t.term || 84}X
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-6">
