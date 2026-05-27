@@ -481,9 +481,19 @@ export default function BanksPage() {
               <div className="flex flex-col items-center mb-6 pt-4">
                 <div className="w-20 h-20 rounded-[1.5rem] bg-slate-50 dark:bg-white/5 p-0 shadow-inner border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center relative overflow-hidden">
                   {bank?.logo_url ? (
-                    <img src={getStaticUrl(bank.logo_url) || ""} alt={bank.name} className="w-full h-full object-cover relative z-10" />
+                    <img 
+                      src={getStaticUrl(bank.logo_url) || ""} 
+                      alt={bank.name} 
+                      className={`w-full h-full object-cover relative z-10 transition-all duration-500 ${
+                        bank.active ? "grayscale-0" : "grayscale opacity-50 contrast-75"
+                      }`} 
+                    />
                   ) : (
-                    <span className="text-2xl font-black text-blue-600 relative z-10">{bank?.name?.substring(0, 2).toUpperCase()}</span>
+                    <span className={`text-2xl font-black relative z-10 transition-all duration-500 ${
+                      bank.active ? "text-blue-600" : "text-slate-400"
+                    }`}>
+                      {bank?.name?.substring(0, 2).toUpperCase()}
+                    </span>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </div>
@@ -584,7 +594,12 @@ export default function BanksPage() {
                     </label>
                     {formData.logo_url && (
                       <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-300 bg-white shadow-md flex-shrink-0">
-                        <img src={getStaticUrl(formData.logo_url) || formData.logo_url} className="w-full h-full object-cover" />
+                        <img 
+                          src={getStaticUrl(formData.logo_url) || formData.logo_url} 
+                          className={`w-full h-full object-cover transition-all duration-500 ${
+                            formData.active ? "grayscale-0" : "grayscale opacity-50 contrast-75"
+                          }`} 
+                        />
                       </div>
                     )}
                   </div>
