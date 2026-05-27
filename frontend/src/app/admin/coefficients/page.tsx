@@ -13,6 +13,8 @@ export default function CoefficientsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCoeff, setEditingCoeff] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'term' | 'default'>('default');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const [formData, setFormData] = useState<any>({
     bank_id: "",
@@ -220,6 +222,23 @@ export default function CoefficientsPage() {
     ? coeffWindows.filter((w) => w.term === globalTermFilter)
     : coeffWindows;
 
+  const sortedWindows = [...displayedWindows];
+  if (sortBy === 'name') {
+    sortedWindows.sort((a, b) => {
+      const nameA = a.table.name || "";
+      const nameB = b.table.name || "";
+      const comp = nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+      return sortOrder === 'asc' ? comp : -comp;
+    });
+  } else if (sortBy === 'term') {
+    sortedWindows.sort((a, b) => {
+      const termA = a.term ?? 0;
+      const termB = b.term ?? 0;
+      const comp = termA - termB;
+      return sortOrder === 'asc' ? comp : -comp;
+    });
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-20">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-100 dark:border-white/5">
@@ -277,41 +296,112 @@ export default function CoefficientsPage() {
         </div>
       </div>
 
-      {/* Filtro Global por Prazo */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-white/5 animate-in fade-in duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Visualizar por Prazo:</span>
-          <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
-            <button
-              onClick={() => setGlobalTermFilter(null)}
-              className={`py-2 px-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                globalTermFilter === null
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20 scale-105"
-                  : "bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
-              }`}
-            >
-              Todos ({coeffWindows.length})
-            </button>
-            {termFilterOptions.map((term) => {
-              const termWindowsCount = coeffWindows.filter((w) => w.term === term).length;
-              return (
+      {/* Filtro Global por Prazo & Ordenação */}
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-white/5 animate-in fade-in duration-500">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-6 w-full xl:w-auto">
+          {/* Visualizar por Prazo */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">Visualizar por Prazo:</span>
+            <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
+              <button
+                type="button"
+                onClick={() => setGlobalTermFilter(null)}
+                className={`py-2 px-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  globalTermFilter === null
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20 scale-105"
+                    : "bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
+                }`}
+              >
+                Todos ({coeffWindows.length})
+              </button>
+              {termFilterOptions.map((term) => {
+                const termWindowsCount = coeffWindows.filter((w) => w.term === term).length;
+                return (
+                  <button
+                    key={term}
+                    type="button"
+                    onClick={() => setGlobalTermFilter(term)}
+                    className={`py-2 px-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                      globalTermFilter === term
+                        ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20 scale-105"
+                        : "bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    {term}X ({termWindowsCount})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ordenar Tabelas */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-white/5 pt-4 lg:pt-0 lg:pl-6">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">Ordenar Tabelas:</span>
+            <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
+              <button
+                type="button"
+                onClick={() => {
+                  if (sortBy !== 'name') {
+                    setSortBy('name');
+                    setSortOrder('asc');
+                  } else {
+                    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                  }
+                }}
+                className={`py-2.5 px-5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 shadow-sm ${
+                  sortBy === 'name'
+                    ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                    : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-300 border-transparent hover:bg-slate-100 dark:hover:bg-white/10'
+                }`}
+                title={sortBy === 'name' ? (sortOrder === 'asc' ? "Nome A-Z (Clique para Z-A)" : "Nome Z-A (Clique para A-Z)") : "Ordenar por Nome"}
+              >
+                <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${sortBy === 'name' && sortOrder === 'desc' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                Nome {sortBy === 'name' ? (sortOrder === 'asc' ? 'A-Z' : 'Z-A') : ''}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (sortBy !== 'term') {
+                    setSortBy('term');
+                    setSortOrder('asc');
+                  } else {
+                    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                  }
+                }}
+                className={`py-2.5 px-5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 shadow-sm ${
+                  sortBy === 'term'
+                    ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                    : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-300 border-transparent hover:bg-slate-100 dark:hover:bg-white/10'
+                }`}
+                title={sortBy === 'term' ? (sortOrder === 'asc' ? "Prazo Crescente (Clique para Decrescente)" : "Prazo Decrescente (Clique para Crescente)") : "Ordenar por Prazo"}
+              >
+                <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${sortBy === 'term' && sortOrder === 'desc' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                Prazo {sortBy === 'term' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+              </button>
+
+              {sortBy !== 'default' && (
                 <button
-                  key={term}
-                  onClick={() => setGlobalTermFilter(term)}
-                  className={`py-2 px-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    globalTermFilter === term
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20 scale-105"
-                      : "bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
-                  }`}
+                  type="button"
+                  onClick={() => {
+                    setSortBy('default');
+                    setSortOrder('asc');
+                  }}
+                  className="py-2 px-3 text-[10px] font-black text-rose-500 hover:text-rose-600 uppercase tracking-widest transition-colors"
+                  title="Limpar Ordenação"
                 >
-                  {term}X ({termWindowsCount})
+                  Limpar
                 </button>
-              );
-            })}
+              )}
+            </div>
           </div>
         </div>
-        <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0 self-end sm:self-center">
-          {displayedWindows.length} {displayedWindows.length === 1 ? "Janela" : "Janelas"} exibidas
+        <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0 self-end xl:self-center">
+          {sortedWindows.length} {sortedWindows.length === 1 ? "Janela" : "Janelas"} exibidas
         </div>
       </div>
 
@@ -321,12 +411,12 @@ export default function CoefficientsPage() {
              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
              <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest animate-pulse">Carregando Coeficientes...</p>
           </div>
-        ) : displayedWindows.length === 0 ? (
+        ) : sortedWindows.length === 0 ? (
           <div className="col-span-full py-24 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/5 shadow-xl animate-in fade-in duration-500">
              <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Nenhuma janela correspondente aos filtros.</p>
           </div>
         ) : (
-          displayedWindows.map((w) => {
+          sortedWindows.map((w) => {
             return (
               <div key={w.key} className="bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-8 duration-700 flex flex-col h-full">
                  <div className="px-6 py-5 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between gap-4">
