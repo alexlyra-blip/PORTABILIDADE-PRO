@@ -79,9 +79,13 @@ async def startup_event():
             conn_sq = sqlite3.connect('./local_db.sqlite')
             try: conn_sq.execute("ALTER TABLE bank_tables ADD COLUMN abater_margem_hp12c BOOLEAN DEFAULT 0")
             except: pass
+            try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN active BOOLEAN DEFAULT 1")
+            except: pass
+            try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disable_weighted_rate_validation BOOLEAN DEFAULT 0")
+            except: pass
             conn_sq.commit()
             conn_sq.close()
-            print("✅ Coluna abater_margem_hp12c verificada/criada no SQLite local.")
+            print("✅ Colunas verificadas/criadas no SQLite local.")
     except Exception as e:
         print(f"SQLite migration log: {e}")
 

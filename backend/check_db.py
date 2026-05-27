@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-db_path = r'c:\Users\alexa\OneDrive\Ambiente de Trabalho\Projeto Simulador de Porabilidade\backend\local_db.sqlite'
+db_path = os.path.join(os.path.dirname(__file__), 'local_db.sqlite')
 
 if not os.path.exists(db_path):
     print(f"Database not found at {db_path}")
@@ -16,12 +16,12 @@ columns = [row[1] for row in cursor.fetchall()]
 
 print(f"Current columns: {columns}")
 
-needed = ['excluded_origin_banks', 'origin_banks_min_paid']
+needed = ['excluded_origin_banks', 'origin_banks_min_paid', 'active', 'disable_weighted_rate_validation', 'excluded_benefit_types']
 for col in needed:
     if col not in columns:
         print(f"Adding column {col}...")
         try:
-            cursor.execute(f"ALTER TABLE bank_rules ADD COLUMN {col} TEXT")
+            cursor.execute(f"ALTER TABLE bank_rules ADD COLUMN {col} INTEGER DEFAULT 1" if col == 'active' else f"ALTER TABLE bank_rules ADD COLUMN {col} TEXT")
             conn.commit()
             print(f"Column {col} added successfully.")
         except Exception as e:

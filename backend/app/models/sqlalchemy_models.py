@@ -129,6 +129,7 @@ class BankRule(Base):
 
     # Validation Toggles
     disable_weighted_rate_validation = Column(Boolean, default=False)
+    active = Column(Boolean, default=True)
 
     bank = relationship("Bank", back_populates="rules")
 

@@ -145,7 +145,8 @@ export default function BanksPage() {
             accepts_disability: rule.accepts_disability ?? false,
             disability_min_age: rule.disability_min_age || "",
             disability_min_benefit_years: rule.disability_min_benefit_years || "",
-            disability_min_benefit_months: rule.disability_min_benefit_months || ""
+            disability_min_benefit_months: rule.disability_min_benefit_months || "",
+            active: rule.active ?? true
           }
         });
       } catch (error) {
@@ -181,7 +182,8 @@ export default function BanksPage() {
           accepts_disability: false,
           disability_min_age: "",
           disability_min_benefit_years: "",
-          disability_min_benefit_months: ""
+          disability_min_benefit_months: "",
+          active: true
         }
       });
     }
@@ -216,6 +218,7 @@ export default function BanksPage() {
         excluded_origin_banks: "",
         origin_banks_min_paid: "",
         excluded_benefit_types: "",
+        active: true
       }
     });
   };
@@ -263,7 +266,8 @@ export default function BanksPage() {
         disability_min_age: formData.rules.disability_min_age ? parseInt(formData.rules.disability_min_age) : null,
         disability_min_benefit_years: formData.rules.disability_min_benefit_years ? parseInt(formData.rules.disability_min_benefit_years) : null,
         disability_min_benefit_months: formData.rules.disability_min_benefit_months ? parseInt(formData.rules.disability_min_benefit_months) : null,
-        bank_id: savedBank.id
+        bank_id: savedBank.id,
+        active: formData.rules.active ?? true
       };
 
       // Check if rule for this agreement exists
@@ -348,10 +352,10 @@ export default function BanksPage() {
           origin_banks_min_paid: rule.origin_banks_min_paid || "",
           excluded_benefit_types: rule.excluded_benefit_types || "",
           accepts_disability: rule.accepts_disability || false,
-
           disability_min_age: rule.disability_min_age || "",
           disability_min_benefit_years: rule.disability_min_benefit_years || "",
-          disability_min_benefit_months: rule.disability_min_benefit_months || ""
+          disability_min_benefit_months: rule.disability_min_benefit_months || "",
+          active: rule.active ?? true
         }
       });
     } else {
@@ -364,6 +368,7 @@ export default function BanksPage() {
           excluded_origin_banks: "",
           origin_banks_min_paid: "",
           excluded_benefit_types: "",
+          active: true
         }
       });
     }
@@ -478,45 +483,58 @@ export default function BanksPage() {
               </div>
 
               {/* Logo Area */}
-              <div className="flex flex-col items-center mb-6 pt-4">
-                <div className="w-20 h-20 rounded-[1.5rem] bg-slate-50 dark:bg-white/5 p-0 shadow-inner border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center relative overflow-hidden">
-                  {bank?.logo_url ? (
-                    <img 
-                      src={getStaticUrl(bank.logo_url) || ""} 
-                      alt={bank.name} 
-                      className={`w-full h-full object-cover relative z-10 transition-all duration-500 ${
-                        bank.active ? "grayscale-0" : "grayscale opacity-50 contrast-75"
-                      }`} 
-                    />
-                  ) : (
-                    <span className={`text-2xl font-black relative z-10 transition-all duration-500 ${
-                      bank.active ? "text-blue-600" : "text-slate-400"
-                    }`}>
-                      {bank?.name?.substring(0, 2).toUpperCase()}
-                    </span>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
-                <h3 className="mt-4 font-black text-slate-800 dark:text-white text-base tracking-tight uppercase group-hover:text-blue-600 transition-colors text-center">{bank?.name}</h3>
-                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1 opacity-60">ID #{bank?.id}</p>
-              </div>
+              {(() => {
+                const isLogoActive = bank.active && (!bank.rules || bank.rules.length === 0 || bank.rules.some((r: any) => r.active !== false));
+                return (
+                  <div className="flex flex-col items-center mb-6 pt-4">
+                    <div className="w-20 h-20 rounded-[1.5rem] bg-slate-50 dark:bg-white/5 p-0 shadow-inner border border-slate-100 dark:border-white/5 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center relative overflow-hidden">
+                      {bank?.logo_url ? (
+                        <img 
+                          src={getStaticUrl(bank.logo_url) || ""} 
+                          alt={bank.name} 
+                          className={`w-full h-full object-cover relative z-10 transition-all duration-500 ${
+                            isLogoActive ? "grayscale-0" : "grayscale opacity-50 contrast-75"
+                          }`} 
+                        />
+                      ) : (
+                        <span className={`text-2xl font-black relative z-10 transition-all duration-500 ${
+                          isLogoActive ? "text-blue-600" : "text-slate-400"
+                        }`}>
+                          {bank?.name?.substring(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </div>
+                    <h3 className="mt-4 font-black text-slate-800 dark:text-white text-base tracking-tight uppercase group-hover:text-blue-600 transition-colors text-center">{bank?.name}</h3>
+                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1 opacity-60">ID #{bank?.id}</p>
+                  </div>
+                );
+              })()}
 
               {/* Convenios Badges */}
               <div className="flex flex-wrap justify-center gap-1.5 mb-8">
                 {bank.rules && bank.rules.length > 0 ? (
-                  Array.from(new Set(bank.rules.map(r => r.agreement))).map(agr => (
-                    <span 
-                      key={agr} 
-                      className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider border transition-all ${
-                        agr === 'INSS' ? 'bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/20' :
-                        agr === 'SIAPE' ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-500/20' :
-                        agr === 'FORCAS' || agr === 'FORÇAS ARMADAS' ? 'bg-emerald-500 text-white border-emerald-400 shadow-lg shadow-emerald-500/20' :
-                        'bg-slate-800 text-white border-slate-700'
-                      }`}
-                    >
-                      {agr === 'FORCAS' || agr === 'FORÇAS ARMADAS' ? 'FORÇAS' : agr}
-                    </span>
-                  ))
+                  Array.from(new Set(bank.rules.map(r => r.agreement))).map(agr => {
+                    const isAgrActive = bank.rules.some(r => r.agreement === agr && r.active !== false);
+                    return (
+                      <span 
+                        key={agr} 
+                        className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 ${
+                          !isAgrActive 
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700/50'
+                            : agr === 'INSS' ? 'bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/20' :
+                              agr === 'SIAPE' ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-500/20' :
+                              agr === 'FORCAS' || agr === 'FORÇAS ARMADAS' ? 'bg-emerald-500 text-white border-emerald-400 shadow-lg shadow-emerald-500/20' :
+                              'bg-slate-800 text-white border-slate-700'
+                        }`}
+                      >
+                        {!isAgrActive && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block shrink-0 animate-pulse"></span>
+                        )}
+                        {agr === 'FORCAS' || agr === 'FORÇAS ARMADAS' ? 'FORÇAS' : agr}
+                      </span>
+                    );
+                  })
                 ) : (
                   <span className="text-[9px] text-slate-300 italic font-black uppercase tracking-widest">Sem Regras</span>
                 )}
@@ -664,6 +682,24 @@ export default function BanksPage() {
                       ))}
                     </div>
                   )}
+
+                  <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-white/5 mt-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                       Ativar Simulação ({formData.rules.agreement}{formData.rules.sub_agreement ? ` - ${formData.rules.sub_agreement}` : ""})?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, rules: {...formData.rules, active: !formData.rules.active}})}
+                      className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all border ${
+                        formData.rules.active !== false 
+                          ? "bg-emerald-500 text-white border-emerald-400 shadow-sm" 
+                          : "bg-rose-500 text-white border-rose-400 shadow-sm"
+                      }`}
+                    >
+                      {formData.rules.active !== false ? "ATIVADO" : "DESATIVADO"}
+                    </button>
+                  </div>
+
                   <p className="text-[9px] text-slate-400 italic">Cada convênio tem suas próprias regras de idade e portabilidade.</p>
                 </div>
                 

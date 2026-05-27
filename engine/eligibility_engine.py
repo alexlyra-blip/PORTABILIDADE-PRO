@@ -6,6 +6,9 @@ def verificar_elegibilidade(cliente_input, regra_banco):
     Verifica se o cliente passa nos filtros iniciais baseados nas regras cadastradas.
     Controle rigoroso para Espécie Invalidez (INSS) e Analfabetismo.
     """
+    # 0. Convênio Ativo para Simulação
+    if not getattr(regra_banco, "active", True):
+        return False, "Simulação desativada para este convênio neste banco."
     
     # 1. Limite de Idade Geral
     idade_cliente = int(getattr(cliente_input, "idade", getattr(cliente_input, "client_age", 0)))
