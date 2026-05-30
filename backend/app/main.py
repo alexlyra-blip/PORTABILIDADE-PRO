@@ -50,6 +50,12 @@ def run_db_fix():
         cursor.execute('ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT;')
+        try:
+            cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;')
+            cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;')
+            print("✅ Colunas term e installment verificadas/criadas no PostgreSQL de produção.")
+        except Exception as e:
+            print(f"⚠️ Erro ao adicionar colunas em simulation_results (Postgres): {e}")
         print("✅ Colunas convertidas para TEXT.")
         cursor.close()
         conn.close()
