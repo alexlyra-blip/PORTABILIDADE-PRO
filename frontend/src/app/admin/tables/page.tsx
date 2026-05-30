@@ -35,7 +35,26 @@ export default function TablesPage() {
 
   const [selectedAgreement, setSelectedAgreement] = useState("");
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
-  const [sortAlphabetically, setSortAlphabetically] = useState(false);
+  const [sortAlphabetically, setSortAlphabetically] = useState<boolean>(false);
+  const [isSortLoaded, setIsSortLoaded] = useState(false);
+
+  // Carrega a preferência de ordenação de forma segura pós-hidratação
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tables_sortAlphabetically');
+      if (saved !== null) {
+        setSortAlphabetically(saved === 'true');
+      }
+      setIsSortLoaded(true);
+    }
+  }, []);
+
+  // Salva no localStorage sempre que as configurações mudarem (apenas após o carregamento inicial)
+  useEffect(() => {
+    if (isSortLoaded && typeof window !== 'undefined') {
+      localStorage.setItem('tables_sortAlphabetically', String(sortAlphabetically));
+    }
+  }, [sortAlphabetically, isSortLoaded]);
   const [previewBaseRate, setPreviewBaseRate] = useState<number>(1.25);
   const [termFilters, setTermFilters] = useState<Record<string, number | null>>({});
 

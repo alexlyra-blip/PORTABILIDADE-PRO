@@ -15,6 +15,30 @@ export default function CoefficientsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'term' | 'default'>('default');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Carrega as preferências de ordenação salvas no localStorage de forma segura pós-hidratação
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSortBy = localStorage.getItem('coef_sortBy');
+      const savedSortOrder = localStorage.getItem('coef_sortOrder');
+      if (savedSortBy) {
+        setSortBy(savedSortBy as 'name' | 'term' | 'default');
+      }
+      if (savedSortOrder) {
+        setSortOrder(savedSortOrder as 'asc' | 'desc');
+      }
+      setIsLoaded(true);
+    }
+  }, []);
+
+  // Salva no localStorage apenas após carregar as preferências iniciais
+  useEffect(() => {
+    if (isLoaded && typeof window !== 'undefined') {
+      localStorage.setItem('coef_sortBy', sortBy);
+      localStorage.setItem('coef_sortOrder', sortOrder);
+    }
+  }, [sortBy, sortOrder, isLoaded]);
 
   const [formData, setFormData] = useState<any>({
     bank_id: "",
