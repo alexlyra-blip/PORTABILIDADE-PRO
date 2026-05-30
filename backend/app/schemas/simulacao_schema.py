@@ -225,6 +225,8 @@ class SimulationResultResponse(BaseModel):
     release_amount: Optional[Decimal] = None
     is_approved: bool = False
     rejection_reason: Optional[str] = None
+    term: Optional[int] = None
+    installment: Optional[float] = None
     class Config:
         from_attributes = True
 

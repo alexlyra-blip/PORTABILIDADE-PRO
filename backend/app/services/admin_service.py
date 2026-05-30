@@ -498,7 +498,9 @@ class AdminService:
                 offered_rate=res.get("taxa_juros"),
                 release_amount=res.get("valor_liberado"),
                 is_approved=res.get("elegivel", True),
-                rejection_reason=res.get("motivo")
+                rejection_reason=res.get("motivo"),
+                term=res.get("prazo"),
+                installment=res.get("valor_parcela")
             )
             db.add(db_res)
             
@@ -780,8 +782,8 @@ class AdminService:
                             "table_name": r.table_name,
                             "offered_rate": r.offered_rate,
                             "release_amount": float(r.release_amount) if r.release_amount is not None else 0.0,
-                            "term": int(s.total_term) if s.total_term else 84,
-                            "installment": float(s.installment_value) if s.installment_value else 0.0,
+                            "term": int(r.term) if r.term is not None else (int(s.total_term) if s.total_term else 84),
+                            "installment": float(r.installment) if r.installment is not None else (float(s.installment_value) if s.installment_value else 0.0),
                             "contract_value": float(s.debt_balance or 0) + float(r.release_amount or 0),
                             "is_approved": r.is_approved
                         } for r in s.results

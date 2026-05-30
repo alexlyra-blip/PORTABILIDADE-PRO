@@ -218,6 +218,8 @@ class SimulationResult(Base):
     release_amount = Column(Numeric(15, 2))
     is_approved = Column(Boolean, default=False)
     rejection_reason = Column(Text)
+    term = Column(Integer, nullable=True)
+    installment = Column(Float, nullable=True)
 
     simulation = relationship("Simulation", back_populates="results")
 

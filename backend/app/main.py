@@ -75,17 +75,22 @@ async def startup_event():
     # Migração SQLite Local para nova coluna abater_margem_hp12c
     try:
         import sqlite3
-        if os.path.exists('./local_db.sqlite'):
-            conn_sq = sqlite3.connect('./local_db.sqlite')
-            try: conn_sq.execute("ALTER TABLE bank_tables ADD COLUMN abater_margem_hp12c BOOLEAN DEFAULT 0")
-            except: pass
-            try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN active BOOLEAN DEFAULT 1")
-            except: pass
-            try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disable_weighted_rate_validation BOOLEAN DEFAULT 0")
-            except: pass
-            conn_sq.commit()
-            conn_sq.close()
-            print("✅ Colunas verificadas/criadas no SQLite local.")
+        for db_file in ['./local_db.sqlite', './backend/local_db.sqlite']:
+            if os.path.exists(db_file):
+                conn_sq = sqlite3.connect(db_file)
+                try: conn_sq.execute("ALTER TABLE bank_tables ADD COLUMN abater_margem_hp12c BOOLEAN DEFAULT 0")
+                except: pass
+                try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN active BOOLEAN DEFAULT 1")
+                except: pass
+                try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disable_weighted_rate_validation BOOLEAN DEFAULT 0")
+                except: pass
+                try: conn_sq.execute("ALTER TABLE simulation_results ADD COLUMN term INTEGER")
+                except: pass
+                try: conn_sq.execute("ALTER TABLE simulation_results ADD COLUMN installment FLOAT")
+                except: pass
+                conn_sq.commit()
+                conn_sq.close()
+                print(f"✅ Colunas SQLite local verificadas/criadas para o banco {db_file}.")
     except Exception as e:
         print(f"SQLite migration log: {e}")
 
