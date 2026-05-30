@@ -5,13 +5,78 @@ import json
 
 def _banco_corresponde(banco_input, banco_regra):
     """
-    Retorna True se o banco_input (ex: "318 - BMG S.A.") corresponde ao banco_regra (ex: "BMG").
+    Retorna True se o banco_input (ex: "318 - BMG S.A." ou "623") corresponde ao banco_regra (ex: "BMG" ou "PAN").
     """
     if not banco_input or not banco_regra:
         return False
     
+    # Dicionário de códigos para nomes
+    MAPA_CODIGOS_BANCOS = {
+        "121": "AGIBANK",
+        "250": "BANCO BCV",
+        "025": "BANCO ALFA",
+        "233": "BANCO CIFRA",
+        "001": "BANCO DO BRASIL",
+        "047": "BANCO DO ESTADO DO SERGIPE",
+        "079": "BANCO ORIGINAL",
+        "643": "BANCO PINE",
+        "081": "BANCO SEGURO",
+        "041": "BANRISUL",
+        "268": "BARIGUI",
+        "318": "BMG",
+        "237": "BRADESCO",
+        "070": "BRB",
+        "626": "C6 CONSIGNADO",
+        "320": "CCB BRASIL",
+        "104": "CAIXA",
+        "069": "CREFISA",
+        "707": "DAYCOVAL",
+        "335": "DIGIO",
+        "149": "FACTA",
+        "012": "INBURSA",
+        "029": "ITAÚ CONSIGNADO",
+        "184": "ITAÚ BBA",
+        "341": "ITAÚ UNIBANCO",
+        "389": "MERCANTIL",
+        "386": "NU FINANCEIRA",
+        "753": "NBC BANK",
+        "169": "OLÉ CONSIGNADO",
+        "290": "PAGBANK",
+        "623": "PAN",
+        "254": "PARANÁ BANCO",
+        "752": "BNP PARIBAS",
+        "326": "PARATI",
+        "611": "PAULISTA",
+        "380": "PICPAY",
+        "329": "QI SOCIEDADE",
+        "966": "SABEMI",
+        "422": "SAFRA",
+        "033": "SANTANDER",
+        "359": "ZEMA",
+        "077": "BANCO INTER",
+        "756": "SICOOB"
+    }
+
     b_input = str(banco_input).upper().strip()
     b_regra = str(banco_regra).upper().strip()
+
+    # Resolve o input do banco (ex: "623" -> "PAN")
+    if b_input in MAPA_CODIGOS_BANCOS:
+        b_input = MAPA_CODIGOS_BANCOS[b_input].upper()
+    else:
+        for cod, nome in MAPA_CODIGOS_BANCOS.items():
+            if b_input.startswith(cod):
+                b_input = nome.upper()
+                break
+
+    # Resolve também o banco da regra por segurança (ex: se cadastrado como "623")
+    if b_regra in MAPA_CODIGOS_BANCOS:
+        b_regra = MAPA_CODIGOS_BANCOS[b_regra].upper()
+    else:
+        for cod, nome in MAPA_CODIGOS_BANCOS.items():
+            if b_regra.startswith(cod):
+                b_regra = nome.upper()
+                break
     
     # Match exato
     if b_input == b_regra:

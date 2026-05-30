@@ -324,33 +324,6 @@ function SimuladorPageContent() {
         total_rejeitados: results.reduce((acc, r) => acc + (r.total_rejeitados || 0), 0)
       };
 
-      const inssBanks = [
-        { value: "121", label: "121 - AGIBANK" }, { value: "250", label: "250 - BANCO BCV" }, { value: "025", label: "025 - BANCO ALFA" },
-        { value: "233", label: "233 - BANCO CIFRA" }, { value: "001", label: "001 - BANCO DO BRASIL" }, { value: "047", label: "047 - BANCO DO ESTADO DO SERGIPE" },
-        { value: "212", label: "212 - BANCO ORIGINAL" }, { value: "643", label: "643 - BANCO PINE" }, { value: "081", label: "081 - BANCO SEGURO" },
-        { value: "041", label: "041 - BANRISUL" }, { value: "000", label: "000 - BARIGUI" }, { value: "318", label: "318 - BMG" },
-        { value: "237", label: "237 - BRADESCO S.A." }, { value: "070", label: "070 - BRB" }, { value: "626", label: "626 - C6 CONSIGNADO" },
-        { value: "104", label: "104 - CAIXA ECONÔMICA FEDERAL" }, { value: "422", label: "422 - SAFRA" }, { value: "000", label: "000 - CREDCESTA" },
-        { value: "000", label: "000 - CTTU" }, { value: "707", label: "707 - DAYCOVAL" }, { value: "000", label: "000 - DEDICARE" },
-        { value: "000", label: "000 - EMPRESTA" }, { value: "000", label: "000 - FACTA" }, { value: "000", label: "000 - FIBRA" },
-        { value: "000", label: "000 - FINANMAX" }, { value: "000", label: "000 - FINAUDI" }, { value: "000", label: "000 - FINAZAM" },
-        { value: "000", label: "000 - GASPREV" }, { value: "000", label: "000 - GFT" }, { value: "000", label: "000 - IBI" },
-        { value: "000", label: "000 - ICBC" }, { value: "000", label: "000 - IDEAL" }, { value: "000", label: "000 - INBURSA" },
-        { value: "652", label: "652 - ITAÚ CONSIGNADO S.A." }, { value: "341", label: "341 - ITAÚ UNIBANCO S.A." }, { value: "000", label: "000 - KREDILIG" },
-        { value: "000", label: "000 - LECCA" }, { value: "000", label: "000 - LUIZACRED" }, { value: "000", label: "000 - MASTER" },
-        { value: "000", label: "000 - MAXIMA" }, { value: "000", label: "000 - MERCANTIL DO BRASIL" }, { value: "000", label: "000 - NEON" },
-        { value: "000", label: "000 - OLE BONSUCESSO" }, { value: "000", label: "000 - OMNI" }, { value: "000", label: "000 - PAN" },
-        { value: "254", label: "254 - PARANÁ" }, { value: "000", label: "000 - PARATI" }, { value: "000", label: "000 - PAULISTA" },
-        { value: "000", label: "000 - PICPAY" }, { value: "000", label: "000 - PORTO SEGURO" }, { value: "000", label: "000 - QI SOCIEDADE" },
-        { value: "000", label: "000 - QUERO QUERO" }, { value: "000", label: "000 - RENNER" }, { value: "000", label: "000 - SABEMI" },
-        { value: "033", label: "033 - SANTANDER" }, { value: "756", label: "756 - SICOOB" }, { value: "000", label: "000 - SICREDI" },
-        { value: "000", label: "000 - SIM" }, { value: "000", label: "000 - SOROCRED" }, { value: "000", label: "000 - SUPER PAGAMENTOS" },
-        { value: "000", label: "000 - TOPÁZIO" }, { value: "000", label: "000 - TRIÂNGULO" }, { value: "000", label: "000 - TRIBANCO" },
-        { value: "000", label: "000 - UNICRED" }, { value: "000", label: "000 - UNIPRIME" }, { value: "000", label: "000 - UP BRASIL" },
-        { value: "000", label: "000 - VIA CERTA" }, { value: "000", label: "000 - VOTORANTIM" }, { value: "000", label: "000 - ZEMA" },
-        { value: "000", label: "000 - WILL" }, { value: "077", label: "077 - BANCO INTER" }
-      ];
-
       const mappedContracts = contracts.map(c => {
          const found = inssBanks.find(b => b.value === c.banco);
          let finalParcela = c.parcela;

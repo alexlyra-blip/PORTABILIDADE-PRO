@@ -10,9 +10,9 @@ from .eligibility_engine import verificar_elegibilidade
 from .financial_engine import calcular_viabilidade_financeira, resolver_taxa_juros
 from app.models.sqlalchemy_models import Bank, BankTable, Coefficient, BankRule, PromotoraRule, User
 from app.models.models import BancoAprovado
-from app.services.admin_service import AdminService
 
 async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: int):
+    from app.services.admin_service import AdminService
     # 0. Pre-calculate Simulation Level Metrics
     try:
         # Normalização de Convênio e Sub-Convênio logo no início para uso em TODO o motor
@@ -35,6 +35,61 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
         # Sobrescreve no input para que todas as funções subsequentes usem o nome normalizado
         cliente_input.convenio = normalize_agr(cliente_input.convenio)
         cliente_input.sub_convenio = normalize_sub(cliente_input.sub_convenio)
+
+        # Resolve código de banco (ex: "623" ou "623 - PAN") para o nome formal do banco (ex: "PAN")
+        MAPA_CODIGOS_BANCOS = {
+            "121": "AGIBANK",
+            "250": "BANCO BCV",
+            "025": "BANCO ALFA",
+            "233": "BANCO CIFRA",
+            "001": "BANCO DO BRASIL",
+            "047": "BANCO DO ESTADO DO SERGIPE",
+            "079": "BANCO ORIGINAL",
+            "643": "BANCO PINE",
+            "081": "BANCO SEGURO",
+            "041": "BANRISUL",
+            "268": "BARIGUI",
+            "318": "BMG",
+            "237": "BRADESCO",
+            "070": "BRB",
+            "626": "C6 CONSIGNADO",
+            "320": "CCB BRASIL",
+            "104": "CAIXA",
+            "069": "CREFISA",
+            "707": "DAYCOVAL",
+            "335": "DIGIO",
+            "149": "FACTA",
+            "012": "INBURSA",
+            "029": "ITAÚ CONSIGNADO",
+            "184": "ITAÚ BBA",
+            "341": "ITAÚ UNIBANCO",
+            "389": "MERCANTIL",
+            "386": "NU FINANCEIRA",
+            "753": "NBC BANK",
+            "169": "OLÉ CONSIGNADO",
+            "290": "PAGBANK",
+            "623": "PAN",
+            "254": "PARANÁ BANCO",
+            "752": "BNP PARIBAS",
+            "326": "PARATI",
+            "611": "PAULISTA",
+            "380": "PICPAY",
+            "329": "QI SOCIEDADE",
+            "966": "SABEMI",
+            "422": "SAFRA",
+            "033": "SANTANDER",
+            "359": "ZEMA",
+            "077": "BANCO INTER",
+            "756": "SICOOB"
+        }
+        b_raw = str(cliente_input.banco or "").strip().upper()
+        if b_raw in MAPA_CODIGOS_BANCOS:
+            cliente_input.banco = MAPA_CODIGOS_BANCOS[b_raw]
+        else:
+            for cod, nome in MAPA_CODIGOS_BANCOS.items():
+                if b_raw.startswith(cod):
+                    cliente_input.banco = nome
+                    break
 
         saldo_devedor = float(cliente_input.saldo_devedor or 0)
         parcela_atual = float(cliente_input.valor_parcela or 0)
