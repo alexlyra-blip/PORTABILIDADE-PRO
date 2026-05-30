@@ -197,7 +197,7 @@ function OfertasPageContent() {
 
   const baseHighlights = [
     { id: "melhor_tabela", title: "MELHOR TABELA", data: bestTableOffer, icon: "🏆", bg: "bg-blue-600/10", text: "text-blue-600", metric: bestTableOffer ? `R$ ${Number(bestTableOffer?.valor_liberado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00", label: "Liberado" },
-    { id: "menor_taxa", title: "MENOR TAXA", data: topByTaxa, icon: "📉", bg: "bg-cyan-600/10", text: "text-cyan-600", metric: topByTaxa ? `${Number(topByTaxa?.taxa_juros || 0).toFixed(2)}%` : "0,00%", label: "Taxa" },
+    { id: "menor_taxa", title: "MENOR TAXA", data: topByTaxa, icon: "📉", bg: "bg-cyan-600/10", text: "text-cyan-600", metric: topByTaxa ? `${Number(topByTaxa?.taxa_juros || 0).toFixed(2).replace('.', ',')}%` : "0,00%", label: "Taxa" },
     { id: "maior_troco", title: "MAIOR TROCO", data: topByTroco, icon: "💰", bg: "bg-emerald-600/10", text: "text-emerald-600", metric: topByTroco ? `R$ ${Number(topByTroco?.valor_liberado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00", label: "Liberado" }
   ];
 
@@ -546,8 +546,8 @@ function OfertasPageContent() {
                 {h.data && (
                   <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mb-3 text-xs text-slate-500 font-bold uppercase tracking-widest border border-slate-100 dark:border-white/5">
                     <div className="flex flex-col gap-1.5">
-                      <span>Taxa Port: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_portabilidade_atual?.toFixed(2)}%</strong></span>
-                      <span>Taxa Refin: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_juros?.toFixed(2)}%</strong></span>
+                      <span>Taxa Port: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_portabilidade_atual?.toFixed(2).replace('.', ',')}%</strong></span>
+                      <span>Taxa Refin: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_juros?.toFixed(2).replace('.', ',')}%</strong></span>
                       <span className="text-[9px] text-blue-600 dark:text-blue-400 font-black">PRAZO: {h.data?.prazo || "84"}X</span>
                     </div>
                     <div className="text-right flex flex-col gap-1.5">
@@ -648,12 +648,12 @@ function OfertasPageContent() {
                         >
                           <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa Port.</p>
-                            <p className="text-2xl font-black text-blue-600 tracking-tighter">{offer.taxa_portabilidade_atual?.toFixed(2)}%</p>
+                            <p className="text-2xl font-black text-blue-600 tracking-tighter">{offer.taxa_portabilidade_atual?.toFixed(2).replace('.', ',')}%</p>
                           </div>
                           <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa Refin</p>
                             <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
-                              {offer.taxa_juros?.toFixed(2)}%
+                              {offer.taxa_juros?.toFixed(2).replace('.', ',')}%
                               <span className="text-[10px] text-slate-400 ml-1 font-bold">a.m.</span>
                             </p>
                             <p className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mt-1">Prazo: {offer.prazo || "84"}X</p>

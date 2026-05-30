@@ -535,7 +535,7 @@ export default function CoefficientsPage() {
                                                              </span>
                                                            )}
                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">
-                                                              Taxa: {w.table.taxa_convenio}%
+                                                              Taxa: {Number(w.table.taxa_convenio || 0).toFixed(2).replace('.', ',')}%
                                                            </span>
                                                         </div>
                                                      </div>
@@ -570,7 +570,7 @@ export default function CoefficientsPage() {
                                                                        <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider mt-0.5">Prazo</span>
                                                                     </div>
                                                                     <div className="text-right">
-                                                                       <span className="text-[11px] text-slate-800 dark:text-white font-black">{Number(coeff.interest_rate || 0).toFixed(2)}%</span>
+                                                                       <span className="text-[11px] text-slate-800 dark:text-white font-black">{Number(coeff.interest_rate || 0).toFixed(2).replace('.', ',')}%</span>
                                                                        <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider block leading-none">AM</span>
                                                                     </div>
                                                                  </div>

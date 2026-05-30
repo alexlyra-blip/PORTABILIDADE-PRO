@@ -332,7 +332,7 @@ export default function TablesPage() {
                         </span>
                       )}
                       <span className="text-blue-600 dark:text-blue-400 font-black text-xs">{table.term || 84}x</span>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">• {Number(table.taxa_convenio || 0).toFixed(2)}% AM</span>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">• {Number(table.taxa_convenio || 0).toFixed(2).replace('.', ',')}% AM</span>
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase ${table.active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-400'}`}>
@@ -698,7 +698,7 @@ export default function TablesPage() {
                      <div className="bg-white p-3 rounded-xl border border-amber-100 shadow-sm">
                         <span className="text-slate-400 block mb-1">Taxa Tabela</span>
                         <span className="text-blue-600 font-black">
-                           {(formData.taxa_convenio || 0).toFixed(2)}%
+                           {(formData.taxa_convenio || 0).toFixed(2).replace('.', ',')}%
                         </span>
                      </div>
                       <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-200">
