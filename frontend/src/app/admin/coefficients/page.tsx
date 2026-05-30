@@ -50,6 +50,14 @@ export default function CoefficientsPage() {
 
   const [selectedAgreement, setSelectedAgreement] = useState("");
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
+  const [collapsedSubAgreements, setCollapsedSubAgreements] = useState<Record<string, boolean>>({});
+
+  const toggleSubAgreement = (key: string) => {
+    setCollapsedSubAgreements(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
 
   const ESTADOS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"];
 
@@ -514,20 +522,38 @@ export default function CoefficientsPage() {
                                 })
                                 .map((subLabel) => {
                                   const windows = subsMap[subLabel];
+                                  const subKey = `${selectedBankId}-${agreement}-${termLabel}-${subLabel}`;
+                                  const isCollapsed = !!collapsedSubAgreements[subKey];
                                   return (
                                     <div key={subLabel} className="space-y-4">
                                       {/* Cabeçalho do Sub-Convênio (Apenas se houver sub-convênios reais) */}
-                                      {hasRealSub && (
-                                        <div className="flex items-center gap-2.5 px-4 py-2 bg-slate-100/50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-white/5 w-fit shadow-inner">
-                                          <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
-                                          <span className="text-[9px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
-                                            Sub-Convênio: {subLabel}
-                                          </span>
+                                      {hasRealSub ? (
+                                        <div 
+                                          className="flex items-center justify-between gap-3 px-4 py-2.5 bg-slate-100/50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-white/5 w-full md:w-fit shadow-inner cursor-pointer select-none group/subHeader"
+                                          onClick={() => toggleSubAgreement(subKey)}
+                                          title={isCollapsed ? "Clique para Expandir" : "Clique para Recolher"}
+                                        >
+                                          <div className="flex items-center gap-2.5">
+                                            <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
+                                            <span className="text-[9px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                              Sub-Convênio: {subLabel}
+                                              <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 bg-slate-200/50 dark:bg-slate-800 px-2 py-0.5 rounded-full lowercase normal-case tracking-normal">
+                                                {windows.length} {windows.length === 1 ? 'janela' : 'janelas'}
+                                              </span>
+                                            </span>
+                                          </div>
+                                          <button className="text-[8px] font-black text-indigo-500 hover:text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 ml-4">
+                                            {isCollapsed ? 'Expandir' : 'Recolher'}
+                                            <svg className={`w-2.5 h-2.5 transform transition-transform duration-300 ${isCollapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3.5">
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                          </button>
                                         </div>
-                                      )}
+                                      ) : null}
 
                                       {/* Grid das Janelas daquele Sub-Convênio */}
-                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-0 md:pl-2">
+                                      {(!hasRealSub || !isCollapsed) && (
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-0 md:pl-2 animate-in fade-in duration-300">
                                         {windows.map((w) => {
                                           return (
                                             <div key={w.key} className="bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-8 duration-700 flex flex-col h-full">
@@ -631,6 +657,7 @@ export default function CoefficientsPage() {
                                           );
                                         })}
                                       </div>
+                                      )}
                                     </div>
                                   );
                                 })}

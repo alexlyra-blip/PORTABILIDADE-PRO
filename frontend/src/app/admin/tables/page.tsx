@@ -35,6 +35,14 @@ export default function TablesPage() {
 
   const [selectedAgreement, setSelectedAgreement] = useState("");
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
+  const [collapsedSubAgreements, setCollapsedSubAgreements] = useState<Record<string, boolean>>({});
+
+  const toggleSubAgreement = (key: string) => {
+    setCollapsedSubAgreements(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
   const [sortAlphabetically, setSortAlphabetically] = useState<boolean>(false);
   const [isSortLoaded, setIsSortLoaded] = useState(false);
 
@@ -466,18 +474,39 @@ export default function TablesPage() {
                   })()}
 
                   {shouldGroup ? (
-                    Object.entries(groupedTables).map(([sub, tList]) => (
-                      <div key={sub} className="mb-8 last:mb-2">
-                        <div className="flex items-center gap-3 mb-4 px-2 opacity-80">
-                           <span className="h-0.5 w-6 bg-blue-500/40 rounded-full"></span>
-                           <h4 className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{sub}</h4>
-                           <span className="h-px flex-1 bg-gradient-to-r from-slate-200 dark:from-white/10 to-transparent"></span>
+                    Object.entries(groupedTables).map(([sub, tList]) => {
+                      const subKey = `${selectedBankId}-${agr}-${sub}`;
+                      const isCollapsed = !!collapsedSubAgreements[subKey];
+                      return (
+                        <div key={sub} className="mb-8 last:mb-2">
+                          <div 
+                            className="flex items-center gap-3 mb-4 px-2 cursor-pointer select-none group/header"
+                            onClick={() => toggleSubAgreement(subKey)}
+                            title={isCollapsed ? "Clique para Expandir" : "Clique para Recolher"}
+                          >
+                             <span className="h-0.5 w-6 bg-blue-500/40 rounded-full"></span>
+                             <h4 className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                               {sub}
+                               <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-full normal-case tracking-normal">
+                                 {tList.length} {tList.length === 1 ? 'tabela' : 'tabelas'}
+                               </span>
+                             </h4>
+                             <span className="h-px flex-1 bg-gradient-to-r from-slate-200 dark:from-white/10 to-transparent"></span>
+                             <button className="text-[9px] font-black text-blue-600 dark:text-blue-400 hover:text-blue-500 hover:underline uppercase tracking-widest flex items-center gap-1.5 transition-all">
+                               {isCollapsed ? 'Expandir' : 'Recolher'}
+                               <svg className={`w-3 h-3.5 transform transition-transform duration-300 ${isCollapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                               </svg>
+                             </button>
+                          </div>
+                          {!isCollapsed && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-300">
+                               {tList.map(t => renderTableCard(t))}
+                            </div>
+                          )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                           {tList.map(t => renderTableCard(t))}
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {finalTables.map(t => renderTableCard(t))}
