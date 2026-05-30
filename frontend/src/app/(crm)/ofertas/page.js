@@ -702,6 +702,7 @@ function OfertasPageContent() {
                     if (m.includes("IDADE")) return "IDADE FORA DO LIMITE";
                     if (m.includes("ESPÉCIE") || m.includes("ESPECIE")) return "ESPÉCIE NÃO PERMITIDA";
                     if (m.includes("ANALFABETO")) return "NÃO ACEITA ANALFABETO";
+                    if (m.includes("PARCELAS") || m.includes("PAGAS")) return m;
                     if (m.includes("VALOR MÍNIMO") || m.includes("TROCO") || m.includes("MÍNIMO")) return "TROCO MÍNIMO NÃO ATINGIDO";
                     if (m.includes("TABELA") || m.includes("REGRAS")) return "REGRAS DE TABELA NÃO ATENDIDAS";
                     return msg.length > 50 ? msg.substring(0, 47) + "..." : msg;
