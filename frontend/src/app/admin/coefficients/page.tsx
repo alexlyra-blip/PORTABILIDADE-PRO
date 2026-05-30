@@ -471,25 +471,42 @@ export default function CoefficientsPage() {
           return Object.keys(groupedByAgreement)
             .sort((a, b) => a.localeCompare(b))
             .map((agreement) => {
+              const selectedBank = banks.find(b => b.id.toString() === selectedBankId);
               const termsMap = groupedByAgreement[agreement];
               return (
-                <div key={agreement} className="space-y-8 animate-in fade-in duration-500 bg-slate-50/20 dark:bg-white/[0.01] p-6 md:p-8 rounded-[3.5rem] border border-slate-100 dark:border-white/5 shadow-inner">
-                  {/* Cabeçalho Premium do Convênio */}
-                  <div className="flex items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-5 rounded-[2rem] shadow-xl shadow-blue-500/10">
-                    <span className="text-2xl drop-shadow-md">
-                      {agreement === 'INSS' ? '📘' :
-                       agreement === 'SIAPE' ? '📙' :
-                       agreement === 'FORÇAS ARMADAS' || agreement === 'FORCAS' ? '📗' :
-                       agreement === 'GOVERNOS' ? '🏛️' : '🔘'}
-                    </span>
-                    <div>
-                      <h2 className="text-xs font-black text-blue-100/70 uppercase tracking-[0.2em] leading-none mb-1">Grupo de Convênio</h2>
-                      <p className="text-base font-black text-white uppercase tracking-tight leading-none">{agreement}</p>
+                <div key={agreement} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500 mb-8">
+                  {/* Cabeçalho do Convênio com logo do Banco */}
+                  <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-0 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden shrink-0">
+                        {(() => {
+                          return selectedBank?.logo_url ? (
+                            <img src={getStaticUrl(selectedBank.logo_url)} className="w-full h-full object-cover" alt={selectedBank.name} />
+                          ) : (
+                            <span className="text-xl font-black text-blue-600">{selectedBank?.name?.charAt(0) || "B"}</span>
+                          );
+                        })()}
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                          {selectedBank?.name} • {agreement}
+                        </h3>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Gestão de Coeficientes de Cálculo</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                      <button 
+                        onClick={() => handleOpenModal(null, "", globalTermFilter)}
+                        className="flex-1 md:flex-none py-2.5 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border-none transition-all shadow-lg hover:shadow-blue-500/40 flex items-center justify-center gap-2"
+                      >
+                        <span>＋</span> Novo Coeficiente
+                      </button>
                     </div>
                   </div>
 
-                  {/* Loop por Prazos dentro do Convênio */}
-                  <div className="space-y-10 pl-0 md:pl-4">
+                  {/* Conteúdo do Card */}
+                  <div className="p-8 space-y-10">
                     {Object.keys(termsMap)
                       .sort((a, b) => {
                         if (a === "SEM COEFICIENTE") return 1;
