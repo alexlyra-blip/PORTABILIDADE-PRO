@@ -57,25 +57,32 @@ def _banco_corresponde(banco_input, banco_regra):
         "756": "SICOOB"
     }
 
-    b_input = str(banco_input).upper().strip()
-    b_regra = str(banco_regra).upper().strip()
+    import unicodedata
+    def normalizar(texto):
+        if not texto:
+            return ""
+        nfkd = unicodedata.normalize('NFKD', str(texto))
+        return "".join([c for c in nfkd if not unicodedata.combining(c)]).upper().strip()
+
+    b_input = normalizar(banco_input)
+    b_regra = normalizar(banco_regra)
 
     # Resolve o input do banco (ex: "623" -> "PAN")
     if b_input in MAPA_CODIGOS_BANCOS:
-        b_input = MAPA_CODIGOS_BANCOS[b_input].upper()
+        b_input = normalizar(MAPA_CODIGOS_BANCOS[b_input])
     else:
         for cod, nome in MAPA_CODIGOS_BANCOS.items():
             if b_input.startswith(cod):
-                b_input = nome.upper()
+                b_input = normalizar(nome)
                 break
 
     # Resolve também o banco da regra por segurança (ex: se cadastrado como "623")
     if b_regra in MAPA_CODIGOS_BANCOS:
-        b_regra = MAPA_CODIGOS_BANCOS[b_regra].upper()
+        b_regra = normalizar(MAPA_CODIGOS_BANCOS[b_regra])
     else:
         for cod, nome in MAPA_CODIGOS_BANCOS.items():
             if b_regra.startswith(cod):
-                b_regra = nome.upper()
+                b_regra = normalizar(nome)
                 break
     
     # Match exato
@@ -90,7 +97,9 @@ def _banco_corresponde(banco_input, banco_regra):
     def clean_words(text):
         for noise in ["BANCO", "S.A.", "SA", "CONSIGNADO", "CREDITO", "FINANCEIRA", "BANK", "PORTABILIDADE", "INSTITUICAO"]:
             text = text.replace(noise, " ")
-        return set(re.findall(r'[A-Z0-9]{2,}', text))
+        words = re.findall(r'[A-Z0-9]{2,}', text)
+        prepositions = {"DO", "DE", "DA", "DOS", "DAS", "E", "S/A"}
+        return {w for w in words if w not in prepositions}
         
     words_input = clean_words(b_input)
     words_regra = clean_words(b_regra)

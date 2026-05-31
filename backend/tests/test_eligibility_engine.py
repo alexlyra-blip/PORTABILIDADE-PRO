@@ -2,24 +2,20 @@ import pytest
 import sys
 import os
 
+# Append the engine path to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../engine')))
 
-from eligibility_engine import verificar_elegibilidade
-from models import Banco
+from eligibility_engine import _banco_corresponde
 
-def test_verificar_elegibilidade_idade_invalida():
-    banco = Banco(nome="Banco Ficticio") # Mocking
+def test_banco_corresponde_do_prepositions_collision():
+    # 1. Test that prepositions like DO, DE, DA do not cause false matches
+    assert not _banco_corresponde("BANCO DO ESTADO DO SERGIPE", "BANCO DO BRASIL")
+    assert not _banco_corresponde("047 - BANCO DO ESTADO DE SERGIPE", "BANCO DO BRASIL")
+    assert not _banco_corresponde("BANCO DE BRASILIA", "BANCO DO ESTADO DO SERGIPE")
     
-    # Example assertion: checking if age 15 is ineligible based on standard rules setup
-    # Note: eligibility_engine relies on banks_db, let's test the interface
-    with pytest.raises(Exception):
-        # We would need to mock or use the real DB. For a unit test, we check if it returns
-        # False or raises an exception for invalid ages as per banks_db rules.
-        pass
-
-def test_verificar_elegibilidade_sucesso():
-    # If using dynamic DB, assuming 65 is valid for PAN or INBURSA
-    banco_pan = Banco(nome="Banco Pan")
-    # valid_idade, valid_beneficio, etc.
-    # assert verificar_elegibilidade(...) == True
-    pass
+    # 2. Test that actual identical or minor spelling variant banks match correctly
+    assert _banco_corresponde("047 - BANCO DO ESTADO DE SERGIPE", "BANCO DO ESTADO DO SERGIPE")
+    assert _banco_corresponde("001 - BANCO DO BRASIL S.A.", "BANCO DO BRASIL")
+    assert _banco_corresponde("335 - DIGIO", "DIGIO")
+    assert _banco_corresponde("623 - PAN", "PAN")
+    assert _banco_corresponde("029 - ITAU", "ITAU CONSIGNADO")
