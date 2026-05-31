@@ -52,6 +52,10 @@ export default function CoefficientsPage() {
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
   const [collapsedSubAgreements, setCollapsedSubAgreements] = useState<Record<string, boolean>>({});
   const [collapsedAgreements, setCollapsedAgreements] = useState<Record<string, boolean>>({});
+  
+  const [filterName, setFilterName] = useState("");
+  const [filterRate, setFilterRate] = useState("");
+  const [filterTerm, setFilterTerm] = useState("");
 
   const toggleSubAgreement = (key: string) => {
     setCollapsedSubAgreements(prev => ({
@@ -226,7 +230,19 @@ export default function CoefficientsPage() {
   // Agrupar coeficientes por prazo para cada tabela
   const coeffWindows: any[] = [];
   filteredTables.forEach((table) => {
-    const tableCoeffs = allCoefficients[table.id] || [];
+    let tableCoeffs = allCoefficients[table.id] || [];
+    
+    // Filtro por Taxa de Coeficiente
+    if (filterRate.trim() !== "") {
+      tableCoeffs = tableCoeffs.filter(c => 
+        String(c.interest_rate).includes(filterRate.replace(",", "."))
+      );
+    }
+
+    if (tableCoeffs.length === 0 && filterRate.trim() !== "") {
+      return;
+    }
+
     if (tableCoeffs.length === 0) {
       coeffWindows.push({
         key: `${table.id}-empty`,
@@ -270,9 +286,26 @@ export default function CoefficientsPage() {
 
   const termFilterOptions = allUniqueTerms.length > 0 ? allUniqueTerms : [84, 96, 108, 120];
 
+  let finalWindows = [...coeffWindows];
+
+  // Filtro por Nome da Tabela
+  if (filterName.trim() !== "") {
+    finalWindows = finalWindows.filter((w) => 
+      w.table.name.toLowerCase().includes(filterName.toLowerCase())
+    );
+  }
+
+  // Filtro por Prazo (Term)
+  if (filterTerm.trim() !== "") {
+    const termVal = parseInt(filterTerm);
+    if (!isNaN(termVal)) {
+      finalWindows = finalWindows.filter((w) => w.term === termVal);
+    }
+  }
+
   const displayedWindows = globalTermFilter !== null
-    ? coeffWindows.filter((w) => w.term === globalTermFilter)
-    : coeffWindows;
+    ? finalWindows.filter((w) => w.term === globalTermFilter)
+    : finalWindows;
 
   const sortedWindows = [...displayedWindows];
   if (sortBy === 'name') {
@@ -375,6 +408,65 @@ export default function CoefficientsPage() {
           </button>
         </div>
       </div>
+
+      {/* Barra de Filtros Avançados */}
+      {selectedBankId && filteredTables.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-100 dark:border-white/5 animate-in slide-in-from-top-4 duration-500">
+          {/* Campo Nome */}
+          <div className="relative">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Buscar por Nome</label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-[10px]">🔍</span>
+              <input 
+                type="text" 
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+                className="w-full py-3 pl-10 pr-4 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                placeholder="Ex: Tabela Flex..."
+              />
+              {filterName && (
+                <button type="button" onClick={() => setFilterName("")} className="absolute right-4 text-slate-400 hover:text-slate-600 text-xs">×</button>
+              )}
+            </div>
+          </div>
+
+          {/* Campo Taxa */}
+          <div className="relative">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Filtrar por Taxa (%)</label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-[10px]">📊</span>
+              <input 
+                type="text" 
+                value={filterRate}
+                onChange={(e) => setFilterRate(e.target.value)}
+                className="w-full py-3 pl-10 pr-4 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                placeholder="Ex: 1.35"
+              />
+              {filterRate && (
+                <button type="button" onClick={() => setFilterRate("")} className="absolute right-4 text-slate-400 hover:text-slate-600 text-xs">×</button>
+              )}
+            </div>
+          </div>
+
+          {/* Campo Prazo */}
+          <div className="relative">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Filtrar por Prazo (Meses)</label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-[10px]">📅</span>
+              <input 
+                type="number" 
+                value={filterTerm}
+                onChange={(e) => setFilterTerm(e.target.value)}
+                className="w-full py-3 pl-10 pr-4 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                placeholder="Ex: 84"
+              />
+              {filterTerm && (
+                <button type="button" onClick={() => setFilterTerm("")} className="absolute right-4 text-slate-400 hover:text-slate-600 text-xs">×</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filtro Global por Prazo & Ordenação */}
       <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-white/5 animate-in fade-in duration-500">

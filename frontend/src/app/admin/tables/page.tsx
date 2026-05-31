@@ -37,6 +37,10 @@ export default function TablesPage() {
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
   const [collapsedSubAgreements, setCollapsedSubAgreements] = useState<Record<string, boolean>>({});
   const [collapsedAgreements, setCollapsedAgreements] = useState<Record<string, boolean>>({});
+  
+  const [filterName, setFilterName] = useState("");
+  const [filterRate, setFilterRate] = useState("");
+  const [filterTerm, setFilterTerm] = useState("");
 
   const toggleSubAgreement = (key: string) => {
     setCollapsedSubAgreements(prev => ({
@@ -327,6 +331,65 @@ export default function TablesPage() {
         </div>
       </div>
 
+      {/* Barra de Filtros Avançados */}
+      {selectedBankId && tables.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-100 dark:border-white/5 animate-in slide-in-from-top-4 duration-500">
+          {/* Campo Nome */}
+          <div className="relative">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Buscar por Nome</label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-[10px]">🔍</span>
+              <input 
+                type="text" 
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+                className="w-full py-3 pl-10 pr-4 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                placeholder="Ex: Tabela Flex..."
+              />
+              {filterName && (
+                <button type="button" onClick={() => setFilterName("")} className="absolute right-4 text-slate-400 hover:text-slate-600 text-xs">×</button>
+              )}
+            </div>
+          </div>
+
+          {/* Campo Taxa */}
+          <div className="relative">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Filtrar por Taxa (%)</label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-[10px]">📊</span>
+              <input 
+                type="text" 
+                value={filterRate}
+                onChange={(e) => setFilterRate(e.target.value)}
+                className="w-full py-3 pl-10 pr-4 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                placeholder="Ex: 1.35"
+              />
+              {filterRate && (
+                <button type="button" onClick={() => setFilterRate("")} className="absolute right-4 text-slate-400 hover:text-slate-600 text-xs">×</button>
+              )}
+            </div>
+          </div>
+
+          {/* Campo Prazo */}
+          <div className="relative">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Filtrar por Prazo (Meses)</label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-[10px]">📅</span>
+              <input 
+                type="number" 
+                value={filterTerm}
+                onChange={(e) => setFilterTerm(e.target.value)}
+                className="w-full py-3 pl-10 pr-4 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                placeholder="Ex: 84"
+              />
+              {filterTerm && (
+                <button type="button" onClick={() => setFilterTerm("")} className="absolute right-4 text-slate-400 hover:text-slate-600 text-xs">×</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Grouped Tables by Bank */}
       <div className="space-y-8">
         {loading ? (
@@ -368,9 +431,34 @@ export default function TablesPage() {
             const activeTerm = termFilters[filterKey] ?? null;
 
             let finalTables = [...agrTables];
+            
+            // Filtro por Nome
+            if (filterName.trim() !== "") {
+              finalTables = finalTables.filter(t => 
+                t.name.toLowerCase().includes(filterName.toLowerCase())
+              );
+            }
+
+            // Filtro por Taxa
+            if (filterRate.trim() !== "") {
+              finalTables = finalTables.filter(t => 
+                String(t.taxa_convenio).includes(filterRate.replace(",", "."))
+              );
+            }
+
+            // Filtro por Prazo
+            if (filterTerm.trim() !== "") {
+              const termVal = parseInt(filterTerm);
+              if (!isNaN(termVal)) {
+                finalTables = finalTables.filter(t => (t.term || 84) === termVal);
+              }
+            }
+
             if (activeTerm !== null) {
               finalTables = finalTables.filter(t => (t.term || 84) === activeTerm);
             }
+
+            if (finalTables.length === 0) return null;
 
             if (sortAlphabetically) {
                finalTables.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
