@@ -71,6 +71,9 @@ export default function BanksPage() {
   const [selectedAgreement, setSelectedAgreement] = useState("INSS");
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
   const [bankRules, setBankRules] = useState<any[]>([]);
+  const [showAddRuleForm, setShowAddRuleForm] = useState(false);
+  const [newAgreement, setNewAgreement] = useState("INSS");
+  const [newSubAgreement, setNewSubAgreement] = useState("");
   
   // Debug & Status
   const currentRuleData = bankRules.find(r => r.agreement === selectedAgreement);
@@ -107,64 +110,127 @@ export default function BanksPage() {
     }
   };
 
+  const updateRuleField = (fieldName: string, value: any) => {
+    // 1. Update in the active formData.rules state (what the form inputs read)
+    setFormData(prev => ({
+      ...prev,
+      rules: {
+        ...prev.rules,
+        [fieldName]: value
+      }
+    }));
+    
+    // 2. Also keep the same rule in bankRules state synchronized
+    setBankRules(prev => prev.map(r => {
+      if (r.agreement === formData.rules.agreement && (r.sub_agreement || "") === (formData.rules.sub_agreement || "")) {
+        return { ...r, [fieldName]: value };
+      }
+      return r;
+    }));
+  };
+
   const handleOpenModal = async (bank: any = null) => {
+    setShowAddRuleForm(false);
     if (bank) {
       setEditingBank(bank);
       try {
         const rules = await api.get(`/admin/banks/${bank.id}/rules`);
         setBankRules(rules);
         
-        // Pick the first rule for current selection or default
-        const rule = rules.find(r => r.agreement === selectedAgreement && (r.sub_agreement || "") === selectedSubAgreement) || rules[0] || {};
-        if (rule.agreement) {
+        // Pick the first rule or default
+        const rule = rules[0] || null;
+        if (rule) {
           setSelectedAgreement(rule.agreement);
           setSelectedSubAgreement(rule.sub_agreement || "");
+          
+          setFormData({ 
+            name: bank.name, 
+            logo_url: bank.logo_url || "",
+            active: bank.active,
+            priority: bank.priority || 99,
+            rules: {
+              agreement: rule.agreement,
+              sub_agreement: rule.sub_agreement || "",
+              min_age: rule.min_age ?? 18,
+              max_age: rule.max_age ?? 80,
+              max_term: rule.max_term ?? 84,
+              min_release_amount: rule.min_release_amount ?? 0,
+              literacy_required: rule.literacy_required ?? false,
+              accepts_illiterate: rule.accepts_illiterate ?? true,
+              accepts_60_plus: rule.accepts_60_plus ?? true,
+              portability_rate_threshold: rule.portability_rate_threshold || "",
+              refin_portability_rate_threshold: rule.refin_portability_rate_threshold || "",
+              min_installment_value: rule.min_installment_value || "",
+              min_debt_balance: rule.min_debt_balance || "",
+              use_balance_plus_released: rule.use_balance_plus_released || false,
+              min_paid_installments: rule.min_paid_installments || 0,
+              excluded_origin_banks: rule.excluded_origin_banks || "",
+              origin_banks_min_paid: rule.origin_banks_min_paid || "",
+              excluded_benefit_types: rule.excluded_benefit_types || "",
+              accepts_disability: rule.accepts_disability ?? false,
+              disability_min_age: rule.disability_min_age || "",
+              disability_min_benefit_years: rule.disability_min_benefit_years || "",
+              disability_min_benefit_months: rule.disability_min_benefit_months || "",
+              active: rule.active ?? true
+            }
+          });
+        } else {
+          // No rules configured yet
+          setSelectedAgreement("");
+          setSelectedSubAgreement("");
+          setFormData({
+            name: bank.name, 
+            logo_url: bank.logo_url || "",
+            active: bank.active,
+            priority: bank.priority || 99,
+            rules: {
+              agreement: "",
+              sub_agreement: "",
+              min_age: 18,
+              max_age: 80,
+              max_term: 84,
+              min_release_amount: 0,
+              literacy_required: false,
+              accepts_illiterate: true,
+              accepts_60_plus: true,
+              portability_rate_threshold: "",
+              refin_portability_rate_threshold: "",
+              min_installment_value: "",
+              min_debt_balance: "",
+              use_balance_plus_released: false,
+              min_paid_installments: 0,
+              excluded_origin_banks: "",
+              origin_banks_min_paid: "",
+              excluded_benefit_types: "",
+              accepts_disability: false,
+              disability_min_age: "",
+              disability_min_benefit_years: "",
+              disability_min_benefit_months: "",
+              active: true
+            }
+          });
         }
-        
-        setFormData({ 
-          name: bank.name, 
-          logo_url: bank.logo_url || "",
-          active: bank.active,
-          priority: bank.priority || 99,
-          rules: {
-            agreement: rule.agreement || "INSS",
-            sub_agreement: rule.sub_agreement || "",
-            min_age: rule.min_age || 18,
-            max_age: rule.max_age || 80,
-            accepts_illiterate: rule.accepts_illiterate ?? true,
-            accepts_60_plus: rule.accepts_60_plus ?? true,
-            portability_rate_threshold: rule.portability_rate_threshold || "",
-            refin_portability_rate_threshold: rule.refin_portability_rate_threshold || "",
-            min_installment_value: rule.min_installment_value || "",
-            min_debt_balance: rule.min_debt_balance || "",
-            use_balance_plus_released: rule.use_balance_plus_released || false,
-            min_paid_installments: rule.min_paid_installments || 0,
-            excluded_origin_banks: rule.excluded_origin_banks || "",
-            origin_banks_min_paid: rule.origin_banks_min_paid || "",
-            excluded_benefit_types: rule.excluded_benefit_types || "",
-            accepts_disability: rule.accepts_disability ?? false,
-            disability_min_age: rule.disability_min_age || "",
-            disability_min_benefit_years: rule.disability_min_benefit_years || "",
-            disability_min_benefit_months: rule.disability_min_benefit_months || "",
-            active: rule.active ?? true
-          }
-        });
       } catch (error) {
         console.error("Erro ao carregar regras:", error);
       }
     } else {
       setEditingBank(null);
       setBankRules([]);
+      setSelectedAgreement("");
+      setSelectedSubAgreement("");
       setFormData({ 
         name: "", 
         logo_url: "",
         active: true,
         priority: 99,
         rules: {
-          agreement: "INSS",
+          agreement: "",
           sub_agreement: "",
           min_age: 18,
           max_age: 80,
+          max_term: 84,
+          min_release_amount: 0,
+          literacy_required: false,
           accepts_illiterate: true,
           accepts_60_plus: true,
           portability_rate_threshold: "",
@@ -173,9 +239,6 @@ export default function BanksPage() {
           min_debt_balance: "",
           use_balance_plus_released: false,
           min_paid_installments: 0,
-          max_term: 84,
-          min_release_amount: 0,
-          literacy_required: false,
           excluded_origin_banks: "",
           origin_banks_min_paid: "",
           excluded_benefit_types: "",
@@ -193,17 +256,20 @@ export default function BanksPage() {
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingBank(null);
-    // Reset to default structure to avoid missing property errors
+    setShowAddRuleForm(false);
     setFormData({ 
       name: "", 
       logo_url: "",
       active: true,
       priority: 99,
       rules: {
-        agreement: "INSS",
+        agreement: "",
         sub_agreement: "",
         min_age: 18,
         max_age: 80,
+        max_term: 84,
+        min_release_amount: 0,
+        literacy_required: false,
         accepts_illiterate: true,
         accepts_60_plus: true,
         portability_rate_threshold: "",
@@ -241,51 +307,43 @@ export default function BanksPage() {
         savedBank = await api.post("/admin/banks", bankPayload);
       }
 
-      // Construct Explicit Rule Payload to ensure fields are NOT dropped
-      const rulePayload = {
-        agreement: formData.rules.agreement,
-        sub_agreement: formData.rules.sub_agreement || "",
-        min_age: parseInt(formData.rules.min_age) || 18,
-        max_age: parseInt(formData.rules.max_age) || 80,
-        max_term: parseInt(formData.rules.max_term) || 84,
-        min_release_amount: parseFloat(formData.rules.min_release_amount) || 0,
-        allowed_benefit_types: formData.rules.allowed_benefit_types || "",
-        literacy_required: formData.rules.literacy_required || false,
-        accepts_illiterate: formData.rules.accepts_illiterate || true,
-        accepts_60_plus: formData.rules.accepts_60_plus || true,
-        portability_rate_threshold: formData.rules.portability_rate_threshold ? parseFloat(formData.rules.portability_rate_threshold) : null,
-        refin_portability_rate_threshold: formData.rules.refin_portability_rate_threshold ? parseFloat(formData.rules.refin_portability_rate_threshold) : null,
-        min_installment_value: formData.rules.min_installment_value ? parseFloat(formData.rules.min_installment_value) : null,
-        min_debt_balance: formData.rules.min_debt_balance ? parseFloat(formData.rules.min_debt_balance) : null,
-        use_balance_plus_released: formData.rules.use_balance_plus_released,
-        min_paid_installments: parseInt(formData.rules.min_paid_installments) || 0,
-        excluded_origin_banks: formData.rules.excluded_origin_banks || "",
-        origin_banks_min_paid: formData.rules.origin_banks_min_paid || "",
-        excluded_benefit_types: formData.rules.excluded_benefit_types || "",
-        accepts_disability: formData.rules.accepts_disability,
-        disability_min_age: formData.rules.disability_min_age ? parseInt(formData.rules.disability_min_age) : null,
-        disability_min_benefit_years: formData.rules.disability_min_benefit_years ? parseInt(formData.rules.disability_min_benefit_years) : null,
-        disability_min_benefit_months: formData.rules.disability_min_benefit_months ? parseInt(formData.rules.disability_min_benefit_months) : null,
-        bank_id: savedBank.id,
-        active: formData.rules.active ?? true
-      };
+      // Save ALL rules in bankRules list
+      for (const rule of bankRules) {
+        const rulePayload = {
+          agreement: rule.agreement,
+          sub_agreement: rule.sub_agreement || "",
+          min_age: parseInt(rule.min_age) || 18,
+          max_age: parseInt(rule.max_age) || 80,
+          max_term: parseInt(rule.max_term) || 84,
+          min_release_amount: parseFloat(rule.min_release_amount) || 0,
+          allowed_benefit_types: rule.allowed_benefit_types || "",
+          literacy_required: rule.literacy_required || false,
+          accepts_illiterate: rule.accepts_illiterate ?? true,
+          accepts_60_plus: rule.accepts_60_plus ?? true,
+          portability_rate_threshold: rule.portability_rate_threshold ? parseFloat(rule.portability_rate_threshold) : null,
+          refin_portability_rate_threshold: rule.refin_portability_rate_threshold ? parseFloat(rule.refin_portability_rate_threshold) : null,
+          min_installment_value: rule.min_installment_value ? parseFloat(rule.min_installment_value) : null,
+          min_debt_balance: rule.min_debt_balance ? parseFloat(rule.min_debt_balance) : null,
+          use_balance_plus_released: rule.use_balance_plus_released ?? false,
+          min_paid_installments: parseInt(rule.min_paid_installments) || 0,
+          excluded_origin_banks: rule.excluded_origin_banks || "",
+          origin_banks_min_paid: rule.origin_banks_min_paid || "",
+          excluded_benefit_types: rule.excluded_benefit_types || "",
+          accepts_disability: rule.accepts_disability ?? false,
+          disability_min_age: rule.disability_min_age ? parseInt(rule.disability_min_age) : null,
+          disability_min_benefit_years: rule.disability_min_benefit_years ? parseInt(rule.disability_min_benefit_years) : null,
+          disability_min_benefit_months: rule.disability_min_benefit_months ? parseInt(rule.disability_min_benefit_months) : null,
+          bank_id: savedBank.id,
+          active: rule.active ?? true
+        };
 
-      // Check if rule for this agreement exists
-      const existingRule = bankRules.find(r => r.agreement === formData.rules.agreement && (r.sub_agreement || "") === (formData.rules.sub_agreement || ""));
-      let savedRule;
-      
-      console.log("Saving Rule for agreement", formData.rules.agreement, ":", rulePayload);
-
-      if (existingRule) {
-        savedRule = await api.patch(`/admin/bank-rules/${existingRule.id}`, rulePayload);
-      } else {
-        savedRule = await api.post("/admin/bank-rules", rulePayload);
+        if (rule.id) {
+          await api.patch(`/admin/bank-rules/${rule.id}`, rulePayload);
+        } else {
+          await api.post("/admin/bank-rules", rulePayload);
+        }
       }
 
-
-      // Refresh rules for this bank to ensure UI reflects latest data
-      const refreshedRules = await api.get(`/admin/banks/${savedBank.id}/rules`);
-      setBankRules(refreshedRules);
       loadBanks();
       alert("✅ Banco e Regras salvos com sucesso!");
       handleCloseModal();
@@ -295,6 +353,142 @@ export default function BanksPage() {
       alert(detail);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAgreementChange = (newAgreement: string, newSubAgreement: string = "") => {
+    setSelectedAgreement(newAgreement);
+    setSelectedSubAgreement(newSubAgreement);
+    const rule = bankRules.find(r => r.agreement === newAgreement && (r.sub_agreement || "") === newSubAgreement);
+    if (rule) {
+      setFormData(prev => ({
+        ...prev,
+        rules: {
+          agreement: rule.agreement,
+          sub_agreement: rule.sub_agreement || "",
+          min_age: rule.min_age ?? 18,
+          max_age: rule.max_age ?? 80,
+          max_term: rule.max_term ?? 84,
+          min_release_amount: rule.min_release_amount ?? 0,
+          literacy_required: rule.literacy_required ?? false,
+          accepts_illiterate: rule.accepts_illiterate ?? true,
+          accepts_60_plus: rule.accepts_60_plus ?? true,
+          portability_rate_threshold: rule.portability_rate_threshold ?? "",
+          refin_portability_rate_threshold: rule.refin_portability_rate_threshold ?? "",
+          min_installment_value: rule.min_installment_value ?? "",
+          min_debt_balance: rule.min_debt_balance ?? "",
+          use_balance_plus_released: rule.use_balance_plus_released ?? false,
+          min_paid_installments: rule.min_paid_installments ?? 0,
+          excluded_origin_banks: rule.excluded_origin_banks ?? "",
+          origin_banks_min_paid: rule.origin_banks_min_paid ?? "",
+          excluded_benefit_types: rule.excluded_benefit_types ?? "",
+          accepts_disability: rule.accepts_disability ?? false,
+          disability_min_age: rule.disability_min_age ?? "",
+          disability_min_benefit_years: rule.disability_min_benefit_years ?? "",
+          disability_min_benefit_months: rule.disability_min_benefit_months ?? "",
+          active: rule.active ?? true
+        }
+      }));
+    }
+  };
+
+  const handleAddNewRule = () => {
+    if (!newAgreement) return;
+    const exists = bankRules.some(r => r.agreement === newAgreement && (r.sub_agreement || "") === newSubAgreement);
+    if (exists) {
+      alert(`⚠️ A regra para ${newAgreement}${newSubAgreement ? ` - ${newSubAgreement}` : ""} já existe!`);
+      handleAgreementChange(newAgreement, newSubAgreement);
+      setShowAddRuleForm(false);
+      return;
+    }
+
+    const defaultRule = {
+      agreement: newAgreement,
+      sub_agreement: newSubAgreement,
+      min_age: 18,
+      max_age: 80,
+      max_term: 84,
+      min_release_amount: 0,
+      literacy_required: false,
+      accepts_illiterate: true,
+      accepts_60_plus: true,
+      portability_rate_threshold: "",
+      refin_portability_rate_threshold: "",
+      min_installment_value: "",
+      min_debt_balance: "",
+      use_balance_plus_released: false,
+      min_paid_installments: 0,
+      excluded_origin_banks: "",
+      origin_banks_min_paid: "",
+      excluded_benefit_types: "",
+      accepts_disability: false,
+      disability_min_age: "",
+      disability_min_benefit_years: "",
+      disability_min_benefit_months: "",
+      active: true
+    };
+
+    setBankRules(prev => [...prev, defaultRule]);
+    setSelectedAgreement(newAgreement);
+    setSelectedSubAgreement(newSubAgreement);
+    setFormData(prev => ({
+      ...prev,
+      rules: defaultRule
+    }));
+    setShowAddRuleForm(false);
+    setNewAgreement("INSS");
+    setNewSubAgreement("");
+  };
+
+  const handleDeleteRule = async (ruleToDelete: any) => {
+    if (!window.confirm(`Tem certeza que deseja excluir a regra de convênio ${ruleToDelete.agreement}${ruleToDelete.sub_agreement ? ` - ${ruleToDelete.sub_agreement}` : ""}?`)) return;
+    
+    try {
+      if (ruleToDelete.id) {
+        await api.delete(`/admin/bank-rules/${ruleToDelete.id}`);
+      }
+      
+      const updatedRules = bankRules.filter(r => !(r.agreement === ruleToDelete.agreement && (r.sub_agreement || "") === (ruleToDelete.sub_agreement || "")));
+      setBankRules(updatedRules);
+      
+      if (updatedRules.length > 0) {
+        handleAgreementChange(updatedRules[0].agreement, updatedRules[0].sub_agreement || "");
+      } else {
+        setSelectedAgreement("");
+        setSelectedSubAgreement("");
+        setFormData(prev => ({
+          ...prev,
+          rules: {
+            agreement: "",
+            sub_agreement: "",
+            min_age: 18,
+            max_age: 80,
+            max_term: 84,
+            min_release_amount: 0,
+            literacy_required: false,
+            accepts_illiterate: true,
+            accepts_60_plus: true,
+            portability_rate_threshold: "",
+            refin_portability_rate_threshold: "",
+            min_installment_value: "",
+            min_debt_balance: "",
+            use_balance_plus_released: false,
+            min_paid_installments: 0,
+            excluded_origin_banks: "",
+            origin_banks_min_paid: "",
+            excluded_benefit_types: "",
+            accepts_disability: false,
+            disability_min_age: "",
+            disability_min_benefit_years: "",
+            disability_min_benefit_months: "",
+            active: true
+          }
+        }));
+      }
+      alert("✅ Regra de convênio removida!");
+    } catch (error) {
+      console.error("Erro ao excluir regra:", error);
+      alert("Erro ao excluir regra do convênio.");
     }
   };
 
@@ -328,65 +522,19 @@ export default function BanksPage() {
     }
   };
 
-  const handleAgreementChange = (newAgreement: string, newSubAgreement: string = "") => {
-    setSelectedAgreement(newAgreement);
-    setSelectedSubAgreement(newSubAgreement);
-    const rule = bankRules.find(r => r.agreement === newAgreement && (r.sub_agreement || "") === newSubAgreement);
-    if (rule) {
-      setFormData({
-        ...formData,
-        rules: {
-          agreement: rule.agreement || newAgreement,
-          sub_agreement: rule.sub_agreement || newSubAgreement,
-          min_age: rule.min_age || 18,
-          max_age: rule.max_age || 80,
-          accepts_illiterate: rule.accepts_illiterate ?? true,
-          accepts_60_plus: rule.accepts_60_plus ?? true,
-          portability_rate_threshold: rule.portability_rate_threshold || "",
-          refin_portability_rate_threshold: rule.refin_portability_rate_threshold || "",
-          min_installment_value: rule.min_installment_value || "",
-          min_debt_balance: rule.min_debt_balance || "",
-          use_balance_plus_released: rule.use_balance_plus_released || false,
-          min_paid_installments: rule.min_paid_installments || 0,
-          excluded_origin_banks: rule.excluded_origin_banks || "",
-          origin_banks_min_paid: rule.origin_banks_min_paid || "",
-          excluded_benefit_types: rule.excluded_benefit_types || "",
-          accepts_disability: rule.accepts_disability || false,
-          disability_min_age: rule.disability_min_age || "",
-          disability_min_benefit_years: rule.disability_min_benefit_years || "",
-          disability_min_benefit_months: rule.disability_min_benefit_months || "",
-          active: rule.active ?? true
-        }
-      });
-    } else {
-      setFormData({
-        ...formData,
-        rules: {
-          ...formData.rules,
-          agreement: newAgreement,
-          sub_agreement: newSubAgreement,
-          excluded_origin_banks: "",
-          origin_banks_min_paid: "",
-          excluded_benefit_types: "",
-          active: true
-        }
-      });
-    }
-  };
-
   const addExcludedBank = () => {
     if (!excludedInput.trim()) return;
     const current = formData.rules.excluded_origin_banks ? formData.rules.excluded_origin_banks.split(',').map(s => s.trim().toUpperCase()) : [];
     if (!current.includes(excludedInput.trim().toUpperCase())) {
       const newList = [...current, excludedInput.trim().toUpperCase()].join(',');
-      setFormData({...formData, rules: {...formData.rules, excluded_origin_banks: newList}});
+      updateRuleField("excluded_origin_banks", newList);
     }
     setExcludedInput("");
   };
 
   const removeExcludedBank = (bank) => {
     const newList = formData.rules.excluded_origin_banks.split(',').map(s => s.trim().toUpperCase()).filter(b => b !== bank).join(',');
-    setFormData({...formData, rules: {...formData.rules, excluded_origin_banks: newList}});
+    updateRuleField("excluded_origin_banks", newList);
   };
 
   const addExcludedBenefitType = () => {
@@ -394,14 +542,14 @@ export default function BanksPage() {
     const current = formData.rules.excluded_benefit_types ? formData.rules.excluded_benefit_types.split(',').map(s => s.trim().toUpperCase()) : [];
     if (!current.includes(benefitTypeInput.trim().toUpperCase())) {
       const newList = [...current, benefitTypeInput.trim().toUpperCase()].join(',');
-      setFormData({...formData, rules: {...formData.rules, excluded_benefit_types: newList}});
+      updateRuleField("excluded_benefit_types", newList);
     }
     setBenefitTypeInput("");
   };
 
   const removeExcludedBenefitType = (species) => {
     const newList = formData.rules.excluded_benefit_types.split(',').map(s => s.trim().toUpperCase()).filter(b => b !== species).join(',');
-    setFormData({...formData, rules: {...formData.rules, excluded_benefit_types: newList}});
+    updateRuleField("excluded_benefit_types", newList);
   };
 
   const addBankCarença = () => {
@@ -412,7 +560,7 @@ export default function BanksPage() {
     } catch {}
     
     currentData[bankCarInput.trim().toUpperCase()] = parseInt(parcCarInput) || 0;
-    setFormData({...formData, rules: {...formData.rules, origin_banks_min_paid: JSON.stringify(currentData)}});
+    updateRuleField("origin_banks_min_paid", JSON.stringify(currentData));
     
     setBankCarInput("");
     setParcCarInput("");
@@ -423,7 +571,7 @@ export default function BanksPage() {
     try {
       currentData = JSON.parse(formData.rules.origin_banks_min_paid);
       delete currentData[bank];
-      setFormData({...formData, rules: {...formData.rules, origin_banks_min_paid: JSON.stringify(currentData)}});
+      updateRuleField("origin_banks_min_paid", JSON.stringify(currentData));
     } catch {}
   };
 
@@ -631,372 +779,472 @@ export default function BanksPage() {
                 </h4>
 
                 <div className="mb-6 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-3">
-                  <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-widest">Selecione o Convênio para configurar a Regra</label>
-                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                    {["INSS", "SIAPE", "GOVERNOS", "FORÇAS ARMADAS", "CLT_PRIVADO"].map(agr => (
-                      <button
-                        key={agr}
-                        type="button"
-                        onClick={() => handleAgreementChange(agr, "")}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all shrink-0 ${formData.rules.agreement === agr ? "bg-blue-600 text-white shadow-lg" : "bg-white text-slate-400 border border-slate-200 hover:border-blue-300"}`}
-                      >
-                        {agr === "GOVERNOS" ? "GOVERNOS" : agr === "FORÇAS ARMADAS" ? "FORÇAS ARMADAS" : agr === "CLT_PRIVADO" ? "CLT PRIVADO" : agr}
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="flex-1">
+                      <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1.5">Selecione o Convênio para configurar a Regra</label>
+                      {bankRules.length === 0 ? (
+                        <div className="text-xs font-semibold text-slate-400 italic py-2">
+                          Nenhuma regra cadastrada para este banco.
+                        </div>
+                      ) : (
+                        <select
+                          value={`${selectedAgreement}|||${selectedSubAgreement}`}
+                          onChange={(e) => {
+                            const [agr, sub] = e.target.value.split("|||");
+                            handleAgreementChange(agr, sub);
+                          }}
+                          className="w-full bg-white text-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
+                        >
+                          {bankRules.map((rule, idx) => {
+                            const label = `${rule.agreement}${rule.sub_agreement ? ` - ${rule.sub_agreement}` : ""}`;
+                            return (
+                              <option key={idx} value={`${rule.agreement}|||${rule.sub_agreement || ""}`}>
+                                {rule.agreement === "FORÇAS ARMADAS" ? `FORÇAS ARMADAS${rule.sub_agreement ? ` - ${rule.sub_agreement}` : " (GERAL)"}` : label}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      )}
+                    </div>
+                    
+                    {selectedAgreement && (
+                      <div className="flex items-end h-[60px] pb-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const rule = bankRules.find(r => r.agreement === selectedAgreement && (r.sub_agreement || "") === selectedSubAgreement);
+                            if (rule) handleDeleteRule(rule);
+                          }}
+                          className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl border border-rose-100 hover:border-transparent transition-all shadow-sm flex items-center justify-center gap-1.5 font-bold text-xs uppercase"
+                          title="Excluir esta Regra"
+                        >
+                          <span className="text-sm">🗑️</span> Excluir
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {formData.rules.agreement === "FORÇAS ARMADAS" && (
-                    <div className="flex gap-2 overflow-x-auto pb-1 mt-2 custom-scrollbar">
-                      {["EXÉRCITO", "AERONÁUTICA", "MARINHA"].map(sub => (
-                        <button
-                          key={sub}
-                          type="button"
-                          onClick={() => handleAgreementChange(formData.rules.agreement, sub)}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-widest transition-all shrink-0 ${formData.rules.sub_agreement === sub ? "bg-blue-800 text-white shadow-md" : "bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-400"}`}
-                        >
-                          {sub}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {formData.rules.agreement === "GOVERNOS" && (
-                    <div className="flex gap-2 overflow-x-auto pb-1 mt-2 custom-scrollbar">
-                      {[
-                        { value: "AC", label: "AC - ACRE" }, { value: "AL", label: "AL - ALAGOAS" }, { value: "AP", label: "AP - AMAPÁ" },
-                        { value: "AM", label: "AM - AMAZONAS" }, { value: "BA", label: "BA - BAHIA" }, { value: "CE", label: "CE - CEARÁ" },
-                        { value: "DF", label: "DF - DISTRITO FEDERAL" }, { value: "ES", label: "ES - ESPÍRITO SANTO" }, { value: "GO", label: "GO - GOIÁS" },
-                        { value: "MA", label: "MA - MARANHÃO" }, { value: "MT", label: "MT - MATO GROSSO" }, { value: "MS", label: "MS - MATO GROSSO DO SUL" },
-                        { value: "MG", label: "MG - MINAS GERAIS" }, { value: "PA", label: "PA - PARÁ" }, { value: "PB", label: "PB - PARAÍBA" },
-                        { value: "PR", label: "PR - PARANÁ" }, { value: "PE", label: "PE - PERNAMBUCO" }, { value: "PI", label: "PI - PIAUÍ" },
-                        { value: "RJ", label: "RJ - RIO DE JANEIRO" }, { value: "RN", label: "RN - RIO GRANDE DO NORTE" }, { value: "RS", label: "RS - RIO GRANDE DO SUL" },
-                        { value: "RO", label: "RO - RONDÔNIA" }, { value: "RR", label: "RR - RORAIMA" }, { value: "SC", label: "SC - SANTA CATARINA" },
-                        { value: "SP", label: "SP - SÃO PAULO" }, { value: "SE", label: "SE - SERGIPE" }, { value: "TO", label: "TO - TOCANTINS" }
-                      ].map(sub => (
-                        <button
-                          key={sub.value}
-                          type="button"
-                          onClick={() => handleAgreementChange(formData.rules.agreement, sub.value)}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-widest transition-all shrink-0 ${formData.rules.sub_agreement === sub.value ? "bg-blue-800 text-white shadow-md" : "bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-400"}`}
-                        >
-                          {sub.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
 
-                  <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-white/5 mt-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                       Ativar Simulação ({formData.rules.agreement}{formData.rules.sub_agreement ? ` - ${formData.rules.sub_agreement}` : ""})?
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({...formData, rules: {...formData.rules, active: !formData.rules.active}})}
-                      className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all border ${
-                        formData.rules.active !== false 
-                          ? "bg-emerald-500 text-white border-emerald-400 shadow-sm" 
-                          : "bg-rose-500 text-white border-rose-400 shadow-sm"
-                      }`}
-                    >
-                      {formData.rules.active !== false ? "ATIVADO" : "DESATIVADO"}
-                    </button>
+                  <div className="mt-3">
+                    {!showAddRuleForm ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddRuleForm(true)}
+                        className="w-full py-2.5 bg-white hover:bg-blue-50 text-blue-600 rounded-xl border border-dashed border-blue-200 font-bold text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <span>＋</span> Adicionar Regra para um Convênio
+                      </button>
+                    ) : (
+                      <div className="bg-white p-4 rounded-xl border border-slate-100 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Nova Regra de Convênio</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddRuleForm(false)}
+                            className="text-slate-400 hover:text-slate-600 text-xs font-bold uppercase"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="block text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Tipo de Convênio</label>
+                            <select
+                              value={newAgreement}
+                              onChange={(e) => {
+                                setNewAgreement(e.target.value);
+                                setNewSubAgreement("");
+                              }}
+                              className="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold"
+                            >
+                              {["INSS", "SIAPE", "GOVERNOS", "FORÇAS ARMADAS", "CLT_PRIVADO"].map(agr => (
+                                <option key={agr} value={agr}>
+                                  {agr === "FORÇAS ARMADAS" ? "FORÇAS ARMADAS" : agr === "CLT_PRIVADO" ? "CLT PRIVADO" : agr}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          
+                          {newAgreement === "GOVERNOS" && (
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Estado (UF)</label>
+                              <select
+                                value={newSubAgreement}
+                                onChange={(e) => setNewSubAgreement(e.target.value)}
+                                className="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold"
+                              >
+                                <option value="">Selecione o Estado...</option>
+                                {[
+                                  { value: "AC", label: "AC - ACRE" }, { value: "AL", label: "AL - ALAGOAS" }, { value: "AP", label: "AP - AMAPÁ" },
+                                  { value: "AM", label: "AM - AMAZONAS" }, { value: "BA", label: "BA - BAHIA" }, { value: "CE", label: "CE - CEARÁ" },
+                                  { value: "DF", label: "DF - DISTRITO FEDERAL" }, { value: "ES", label: "ES - ESPÍRITO SANTO" }, { value: "GO", label: "GO - GOIÁS" },
+                                  { value: "MA", label: "MA - MARANHÃO" }, { value: "MT", label: "MT - MATO GROSSO" }, { value: "MS", label: "MS - MATO GROSSO DO SUL" },
+                                  { value: "MG", label: "MG - MINAS GERAIS" }, { value: "PA", label: "PA - PARÁ" }, { value: "PB", label: "PB - PARAÍBA" },
+                                  { value: "PR", label: "PR - PARANÁ" }, { value: "PE", label: "PE - PERNAMBUCO" }, { value: "PI", label: "PI - PIAUÍ" },
+                                  { value: "RJ", label: "RJ - RIO DE JANEIRO" }, { value: "RN", label: "RN - RIO GRANDE DO NORTE" }, { value: "RS", label: "RS - RIO GRANDE DO SUL" },
+                                  { value: "RO", label: "RO - RONDÔNIA" }, { value: "RR", label: "RR - RORAIMA" }, { value: "SC", label: "SC - SANTA CATARINA" },
+                                  { value: "SP", label: "SP - SÃO PAULO" }, { value: "SE", label: "SE - SERGIPE" }, { value: "TO", label: "TO - TOCANTINS" }
+                                ].map(sub => (
+                                  <option key={sub.value} value={sub.value}>{sub.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          
+                          {newAgreement === "FORÇAS ARMADAS" && (
+                            <div>
+                              <label className="block text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Organização</label>
+                              <select
+                                value={newSubAgreement}
+                                onChange={(e) => setNewSubAgreement(e.target.value)}
+                                className="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold"
+                              >
+                                <option value="">Selecione o Ramo...</option>
+                                {["EXÉRCITO", "AERONÁUTICA", "MARINHA"].map(sub => (
+                                  <option key={sub} value={sub}>{sub}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={handleAddNewRule}
+                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-emerald-500/20"
+                        >
+                          Adicionar Convênio
+                        </button>
+                      </div>
+                    )}
                   </div>
+
+                  {selectedAgreement && (
+                    <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-white/5 mt-2 shadow-sm">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                         Ativar Simulação ({formData.rules.agreement}{formData.rules.sub_agreement ? ` - ${formData.rules.sub_agreement}` : ""})?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateRuleField("active", !formData.rules.active)}
+                        className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all border ${
+                          formData.rules.active !== false 
+                            ? "bg-emerald-500 text-white border-emerald-400 shadow-sm" 
+                            : "bg-rose-500 text-white border-rose-400 shadow-sm"
+                        }`}
+                      >
+                        {formData.rules.active !== false ? "ATIVADO" : "DESATIVADO"}
+                      </button>
+                    </div>
+                  )}
 
                   <p className="text-[9px] text-slate-400 italic">Cada convênio tem suas próprias regras de idade e portabilidade.</p>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Mínima</label>
-                    <input 
-                      type="number" 
-                      value={formData.rules.min_age}
-                      onChange={(e) => setFormData({...formData, rules: {...formData.rules, min_age: parseInt(e.target.value) || 0}})}
-                      className="input-admin !py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Máxima</label>
-                    <input 
-                      type="number" 
-                      value={formData.rules.max_age}
-                      onChange={(e) => setFormData({...formData, rules: {...formData.rules, max_age: parseInt(e.target.value) || 0}})}
-                      className="input-admin !py-2"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Taxa Portabilidade (%)</label>
-                    <input 
-                      type="number" 
-                      step="0.01"
-                      value={formData.rules.portability_rate_threshold}
-                      onChange={(e) => setFormData({...formData, rules: {...formData.rules, portability_rate_threshold: e.target.value}})}
-                      className="input-admin !py-2"
-                      placeholder="Ex: 1.50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Taxa Refin (%)</label>
-                    <input 
-                      type="number" 
-                      step="0.01"
-                      value={formData.rules.refin_portability_rate_threshold}
-                      onChange={(e) => setFormData({...formData, rules: {...formData.rules, refin_portability_rate_threshold: e.target.value}})}
-                      className="input-admin !py-2"
-                      placeholder="Ex: 1.60"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Valor Parcela Mín.</label>
-                    <input 
-                      type="number" 
-                      value={formData.rules.min_installment_value}
-                      onChange={(e) => setFormData({...formData, rules: {...formData.rules, min_installment_value: e.target.value}})}
-                      className="input-admin !py-2"
-                      placeholder="R$ 50,00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Saldo Devedor Mín.</label>
-                    <input 
-                      type="number" 
-                      value={formData.rules.min_debt_balance}
-                      onChange={(e) => setFormData({...formData, rules: {...formData.rules, min_debt_balance: e.target.value}})}
-                      className="input-admin !py-2"
-                      placeholder="R$ 1000,00"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mín. Parc. Pagas (Geral)</label>
-                    <input 
-                      type="number" 
-                      value={formData.rules.min_paid_installments}
-                      onChange={(e) => setFormData({...formData, rules: {...formData.rules, min_paid_installments: parseInt(e.target.value) || 0}})}
-                      className="input-admin !py-2"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-6 mb-4 mt-6">
-                  {formData.rules.agreement === "INSS" && (
-                    <div className="p-4 bg-orange-50/30 rounded-2xl border border-orange-100">
-                      <label className="block text-[10px] font-bold text-orange-600 uppercase mb-2">Espécies de Benefício NÃO Atendidas (Bloquear)</label>
-                      <div className="flex gap-2 mb-3">
-                        <input 
-                          type="text" 
-                          list="inssSpecies"
-                          value={benefitTypeInput}
-                          onChange={(e) => setBenefitTypeInput(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addExcludedBenefitType())}
-                          className="input-admin !py-2 !text-xs flex-1"
-                          placeholder="Ex: 04, 32, 92..."
-                        />
-                        <datalist id="inssSpecies">
-                          {["04", "05", "06", "32", "33", "34", "92", "87", "88", "42", "21"].map(s => (
-                            <option key={s} value={s} />
-                          ))}
-                        </datalist>
-                        <button type="button" onClick={addExcludedBenefitType} className="px-4 bg-orange-600 text-white rounded-xl text-xs font-bold leading-none">+</button>
-                      </div>
-                      <div className="flex flex-wrap gap-2 min-h-fit py-2 items-center">
-                        {(formData.rules.excluded_benefit_types || "").split(',').filter(Boolean).map(species => (
-                          <span key={species} className="px-3 py-1 bg-orange-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
-                            ESPÉCIE {species.trim().toUpperCase()}
-                            <button type="button" onClick={() => removeExcludedBenefitType(species)} className="hover:scale-120 transition-all opacity-60 group-hover:opacity-100">×</button>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="p-4 bg-red-50/30 rounded-2xl border border-red-100">
-                    <label className="block text-[10px] font-bold text-red-600 uppercase mb-2">Bancos de Origem NÃO Portados (Excluir)</label>
-                    <div className="flex gap-2 mb-3">
-                      <input 
-                        type="text" 
-                        list="commonBanks"
-                        value={excludedInput}
-                        onChange={(e) => setExcludedInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addExcludedBank())}
-                        className="input-admin !py-2 !text-xs flex-1"
-                        placeholder="Escolha ou Digite o Banco..."
-                      />
-                      <button type="button" onClick={addExcludedBank} className="px-4 bg-red-600 text-white rounded-xl text-xs font-bold leading-none">+</button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 min-h-fit py-2 items-center">
-                      {(formData.rules.excluded_origin_banks || "").split(',').filter(Boolean).map(bank => (
-                        <span key={bank} className="px-3 py-1 bg-red-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
-                          {bank.trim().toUpperCase()}
-                          <button type="button" onClick={() => removeExcludedBank(bank)} className="hover:scale-120 transition-all opacity-60 group-hover:opacity-100">×</button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100">
-                    <label className="block text-[10px] font-bold text-emerald-600 uppercase mb-2">Regra Específica: Banco e Parcelas Pagas</label>
-                    <div className="flex gap-2 mb-3 items-start">
-                      <div className="flex-1">
-                        <label className="block text-[8px] font-bold text-slate-400 mb-1 ml-1 uppercase tracking-widest">Banco</label>
-                        <input 
-                          type="text" 
-                          list="commonBanks"
-                          value={bankCarInput}
-                          onChange={(e) => setBankCarInput(e.target.value)}
-                          className="input-admin !py-2 !text-xs w-full"
-                          placeholder="029 - ITAU..."
-                        />
-                        <datalist id="commonBanks">
-                          {["AGIBANK", "BMG", "BRADESCO", "CAIXA", "ITAU", "PAN", "SAFRA", "SANTANDER", "DAYCOVAL", "C6", "PICPAY", "INBURSA", "MERCANTIL"].map(b => (
-                            <option key={b} value={b} />
-                          ))}
-                        </datalist>
-                      </div>
-                      <div className="w-24">
-                        <label className="block text-[8px] font-bold text-slate-400 mb-1 ml-1 uppercase tracking-widest">Parcelas Pagas</label>
-                        <input 
-                          type="number" 
-                          value={parcCarInput}
-                          onChange={(e) => setParcCarInput(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addBankCarença())}
-                          className="input-admin !py-2 !text-xs w-full"
-                          placeholder="Min: 12"
-                        />
-                      </div>
-                      <button type="button" onClick={addBankCarença} className="px-5 bg-emerald-600 text-white rounded-xl text-xs font-bold leading-none mt-5 h-[38px] transition-all hover:scale-105 active:scale-95">+</button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 min-h-fit py-2 items-center">
-                      {Object.entries(safeParse(formData.rules.origin_banks_min_paid, {})).map(([bank, parc]) => (
-                        <span key={bank} className="px-3 py-1 bg-emerald-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
-                          {bank}; {parc as string} PARC. PAGAS
-                          <button type="button" onClick={() => removeBankCarença(bank)} className="hover:scale-120 transition-all opacity-60 group-hover:opacity-100">×</button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-600">Analfabeto</span>
-                    <div className="flex bg-white rounded-lg p-1 border border-slate-200">
-                      <button 
-                        type="button"
-                        onClick={() => setFormData({...formData, rules: {...formData.rules, accepts_illiterate: true}})}
-                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${formData.rules.accepts_illiterate ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                      >
-                        SIM
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => setFormData({...formData, rules: {...formData.rules, accepts_illiterate: false}})}
-                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${!formData.rules.accepts_illiterate ? "bg-red-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                      >
-                        NÃO
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-600">Aceita 60+</span>
-                    <div className="flex bg-white rounded-lg p-1 border border-slate-200">
-                      <button 
-                        type="button"
-                        onClick={() => setFormData({...formData, rules: {...formData.rules, accepts_60_plus: true}})}
-                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${formData.rules.accepts_60_plus ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                      >
-                        SIM
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => setFormData({...formData, rules: {...formData.rules, accepts_60_plus: false}})}
-                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${!formData.rules.accepts_60_plus ? "bg-red-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                      >
-                        NÃO
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-600">Saldo Devedor + Valor Liberado</span>
-                    <button 
-                      type="button"
-                      onClick={() => setFormData({...formData, rules: {...formData.rules, use_balance_plus_released: !formData.rules.use_balance_plus_released}})}
-                      className={`px-4 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
-                        formData.rules.use_balance_plus_released 
-                          ? "bg-blue-600 text-white border-blue-600 shadow-md" 
-                          : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
-                      }`}
-                    >
-                      {formData.rules.use_balance_plus_released ? "ATIVADO" : "DESATIVADO"}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-4 mt-6 border-t border-slate-100">
-                  <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <span>♿</span> Regras de Invalidez (04, 32, 92)
-                  </h4>
-                  
-                  <div className="flex items-center justify-between mb-4 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-                    <span className="text-xs font-bold text-blue-700">Aceita Invalidez?</span>
-                    <button 
-                      type="button"
-                      onClick={() => setFormData({...formData, rules: {...formData.rules, accepts_disability: !formData.rules.accepts_disability}})}
-                      className={`px-4 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
-                        formData.rules.accepts_disability 
-                          ? "bg-emerald-600 text-white border-emerald-600 shadow-md" 
-                          : "bg-white text-slate-400 border-slate-200"
-                      }`}
-                    >
-                      {formData.rules.accepts_disability ? "SIM" : "NÃO"}
-                    </button>
-                  </div>
-
-                  {formData.rules.accepts_disability && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                {selectedAgreement ? (
+                  <div className="space-y-4 mt-4 animate-in fade-in duration-300">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Permitida (&lt; 60 anos)</label>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Mínima</label>
                         <input 
                           type="number" 
-                          value={formData.rules.disability_min_age}
-                          onChange={(e) => setFormData({...formData, rules: {...formData.rules, disability_min_age: e.target.value}})}
+                          value={formData.rules.min_age}
+                          onChange={(e) => updateRuleField("min_age", parseInt(e.target.value) || 0)}
                           className="input-admin !py-2"
-                          placeholder="Ex: 50"
                         />
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tempo Benefício (Anos)</label>
-                          <input 
-                            type="number" 
-                            value={formData.rules.disability_min_benefit_years}
-                            onChange={(e) => setFormData({...formData, rules: {...formData.rules, disability_min_benefit_years: e.target.value}})}
-                            className="input-admin !py-2"
-                            placeholder="Anos"
-                          />
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Máxima</label>
+                        <input 
+                          type="number" 
+                          value={formData.rules.max_age}
+                          onChange={(e) => updateRuleField("max_age", parseInt(e.target.value) || 0)}
+                          className="input-admin !py-2"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Taxa Portabilidade (%)</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          value={formData.rules.portability_rate_threshold}
+                          onChange={(e) => updateRuleField("portability_rate_threshold", e.target.value)}
+                          className="input-admin !py-2"
+                          placeholder="Ex: 1.50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Taxa Refin (%)</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          value={formData.rules.refin_portability_rate_threshold}
+                          onChange={(e) => updateRuleField("refin_portability_rate_threshold", e.target.value)}
+                          className="input-admin !py-2"
+                          placeholder="Ex: 1.60"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Valor Parcela Mín.</label>
+                        <input 
+                          type="number" 
+                          value={formData.rules.min_installment_value}
+                          onChange={(e) => updateRuleField("min_installment_value", e.target.value)}
+                          className="input-admin !py-2"
+                          placeholder="R$ 50,00"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Saldo Devedor Mín.</label>
+                        <input 
+                          type="number" 
+                          value={formData.rules.min_debt_balance}
+                          onChange={(e) => updateRuleField("min_debt_balance", e.target.value)}
+                          className="input-admin !py-2"
+                          placeholder="R$ 1000,00"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mín. Parc. Pagas (Geral)</label>
+                        <input 
+                          type="number" 
+                          value={formData.rules.min_paid_installments}
+                          onChange={(e) => updateRuleField("min_paid_installments", parseInt(e.target.value) || 0)}
+                          className="input-admin !py-2"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-6 mb-4 mt-6">
+                      {formData.rules.agreement === "INSS" && (
+                        <div className="p-4 bg-orange-50/30 rounded-2xl border border-orange-100">
+                          <label className="block text-[10px] font-bold text-orange-600 uppercase mb-2">Espécies de Benefício NÃO Atendidas (Bloquear)</label>
+                          <div className="flex gap-2 mb-3">
+                            <input 
+                              type="text" 
+                              list="inssSpecies"
+                              value={benefitTypeInput}
+                              onChange={(e) => setBenefitTypeInput(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addExcludedBenefitType())}
+                              className="input-admin !py-2 !text-xs flex-1"
+                              placeholder="Ex: 04, 32, 92..."
+                            />
+                            <datalist id="inssSpecies">
+                              {["04", "05", "06", "32", "33", "34", "92", "87", "88", "42", "21"].map(s => (
+                                <option key={s} value={s} />
+                              ))}
+                            </datalist>
+                            <button type="button" onClick={addExcludedBenefitType} className="px-4 bg-orange-600 text-white rounded-xl text-xs font-bold leading-none">+</button>
+                          </div>
+                          <div className="flex flex-wrap gap-2 min-h-fit py-2 items-center">
+                            {(formData.rules.excluded_benefit_types || "").split(',').filter(Boolean).map(species => (
+                              <span key={species} className="px-3 py-1 bg-orange-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
+                                ESPÉCIE {species.trim().toUpperCase()}
+                                <button type="button" onClick={() => removeExcludedBenefitType(species)} className="hover:scale-120 transition-all opacity-60 group-hover:opacity-100">×</button>
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tempo Benefício (Meses)</label>
+                      )}
+
+                      <div className="p-4 bg-red-50/30 rounded-2xl border border-red-100">
+                        <label className="block text-[10px] font-bold text-red-600 uppercase mb-2">Bancos de Origem NÃO Portados (Excluir)</label>
+                        <div className="flex gap-2 mb-3">
                           <input 
-                            type="number" 
-                            value={formData.rules.disability_min_benefit_months}
-                            onChange={(e) => setFormData({...formData, rules: {...formData.rules, disability_min_benefit_months: e.target.value}})}
-                            className="input-admin !py-2"
-                            placeholder="Meses"
+                            type="text" 
+                            list="commonBanks"
+                            value={excludedInput}
+                            onChange={(e) => setExcludedInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addExcludedBank())}
+                            className="input-admin !py-2 !text-xs flex-1"
+                            placeholder="Escolha ou Digite o Banco..."
                           />
+                          <button type="button" onClick={addExcludedBank} className="px-4 bg-red-600 text-white rounded-xl text-xs font-bold leading-none">+</button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 min-h-fit py-2 items-center">
+                          {(formData.rules.excluded_origin_banks || "").split(',').filter(Boolean).map(bank => (
+                            <span key={bank} className="px-3 py-1 bg-red-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
+                              {bank.trim().toUpperCase()}
+                              <button type="button" onClick={() => removeExcludedBank(bank)} className="hover:scale-120 transition-all opacity-60 group-hover:opacity-100">×</button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100">
+                        <label className="block text-[10px] font-bold text-emerald-600 uppercase mb-2">Regra Específica: Banco e Parcelas Pagas</label>
+                        <div className="flex gap-2 mb-3 items-start">
+                          <div className="flex-1">
+                            <label className="block text-[8px] font-bold text-slate-400 mb-1 ml-1 uppercase tracking-widest">Banco</label>
+                            <input 
+                              type="text" 
+                              list="commonBanks"
+                              value={bankCarInput}
+                              onChange={(e) => setBankCarInput(e.target.value)}
+                              className="input-admin !py-2 !text-xs w-full"
+                              placeholder="029 - ITAU..."
+                            />
+                            <datalist id="commonBanks">
+                              {["AGIBANK", "BMG", "BRADESCO", "CAIXA", "ITAU", "PAN", "SAFRA", "SANTANDER", "DAYCOVAL", "C6", "PICPAY", "INBURSA", "MERCANTIL"].map(b => (
+                                <option key={b} value={b} />
+                              ))}
+                            </datalist>
+                          </div>
+                          <div className="w-24">
+                            <label className="block text-[8px] font-bold text-slate-400 mb-1 ml-1 uppercase tracking-widest">Parcelas Pagas</label>
+                            <input 
+                              type="number" 
+                              value={parcCarInput}
+                              onChange={(e) => setParcCarInput(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addBankCarença())}
+                              className="input-admin !py-2 !text-xs w-full"
+                              placeholder="Min: 12"
+                            />
+                          </div>
+                          <button type="button" onClick={addBankCarença} className="px-5 bg-emerald-600 text-white rounded-xl text-xs font-bold leading-none mt-5 h-[38px] transition-all hover:scale-105 active:scale-95">+</button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 min-h-fit py-2 items-center">
+                          {Object.entries(safeParse(formData.rules.origin_banks_min_paid, {})).map(([bank, parc]) => (
+                            <span key={bank} className="px-3 py-1 bg-emerald-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
+                              {bank}; {parc as string} PARC. PAGAS
+                              <button type="button" onClick={() => removeBankCarença(bank)} className="hover:scale-120 transition-all opacity-60 group-hover:opacity-100">×</button>
+                            </span>
+                          ))}
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
+
+                    <div className="space-y-3 bg-slate-50 rounded-xl border border-slate-100 p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-600">Analfabeto</span>
+                        <div className="flex bg-white rounded-lg p-1 border border-slate-200">
+                          <button 
+                            type="button"
+                            onClick={() => updateRuleField("accepts_illiterate", true)}
+                            className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${formData.rules.accepts_illiterate ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                          >
+                            SIM
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => updateRuleField("accepts_illiterate", false)}
+                            className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${!formData.rules.accepts_illiterate ? "bg-red-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                          >
+                            NÃO
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-600">Aceita 60+</span>
+                        <div className="flex bg-white rounded-lg p-1 border border-slate-200">
+                          <button 
+                            type="button"
+                            onClick={() => updateRuleField("accepts_60_plus", true)}
+                            className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${formData.rules.accepts_60_plus ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                          >
+                            SIM
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => updateRuleField("accepts_60_plus", false)}
+                            className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${!formData.rules.accepts_60_plus ? "bg-red-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                          >
+                            NÃO
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-600">Saldo Devedor + Valor Liberado</span>
+                        <button 
+                          type="button"
+                          onClick={() => updateRuleField("use_balance_plus_released", !formData.rules.use_balance_plus_released)}
+                          className={`px-4 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
+                            formData.rules.use_balance_plus_released 
+                              ? "bg-blue-600 text-white border-blue-600 shadow-md" 
+                              : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          {formData.rules.use_balance_plus_released ? "ATIVADO" : "DESATIVADO"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 mt-6 border-t border-slate-100">
+                      <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span>♿</span> Regras de Invalidez (04, 32, 92)
+                      </h4>
+                      
+                      <div className="flex items-center justify-between mb-4 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                        <span className="text-xs font-bold text-blue-700">Aceita Invalidez?</span>
+                        <button 
+                          type="button"
+                          onClick={() => updateRuleField("accepts_disability", !formData.rules.accepts_disability)}
+                          className={`px-4 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
+                            formData.rules.accepts_disability 
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-md" 
+                              : "bg-white text-slate-400 border-slate-200"
+                          }`}
+                        >
+                          {formData.rules.accepts_disability ? "SIM" : "NÃO"}
+                        </button>
+                      </div>
+
+                      {formData.rules.accepts_disability && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Permitida (&lt; 60 anos)</label>
+                            <input 
+                              type="number" 
+                              value={formData.rules.disability_min_age}
+                              onChange={(e) => updateRuleField("disability_min_age", e.target.value)}
+                              className="input-admin !py-2"
+                              placeholder="Ex: 50"
+                            />
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tempo Benefício (Anos)</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.disability_min_benefit_years}
+                                onChange={(e) => updateRuleField("disability_min_benefit_years", e.target.value)}
+                                className="input-admin !py-2"
+                                placeholder="Anos"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tempo Benefício (Meses)</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.disability_min_benefit_months}
+                                onChange={(e) => updateRuleField("disability_min_benefit_months", e.target.value)}
+                                className="input-admin !py-2"
+                                placeholder="Meses"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-white/5 mt-4">
+                    <span className="text-2xl block mb-2">⚖️</span>
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Escolha ou Adicione um Convênio acima para configurar.</p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3 py-2">
