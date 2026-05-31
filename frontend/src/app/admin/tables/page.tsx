@@ -67,15 +67,20 @@ export default function TablesPage() {
   const handleExpandAllAgreements = () => {
     setCollapsedAgreements({});
   };
-  const [sortAlphabetically, setSortAlphabetically] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<'name' | 'rate' | 'term' | 'default'>('default');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isSortLoaded, setIsSortLoaded] = useState(false);
 
   // Carrega a preferência de ordenação de forma segura pós-hidratação
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('tables_sortAlphabetically');
-      if (saved !== null) {
-        setSortAlphabetically(saved === 'true');
+      const savedSortBy = localStorage.getItem('tables_sortBy');
+      const savedSortOrder = localStorage.getItem('tables_sortOrder');
+      if (savedSortBy) {
+        setSortBy(savedSortBy as 'name' | 'rate' | 'term' | 'default');
+      }
+      if (savedSortOrder) {
+        setSortOrder(savedSortOrder as 'asc' | 'desc');
       }
       setIsSortLoaded(true);
     }
@@ -84,9 +89,10 @@ export default function TablesPage() {
   // Salva no localStorage sempre que as configurações mudarem (apenas após o carregamento inicial)
   useEffect(() => {
     if (isSortLoaded && typeof window !== 'undefined') {
-      localStorage.setItem('tables_sortAlphabetically', String(sortAlphabetically));
+      localStorage.setItem('tables_sortBy', sortBy);
+      localStorage.setItem('tables_sortOrder', sortOrder);
     }
-  }, [sortAlphabetically, isSortLoaded]);
+  }, [sortBy, sortOrder, isSortLoaded]);
   const [previewBaseRate, setPreviewBaseRate] = useState<number>(1.25);
   const [termFilters, setTermFilters] = useState<Record<string, number | null>>({});
 
@@ -460,8 +466,21 @@ export default function TablesPage() {
 
             if (finalTables.length === 0) return null;
 
-            if (sortAlphabetically) {
-               finalTables.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+            if (sortBy === 'name') {
+              finalTables.sort((a, b) => {
+                const comp = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+                return sortOrder === 'asc' ? comp : -comp;
+              });
+            } else if (sortBy === 'rate') {
+              finalTables.sort((a, b) => {
+                const comp = (a.taxa_convenio || 0) - (b.taxa_convenio || 0);
+                return sortOrder === 'asc' ? comp : -comp;
+              });
+            } else if (sortBy === 'term') {
+              finalTables.sort((a, b) => {
+                const comp = (a.term || 84) - (b.term || 84);
+                return sortOrder === 'asc' ? comp : -comp;
+              });
             }
 
             const shouldGroup = agr === "FORÇAS ARMADAS" || agr === "GOVERNOS";
@@ -573,14 +592,75 @@ export default function TablesPage() {
                       {collapsedAgreements[filterKey] ? 'Expandir' : 'Recolher'}
                     </button>
 
-                    <button 
-                      onClick={() => setSortAlphabetically(!sortAlphabetically)}
-                      className={`py-2.5 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 shadow-lg ${sortAlphabetically ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-blue-500/20' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-white/10'}`}
-                      title="Ordenar de A a Z"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path></svg>
-                      {sortAlphabetically ? 'A-Z (Ativo)' : 'A-Z'}
-                    </button>
+                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-white/5 p-1 rounded-xl border border-slate-200 dark:border-white/10 shadow-inner">
+                      <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-2">Ordenar:</span>
+                      
+                      {/* Nome */}
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (sortBy !== 'name') {
+                            setSortBy('name');
+                            setSortOrder('asc');
+                          } else {
+                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                          }
+                        }}
+                        className={`py-1.5 px-3 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all flex items-center gap-1 ${sortBy === 'name' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                        title="Ordenar por Nome"
+                      >
+                        Nome {sortBy === 'name' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </button>
+
+                      {/* Taxa */}
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (sortBy !== 'rate') {
+                            setSortBy('rate');
+                            setSortOrder('asc');
+                          } else {
+                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                          }
+                        }}
+                        className={`py-1.5 px-3 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all flex items-center gap-1 ${sortBy === 'rate' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                        title="Ordenar por Taxa"
+                      >
+                        Taxa {sortBy === 'rate' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </button>
+
+                      {/* Prazo */}
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (sortBy !== 'term') {
+                            setSortBy('term');
+                            setSortOrder('asc');
+                          } else {
+                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                          }
+                        }}
+                        className={`py-1.5 px-3 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all flex items-center gap-1 ${sortBy === 'term' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                        title="Ordenar por Prazo"
+                      >
+                        Prazo {sortBy === 'term' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </button>
+
+                      {/* Limpar */}
+                      {sortBy !== 'default' && (
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setSortBy('default');
+                            setSortOrder('asc');
+                          }}
+                          className="py-1.5 px-2 text-rose-500 hover:text-rose-600 text-[8px] font-black uppercase tracking-wider transition-colors"
+                          title="Limpar Ordenação"
+                        >
+                          Limpar
+                        </button>
+                      )}
+                    </div>
                     <button 
                       onClick={() => handleOpenModal()}
                       className="flex-1 md:flex-none py-2.5 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border-none transition-all shadow-lg hover:shadow-blue-500/40 flex items-center justify-center gap-2"

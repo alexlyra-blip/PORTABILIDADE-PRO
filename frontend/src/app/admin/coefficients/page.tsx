@@ -13,7 +13,7 @@ export default function CoefficientsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCoeff, setEditingCoeff] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'term' | 'default'>('default');
+  const [sortBy, setSortBy] = useState<'name' | 'rate' | 'term' | 'default'>('default');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -23,7 +23,7 @@ export default function CoefficientsPage() {
       const savedSortBy = localStorage.getItem('coef_sortBy');
       const savedSortOrder = localStorage.getItem('coef_sortOrder');
       if (savedSortBy) {
-        setSortBy(savedSortBy as 'name' | 'term' | 'default');
+        setSortBy(savedSortBy as 'name' | 'rate' | 'term' | 'default');
       }
       if (savedSortOrder) {
         setSortOrder(savedSortOrder as 'asc' | 'desc');
@@ -322,6 +322,13 @@ export default function CoefficientsPage() {
       const comp = termA - termB;
       return sortOrder === 'asc' ? comp : -comp;
     });
+  } else if (sortBy === 'rate') {
+    sortedWindows.sort((a, b) => {
+      const rateA = a.coefficients.length > 0 ? Math.min(...a.coefficients.map(c => c.interest_rate)) : 0;
+      const rateB = b.coefficients.length > 0 ? Math.min(...b.coefficients.map(c => c.interest_rate)) : 0;
+      const comp = rateA - rateB;
+      return sortOrder === 'asc' ? comp : -comp;
+    });
   }
 
   return (
@@ -554,6 +561,29 @@ export default function CoefficientsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
                 </svg>
                 Prazo {sortBy === 'term' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (sortBy !== 'rate') {
+                    setSortBy('rate');
+                    setSortOrder('asc');
+                  } else {
+                    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                  }
+                }}
+                className={`py-2.5 px-5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 shadow-sm ${
+                  sortBy === 'rate'
+                    ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                    : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-300 border-transparent hover:bg-slate-100 dark:hover:bg-white/10'
+                }`}
+                title={sortBy === 'rate' ? (sortOrder === 'asc' ? "Taxa Crescente (Clique para Decrescente)" : "Taxa Decrescente (Clique para Crescente)") : "Ordenar por Taxa"}
+              >
+                <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${sortBy === 'rate' && sortOrder === 'desc' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                Taxa {sortBy === 'rate' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
               </button>
 
               {sortBy !== 'default' && (
