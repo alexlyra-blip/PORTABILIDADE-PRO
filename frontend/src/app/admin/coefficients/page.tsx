@@ -51,12 +51,32 @@ export default function CoefficientsPage() {
   const [selectedAgreement, setSelectedAgreement] = useState("");
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
   const [collapsedSubAgreements, setCollapsedSubAgreements] = useState<Record<string, boolean>>({});
+  const [collapsedAgreements, setCollapsedAgreements] = useState<Record<string, boolean>>({});
 
   const toggleSubAgreement = (key: string) => {
     setCollapsedSubAgreements(prev => ({
       ...prev,
       [key]: !prev[key]
     }));
+  };
+
+  const toggleAgreement = (key: string) => {
+    setCollapsedAgreements(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleCollapseAllAgreements = () => {
+    const newCollapsed: Record<string, boolean> = {};
+    ["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT PRIVADO", "OUTROS"].forEach(agr => {
+      newCollapsed[`${selectedBankId}-${agr}`] = true;
+    });
+    setCollapsedAgreements(newCollapsed);
+  };
+
+  const handleExpandAllAgreements = () => {
+    setCollapsedAgreements({});
   };
 
   const ESTADOS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"];
@@ -318,6 +338,34 @@ export default function CoefficientsPage() {
             </div>
           )}
 
+          {/* Botões Master Expandir/Recolher Todos */}
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-white/5 p-1 rounded-2xl border border-slate-100 dark:border-white/5 w-full md:w-auto justify-center">
+            <button
+              type="button"
+              disabled={!selectedBankId || filteredTables.length === 0}
+              onClick={handleExpandAllAgreements}
+              className="py-2.5 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:shadow transition-all flex items-center gap-2 border border-slate-100 dark:border-white/5 disabled:opacity-50 shrink-0"
+              title="Expandir Todos os Convênios"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+              <span>Expandir Todos</span>
+            </button>
+            <button
+              type="button"
+              disabled={!selectedBankId || filteredTables.length === 0}
+              onClick={handleCollapseAllAgreements}
+              className="py-2.5 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:shadow transition-all flex items-center gap-2 border border-slate-100 dark:border-white/5 disabled:opacity-50 shrink-0"
+              title="Recolher Todos os Convênios"
+            >
+              <svg className="w-3.5 h-3.5 -rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+              <span>Recolher Todos</span>
+            </button>
+          </div>
+
           <button 
             disabled={filteredTables.length === 0}
             onClick={() => handleOpenModal(null, "", globalTermFilter)}
@@ -473,10 +521,12 @@ export default function CoefficientsPage() {
             .map((agreement) => {
               const selectedBank = banks.find(b => b.id.toString() === selectedBankId);
               const termsMap = groupedByAgreement[agreement];
+              const filterKey = `${selectedBankId}-${agreement}`;
+
               return (
                 <div key={agreement} className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl animate-in slide-in-from-bottom-4 duration-500 mb-8">
                   {/* Cabeçalho do Convênio com logo do Banco */}
-                  <div className="px-8 py-6 bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className={`px-8 py-6 bg-slate-50/50 dark:bg-white/5 flex flex-col md:flex-row items-center justify-between gap-4 ${collapsedAgreements[filterKey] ? "" : "border-b border-slate-100 dark:border-white/5"}`}>
                     <div className="flex items-center gap-5">
                       <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 p-0 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden shrink-0">
                         {(() => {
@@ -495,7 +545,18 @@ export default function CoefficientsPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                      <button 
+                        onClick={() => toggleAgreement(filterKey)}
+                        className={`py-2.5 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 shadow-lg ${collapsedAgreements[filterKey] ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-blue-500/20' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-white/10'}`}
+                        title={collapsedAgreements[filterKey] ? "Expandir Convênio" : "Recolher Convênio"}
+                      >
+                        <svg className={`w-3.5 h-3.5 transform transition-transform duration-300 ${collapsedAgreements[filterKey] ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                        {collapsedAgreements[filterKey] ? 'Expandir' : 'Recolher'}
+                      </button>
+
                       <button 
                         onClick={() => handleOpenModal(null, "", globalTermFilter)}
                         className="flex-1 md:flex-none py-2.5 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border-none transition-all shadow-lg hover:shadow-blue-500/40 flex items-center justify-center gap-2"
@@ -506,7 +567,8 @@ export default function CoefficientsPage() {
                   </div>
 
                   {/* Conteúdo do Card */}
-                  <div className="p-8 space-y-10">
+                  {!collapsedAgreements[filterKey] && (
+                    <div className="p-8 space-y-10 animate-in fade-in duration-300">
                     {Object.keys(termsMap)
                       .sort((a, b) => {
                         if (a === "SEM COEFICIENTE") return 1;
@@ -683,8 +745,9 @@ export default function CoefficientsPage() {
                         );
                       })}
                   </div>
-                </div>
-              );
+                )}
+              </div>
+            );
             });
         })()}
       </div>
