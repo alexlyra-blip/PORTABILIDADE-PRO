@@ -104,8 +104,18 @@ def _banco_corresponde(banco_input, banco_regra):
     words_input = clean_words(b_input)
     words_regra = clean_words(b_regra)
     
-    if words_input and words_regra and len(words_input.intersection(words_regra)) > 0:
-        return True
+    if words_input and words_regra:
+        # Se a regra estiver contida no input ou vice-versa (ex: regra="PAN", input="BANCO PAN")
+        if words_regra.issubset(words_input) or words_input.issubset(words_regra):
+            return True
+            
+        # Palavras muito comuns que sozinhas não devem configurar um match
+        # (evita que "ESTADO DO SERGIPE" dê match com "ESTADO DO PARA" só por causa de "ESTADO")
+        common_words = {"ESTADO", "SUL", "NORTE", "BRASIL", "NACIONAL"}
+        intersection = words_input.intersection(words_regra) - common_words
+        
+        if len(intersection) > 0:
+            return True
         
     return False
 
@@ -141,28 +151,35 @@ def verificar_elegibilidade(cliente_input, regra_banco):
     prazo_restante = int(getattr(cliente_input, "prazo_restante", getattr(cliente_input, "remaining_term", 0)))
     parcelas_pagas = prazo_total - prazo_restante
     
-    if regra_banco.min_paid_installments and parcelas_pagas < regra_banco.min_paid_installments:
-        return False, f"Mínimo de parcelas pagas não atingido ({parcelas_pagas}/{regra_banco.min_paid_installments})."
-        
-    # 3.1 Bancos de Origem Excluídos
     banco_origem = str(getattr(cliente_input, "banco", getattr(cliente_input, "bank", ""))).upper().strip()
+    
+    # 3.1 Bancos de Origem Excluídos
     if hasattr(regra_banco, "excluded_origin_banks") and regra_banco.excluded_origin_banks:
         bancos_excluidos = [b.strip() for b in str(regra_banco.excluded_origin_banks).split(",") if b.strip()]
         for b_excluido in bancos_excluidos:
             if _banco_corresponde(banco_origem, b_excluido):
                 return False, f"Banco de origem {banco_origem} não é portado por este banco."
                 
-    # 3.2 Regras Específicas de Parcelas Pagas por Banco de Origem
+    # 3.2 Regras Específicas de Parcelas Pagas por Banco de Origem vs Regra Padrão
+    min_pagas_exigido = regra_banco.min_paid_installments or 0
+    regra_especifica_encontrada = False
+    
     if hasattr(regra_banco, "origin_banks_min_paid") and regra_banco.origin_banks_min_paid:
         try:
             regras_especificas = json.loads(regra_banco.origin_banks_min_paid)
             if isinstance(regras_especificas, dict):
                 for b_nome, min_pagas in regras_especificas.items():
                     if _banco_corresponde(banco_origem, b_nome):
-                        if parcelas_pagas < int(min_pagas):
-                            return False, f"Mínimo de parcelas pagas para o banco {b_nome} não atingido ({parcelas_pagas}/{min_pagas})."
+                        min_pagas_exigido = int(min_pagas)
+                        regra_especifica_encontrada = True
+                        break
         except Exception as e:
             pass
+
+    # Verifica o mínimo de parcelas pagas com base na regra específica ou padrão
+    if min_pagas_exigido > 0 and parcelas_pagas < min_pagas_exigido:
+        origem_msg = f"para o banco {banco_origem}" if regra_especifica_encontrada else "na regra geral"
+        return False, f"Mínimo de parcelas pagas não atingido {origem_msg} ({parcelas_pagas}/{min_pagas_exigido})."
             
     # 4. Cliente 60+
     is_60_plus = bool(getattr(cliente_input, "is_60_plus", idade_cliente >= 60))
