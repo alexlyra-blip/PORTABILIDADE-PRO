@@ -53,9 +53,10 @@ def run_db_fix():
         try:
             cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;')
             cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;')
-            print("✅ Colunas term e installment verificadas/criadas no PostgreSQL de produção.")
+            cursor.execute('ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);')
+            print("✅ Colunas term, installment e max_ticket verificadas/criadas no PostgreSQL de produção.")
         except Exception as e:
-            print(f"⚠️ Erro ao adicionar colunas em simulation_results (Postgres): {e}")
+            print(f"⚠️ Erro ao adicionar colunas em production (Postgres): {e}")
         print("✅ Colunas convertidas para TEXT.")
         cursor.close()
         conn.close()
