@@ -285,9 +285,12 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         motivos_tabelas.append(f"Tabela {tabela.name}: Parcela máxima R$ {tabela.max_installment}")
                         continue
                         
-                    # Additional Table Validation: Ticket Mínimo (Saldo Devedor)
+                    # Additional Table Validation: Ticket Mínimo e Máximo (Saldo Devedor)
                     if tabela.min_ticket and float(saldo_devedor) < float(tabela.min_ticket):
                         motivos_tabelas.append(f"Tabela {tabela.name}: Saldo devedor mínimo R$ {tabela.min_ticket}")
+                        continue
+                    if getattr(tabela, "max_ticket", None) and float(tabela.max_ticket) > 0 and float(saldo_devedor) > float(tabela.max_ticket):
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Saldo devedor máximo R$ {tabela.max_ticket}")
                         continue
                         
                     # Additional Table Validation: Age limits

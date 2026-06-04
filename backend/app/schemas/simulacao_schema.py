@@ -158,6 +158,7 @@ class BankTableBase(BaseModel):
     active: bool = True
     min_paid_installments: int = 0
     min_ticket: Decimal = 0
+    max_ticket: Optional[Decimal] = None
     min_installment: Optional[Decimal] = None
     max_installment: Optional[Decimal] = None
     min_age: Optional[int] = None

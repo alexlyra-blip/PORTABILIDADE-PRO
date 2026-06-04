@@ -150,6 +150,7 @@ class BankTable(Base):
     
     min_paid_installments = Column(Integer, default=0)
     min_ticket = Column(Numeric(15, 2), default=0)
+    max_ticket = Column(Numeric(15, 2), nullable=True)
     min_installment = Column(Numeric(15, 2), nullable=True)
     max_installment = Column(Numeric(15, 2), nullable=True)
     min_age = Column(Integer, nullable=True)

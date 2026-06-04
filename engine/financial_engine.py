@@ -30,6 +30,9 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     if tabela_obj.min_ticket and valor_total_contrato < Decimal(str(tabela_obj.min_ticket)):
         return False, 0.0, None, f"Ticket mínimo não atingido (RS {valor_total_contrato:.2f} < RS {tabela_obj.min_ticket:.2f})."
 
+    if getattr(tabela_obj, "max_ticket", None) and valor_total_contrato > Decimal(str(tabela_obj.max_ticket)):
+        return False, 0.0, None, f"Ticket máximo ultrapassado (RS {valor_total_contrato:.2f} > RS {tabela_obj.max_ticket:.2f})."
+
     # 3. Automated Portability Rate Calculation (i)
     # Prioritizes Front-End provided rate (e.g. manual adjustment) over HP-12C recalculation
     provided_rate = getattr(cliente_input, "taxa_juros", 0.0)

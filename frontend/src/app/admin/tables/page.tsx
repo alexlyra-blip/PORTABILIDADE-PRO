@@ -23,6 +23,7 @@ export default function TablesPage() {
     refin_adjustment: 0,
     min_paid_installments: 0,
     min_ticket: 0,
+    max_ticket: 0,
     min_rate: 0,
     min_port_rate: 0,
     min_installment: 0,
@@ -151,6 +152,7 @@ export default function TablesPage() {
         refin_adjustment: table.refin_adjustment || 0,
         min_paid_installments: table.min_paid_installments || 0,
         min_ticket: table.min_ticket || 0,
+        max_ticket: table.max_ticket || 0,
         min_rate: table.min_rate || 0,
         min_port_rate: table.min_port_rate || 0,
         min_installment: table.min_installment || 0,
@@ -173,6 +175,7 @@ export default function TablesPage() {
         refin_adjustment: 0,
         min_paid_installments: 0,
         min_ticket: 0,
+        max_ticket: 0,
         min_rate: 0,
         min_port_rate: 0,
         min_installment: 0,
@@ -211,6 +214,7 @@ export default function TablesPage() {
         refin_adjustment: parseFloat(formData.refin_adjustment) || 0,
         min_paid_installments: parseInt(formData.min_paid_installments) || 0,
         min_ticket: parseFloat(formData.min_ticket) || 0,
+        max_ticket: parseFloat(formData.max_ticket) || 0,
         min_rate: parseFloat(formData.min_rate) || 0,
         min_port_rate: parseFloat(formData.min_port_rate) || 0,
         min_installment: parseFloat(formData.min_installment) || 0,
@@ -864,6 +868,15 @@ export default function TablesPage() {
                       type="number"
                       value={formData.min_ticket}
                       onChange={(e) => setFormData({...formData, min_ticket: parseFloat(e.target.value)})}
+                      className="input-admin !py-1.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Ticket Máx. (R$)</label>
+                    <input 
+                      type="number"
+                      value={formData.max_ticket}
+                      onChange={(e) => setFormData({...formData, max_ticket: parseFloat(e.target.value)})}
                       className="input-admin !py-1.5"
                     />
                   </div>
