@@ -471,9 +471,9 @@ function SimuladorPageContent() {
            <div className="relative w-full max-w-lg h-56 flex items-center justify-center">
               {[...Array(3)].map((_, i) => {
                 const animations = [
-                  { x: [0, -180, 180, 0], scale: [1.6, 0.6, 0.6, 1.6], zIndex: [30, 10, 10, 30], opacity: [1, 0.5, 0.5, 1] },
-                  { x: [-180, 180, 0, -180], scale: [0.6, 0.6, 1.6, 0.6], zIndex: [10, 10, 30, 10], opacity: [0.5, 0.5, 1, 0.5] },
-                  { x: [180, 0, -180, 180], scale: [0.6, 1.6, 0.6, 0.6], zIndex: [10, 30, 10, 10], opacity: [0.5, 1, 0.5, 0.5] }
+                  { x: [0, -180, 180, 0], scale: [1.6, 0.6, 0.6, 1.6], zIndex: [30, 10, 10, 30] },
+                  { x: [-180, 180, 0, -180], scale: [0.6, 0.6, 1.6, 0.6], zIndex: [10, 10, 30, 10] },
+                  { x: [180, 0, -180, 180], scale: [0.6, 1.6, 0.6, 0.6], zIndex: [10, 30, 10, 10] }
                 ];
                 return (
                     <motion.div

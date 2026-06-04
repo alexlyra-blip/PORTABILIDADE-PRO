@@ -13,7 +13,7 @@ function OfertasPageContent() {
   const [inputData, setInputData] = useState(null);
   const [filterBank, setFilterBank] = useState("");
   const [sortBy, setSortBy] = useState("melhor_tabela");
-  const [selectedTermFilter, setSelectedTermFilter] = useState(null);
+  const [selectedTermFilter, setSelectedTermFilter] = useState(108);
   const [isInitializing, setIsInitializing] = useState(false);
   const hexToRgb = (hex) => {
     if (!hex || typeof hex !== 'string') return "37, 99, 235";
@@ -78,7 +78,7 @@ function OfertasPageContent() {
   }, [user, hexToRgb]);
 
   useEffect(() => {
-    setSelectedTermFilter(null);
+    setSelectedTermFilter(108);
   }, [activeContractId]);
 
   if (!data || !data.ofertas) return null;
@@ -395,6 +395,35 @@ function OfertasPageContent() {
           </div>
         </div>
         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl p-4 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-2xl sticky top-4 z-[40] space-y-3">
+          {/* Filtros de Prazo Premium e Badges de Contagem */}
+          {(() => {
+            const availableTerms = Array.from(new Set(contractResults.map(o => o.prazo || 84))).sort((a, b) => b - a);
+            if (availableTerms.length <= 1) return null;
+            return (
+              <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-slate-100 dark:border-white/5">
+                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mr-2">Prazos de Oferta:</span>
+                {availableTerms.map(term => {
+                  const termCount = contractResults.filter(o => (o.prazo || 84) === term).length;
+                  return (
+                    <button
+                      key={term}
+                      onClick={() => setSelectedTermFilter(term)}
+                      className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === term ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'}`}
+                    >
+                      {term}X ({termCount})
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setSelectedTermFilter(null)}
+                  className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === null ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'}`}
+                >
+                  TODOS ({contractResults.length})
+                </button>
+              </div>
+            );
+          })()}
+
           <div className="flex flex-col md:flex-row items-center gap-3 relative">
             <div className="flex-1 w-full relative">
               <input 
@@ -446,35 +475,6 @@ function OfertasPageContent() {
               ))}
             </div>
           </div>
-
-          {/* Filtros de Prazo Premium e Badges de Contagem */}
-          {(() => {
-            const availableTerms = Array.from(new Set(contractResults.map(o => o.prazo || 84))).sort((a, b) => a - b);
-            if (availableTerms.length <= 1) return null;
-            return (
-              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
-                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mr-2">Prazos de Oferta:</span>
-                <button
-                  onClick={() => setSelectedTermFilter(null)}
-                  className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === null ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'}`}
-                >
-                  TODOS ({contractResults.length})
-                </button>
-                {availableTerms.map(term => {
-                  const termCount = contractResults.filter(o => (o.prazo || 84) === term).length;
-                  return (
-                    <button
-                      key={term}
-                      onClick={() => setSelectedTermFilter(term)}
-                      className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === term ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'}`}
-                    >
-                      {term}X ({termCount})
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
         </div>
         <motion.div
           className="grid grid-cols-1 md:grid-cols-3 gap-8"
