@@ -98,6 +98,8 @@ async def startup_event():
                 except: pass
                 try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disable_weighted_rate_validation BOOLEAN DEFAULT 0")
                 except: pass
+                try: conn_sq.execute("ALTER TABLE bank_tables ADD COLUMN max_ticket DECIMAL(15, 2)")
+                except: pass
                 try: conn_sq.execute("ALTER TABLE simulation_results ADD COLUMN term INTEGER")
                 except: pass
                 try: conn_sq.execute("ALTER TABLE simulation_results ADD COLUMN installment FLOAT")
