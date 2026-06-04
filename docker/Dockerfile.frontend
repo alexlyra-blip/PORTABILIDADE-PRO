@@ -9,7 +9,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY ./frontend/package*.json ./
 
 # Instalação com flags para economizar memória e ignorar a falta de lockfile
-RUN npm install --no-audit --no-fund --loglevel=error
+RUN npm install --legacy-peer-deps --no-audit --no-fund --loglevel=error
 
 COPY ./frontend ./
 
