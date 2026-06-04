@@ -55,12 +55,19 @@ export default function DashboardPage() {
         setRole(userObj.role || "vendedor");
       } catch (e) {}
     }
-    loadDashboardStats();
+    loadDashboardStats(true);
+    
+    // Auto-refresh inteligente a cada 10 segundos
+    const interval = setInterval(() => {
+      loadDashboardStats(false);
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [filterDays]);
 
-  const loadDashboardStats = async () => {
+  const loadDashboardStats = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
       const d = res.data || res;
       

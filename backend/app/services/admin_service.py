@@ -527,10 +527,19 @@ class AdminService:
         return True
 
     _dashboard_cache = {}
-    _dashboard_cache_ttl = 30 # Reduzido para 30 segundos para maior fluidez no teste
+    _dashboard_cache_ttl = 10 # Cache de 10 segundos para velocidade extrema e alta atualização
 
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
+        import time
+        cache_key = f"{current_user.id}_{days}"
+        now = time.time()
+        
+        if cache_key in AdminService._dashboard_cache:
+            cached_data, timestamp = AdminService._dashboard_cache[cache_key]
+            if now - timestamp < AdminService._dashboard_cache_ttl:
+                return cached_data
+
         # Base query for simulations
         if current_user.role == "admin":
             sim_query = select(Simulation)
@@ -791,6 +800,7 @@ class AdminService:
                 } for s in simulations[:10]
             ]
         }
+        AdminService._dashboard_cache[cache_key] = (response_data, now)
         return response_data
     @staticmethod
     async def get_active_announcement(db: AsyncSession):

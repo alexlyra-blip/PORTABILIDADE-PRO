@@ -60,12 +60,19 @@ export default function AdminPage() {
         setRole(parsedUser.role || "vendedor");
       } catch (e) {}
     }
-    fetchData();
+    fetchData(true);
+    
+    // Auto-refresh inteligente a cada 10 segundos
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [filterDays]);
 
-  const fetchData = async () => {
+  const fetchData = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
       const d = res.data || res;
 
