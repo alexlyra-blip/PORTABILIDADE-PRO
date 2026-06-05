@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { 
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -132,31 +133,22 @@ export default function DashboardPage() {
   return (
     <div className="w-full max-w-[98%] mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700">
       
-      {/* Premium Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 to-slate-800 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3"></div>
-        <div className="relative z-10">
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase">
-            Dashboard <span className="text-blue-400">Simulações</span>
-          </h1>
-          <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mt-1">
-            Análise de Performance Comercial
-          </p>
-        </div>
-        
-        <div className="relative z-10 flex gap-3">
-          <select 
-            value={filterDays} 
-            onChange={(e) => setFilterDays(Number(e.target.value))}
-            className="py-3 px-6 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/10 text-[11px] font-black uppercase tracking-widest outline-none cursor-pointer transition-all backdrop-blur-md"
-          >
-            <option value={1} className="text-slate-800">Hoje</option>
-            <option value={7} className="text-slate-800">7 Dias</option>
-            <option value={30} className="text-slate-800">30 Dias</option>
-            <option value={90} className="text-slate-800">90 Dias</option>
-          </select>
-        </div>
-      </div>
+      <PageHeader 
+        title="Dashboard" 
+        highlight="Simulações" 
+        subtitle="Análise de Performance Comercial"
+      >
+        <select 
+          value={filterDays} 
+          onChange={(e) => setFilterDays(Number(e.target.value))}
+          className="py-3 px-6 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/10 text-[11px] font-black uppercase tracking-widest outline-none cursor-pointer transition-all backdrop-blur-md"
+        >
+          <option value={1} className="text-slate-800">Hoje</option>
+          <option value={7} className="text-slate-800">7 Dias</option>
+          <option value={30} className="text-slate-800">30 Dias</option>
+          <option value={90} className="text-slate-800">90 Dias</option>
+        </select>
+      </PageHeader>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 
 export default function RulesPage() {
@@ -205,14 +206,13 @@ export default function RulesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header Premium com Filtros Lado a Lado */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-100 dark:border-white/5">
-        <div className="flex-1">
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none mb-1">Regras de Aceitação</h1>
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest italic">Configure as restrições por idade e convênio</p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+      <PageHeader
+        title="Regras de"
+        highlight="Aceitação"
+        subtitle="Configure as restrições por idade e convênio"
+      />
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-full">
           {/* Seletor 1: BANCO */}
           <div className="relative w-full md:w-48">
             <select 

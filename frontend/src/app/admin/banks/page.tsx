@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 
 interface BankRule {
@@ -609,20 +610,20 @@ export default function BanksPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-12">
       {/* Header Premium */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Instituições Bancárias</h1>
-          <p className="text-slate-500 text-sm mt-1 font-medium">Controle central de ativos, identidades visuais e restrições operacionais.</p>
-        </div>
+      <PageHeader
+        title="Instituições"
+        highlight="Bancárias"
+        subtitle="Controle central de ativos, identidades visuais e restrições operacionais."
+      >
         <button 
           onClick={() => handleOpenModal()}
-          className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-3 group"
+          className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-3 group"
         >
           <span className="text-lg group-hover:rotate-90 transition-transform duration-300">＋</span> 
           Novo Banco
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
         </button>
-      </div>
+      </PageHeader>
 
       {/* Grid de Bancos Premium */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

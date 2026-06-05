@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import StatsCard from "@/components/admin/StatsCard";
 import { api, getStaticUrl } from "@/utils/api";
 import { 
@@ -150,42 +151,34 @@ export default function AdminPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-700 max-w-7xl mx-auto pb-10">
       
-      {/* Header Premium Glass */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-blue-900 to-indigo-900 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+      <PageHeader 
+        title="Painel" 
+        highlight="Inteligente" 
+        subtitle="Visão Global Administrativa e Métricas de Uso"
+      >
+        <div className="bg-black/20 px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-3 backdrop-blur-md">
+           <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"></span>
+           <span className="text-[10px] font-black text-white uppercase tracking-widest">Sistema Operante</span>
+        </div>
+
+        <select 
+          value={filterDays} 
+          onChange={(e) => setFilterDays(Number(e.target.value))}
+          className="py-3 px-6 bg-white hover:bg-slate-50 text-blue-900 rounded-2xl border-none text-[11px] font-black uppercase tracking-widest cursor-pointer shadow-lg transition-all"
+        >
+          <option value={1}>Métricas de Hoje</option>
+          <option value={7}>Últimos 7 Dias</option>
+          <option value={30}>Últimos 30 Dias</option>
+          <option value={90}>Últimos 90 Dias</option>
+        </select>
         
-        <div className="relative z-10">
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase mb-1">Painel <span className="text-blue-300">Inteligente</span></h1>
-          <p className="text-blue-200 font-bold italic text-[10px] uppercase tracking-widest">
-            Visão Global Administrativa e Métricas de Uso
-          </p>
-        </div>
-
-        <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-          <div className="bg-black/20 px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-3 backdrop-blur-md">
-             <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"></span>
-             <span className="text-[10px] font-black text-white uppercase tracking-widest">Sistema Operante</span>
-          </div>
-
-          <select 
-            value={filterDays} 
-            onChange={(e) => setFilterDays(Number(e.target.value))}
-            className="py-3 px-6 bg-white hover:bg-slate-50 text-blue-900 rounded-2xl border-none text-[11px] font-black uppercase tracking-widest cursor-pointer shadow-lg transition-all"
-          >
-            <option value={1}>Métricas de Hoje</option>
-            <option value={7}>Últimos 7 Dias</option>
-            <option value={30}>Últimos 30 Dias</option>
-            <option value={90}>Últimos 90 Dias</option>
-          </select>
-          
-          <button 
-            onClick={handleExportPDF} 
-            className="py-3 px-6 bg-indigo-500 hover:bg-indigo-400 text-white rounded-2xl border border-white/20 shadow-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group"
-          >
-            <span className="group-hover:-translate-y-0.5 transition-transform"><Icons.Download size={14} /></span> PDF
-          </button>
-        </div>
-      </div>
+        <button 
+          onClick={handleExportPDF} 
+          className="py-3 px-6 bg-indigo-500 hover:bg-indigo-400 text-white rounded-2xl border border-white/20 shadow-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group"
+        >
+          <span className="group-hover:-translate-y-0.5 transition-transform"><Icons.Download size={14} /></span> PDF
+        </button>
+      </PageHeader>
 
       {/* Cards de Métricas Rápidas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

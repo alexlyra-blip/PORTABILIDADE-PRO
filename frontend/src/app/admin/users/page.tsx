@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 
 interface User {
@@ -157,12 +158,13 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
+      <PageHeader 
+        title="Gestão de" 
+        highlight="Equipe" 
+        subtitle="Administre permissões, limites e assinaturas dos usuários."
+      />
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Gestão de Equipe</h1>
-          <p className="text-slate-500 text-sm mt-1 font-medium">Administre permissões, limites e assinaturas dos usuários.</p>
-        </div>
-        <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-auto">
+        <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-full">
           <div className="relative flex-1 md:w-64 group">
             <input type="text" placeholder="PESQUISAR..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full py-3.5 pl-14 pr-6 bg-white dark:bg-slate-900 rounded-2xl border-none shadow-xl text-[10px] font-black uppercase tracking-widest focus:ring-2 ring-blue-500/20" />

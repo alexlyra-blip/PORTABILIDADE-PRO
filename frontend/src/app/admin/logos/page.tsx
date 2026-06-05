@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 
 export default function SubLogosPage() {
@@ -130,20 +131,20 @@ export default function SubLogosPage() {
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Logos Secundários</h1>
-          <p className="text-slate-500 text-sm mt-1 font-medium">Personalize a identidade visual de convênios, estados e instituições.</p>
-        </div>
+      <PageHeader
+        title="Logos"
+        highlight="Secundários"
+        subtitle="Personalize a identidade visual de convênios, estados e instituições."
+      >
         <button 
           onClick={() => handleOpenModal()}
-          className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-[10px] uppercase tracking-widest flex items-center gap-3 group"
+          className="relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-8 rounded-2xl transition-all shadow-2xl shadow-blue-500/40 hover:-translate-y-1 active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 group"
         >
           <span className="text-base group-hover:rotate-90 transition-transform duration-300">＋</span> 
           Novo Logo
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
         </button>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-1 gap-8">
         {loading ? (
