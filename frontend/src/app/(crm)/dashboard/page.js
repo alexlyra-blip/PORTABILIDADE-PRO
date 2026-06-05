@@ -141,7 +141,7 @@ export default function DashboardPage() {
         <select 
           value={filterDays} 
           onChange={(e) => setFilterDays(Number(e.target.value))}
-          className="py-3 px-6 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/10 text-[11px] font-black uppercase tracking-widest outline-none cursor-pointer transition-all backdrop-blur-md"
+          className="py-3 px-6 bg-white hover:bg-slate-50 text-slate-800 rounded-2xl border-none shadow-xl text-[11px] font-black uppercase tracking-widest outline-none cursor-pointer transition-all hover:-translate-y-0.5"
         >
           <option value={1} className="text-slate-800">Hoje</option>
           <option value={7} className="text-slate-800">7 Dias</option>
