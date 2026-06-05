@@ -127,7 +127,7 @@ export default function DashboardPage() {
     { title: "Top Banco", desc: "Mais indicado", value: data.stats.top_bank, img: data.stats.top_bank_logo, icon: <Icons.Bank />, color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
     { title: "Mais Portado", desc: "Origem frequente", value: getFullOriginBankName(data.stats.top_origin_bank), img: data.stats.top_origin_logo, icon: <Icons.History />, color: "bg-pink-500/10 text-pink-600 border-pink-500/20" },
     { title: "Tabela Campeã", desc: "Tabela Mais Indicada", value: data.stats.top_table, img: data.stats.top_table_logo, icon: <Icons.Table />, color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
-    { title: "Taxa Média", desc: "Geral", value: data.stats.avg_rate, icon: <Icons.Percent />, color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
+    { title: "Taxa Média", desc: "Taxa Média", value: data.stats.avg_rate, icon: <Icons.Percent />, color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
   ];
 
   return (

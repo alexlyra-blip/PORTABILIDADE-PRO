@@ -702,6 +702,13 @@ class AdminService:
         top_table_bank_id = table_counts[top_table_name]["bank_id"] if top_table_name != "N/A" else None
         top_table_logo = banks_logo_map.get(top_table_bank_id) if top_table_bank_id else None
 
+        if top_table_name != "N/A" and top_table_bank_id:
+            bank_name = banks_map.get(top_table_bank_id, "")
+            if "-" in bank_name:
+                bank_name = bank_name.split("-")[-1].strip()
+            if bank_name:
+                top_table_name = f"{top_table_name} ({bank_name.upper()})"
+
         top_origin_bank = max(origin_counts, key=origin_counts.get) if origin_counts else "N/A"
         top_origin_logo = None
         top_origin_name = top_origin_bank
