@@ -46,6 +46,7 @@ class User(Base):
     logo_url = Column(Text, nullable=True)
     dark_mode = Column(Boolean, default=False)
     phone = Column(String(15), nullable=True)
+    last_access = Column(DateTime(timezone=True), nullable=True)
 
     
     company = relationship("Company", back_populates="users")

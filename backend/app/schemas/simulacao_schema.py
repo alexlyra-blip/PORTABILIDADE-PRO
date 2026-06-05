@@ -60,6 +60,8 @@ class LoginRequest(BaseModel):
 
 class UserResponse(UserBase):
     id: int
+    simulations_count: Optional[int] = 0
+    last_access: Optional[datetime] = None
     class Config:
         from_attributes = True
 

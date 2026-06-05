@@ -10,6 +10,8 @@ interface User {
   active?: boolean; phone?: string;
   subscription_expires_at?: string; users_count?: number;
   promotora_id?: number;
+  simulations_count?: number;
+  last_access?: string;
 }
 
 function getDaysLeft(expiresAt?: string): number | null {
@@ -239,6 +241,14 @@ export default function UsersPage() {
                   {user.phone && (
                     <p className="text-[10px] font-mono text-slate-500 flex items-center gap-1">📱 {user.phone}</p>
                   )}
+                  <div className="pt-2 flex flex-col gap-0.5">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      Simulações: <span className="text-blue-500">{user.simulations_count || 0}</span>
+                    </p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      Último Acesso: <span className="text-slate-500">{user.last_access ? new Date(user.last_access).toLocaleString('pt-BR') : 'NUNCA'}</span>
+                    </p>
+                  </div>
                 </div>
 
                 {/* Promotora Info */}

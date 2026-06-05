@@ -291,7 +291,14 @@ class AdminService:
             )
         else: # vendedor
             result = await db.execute(select(User).where(User.id == current_user.id))
-        return result.scalars().all()
+            
+        users = result.scalars().all()
+        # Compute simulations count for each user
+        for u in users:
+            count = await db.execute(select(func.count(Simulation.id)).where(Simulation.user_id == u.id))
+            u.simulations_count = count.scalar() or 0
+            
+        return users
 
     @staticmethod
     async def count_sellers_by_broker(db: AsyncSession, broker_id: int) -> int:
