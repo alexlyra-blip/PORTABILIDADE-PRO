@@ -6,6 +6,7 @@ import json
 def _banco_corresponde(banco_input, banco_regra):
     """
     Retorna True se o banco_input (ex: "318 - BMG S.A." ou "623") corresponde ao banco_regra (ex: "BMG" ou "PAN").
+    Usa um match rigoroso para evitar bloqueios indevidos por "nomes soltos".
     """
     if not banco_input or not banco_regra:
         return False
@@ -67,55 +68,35 @@ def _banco_corresponde(banco_input, banco_regra):
     b_input = normalizar(banco_input)
     b_regra = normalizar(banco_regra)
 
-    # Resolve o input do banco (ex: "623" -> "PAN")
-    if b_input in MAPA_CODIGOS_BANCOS:
-        b_input = normalizar(MAPA_CODIGOS_BANCOS[b_input])
-    else:
+    def resolve_bank(nome_ou_cod):
+        nome_norm = normalizar(nome_ou_cod)
+        if nome_norm in MAPA_CODIGOS_BANCOS:
+            return normalizar(MAPA_CODIGOS_BANCOS[nome_norm])
         for cod, nome in MAPA_CODIGOS_BANCOS.items():
-            if b_input.startswith(cod):
-                b_input = normalizar(nome)
-                break
+            if nome_norm.startswith(cod) or normalizar(nome) == nome_norm:
+                return normalizar(nome)
+        return nome_norm
 
-    # Resolve também o banco da regra por segurança (ex: se cadastrado como "623")
-    if b_regra in MAPA_CODIGOS_BANCOS:
-        b_regra = normalizar(MAPA_CODIGOS_BANCOS[b_regra])
-    else:
-        for cod, nome in MAPA_CODIGOS_BANCOS.items():
-            if b_regra.startswith(cod):
-                b_regra = normalizar(nome)
-                break
-    
-    # Match exato
-    if b_input == b_regra:
+    b_input_resolved = resolve_bank(b_input)
+    b_regra_resolved = resolve_bank(b_regra)
+
+    # 1. Match exato pós-resolução (Ex: "001" == "BANCO DO BRASIL" == "BANCO DO BRASIL")
+    if b_input_resolved == b_regra_resolved:
         return True
         
-    # Match de substring simples
-    if b_regra in b_input or b_input in b_regra:
+    # 2. Se ambos forem nomes listados oficialmente em MAPA_CODIGOS_BANCOS e forem diferentes, não há match.
+    # Isso evita que "BANCO DO BRASIL" bloqueie "CCB BRASIL" só por causa da palavra "BRASIL".
+    nomes_oficiais = [normalizar(v) for v in MAPA_CODIGOS_BANCOS.values()]
+    if b_input_resolved in nomes_oficiais and b_regra_resolved in nomes_oficiais:
+        return False
+        
+    # 3. Match de substring seguro apenas se os nomes não forem oficiais,
+    # para aceitar apelidos. Ex: "BANCO PAN" corresponde a "PAN"
+    if len(b_regra_resolved) >= 3 and (b_regra_resolved in b_input_resolved or b_input_resolved in b_regra_resolved):
+        # Proteção contra palavras muito genéricas darem match com tudo
+        if b_regra_resolved in ["BANCO", "SA", "S/A", "LTDA", "DO", "DE", "DA", "BRASIL", "SUL", "NORTE"]:
+            return False
         return True
-        
-    # Match por palavras-chave limpas (removendo ruídos comuns)
-    def clean_words(text):
-        for noise in ["BANCO", "S.A.", "SA", "CONSIGNADO", "CREDITO", "FINANCEIRA", "BANK", "PORTABILIDADE", "INSTITUICAO"]:
-            text = text.replace(noise, " ")
-        words = re.findall(r'[A-Z0-9]{2,}', text)
-        prepositions = {"DO", "DE", "DA", "DOS", "DAS", "E", "S/A"}
-        return {w for w in words if w not in prepositions}
-        
-    words_input = clean_words(b_input)
-    words_regra = clean_words(b_regra)
-    
-    if words_input and words_regra:
-        # Se a regra estiver contida no input ou vice-versa (ex: regra="PAN", input="BANCO PAN")
-        if words_regra.issubset(words_input) or words_input.issubset(words_regra):
-            return True
-            
-        # Palavras muito comuns que sozinhas não devem configurar um match
-        # (evita que "ESTADO DO SERGIPE" dê match com "ESTADO DO PARA" só por causa de "ESTADO")
-        common_words = {"ESTADO", "SUL", "NORTE", "BRASIL", "NACIONAL"}
-        intersection = words_input.intersection(words_regra) - common_words
-        
-        if len(intersection) > 0:
-            return True
         
     return False
 
