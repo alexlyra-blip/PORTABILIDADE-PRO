@@ -135,6 +135,8 @@ class BankRuleBase(BaseModel):
     accepts_disability: bool = True
     accepts_loas: bool = True
     disability_min_age: Optional[int] = None
+    disability_max_age: Optional[int] = None
+    disability_grace_age: Optional[int] = None
     disability_min_benefit_years: Optional[int] = None
     disability_min_benefit_months: Optional[int] = None
     excluded_origin_banks: Optional[str] = None

@@ -23,6 +23,8 @@ export default function RulesPage() {
     literacy_required: false,
     accepts_disability: false,
     disability_min_age: 0,
+    disability_max_age: 0,
+    disability_grace_age: 0,
     disability_min_benefit_years: 0,
     disability_min_benefit_months: 0,
     min_paid_installments: 0,
@@ -95,6 +97,8 @@ export default function RulesPage() {
         literacy_required: rule.literacy_required || false,
         accepts_disability: rule.accepts_disability || false,
         disability_min_age: rule.disability_min_age || 0,
+        disability_max_age: rule.disability_max_age || 0,
+        disability_grace_age: rule.disability_grace_age || 0,
         disability_min_benefit_years: rule.disability_min_benefit_years || 0,
         disability_min_benefit_months: rule.disability_min_benefit_months || 0,
         min_paid_installments: rule.min_paid_installments || 0,
@@ -124,6 +128,8 @@ export default function RulesPage() {
         literacy_required: false,
         accepts_disability: false,
         disability_min_age: 0,
+        disability_max_age: 0,
+        disability_grace_age: 0,
         disability_min_benefit_years: 0,
         disability_min_benefit_months: 0,
         min_paid_installments: 0,
@@ -161,6 +167,8 @@ export default function RulesPage() {
         max_term: parseInt(formData.max_term),
         min_release_amount: parseFloat(formData.min_release_amount),
         disability_min_age: parseInt(formData.disability_min_age) || 0,
+        disability_max_age: parseInt(formData.disability_max_age) || 0,
+        disability_grace_age: parseInt(formData.disability_grace_age) || 0,
         disability_min_benefit_years: parseInt(formData.disability_min_benefit_years) || 0,
         disability_min_benefit_months: parseInt(formData.disability_min_benefit_months) || 0,
         min_paid_installments: parseInt(formData.min_paid_installments) || 0,
@@ -542,11 +550,21 @@ export default function RulesPage() {
               {formData.accepts_disability && (
                 <div className="p-4 bg-red-50/30 rounded-2xl border border-red-100 space-y-4 animate-slide-up">
                   <h4 className="text-xs font-black text-red-800 uppercase tracking-widest">III. Trava de Concessão (Invalidez)</h4>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <label className="block text-[9px] font-black text-red-700 uppercase mb-1">Idade Min</label>
                       <input type="number" value={formData.disability_min_age} onChange={(e) => setFormData({...formData, disability_min_age: e.target.value})} className="input-admin !border-red-200 focus:!border-red-400" />
                     </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-red-700 uppercase mb-1">Idade Max</label>
+                      <input type="number" value={formData.disability_max_age} onChange={(e) => setFormData({...formData, disability_max_age: e.target.value})} className="input-admin !border-red-200 focus:!border-red-400" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-red-700 uppercase mb-1">Isenção da DIB</label>
+                      <input type="number" value={formData.disability_grace_age} onChange={(e) => setFormData({...formData, disability_grace_age: e.target.value})} className="input-admin !border-red-200 focus:!border-red-400" placeholder="Ex: 60" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
                     <div>
                       <label className="block text-[9px] font-black text-red-700 uppercase mb-1">Anos de Concessão</label>
                       <input type="number" value={formData.disability_min_benefit_years} onChange={(e) => setFormData({...formData, disability_min_benefit_years: e.target.value})} className="input-admin !border-red-200 focus:!border-red-400" />

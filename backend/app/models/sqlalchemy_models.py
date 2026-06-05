@@ -124,6 +124,8 @@ class BankRule(Base):
     excluded_benefit_types = Column(Text, nullable=True) # Comma-separated species like "04,32,92"
     
     disability_min_age = Column(Integer, nullable=True)
+    disability_max_age = Column(Integer, nullable=True)
+    disability_grace_age = Column(Integer, nullable=True)
     disability_min_benefit_years = Column(Integer, nullable=True)
     disability_min_benefit_months = Column(Integer, nullable=True)
 

@@ -235,7 +235,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                 # Aplicar todas as regras aplicáveis. Se qualquer uma rejeitar, o banco é rejeitado.
                 banco_bloqueado = False
                 for regra in regras_aplicaveis:
-                    elegivel, motivo = verificar_elegibilidade(cliente_input, regra, banco.name)
+                    elegivel, motivo = verificar_elegibilidade(cliente_input, regra)
                     if not elegivel:
                         rejeitados.append({
                             "banco": banco.name,

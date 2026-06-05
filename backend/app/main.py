@@ -54,7 +54,9 @@ def run_db_fix():
             cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;')
             cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;')
             cursor.execute('ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);')
-            print("✅ Colunas term, installment e max_ticket verificadas/criadas no PostgreSQL de produção.")
+            cursor.execute('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_max_age" INTEGER;')
+            cursor.execute('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_grace_age" INTEGER;')
+            print("✅ Colunas term, installment, max_ticket, disability_max_age e disability_grace_age verificadas/criadas no PostgreSQL de produção.")
         except Exception as e:
             print(f"⚠️ Erro ao adicionar colunas em production (Postgres): {e}")
         print("✅ Colunas convertidas para TEXT.")
@@ -98,6 +100,10 @@ async def startup_event():
                 try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN active BOOLEAN DEFAULT 1")
                 except: pass
                 try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disable_weighted_rate_validation BOOLEAN DEFAULT 0")
+                except: pass
+                try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disability_max_age INTEGER")
+                except: pass
+                try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disability_grace_age INTEGER")
                 except: pass
                 try: conn_sq.execute("ALTER TABLE bank_tables ADD COLUMN max_ticket DECIMAL(15, 2)")
                 except: pass

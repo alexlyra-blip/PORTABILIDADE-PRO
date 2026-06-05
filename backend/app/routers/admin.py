@@ -37,6 +37,8 @@ async def ensure_columns_exist():
                 await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disable_weighted_rate_validation BOOLEAN DEFAULT FALSE"))
                 await db.execute(text("ALTER TABLE bank_tables ADD COLUMN IF NOT EXISTS abater_margem_hp12c BOOLEAN DEFAULT FALSE"))
                 await db.execute(text("ALTER TABLE bank_tables ADD COLUMN IF NOT EXISTS max_ticket DECIMAL(15, 2)"))
+                await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disability_max_age INTEGER"))
+                await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disability_grace_age INTEGER"))
                 await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE"))
             
             await db.commit()

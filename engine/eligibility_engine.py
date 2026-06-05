@@ -119,7 +119,7 @@ def _banco_corresponde(banco_input, banco_regra):
         
     return False
 
-def verificar_elegibilidade(cliente_input, regra_banco, banco_nome=""):
+def verificar_elegibilidade(cliente_input, regra_banco):
     """
     Verifica se o cliente passa nos filtros iniciais baseados nas regras cadastradas.
     Controle rigoroso para Espécie Invalidez (INSS) e Analfabetismo.
@@ -221,21 +221,33 @@ def verificar_elegibilidade(cliente_input, regra_banco, banco_nome=""):
             if not getattr(regra_banco, "accepts_disability", True):
                 return False, f"Banco não aceita Invalidez (Espécie {especie_cliente})."
             
-            is_quali = banco_nome and "QUALI" in banco_nome.upper()
+            # 8.1 Idade Máxima para Invalidez (Se configurada)
+            max_age = getattr(regra_banco, "disability_max_age", None)
+            if max_age and idade_cliente > max_age:
+                return False, f"Banco não aceita Invalidez para maiores de {max_age} anos (Idade: {idade_cliente})."
             
-            if is_quali:
-                # Regra Quali: Idade máxima de 65 para Invalidez
-                if idade_cliente > 65:
-                    return False, f"Banco Quali não aceita Invalidez para maiores de 65 anos (Idade: {idade_cliente})."
+            # 8.2 Idade de Isenção de DIB (Padrão 60 anos se não preenchido)
+            grace_age = getattr(regra_banco, "disability_grace_age", None) or 60
+            
+            if idade_cliente >= grace_age:
+                pass # Sem validação de tempo de benefício (DIB)
+            else:
+                # 8.3 Idade mínima para invalidez
+                if regra_banco.disability_min_age and idade_cliente < regra_banco.disability_min_age:
+                    return False, f"Idade para invalidez ({idade_cliente}) abaixo do mínimo exigido ({regra_banco.disability_min_age})."
                 
-                # Regra Quali: Idades específicas para DIB
-                if idade_cliente >= 58:
-                    pass # Sem validação de tempo de benefício
-                elif 55 <= idade_cliente <= 57:
-                    # Exige 15 anos e 11 meses (191 meses)
-                    dib = getattr(cliente_input, "benefit_start_date", getattr(cliente_input, "data_concessao", None))
+                # 8.4 Tempo de benefício (DIB)
+                dib = getattr(cliente_input, "benefit_start_date", getattr(cliente_input, "data_concessao", None))
+                
+                # Se a regra exige tempo, a DIB é obrigatória
+                exigidos_anos = int(regra_banco.disability_min_benefit_years or 0)
+                exigidos_meses = int(regra_banco.disability_min_benefit_months or 0)
+                total_meses_exigidos = (exigidos_anos * 12) + exigidos_meses
+                
+                if total_meses_exigidos > 0:
                     if not dib:
-                        return False, "Data de concessão (DIB) obrigatória para benefício de invalidez (Quali Banking)."
+                        return False, f"Data de concessão (DIB) obrigatória para benefício de invalidez abaixo de {grace_age} anos."
+                    
                     try:
                         dt_concessao = None
                         dib_str = str(dib).strip()[:10]
@@ -244,60 +256,18 @@ def verificar_elegibilidade(cliente_input, regra_banco, banco_nome=""):
                                 dt_concessao = datetime.strptime(dib_str, fmt)
                                 break
                             except: continue
+                        
                         if not dt_concessao:
-                            return False, f"Formato de data DIB inválido: {dib}."
+                            return False, f"Formato de data DIB inválido: {dib}. Use DD/MM/AAAA ou AAAA-MM-DD."
                         
                         hoje = datetime.now()
                         diff = relativedelta(hoje, dt_concessao)
                         total_meses_cliente = (diff.years * 12) + diff.months
-                        total_meses_exigidos = (15 * 12) + 11
                         
                         if total_meses_cliente < total_meses_exigidos:
-                            return False, f"Tempo de benefício insuficiente ({diff.years}a {diff.months}m). Banco Quali exige 15a 11m para idades entre 55 e 57 anos."
+                            return False, f"Tempo de benefício insuficiente ({diff.years}a {diff.months}m). Exigido pelo banco: {exigidos_anos}a {exigidos_meses}m."
                     except Exception as e:
                         return False, f"Erro ao validar tempo de benefício: {str(e)}"
-                else:
-                    return False, f"Banco Quali não aceita Invalidez para menores de 55 anos (Idade: {idade_cliente})."
-            else:
-                # Regras normais (Outros Bancos)
-                # Regra para menores de 60 anos (DIB / Tempo de benefício)
-                if idade_cliente < 60:
-                    # 8.1 Idade mínima para invalidez
-                    if regra_banco.disability_min_age and idade_cliente < regra_banco.disability_min_age:
-                        return False, f"Idade para invalidez ({idade_cliente}) abaixo do mínimo exigido ({regra_banco.disability_min_age})."
-                    
-                    # 8.2 Tempo de benefício (DIB)
-                    dib = getattr(cliente_input, "benefit_start_date", getattr(cliente_input, "data_concessao", None))
-                    
-                    # Se a regra exige tempo, a DIB é obrigatória
-                    exigidos_anos = int(regra_banco.disability_min_benefit_years or 0)
-                    exigidos_meses = int(regra_banco.disability_min_benefit_months or 0)
-                    total_meses_exigidos = (exigidos_anos * 12) + exigidos_meses
-                    
-                    if total_meses_exigidos > 0:
-                        if not dib:
-                            return False, "Data de concessão (DIB) obrigatória para benefício de invalidez abaixo de 60 anos."
-                        
-                        try:
-                            dt_concessao = None
-                            dib_str = str(dib).strip()[:10]
-                            for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
-                                try:
-                                    dt_concessao = datetime.strptime(dib_str, fmt)
-                                    break
-                                except: continue
-                            
-                            if not dt_concessao:
-                                return False, f"Formato de data DIB inválido: {dib}. Use DD/MM/AAAA ou AAAA-MM-DD."
-                            
-                            hoje = datetime.now()
-                            diff = relativedelta(hoje, dt_concessao)
-                            total_meses_cliente = (diff.years * 12) + diff.months
-                            
-                            if total_meses_cliente < total_meses_exigidos:
-                                return False, f"Tempo de benefício insuficiente ({diff.years}a {diff.months}m). Exigido pelo banco: {exigidos_anos}a {exigidos_meses}m."
-                        except Exception as e:
-                            return False, f"Erro ao validar tempo de benefício: {str(e)}"
 
         # Validação LOAS
         if especie_cliente in especies_loas:

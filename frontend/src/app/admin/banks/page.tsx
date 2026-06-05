@@ -20,6 +20,8 @@ interface BankRule {
   origin_banks_min_paid?: string;
   accepts_disability: boolean;
   disability_min_age: string;
+  disability_max_age: string;
+  disability_grace_age: string;
   disability_min_benefit_years: string;
   disability_min_benefit_months: string;
 }
@@ -63,6 +65,8 @@ export default function BanksPage() {
       excluded_benefit_types: "",
       accepts_disability: false,
       disability_min_age: "",
+      disability_max_age: "",
+      disability_grace_age: "",
       disability_min_benefit_years: "",
       disability_min_benefit_months: ""
     }
@@ -169,6 +173,8 @@ export default function BanksPage() {
               excluded_benefit_types: rule.excluded_benefit_types || "",
               accepts_disability: rule.accepts_disability ?? false,
               disability_min_age: rule.disability_min_age || "",
+              disability_max_age: rule.disability_max_age || "",
+              disability_grace_age: rule.disability_grace_age || "",
               disability_min_benefit_years: rule.disability_min_benefit_years || "",
               disability_min_benefit_months: rule.disability_min_benefit_months || "",
               active: rule.active ?? true
@@ -204,6 +210,8 @@ export default function BanksPage() {
               excluded_benefit_types: "",
               accepts_disability: false,
               disability_min_age: "",
+              disability_max_age: "",
+              disability_grace_age: "",
               disability_min_benefit_years: "",
               disability_min_benefit_months: "",
               active: true
@@ -244,6 +252,8 @@ export default function BanksPage() {
           excluded_benefit_types: "",
           accepts_disability: false,
           disability_min_age: "",
+          disability_max_age: "",
+          disability_grace_age: "",
           disability_min_benefit_years: "",
           disability_min_benefit_months: "",
           active: true
@@ -279,6 +289,8 @@ export default function BanksPage() {
         use_balance_plus_released: false,
         accepts_disability: false,
         disability_min_age: "",
+        disability_max_age: "",
+        disability_grace_age: "",
         disability_min_benefit_years: "",
         disability_min_benefit_months: "",
         excluded_origin_banks: "",
@@ -331,6 +343,8 @@ export default function BanksPage() {
           excluded_benefit_types: rule.excluded_benefit_types || "",
           accepts_disability: rule.accepts_disability ?? false,
           disability_min_age: rule.disability_min_age ? parseInt(rule.disability_min_age) : null,
+          disability_max_age: rule.disability_max_age ? parseInt(rule.disability_max_age) : null,
+          disability_grace_age: rule.disability_grace_age ? parseInt(rule.disability_grace_age) : null,
           disability_min_benefit_years: rule.disability_min_benefit_years ? parseInt(rule.disability_min_benefit_years) : null,
           disability_min_benefit_months: rule.disability_min_benefit_months ? parseInt(rule.disability_min_benefit_months) : null,
           bank_id: savedBank.id,
@@ -384,6 +398,8 @@ export default function BanksPage() {
           excluded_benefit_types: rule.excluded_benefit_types ?? "",
           accepts_disability: rule.accepts_disability ?? false,
           disability_min_age: rule.disability_min_age ?? "",
+          disability_max_age: rule.disability_max_age ?? "",
+          disability_grace_age: rule.disability_grace_age ?? "",
           disability_min_benefit_years: rule.disability_min_benefit_years ?? "",
           disability_min_benefit_months: rule.disability_min_benefit_months ?? "",
           active: rule.active ?? true
@@ -423,6 +439,8 @@ export default function BanksPage() {
       excluded_benefit_types: "",
       accepts_disability: false,
       disability_min_age: "",
+      disability_max_age: "",
+      disability_grace_age: "",
       disability_min_benefit_years: "",
       disability_min_benefit_months: "",
       active: true
@@ -479,6 +497,8 @@ export default function BanksPage() {
             excluded_benefit_types: "",
             accepts_disability: false,
             disability_min_age: "",
+            disability_max_age: "",
+            disability_grace_age: "",
             disability_min_benefit_years: "",
             disability_min_benefit_months: "",
             active: true
@@ -1202,15 +1222,37 @@ export default function BanksPage() {
 
                       {formData.rules.accepts_disability && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Permitida (&lt; 60 anos)</label>
-                            <input 
-                              type="number" 
-                              value={formData.rules.disability_min_age}
-                              onChange={(e) => updateRuleField("disability_min_age", e.target.value)}
-                              className="input-admin !py-2"
-                              placeholder="Ex: 50"
-                            />
+                          <div className="grid grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Mínima</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.disability_min_age}
+                                onChange={(e) => updateRuleField("disability_min_age", e.target.value)}
+                                className="input-admin !py-2"
+                                placeholder="Mínima"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Máxima</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.disability_max_age}
+                                onChange={(e) => updateRuleField("disability_max_age", e.target.value)}
+                                className="input-admin !py-2"
+                                placeholder="Máxima"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Isenção da DIB a partir</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.disability_grace_age}
+                                onChange={(e) => updateRuleField("disability_grace_age", e.target.value)}
+                                className="input-admin !py-2"
+                                placeholder="Ex: 60"
+                              />
+                            </div>
                           </div>
                           
                           <div className="grid grid-cols-2 gap-4">
