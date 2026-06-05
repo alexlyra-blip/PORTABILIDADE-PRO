@@ -56,6 +56,7 @@ def run_db_fix():
             cursor.execute('ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);')
             cursor.execute('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_max_age" INTEGER;')
             cursor.execute('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_grace_age" INTEGER;')
+            cursor.execute('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_access" TIMESTAMP WITH TIME ZONE;')
             print("✅ Colunas term, installment, max_ticket, disability_max_age e disability_grace_age verificadas/criadas no PostgreSQL de produção.")
         except Exception as e:
             print(f"⚠️ Erro ao adicionar colunas em production (Postgres): {e}")
@@ -98,6 +99,8 @@ async def startup_event():
                 try: conn_sq.execute("ALTER TABLE bank_tables ADD COLUMN abater_margem_hp12c BOOLEAN DEFAULT 0")
                 except: pass
                 try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN active BOOLEAN DEFAULT 1")
+                except: pass
+                try: conn_sq.execute("ALTER TABLE users ADD COLUMN last_access DATETIME")
                 except: pass
                 try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disable_weighted_rate_validation BOOLEAN DEFAULT 0")
                 except: pass
