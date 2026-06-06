@@ -305,6 +305,14 @@ class AdminService:
             count = await db.execute(select(func.count(Simulation.id)).where(Simulation.user_id == u.id))
             u.simulations_count = count.scalar() or 0
             
+            # Identify creator
+            if u.broker_id:
+                broker_res = await db.execute(select(User).where(User.id == u.broker_id))
+                broker = broker_res.scalar_one_or_none()
+                u.broker_name = broker.name if broker else "Sistema"
+            else:
+                u.broker_name = "Administrador"
+            
         return users
 
     @staticmethod

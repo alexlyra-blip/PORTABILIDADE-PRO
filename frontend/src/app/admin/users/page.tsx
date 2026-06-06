@@ -13,6 +13,7 @@ interface User {
   promotora_id?: number;
   simulations_count?: number;
   last_access?: string;
+  broker_name?: string;
 }
 
 function getDaysLeft(expiresAt?: string): number | null {
@@ -245,6 +246,9 @@ export default function UsersPage() {
                     <p className="text-[10px] font-mono text-slate-500 flex items-center gap-1">📱 {user.phone}</p>
                   )}
                   <div className="pt-2 flex flex-col gap-0.5">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      Criado por: <span className="text-blue-500">{user.broker_name || 'Sistema'}</span>
+                    </p>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                       Simulações: <span className="text-blue-500">{user.simulations_count || 0}</span>
                     </p>

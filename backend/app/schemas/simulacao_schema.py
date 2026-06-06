@@ -63,6 +63,7 @@ class UserResponse(UserBase):
     id: int
     simulations_count: Optional[int] = 0
     last_access: Optional[datetime] = None
+    broker_name: Optional[str] = None
     class Config:
         from_attributes = True
 
