@@ -80,9 +80,9 @@ export default function PromotoraRulesPage() {
   const loadAll = async (userId: number) => {
     try {
       setLoading(true);
-      const [banksData, subLogosData, rulesData] = await Promise.all([
+      const [banksData, subLogosData, rulesData, visibleBanksData] = await Promise.all([
         api.get("/admin/banks"),
-                api.get("/admin/sub-logos"),
+        api.get("/admin/sub-logos"),
         api.get(`/admin/users/${userId}/rules`),
         api.get(`/admin/users/${userId}/visible-banks`)
       ]);
