@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
-import { api } from "@/utils/api";
+import { api, getStaticUrl } from "@/utils/api";
 import { inssBanks } from "@/utils/constants";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -175,9 +175,14 @@ export default function PromotoraRulesPage() {
     if (!newOriginRule.origin_bank || !newOriginRule.min_paid) return;
     const bankItem = inssBanks.find(b => b.value === newOriginRule.origin_bank);
     if (!bankItem) return;
+    
+    // Find matching logo if possible
+    const matchedBank = banks.find(b => bankItem.label.toUpperCase().includes(b.name.toUpperCase()));
+    
     const updated = [...originRules, { 
       ...newOriginRule, 
       origin_bank: bankItem.label,
+      logo_url: matchedBank ? matchedBank.logo_url : null,
       id: Date.now() 
     }];
     saveOriginRules(updated);
@@ -193,7 +198,14 @@ export default function PromotoraRulesPage() {
     if (!newBlockedOriginBank) return;
     const bankItem = inssBanks.find(b => b.value === newBlockedOriginBank);
     if (!bankItem) return;
-    const updated = [...blockedOriginBanks, { origin_bank: bankItem.label, id: Date.now() }];
+
+    const matchedBank = banks.find(b => bankItem.label.toUpperCase().includes(b.name.toUpperCase()));
+
+    const updated = [...blockedOriginBanks, { 
+      origin_bank: bankItem.label, 
+      logo_url: matchedBank ? matchedBank.logo_url : null,
+      id: Date.now() 
+    }];
     saveBlockedOriginBanks(updated);
     setNewBlockedOriginBank("");
   };
@@ -216,11 +228,7 @@ export default function PromotoraRulesPage() {
     toggleSimBankBlock(bank_name, true);
   };
 
-  const getStaticUrl = (path: string) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    return `http://localhost:8000${path.startsWith('/') ? '' : '/'}${path}`;
-  };
+
 
   if (loading) return <div className="p-8 text-center font-bold text-slate-500">Carregando...</div>;
 
@@ -318,7 +326,7 @@ export default function PromotoraRulesPage() {
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{p.convenio}</p>
                     </div>
                   </div>
-                  <button onClick={() => removePriority(p.id)} className="text-slate-300 hover:text-red-500 p-2 transition-colors">🗑️</button>
+                  <button onClick={() => removePriority(p.id)} className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"><Icons.Trash size={16} /></button>
                 </motion.div>
               ))}
               {priorities.length === 0 && <p className="text-center py-8 text-slate-400 font-bold uppercase text-xs tracking-widest italic">Nenhuma prioridade definida</p>}
@@ -444,13 +452,16 @@ export default function PromotoraRulesPage() {
                   className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group"
                 >
                   <div className="flex items-center gap-4">
-                    {r.logo_url ? (
-                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm shrink-0">
-                        <img src={getStaticUrl(r.logo_url) || ""} className="w-full h-full object-contain" alt="" />
-                      </div>
-                    ) : (
-                      <span className="w-10 h-10 bg-emerald-600 text-white text-xs font-black rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-100"><Icons.Landmark size={16} /></span>
-                    )}
+                    {(() => {
+                      const computedLogo = r.logo_url || banks.find(b => r.origin_bank.toUpperCase().includes(b.name.toUpperCase()))?.logo_url;
+                      return computedLogo ? (
+                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm shrink-0">
+                          <img src={getStaticUrl(computedLogo) || ""} className="w-full h-full object-contain" alt="" />
+                        </div>
+                      ) : (
+                        <span className="w-10 h-10 bg-emerald-600 text-white text-xs font-black rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-100"><Icons.Landmark size={16} /></span>
+                      );
+                    })()}
                     <div>
                       <p className="text-sm font-black text-slate-900">{r.origin_bank}</p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Mínimo {r.min_paid} parcelas pagas</p>
@@ -511,10 +522,19 @@ export default function PromotoraRulesPage() {
                   className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group"
                 >
                   <div className="flex items-center gap-4">
-                    <span className="w-10 h-10 bg-orange-600 text-white text-xs font-black rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-orange-100"><Icons.ShieldBan size={16} /></span>
+                    {(() => {
+                      const computedLogo = r.logo_url || banks.find(b => r.origin_bank.toUpperCase().includes(b.name.toUpperCase()))?.logo_url;
+                      return computedLogo ? (
+                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm shrink-0">
+                          <img src={getStaticUrl(computedLogo) || ""} className="w-full h-full object-contain" alt="" />
+                        </div>
+                      ) : (
+                        <span className="w-10 h-10 bg-orange-600 text-white text-xs font-black rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-orange-100"><Icons.ShieldBan size={16} /></span>
+                      );
+                    })()}
                     <div>
                       <p className="text-sm font-black text-slate-900">{r.origin_bank}</p>
-                      <p className="text-[10px] font-bold text-orange-500 uppercase tracking-[0.2em]">Não permite portabilidade</p>
+                      <p className="text-[10px] font-bold text-orange-500 uppercase tracking-[0.2em]">Bloqueado para Simulação</p>
                     </div>
                   </div>
                   <button onClick={() => removeBlockedOriginBank(r.id)} className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"><Icons.Trash size={16} /></button>
