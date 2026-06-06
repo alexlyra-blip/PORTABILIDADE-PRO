@@ -14,7 +14,8 @@ from app.schemas.simulacao_schema import (
     UserCreate, UserResponse,
     CompanyCreate, CompanyResponse,
     SimulationResponse,
-    SubAgreementLogoCreate, SubAgreementLogoResponse
+    SubAgreementLogoCreate, SubAgreementLogoResponse,
+    RuleCreate, BankVisibilityCreate
 )
 from app.routers.deps import get_admin_user, get_current_user, get_manager_user
 from typing import List
@@ -245,16 +246,16 @@ async def get_user_rules(user_id: int, db: AsyncSession = Depends(get_db), curre
     return await AdminService.get_promotora_rules(db, user_id)
 
 @router.post("/users/{user_id}/rules")
-async def set_user_rule(user_id: int, rule_key: str, rule_value: str, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_manager_user)):
-    return await AdminService.set_promotora_rule(db, user_id, rule_key, rule_value, current_user)
+async def set_user_rule(user_id: int, rule: RuleCreate, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_manager_user)):
+    return await AdminService.set_promotora_rule(db, user_id, rule.rule_key, rule.rule_value, current_user)
 
 @router.get("/users/{user_id}/visible-banks", response_model=List[BankResponse])
 async def get_user_visible_banks(user_id: int, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     return await AdminService.get_visible_banks_for_user(db, user_id)
 
 @router.post("/users/{user_id}/visible-banks")
-async def set_user_visible_banks(user_id: int, bank_name: str, is_visible: bool, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_manager_user)):
-    return await AdminService.set_bank_visibility(db, user_id, bank_name, is_visible, current_user)
+async def set_user_visible_banks(user_id: int, visibility: BankVisibilityCreate, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_manager_user)):
+    return await AdminService.set_bank_visibility(db, user_id, visibility.bank_name, visibility.is_visible, current_user)
 
 # Companies
 @router.get("/companies", response_model=List[CompanyResponse])

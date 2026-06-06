@@ -112,9 +112,11 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
         p_rules = rules_res.scalars().all()
         p_priority_config = []
         p_origin_config = []
+        p_origin_blocklist = []
         for r in p_rules:
             if r.rule_key == 'priority_config': p_priority_config = json.loads(r.rule_value)
             if r.rule_key == 'origin_bank_config': p_origin_config = json.loads(r.rule_value)
+            if r.rule_key == 'origin_bank_blocklist': p_origin_blocklist = json.loads(r.rule_value)
 
         # 0.1 Validate Promotora Origin Bank Rules (PRIORIDADE MÁXIMA)
         import re
@@ -161,6 +163,42 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         }
                     }
 
+        # 0.2 Validate Origin Bank Blocklist
+        for rule in p_origin_blocklist:
+            rule_bank_name = str(rule.get('origin_bank', '')).upper()
+            rule_words = set(re.findall(r'[A-Z0-9]{2,}', rule_bank_name)) if rule_bank_name else set()
+            is_match = False
+            if rule_words and input_words and len(rule_words.intersection(input_words)) > 0:
+                is_match = True
+            elif rule_bank_name and (rule_bank_name in full_origin_name or full_origin_name in rule_bank_name):
+                is_match = True
+                
+            if is_match:
+                return {
+                    "ofertas": [],
+                    "rejeitados": [{
+                        "banco": "BLOQUEIO REGRAS PROMOTORA",
+                        "motivo": f"A sua promotora bloqueou a portabilidade de contratos originados na instituição {rule_bank_name}.",
+                        "elegivel": False
+                    }],
+                    "total_bancos_analisados": 0,
+                    "total_aprovados": 0,
+                    "total_rejeitados": 1,
+                    "cliente": {
+                        "nome": getattr(cliente_input, "nome_cliente", ""),
+                        "cpf": getattr(cliente_input, "cpf_cliente", ""),
+                        "saldo_devedor": saldo_devedor,
+                        "valor_parcela": parcela_atual
+                    }
+                }
+
+        # 0.3 Fetch Blocked Simulation Banks (Target Banks)
+        from app.models.sqlalchemy_models import UserBankVisibility
+        vis_res = await db.execute(select(UserBankVisibility).where(UserBankVisibility.user_id == promotora_id))
+        visibilities = vis_res.scalars().all()
+        blocked_sim_banks = [v.bank_name.upper() for v in visibilities if not v.is_visible]
+        visible_sim_banks = [v.bank_name.upper() for v in visibilities if v.is_visible]
+
         bancos_aprovados = []
         rejeitados = []
         
@@ -189,6 +227,20 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         break
                 
                 if not tem_tabelas_convenio:
+                    continue
+
+                # FILTRO 2: Promotora Blocklist para Bancos Destino
+                banco_name_upper = banco.name.upper()
+                if visible_sim_banks and banco_name_upper not in visible_sim_banks:
+                    continue # Ignore banks not in whitelist
+                if banco_name_upper in blocked_sim_banks:
+                    rejeitados.append({
+                        "banco": banco.name,
+                        "bank_id": banco.id,
+                        "logo_url": banco.logo_url,
+                        "motivo": "Bloqueado para simulação pelas regras da Promotora",
+                        "elegivel": False
+                    })
                     continue
 
                 if not banco.rules:

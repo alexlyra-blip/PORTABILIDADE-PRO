@@ -97,6 +97,14 @@ class PromotoraRuleResponse(PromotoraRuleBase):
     class Config:
         from_attributes = True
 
+class RuleCreate(BaseModel):
+    rule_key: str
+    rule_value: str
+
+class BankVisibilityCreate(BaseModel):
+    bank_name: str
+    is_visible: bool
+
 # Bank Schemas
 class BankBase(BaseModel):
     name: str

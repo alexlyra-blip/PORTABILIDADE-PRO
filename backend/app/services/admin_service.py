@@ -261,8 +261,15 @@ class AdminService:
         if not visibilities:
             return all_banks
             
+        blocked_names = [v.bank_name for v in visibilities if not v.is_visible]
         visible_names = [v.bank_name for v in visibilities if v.is_visible]
-        return [b for b in all_banks if b.name in visible_names]
+        
+        # Se houver bancos explicitamente visíveis, usamos whitelist
+        if visible_names:
+            return [b for b in all_banks if b.name in visible_names and b.name not in blocked_names]
+        
+        # Caso contrário, usamos blacklist
+        return [b for b in all_banks if b.name not in blocked_names]
 
     @staticmethod
     async def get_user_by_id(db: AsyncSession, user_id: int, current_user: User):
