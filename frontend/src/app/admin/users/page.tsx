@@ -227,7 +227,7 @@ export default function UsersPage() {
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
-                      user.role === 'admin' ? 'bg-purple-500 text-white border-purple-400' :
+                      user.role === 'admin' ? 'bg-slate-900 text-white border-slate-700' :
                       user.role === 'promotora' ? 'bg-blue-600 text-white border-blue-500' :
                       user.role === 'corretor' ? 'bg-amber-500 text-white border-amber-400' :
                       'bg-slate-500 text-white border-slate-400'
