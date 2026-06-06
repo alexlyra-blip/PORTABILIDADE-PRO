@@ -7,7 +7,7 @@ interface User {
   id: number; name: string; email: string; role: string;
   seller_limit: number; brand_color: string; logo_url: string;
   avatar_url: string; is_temporary_password: boolean;
-  sidebar_color?: string; sidebar_color_secondary?: string;
+  sidebar_color?: string; sidebar_color_secondary?: string; highlight_color?: string;
   active?: boolean; phone?: string;
   subscription_expires_at?: string; users_count?: number;
   promotora_id?: number;
@@ -38,8 +38,8 @@ export default function UsersPage() {
   const [formData, setFormData] = useState<any>({
     name: "", email: "", role: "corretor", password: "",
     seller_limit: 0, brand_color: "#2563eb", sidebar_color: "#0f172a",
-    sidebar_color_secondary: "", logo_url: "", avatar_url: "",
-  is_temporary_password: true, active: true, phone: ""
+    sidebar_color_secondary: "#1e293b", highlight_color: "#2563eb", logo_url: "", avatar_url: "",
+    is_temporary_password: true, active: true, phone: ""
   });
   
   // Ícones Premium SVG
@@ -93,14 +93,15 @@ export default function UsersPage() {
       setEditingUser(user);
       setFormData({ name: user.name, email: user.email, role: user.role, password: "",
         seller_limit: user.seller_limit || 0, brand_color: user.brand_color || "#2563eb",
-        sidebar_color: user.sidebar_color || "#0f172a", sidebar_color_secondary: user.sidebar_color_secondary || "",
+        sidebar_color: user.sidebar_color || "#0f172a", sidebar_color_secondary: user.sidebar_color_secondary || "#1e293b",
+        highlight_color: user.highlight_color || user.brand_color || "#2563eb",
         logo_url: user.logo_url || "", avatar_url: user.avatar_url || "",
         is_temporary_password: user.is_temporary_password ?? true,
         active: user.active ?? true, phone: user.phone || "" });
     } else {
       setEditingUser(null);
       setFormData({ name: "", email: "", role: "corretor", password: "", seller_limit: 0,
-        brand_color: "#2563eb", sidebar_color: "#0f172a", sidebar_color_secondary: "",
+        brand_color: "#2563eb", sidebar_color: "#0f172a", sidebar_color_secondary: "#1e293b", highlight_color: "#2563eb",
         logo_url: "", avatar_url: "", is_temporary_password: true, active: true, phone: "" });
     }
     setModalOpen(true);
@@ -361,17 +362,31 @@ export default function UsersPage() {
                     </label>
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Cor Principal (Botões e Destaques)</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">1. Cor de Fundo do Menu</label>
+                    <div className="flex gap-3">
+                      <input type="color" value={formData.sidebar_color} onChange={(e) => setFormData({...formData, sidebar_color: e.target.value})} className="w-12 h-12 rounded-2xl p-1 bg-white shadow-sm border-none cursor-pointer" />
+                      <input type="text" value={formData.sidebar_color} onChange={(e) => setFormData({...formData, sidebar_color: e.target.value})} className="input-admin flex-1 !rounded-2xl !bg-slate-50 border-none shadow-inner font-mono text-xs" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">2. Cor Secundária do Menu (Botões/Janelas)</label>
+                    <div className="flex gap-3">
+                      <input type="color" value={formData.sidebar_color_secondary} onChange={(e) => setFormData({...formData, sidebar_color_secondary: e.target.value})} className="w-12 h-12 rounded-2xl p-1 bg-white shadow-sm border-none cursor-pointer" />
+                      <input type="text" value={formData.sidebar_color_secondary} onChange={(e) => setFormData({...formData, sidebar_color_secondary: e.target.value})} className="input-admin flex-1 !rounded-2xl !bg-slate-50 border-none shadow-inner font-mono text-xs" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">3. Cor dos Botões do Sistema</label>
                     <div className="flex gap-3">
                       <input type="color" value={formData.brand_color} onChange={(e) => setFormData({...formData, brand_color: e.target.value})} className="w-12 h-12 rounded-2xl p-1 bg-white shadow-sm border-none cursor-pointer" />
                       <input type="text" value={formData.brand_color} onChange={(e) => setFormData({...formData, brand_color: e.target.value})} className="input-admin flex-1 !rounded-2xl !bg-slate-50 border-none shadow-inner font-mono text-xs" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Cor Secundária (Menu Lateral)</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">4. Cor da Fonte de Destaque</label>
                     <div className="flex gap-3">
-                      <input type="color" value={formData.sidebar_color_secondary || formData.sidebar_color} onChange={(e) => setFormData({...formData, sidebar_color_secondary: e.target.value})} className="w-12 h-12 rounded-2xl p-1 bg-white shadow-sm border-none cursor-pointer" />
-                      <input type="text" value={formData.sidebar_color_secondary || ""} onChange={(e) => setFormData({...formData, sidebar_color_secondary: e.target.value})} className="input-admin flex-1 !rounded-2xl !bg-slate-50 border-none shadow-inner font-mono text-xs" placeholder="Ex: #0f172a" />
+                      <input type="color" value={formData.highlight_color} onChange={(e) => setFormData({...formData, highlight_color: e.target.value})} className="w-12 h-12 rounded-2xl p-1 bg-white shadow-sm border-none cursor-pointer" />
+                      <input type="text" value={formData.highlight_color} onChange={(e) => setFormData({...formData, highlight_color: e.target.value})} className="input-admin flex-1 !rounded-2xl !bg-slate-50 border-none shadow-inner font-mono text-xs" />
                     </div>
                   </div>
                   <button type="button" onClick={() => setFormData({...formData, active: !formData.active})}

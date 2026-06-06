@@ -115,9 +115,7 @@ export default function Sidebar() {
     <aside
       className="fixed left-0 top-0 flex h-screen w-64 flex-col text-white shadow-xl z-50 transition-all border-r border-white/5"
       style={{
-        background: user.sidebar_color_secondary
-          ? `linear-gradient(135deg, ${user.sidebar_color || '#0f172a'}, ${user.sidebar_color_secondary})`
-          : (user.sidebar_color || '#0f172a')
+        backgroundColor: user.sidebar_color || '#0f172a'
       }}
     >
       {/* Header: Centered Avatar + Branding Row */}
@@ -193,9 +191,9 @@ export default function Sidebar() {
                     : "border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
                   }`}
                 style={{
-                  backgroundColor: user.brand_color || '#3b82f6',
-                  backgroundImage: `linear-gradient(45deg, ${user.brand_color || '#3b82f6'} 0%, #172554 100%)`,
-                  boxShadow: `0 15px 20px -5px color-mix(in srgb, ${user.brand_color || '#3b82f6'} 30%, transparent)`
+                  backgroundColor: user.sidebar_color_secondary || user.brand_color || '#3b82f6',
+                  backgroundImage: `linear-gradient(45deg, ${user.sidebar_color_secondary || user.brand_color || '#3b82f6'} 0%, #172554 100%)`,
+                  boxShadow: `0 15px 20px -5px color-mix(in srgb, ${user.sidebar_color_secondary || user.brand_color || '#3b82f6'} 30%, transparent)`
                 }}
               >
                 {!isActive && <div className="absolute inset-0 bg-white/10 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>}
@@ -215,8 +213,8 @@ export default function Sidebar() {
                 : "text-white/50 hover:text-white hover:bg-white/5 hover:translate-x-1"
                 }`}
               style={isActive ? { 
-                backgroundColor: user.brand_color || '#2563eb',
-                backgroundImage: `linear-gradient(135deg, ${user.brand_color || '#2563eb'} 0%, color-mix(in srgb, ${user.brand_color || '#2563eb'} 70%, black) 100%)`
+                backgroundColor: user.sidebar_color_secondary || user.brand_color || '#2563eb',
+                backgroundImage: `linear-gradient(135deg, ${user.sidebar_color_secondary || user.brand_color || '#2563eb'} 0%, color-mix(in srgb, ${user.sidebar_color_secondary || user.brand_color || '#2563eb'} 70%, black) 100%)`
               } : {}}
             >
               {isActive && (

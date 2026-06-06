@@ -6,6 +6,7 @@ export default function PageHeader({ title, highlight, subtitle, children }) {
   const [userColor, setUserColor] = useState('#1e3a8a'); // blue-900 as fallback
   const [userColorSec, setUserColorSec] = useState('#312e81'); // indigo-900 as fallback
   const [brandColor, setBrandColor] = useState('#3b82f6'); // blue-500 as fallback
+  const [highlightColor, setHighlightColor] = useState('#3b82f6'); // fallback
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -15,6 +16,14 @@ export default function PageHeader({ title, highlight, subtitle, children }) {
         if (user.brand_color) {
           setBrandColor(user.brand_color);
         }
+        if (user.highlight_color) {
+          setHighlightColor(user.highlight_color);
+        } else if (user.sidebar_color_secondary) {
+          setHighlightColor(user.sidebar_color_secondary);
+        } else if (user.brand_color) {
+          setHighlightColor(user.brand_color);
+        }
+        
         if (user.sidebar_color) {
           setUserColor(user.sidebar_color);
           setUserColorSec(user.sidebar_color_secondary || '#0f172a'); 
@@ -37,7 +46,7 @@ export default function PageHeader({ title, highlight, subtitle, children }) {
       
       <div className="relative z-10">
         <h1 className="text-3xl font-black text-white tracking-tight uppercase mb-1">
-          {title} {highlight && <span style={{ color: brandColor }}>{highlight}</span>}
+          {title} {highlight && <span style={{ color: highlightColor }}>{highlight}</span>}
         </h1>
         {subtitle && (
           <p className="text-white/70 font-bold text-[10px] uppercase tracking-widest mt-1">

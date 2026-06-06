@@ -42,6 +42,7 @@ class UserBase(BaseModel):
     brand_color: Optional[str] = "#2563eb"
     sidebar_color: Optional[str] = "#1e293b" # Default dark slate 800ish or whatever the current sidebar uses
     sidebar_color_secondary: Optional[str] = None
+    highlight_color: Optional[str] = None
     logo_url: Optional[str] = None
     avatar_url: Optional[str] = None
     dark_mode: Optional[bool] = False

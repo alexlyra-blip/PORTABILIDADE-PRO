@@ -36,6 +36,7 @@ async def login(req: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
             "brand_color": user.brand_color,
             "sidebar_color": user.sidebar_color,
             "sidebar_color_secondary": user.sidebar_color_secondary,
+            "highlight_color": user.highlight_color,
             "logo_url": user.logo_url,
             "avatar_url": user.avatar_url,
             "seller_limit": user.seller_limit,
