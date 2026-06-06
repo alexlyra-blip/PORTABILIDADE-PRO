@@ -342,15 +342,22 @@ class AdminService:
         if "is_temporary_password" not in user_data:
             user_data["is_temporary_password"] = True
 
-        if user_data.get("role") == "vendedor" and user_data.get("broker_id"):
+        role = user_data.get("role")
+        if role in ["vendedor", "corretor"] and user_data.get("broker_id"):
             broker_result = await db.execute(select(User).where(User.id == user_data["broker_id"]))
             broker = broker_result.scalar_one_or_none()
-            if broker and broker.seller_limit and broker.seller_limit > 0:
-                current_count = await AdminService.count_sellers_by_broker(db, broker.id)
-                if current_count >= broker.seller_limit:
+            if broker:
+                limit = broker.seller_limit if broker.seller_limit is not None else 0
+                if limit <= 0:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Limite de vendedores atingido ({broker.seller_limit})."
+                        detail="Você não possui limite para criar usuários. Por favor, entre em contato com o administrador."
+                    )
+                current_count = await AdminService.count_sellers_by_broker(db, broker.id)
+                if current_count >= limit:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Limite de usuários atingido ({limit}). Por favor, entre em contato com o administrador."
                     )
             
         db_user = User(**user_data)
