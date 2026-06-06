@@ -50,6 +50,7 @@ def run_db_fix():
         cursor.execute('ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT;')
+        cursor.execute('ALTER TABLE "promotora_rules" ALTER COLUMN "rule_value" TYPE TEXT;')
         try:
             cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;')
             cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;')
@@ -164,7 +165,8 @@ async def startup_event():
             'ALTER TABLE "users" ALTER COLUMN "avatar_url" TYPE TEXT',
             'ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT',
             'ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT',
-            'ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT'
+            'ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT',
+            'ALTER TABLE "promotora_rules" ALTER COLUMN "rule_value" TYPE TEXT'
         ]
         for sql in reformas:
             try: 
