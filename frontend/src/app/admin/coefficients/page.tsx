@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
+import { Icons } from "@/components/Icons";
 
 export default function CoefficientsPage() {
   const [banks, setBanks] = useState<any[]>([]);
@@ -412,7 +413,7 @@ export default function CoefficientsPage() {
             onClick={() => handleOpenModal(null, "", globalTermFilter)}
             className="w-full md:w-auto py-3.5 px-8 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
           >
-            <span>🔢</span> Novo Coeficiente
+            <Icons.Plus size={16} /> Novo Coeficiente
           </button>
         </div>
       </div>
@@ -424,7 +425,7 @@ export default function CoefficientsPage() {
           <div className="relative">
             <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Buscar por Nome</label>
             <div className="relative flex items-center">
-              <span className="absolute left-4 text-[10px]">🔍</span>
+              <span className="absolute left-4 text-slate-400"><Icons.Search size={14} /></span>
               <input 
                 type="text" 
                 value={filterName}
@@ -442,7 +443,7 @@ export default function CoefficientsPage() {
           <div className="relative">
             <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Filtrar por Taxa (%)</label>
             <div className="relative flex items-center">
-              <span className="absolute left-4 text-[10px]">📊</span>
+              <span className="absolute left-4 text-slate-400"><Icons.BarChart size={14} /></span>
               <input 
                 type="text" 
                 value={filterRate}
@@ -460,7 +461,7 @@ export default function CoefficientsPage() {
           <div className="relative">
             <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Filtrar por Prazo (Meses)</label>
             <div className="relative flex items-center">
-              <span className="absolute left-4 text-[10px]">📅</span>
+              <span className="absolute left-4 text-slate-400"><Icons.Calendar size={14} /></span>
               <input 
                 type="number" 
                 value={filterTerm}

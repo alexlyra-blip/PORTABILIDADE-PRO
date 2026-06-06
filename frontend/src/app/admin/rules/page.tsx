@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
+import { Icons } from "@/components/Icons";
 
 export default function RulesPage() {
   const [banks, setBanks] = useState<any[]>([]);
@@ -260,7 +261,7 @@ export default function RulesPage() {
             onClick={() => handleOpenModal()}
             className="w-full md:w-auto py-3.5 px-8 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
           >
-            <span>⚖️</span> Nova Regra
+            <Icons.Plus size={16} /> Nova Regra
           </button>
         </div>
       </div>
@@ -325,7 +326,7 @@ export default function RulesPage() {
                     onClick={() => handleOpenModal()}
                     className="py-2.5 px-6 bg-white dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-600 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 dark:border-white/10 transition-all shadow-lg flex items-center gap-2"
                   >
-                    <span>＋</span> Adicionar Regra {agr}
+                    <Icons.Plus size={14} /> Adicionar Regra {agr}
                   </button>
                 </div>
 
@@ -351,15 +352,15 @@ export default function RulesPage() {
                           {/* Espécies */}
                           <div className="flex flex-wrap gap-2">
                              <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.accepts_disability ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500 opacity-60'}`}>
-                                <span className="text-xs">♿</span>
+                                <Icons.Wheelchair size={14} />
                                 <span className="text-[9px] font-black uppercase tracking-widest">{rule.accepts_disability ? 'Invalidez OK' : 'Não Invalidez'}</span>
                              </div>
                              <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.accepts_loas ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500 opacity-60'}`}>
-                                <span className="text-xs">🤝</span>
+                                <Icons.HandCoins size={14} />
                                 <span className="text-[9px] font-black uppercase tracking-widest">{rule.accepts_loas ? 'LOAS OK' : 'Não LOAS'}</span>
                              </div>
                              <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.literacy_required ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
-                                <span className="text-xs">📝</span>
+                                <Icons.BookOpen size={14} />
                                 <span className="text-[9px] font-black uppercase tracking-widest">{rule.literacy_required ? 'Só Alfabetizado' : 'Aceita Analfabeto'}</span>
                              </div>
                           </div>
