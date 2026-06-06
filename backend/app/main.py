@@ -171,11 +171,11 @@ async def startup_event():
         for sql in reformas:
             try: 
                 await session.execute(text(sql))
+                await session.commit()
                 print(f"SQL SUCCESS: {sql}")
             except Exception as e: 
+                await session.rollback()
                 print(f"SQL INFO: {sql} -> {e}")
-            
-        await session.commit()
 
 app.add_middleware(
     CORSMiddleware,
