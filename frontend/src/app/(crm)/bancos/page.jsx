@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { inssBanks } from "@/utils/constants";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 
 const Icons = {
   Search: ({ size = 20 }) => (
@@ -39,10 +40,14 @@ export default function BancosPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedConvenio, setSelectedConvenio] = useState("INSS");
   const [selectedBank, setSelectedBank] = useState(null);
+  const [selectedRuleId, setSelectedRuleId] = useState(null);
+  const [bankTables, setBankTables] = useState([]);
   const [user, setUser] = useState(null);
+  const [mounted, setMounted] = useState(false);
   const pdfRef = useRef();
 
   useEffect(() => {
+    setMounted(true);
     const savedUser = localStorage.getItem('user');
     if (savedUser) setUser(JSON.parse(savedUser));
     
@@ -67,23 +72,54 @@ export default function BancosPage() {
     return matchesSearch && hasRulesForConvenio;
   });
 
-  const getRuleForConvenio = (bank) => {
-    return bank?.rules?.find(r => r.agreement === selectedConvenio && r.active);
+  const handleBankClick = async (bank) => {
+    setSelectedBank(bank);
+    const rule = bank.rules?.find(r => r.agreement === selectedConvenio && r.active);
+    if (rule) setSelectedRuleId(rule.id);
+    
+    // Fetch tables for this bank to get accurate prazos
+    try {
+       const tables = await api.get(`/admin/banks/${bank.id}/tables`);
+       setBankTables(tables || []);
+    } catch (e) {
+       setBankTables([]);
+    }
+  };
+
+  const getSelectedRule = () => {
+    if (!selectedBank) return null;
+    return selectedBank.rules?.find(r => r.id === selectedRuleId) || selectedBank.rules?.[0];
   };
 
   const exportPDF = async () => {
     if (typeof window !== "undefined") {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const element = pdfRef.current;
-      const opt = {
-        margin:       10,
-        filename:     `Regras_${selectedBank.name}_${selectedConvenio}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      
-      html2pdf().set(opt).from(element).save();
+      try {
+        const html2pdf = (await import('html2pdf.js')).default;
+        const element = pdfRef.current;
+        
+        // Temporarily remove max-height and overflow to prevent cutoff/crashing
+        const originalMaxHeight = element.style.maxHeight;
+        const originalOverflow = element.style.overflow;
+        element.style.maxHeight = 'none';
+        element.style.overflow = 'visible';
+
+        const opt = {
+          margin:       10,
+          filename:     `Regras_${selectedBank.name}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 1.5, useCORS: true, logging: false },
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        await html2pdf().set(opt).from(element).save();
+        
+        // Restore
+        element.style.maxHeight = originalMaxHeight;
+        element.style.overflow = originalOverflow;
+      } catch (e) {
+        console.error("Erro ao gerar PDF:", e);
+        alert("Ocorreu um erro ao gerar o PDF. Tente novamente.");
+      }
     }
   };
 
@@ -142,14 +178,14 @@ export default function BancosPage() {
               <motion.div
                 key={bank.id}
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
-                onClick={() => setSelectedBank(bank)}
+                onClick={() => handleBankClick(bank)}
                 className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group flex flex-col items-center text-center gap-4 relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 
-                <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden relative z-10 p-2">
+                <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden relative z-10 p-0">
                   {bank.logo_url ? (
-                    <img src={getStaticUrl(bank.logo_url)} alt={bank.name} className="w-full h-full object-contain" />
+                    <img src={getStaticUrl(bank.logo_url)} alt={bank.name} className="w-full h-full object-cover" />
                   ) : (
                     <Icons.Landmark size={32} />
                   )}
@@ -165,37 +201,48 @@ export default function BancosPage() {
         </div>
       )}
 
-      {/* Modal - Bank Rules */}
-      <AnimatePresence>
-        {selectedBank && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-              onClick={() => setSelectedBank(null)}
-            ></motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-slate-50 w-full max-w-3xl max-h-[90vh] rounded-[2.5rem] shadow-2xl relative z-10 flex flex-col overflow-hidden"
-            >
-              {/* Header */}
-              <div className="p-6 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 p-2 flex items-center justify-center shrink-0">
-                     {selectedBank.logo_url ? (
-                        <img src={getStaticUrl(selectedBank.logo_url)} alt={selectedBank.name} className="w-full h-full object-contain" />
-                      ) : (
-                        <Icons.Landmark size={24} />
-                      )}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-black text-slate-900 leading-none">{selectedBank.name}</h2>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-black uppercase tracking-widest">{selectedConvenio}</span>
+      {/* Modal - Bank Rules via Portal to break z-index context */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {selectedBank && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" style={{ isolation: 'isolate' }}>
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                onClick={() => setSelectedBank(null)}
+              ></motion.div>
+              
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-slate-50 w-full max-w-3xl max-h-[90vh] rounded-[2.5rem] shadow-2xl relative z-10 flex flex-col overflow-hidden"
+              >
+                {/* Header */}
+                <div className="p-6 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 p-0 flex items-center justify-center shrink-0 overflow-hidden">
+                       {selectedBank.logo_url ? (
+                          <img src={getStaticUrl(selectedBank.logo_url)} alt={selectedBank.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Icons.Landmark size={24} />
+                        )}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black text-slate-900 leading-none">{selectedBank.name}</h2>
+                      <div className="flex items-center gap-2 mt-2">
+                        <select 
+                          value={selectedRuleId || ""}
+                          onChange={(e) => setSelectedRuleId(Number(e.target.value))}
+                          className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-black uppercase tracking-widest outline-none cursor-pointer"
+                        >
+                          {selectedBank.rules?.map(r => (
+                            <option key={r.id} value={r.id}>
+                              {r.agreement} {r.sub_agreement ? `- ${r.sub_agreement}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                </div>
                 <div className="flex items-center gap-2">
                   <button onClick={exportPDF} className="w-10 h-10 sm:w-auto sm:px-4 rounded-xl bg-blue-600 text-white flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
                     <Icons.Download size={18} />
@@ -218,17 +265,39 @@ export default function BancosPage() {
                     <h1 className="text-xl font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                       🏛️ {selectedBank.name}
                     </h1>
-                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Regras para {selectedConvenio}</p>
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
+                      Regras para {(() => {
+                        const r = getSelectedRule();
+                        return r ? `${r.agreement} ${r.sub_agreement ? '- ' + r.sub_agreement : ''}` : selectedConvenio;
+                      })()}
+                    </p>
                   </div>
 
                   {(() => {
-                    const rule = getRuleForConvenio(selectedBank);
-                    if (!rule) return <p className="text-center text-slate-400 font-bold">Regras não cadastradas para este convênio.</p>;
+                    const rule = getSelectedRule();
+                    if (!rule) return <p className="text-center text-slate-400 font-bold">Regras não cadastradas.</p>;
+
+                    // Calcular Prazos baseados nas tabelas retornadas
+                    let prazosAtivos = bankTables
+                      .filter(t => t.active && (!t.agreement || t.agreement === rule.agreement) && (!t.sub_agreement || t.sub_agreement === rule.sub_agreement))
+                      .map(t => t.term)
+                      .filter(Boolean);
+                    
+                    prazosAtivos = [...new Set(prazosAtivos)].sort((a,b)=>a-b);
+                    const prazosText = prazosAtivos.length > 0 
+                      ? prazosAtivos.map(p => `${p}X`).join(' e ') 
+                      : `Até ${rule.max_term || 'N/A'}X`;
+
+                    // Calcular LOAS
+                    let excluidos = rule.excluded_benefit_types || "";
+                    if (rule.accepts_loas === false) {
+                      excluidos = excluidos ? `${excluidos}, 87 e 88 (LOAS)` : "87 e 88 (LOAS)";
+                    }
 
                     return (
                       <div className="space-y-4">
                         <RuleItem icon="👵" label="Idade" value={`De ${rule.min_age || 'N/A'} a ${rule.max_age || 'N/A'} anos`} />
-                        <RuleItem icon="📅" label="Prazos" value={`Até ${rule.max_term || 'N/A'}X`} />
+                        <RuleItem icon="📅" label="Prazos" value={prazosText} />
                         
                         <RuleItem 
                           icon="♿" 
@@ -240,7 +309,7 @@ export default function BancosPage() {
                         <RuleItem 
                           icon="🚫" 
                           label="Benefício não atendido" 
-                          value={rule.excluded_benefit_types || "Nenhum restrito"} 
+                          value={excluidos || "Nenhum restrito"} 
                           status="warning"
                         />
                         
@@ -249,6 +318,7 @@ export default function BancosPage() {
                         
                         <RuleItem icon="💵" label="Parcela Mínima" value={formatCurrency(rule.min_installment_value)} />
                         <RuleItem icon="💰" label="Troco Mínimo" value={formatCurrency(rule.min_release_amount)} />
+                        <RuleItem icon="🏦" label="Saldo Mínimo" value={formatCurrency(rule.min_debt_balance)} />
                         
                         <RuleItem icon="📉" label="Taxa Mínima Portabilidade" value={rule.portability_rate_threshold ? `${rule.portability_rate_threshold}%` : "Não informado"} />
                         <RuleItem icon="🔄" label="Taxa Mínima Refin/Port" value={rule.refin_portability_rate_threshold ? `${rule.refin_portability_rate_threshold}%` : "Não informado"} />
@@ -272,7 +342,11 @@ export default function BancosPage() {
                               <Icons.AlertTriangle size={16} /> Bancos com Regras Específicas
                             </h4>
                             <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
-                               <p className="text-sm text-orange-800 font-bold whitespace-pre-wrap">{rule.origin_banks_min_paid}</p>
+                               <ul className="text-sm text-orange-800 font-bold space-y-1">
+                                 {rule.origin_banks_min_paid.split(/,|\n/).map(item => item.trim()).filter(Boolean).map((item, idx) => (
+                                    <li key={idx} className="list-disc ml-4">{item}</li>
+                                 ))}
+                               </ul>
                             </div>
                           </div>
                         )}
@@ -284,7 +358,9 @@ export default function BancosPage() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
 
     </div>
   );
