@@ -95,17 +95,7 @@ export default function Sidebar() {
 
   const profileImageUrl = getStaticUrl(user.logo_url || user.avatar_url);
 
-  const proColor = (() => {
-    const bgColor = user.sidebar_color || '#0f172a';
-    let hex = bgColor.replace('#', '');
-    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
-    if (hex.length !== 6) return '#3b82f6';
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    const dist = Math.sqrt(Math.pow(r - 59, 2) + Math.pow(g - 130, 2) + Math.pow(b - 246, 2));
-    return dist < 120 ? '#22d3ee' : '#3b82f6';
-  })();
+
 
   return (
     <aside 
@@ -161,7 +151,7 @@ export default function Sidebar() {
              P
            </div>
            <span className="text-xl font-black tracking-tighter drop-shadow-lg text-white">
-             Portabilidade<span className="pointer-events-none uppercase" style={{ color: proColor }}>PRO</span>
+             Portabilidade<span className="pointer-events-none uppercase" style={{ color: user.brand_color || '#3b82f6' }}>PRO</span>
            </span>
         </div>
         <p className="text-[10px] text-white/30 uppercase tracking-[0.3em] font-black mt-2 italic text-center">Painel Administrativo</p>

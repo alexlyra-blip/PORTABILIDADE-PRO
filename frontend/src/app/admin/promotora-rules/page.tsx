@@ -75,9 +75,10 @@ export default function PromotoraRulesPage() {
       const parsed = JSON.parse(u);
       setLoggedUser(parsed);
       loadAll(parsed.id);
+      if (parsed.brand_color) {
+        setButtonColor(parsed.brand_color);
+      }
     }
-    const uc = localStorage.getItem('userColor');
-    if (uc) setButtonColor(uc);
   }, []);
 
   const loadAll = async (userId: number) => {
