@@ -139,7 +139,7 @@ export default function Sidebar() {
 
         {/* Username Banner */}
         <div className="mb-4 text-center flex flex-col items-center w-full">
-            <p className="text-[11px] font-black uppercase tracking-wider opacity-80 mb-0.5 text-center" style={{ color: user.brand_color || '#60a5fa' }}>Acesso AdminMaster</p>
+            <p className="text-[11px] font-black uppercase tracking-wider opacity-80 mb-0.5 text-center" style={{ color: user.highlight_color || user.brand_color || '#60a5fa' }}>Acesso AdminMaster</p>
             <h2 className="text-base font-black text-white break-words whitespace-normal leading-tight drop-shadow-md text-center mx-auto max-w-[200px]">{user.name}</h2>
         </div>
 
@@ -151,7 +151,7 @@ export default function Sidebar() {
              P
            </div>
            <span className="text-xl font-black tracking-tighter drop-shadow-lg text-white">
-             Portabilidade<span className="pointer-events-none uppercase" style={{ color: user.brand_color || '#3b82f6' }}>PRO</span>
+             Portabilidade<span className="pointer-events-none uppercase" style={{ color: user.highlight_color || user.brand_color || '#3b82f6' }}>PRO</span>
            </span>
         </div>
         <p className="text-[10px] text-white/30 uppercase tracking-[0.3em] font-black mt-2 italic text-center">Painel Administrativo</p>
