@@ -139,8 +139,8 @@ export default function Sidebar() {
 
         {/* Username Banner */}
         <div className="mb-4 text-center flex flex-col items-center w-full">
-            <p className="text-[11px] font-black uppercase text-blue-400 tracking-wider opacity-80 mb-0.5 text-center">Acesso AdminMaster</p>
-            <h2 className="text-base font-black text-white truncate max-w-[180px] drop-shadow-md text-center mx-auto">{user.name}</h2>
+            <p className="text-[11px] font-black uppercase tracking-wider opacity-80 mb-0.5 text-center" style={{ color: user.brand_color || '#60a5fa' }}>Acesso AdminMaster</p>
+            <h2 className="text-base font-black text-white break-words whitespace-normal leading-tight drop-shadow-md text-center mx-auto max-w-[200px]">{user.name}</h2>
         </div>
 
         <div className="flex items-center gap-1.5 mt-2 group cursor-pointer text-center relative z-20">

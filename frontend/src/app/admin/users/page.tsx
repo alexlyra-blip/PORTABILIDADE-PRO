@@ -183,7 +183,8 @@ export default function UsersPage() {
             <option value="vendedor">VENDEDORES</option>
           </select>
           <button onClick={() => handleOpenModal()}
-            className="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 px-8 rounded-2xl shadow-2xl shadow-blue-500/40 hover:-translate-y-1 text-[10px] uppercase tracking-widest flex items-center gap-2">
+            className="w-full md:w-auto text-white font-black py-3.5 px-8 rounded-2xl shadow-2xl hover:-translate-y-1 transition-all active:scale-95 text-[10px] uppercase tracking-widest flex items-center gap-2"
+            style={{ backgroundColor: loggedUser?.brand_color || '#2563eb', boxShadow: `0 10px 20px -5px ${loggedUser?.brand_color || '#2563eb'}60` }}>
             👤 Novo Usuário
           </button>
         </div>
