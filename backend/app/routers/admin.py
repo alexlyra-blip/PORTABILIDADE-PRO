@@ -130,7 +130,7 @@ async def delete_rule(rule_id: int, db: AsyncSession = Depends(get_db), admin: U
 
 # Tables
 @router.get("/banks/{bank_id}/tables", response_model=List[BankTableResponse])
-async def list_bank_tables(bank_id: int, db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
+async def list_bank_tables(bank_id: int, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     return await AdminService.get_tables_by_bank(db, bank_id)
 
 @router.post("/bank-tables", response_model=BankTableResponse)
