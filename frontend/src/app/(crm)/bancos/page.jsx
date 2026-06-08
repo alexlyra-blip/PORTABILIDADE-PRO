@@ -91,10 +91,10 @@ export default function BancosPage() {
     return selectedBank.rules?.find(r => r.id === selectedRuleId) || selectedBank.rules?.[0];
   };
 
-  const exportPDF = async () => {
+  const exportPDF = () => {
     if (typeof window !== "undefined") {
-      try {
-        const html2pdf = (await import('html2pdf.js')).default;
+      import('html2pdf.js').then((module) => {
+        const html2pdf = module.default;
         const element = pdfRef.current;
         
         // Temporarily remove max-height and overflow to prevent cutoff/crashing
@@ -107,19 +107,23 @@ export default function BancosPage() {
           margin:       10,
           filename:     `Regras_${selectedBank.name}.pdf`,
           image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 1.5, useCORS: true, logging: false },
+          html2canvas:  { scale: 1.5, useCORS: true, allowTaint: true, logging: true },
           jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
         
-        await html2pdf().set(opt).from(element).save();
-        
-        // Restore
-        element.style.maxHeight = originalMaxHeight;
-        element.style.overflow = originalOverflow;
-      } catch (e) {
-        console.error("Erro ao gerar PDF:", e);
-        alert("Ocorreu um erro ao gerar o PDF. Tente novamente.");
-      }
+        html2pdf().set(opt).from(element).save().then(() => {
+          element.style.maxHeight = originalMaxHeight;
+          element.style.overflow = originalOverflow;
+        }).catch(e => {
+          console.error("Erro interno do html2pdf:", e);
+          element.style.maxHeight = originalMaxHeight;
+          element.style.overflow = originalOverflow;
+          alert("Ocorreu um erro ao renderizar o PDF. Verifique se há imagens corrompidas.");
+        });
+      }).catch(e => {
+        console.error("Erro ao importar html2pdf:", e);
+        alert("Ocorreu um erro ao carregar a ferramenta de PDF.");
+      });
     }
   };
 
@@ -294,6 +298,12 @@ export default function BancosPage() {
                       excluidos = excluidos ? `${excluidos}, 87 e 88 (LOAS)` : "87 e 88 (LOAS)";
                     }
 
+                    // Calcular Invalidez
+                    const mesesInvalidezStr = rule.disability_min_benefit_months ? ` e ${rule.disability_min_benefit_months} Meses` : '';
+                    const invalidezTexto = rule.accepts_disability 
+                      ? `SIM (Idade mínima ${rule.disability_min_age || 0} anos até ${rule.disability_max_age || 0} anos, Tempo de benefício de ${rule.disability_min_benefit_years || 0} Anos${mesesInvalidezStr})` 
+                      : "NÃO";
+
                     return (
                       <div className="space-y-4">
                         <RuleItem icon="👵" label="Idade" value={`De ${rule.min_age || 'N/A'} a ${rule.max_age || 'N/A'} anos`} />
@@ -302,7 +312,7 @@ export default function BancosPage() {
                         <RuleItem 
                           icon="♿" 
                           label="Aceita Invalidez" 
-                          value={rule.accepts_disability ? `SIM (Idade: >=${rule.disability_min_age || 0} anos e <${rule.disability_max_age || 0} anos, Tempo de Benefício: ${rule.disability_min_benefit_years || 0} anos)` : "NÃO"}
+                          value={invalidezTexto}
                           status={rule.accepts_disability ? "success" : "error"}
                         />
                         
@@ -343,9 +353,10 @@ export default function BancosPage() {
                             </h4>
                             <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
                                <ul className="text-sm text-orange-800 font-bold space-y-1">
-                                 {rule.origin_banks_min_paid.split(/,|\n/).map(item => item.trim()).filter(Boolean).map((item, idx) => (
-                                    <li key={idx} className="list-disc ml-4">{item}</li>
-                                 ))}
+                                 {rule.origin_banks_min_paid.split(/,|\n/).map(item => item.trim()).filter(Boolean).map((item, idx) => {
+                                    const text = item.replace(/^-/, '').trim();
+                                    return <li key={idx}>- {text}</li>;
+                                 })}
                                </ul>
                             </div>
                           </div>
