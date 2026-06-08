@@ -170,7 +170,8 @@ export default function BancosPage() {
 
   const handleBankClick = async (bank) => {
     setSelectedBank(bank);
-    const rule = bank.rules?.find(r => matchAgreement(r.agreement, selectedConvenio));
+    const rule = bank.rules?.find(r => matchAgreement(r.agreement, selectedConvenio) && r.active)
+      || bank.rules?.find(r => matchAgreement(r.agreement, selectedConvenio));
     if (rule) setSelectedRuleId(rule.id);
     else setSelectedRuleId(null);
     
@@ -407,7 +408,6 @@ export default function BancosPage() {
             <option value="FORCAS">FORÇAS ARMADAS</option>
             <option value="GOV_EST">GOVERNO</option>
             <option value="CLT_PRIVADO">CLT PRIVADO</option>
-            <option value="FGTS">FGTS</option>
           </select>
         </div>
       </div>
@@ -419,23 +419,21 @@ export default function BancosPage() {
         <div className="text-center py-12 text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhum banco encontrado com regras ativas para este convênio.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <AnimatePresence>
+          <AnimatePresence mode="popLayout">
             {filteredBanks.map(bank => {
-              const rule = getRuleForSelectedConvenio(bank);
-              const isRuleActive = rule?.active;
               return (
                 <motion.div
                   key={bank.id}
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
                   onClick={() => handleBankClick(bank)}
-                  className={`bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group flex flex-col items-center text-center gap-4 relative overflow-hidden ${!isRuleActive ? 'opacity-80' : ''}`}
+                  className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group flex flex-col items-center text-center gap-4 relative overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   
-                  {!isRuleActive && (
-                    <span className="absolute top-3 right-3 bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider z-20">{getConvenioDisplayName(selectedConvenio)} Inativo</span>
-                  )}
-
                   <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden relative z-10 p-0">
                     {bank.logo_url ? (
                       <img src={getStaticUrl(bank.logo_url)} alt={bank.name} className="w-full h-full object-cover" />
@@ -447,7 +445,7 @@ export default function BancosPage() {
                   <div className="relative z-10 w-full">
                     <h3 className="font-black text-slate-800 text-lg truncate w-full" title={bank.name}>{bank.name}</h3>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mt-1">
-                      {isRuleActive ? "Ver Regras" : "Convênio Inativo"}
+                      Ver Regras
                     </p>
                   </div>
                 </motion.div>
@@ -498,11 +496,13 @@ export default function BancosPage() {
                               {getConvenioDisplayName(selectedConvenio)} (Inativo)
                             </option>
                           )}
-                          {selectedBank.rules?.map(r => (
-                            <option key={r.id} value={r.id}>
-                              {r.agreement} {r.sub_agreement ? `- ${r.sub_agreement}` : ""}
-                            </option>
-                          ))}
+                          {selectedBank.rules
+                            ?.filter(r => matchAgreement(r.agreement, selectedConvenio))
+                            .map(r => (
+                              <option key={r.id} value={r.id}>
+                                {r.sub_agreement ? r.sub_agreement : "Regra Geral"}
+                              </option>
+                            ))}
                         </select>
                       </div>
                     </div>
