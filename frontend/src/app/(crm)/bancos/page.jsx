@@ -205,14 +205,21 @@ export default function BancosPage() {
       const tablesForAgreement = bankTables.filter(t => t.active && (!t.agreement || matchAgreement(t.agreement, activeAgreement)) && (!t.sub_agreement || t.sub_agreement === activeSubAgreement));
 
       // Fallback rates from bankTables
-      const portRates = tablesForAgreement.map(t => t.min_port_rate || t.min_rate).filter(rate => rate > 0);
+      const portRates = tablesForAgreement
+        .map(t => (t.min_port_rate !== null && t.min_port_rate !== undefined) ? Number(t.min_port_rate) : Number(t.min_rate))
+        .filter(rate => !isNaN(rate) && rate !== null);
       const fallbackPortRate = portRates.length > 0 ? Math.min(...portRates) : null;
 
-      const refinRates = tablesForAgreement.map(t => t.min_rate).filter(rate => rate > 0);
+      const refinRates = tablesForAgreement
+        .map(t => Number(t.min_rate))
+        .filter(rate => !isNaN(rate) && rate !== null);
       const fallbackRefinRate = refinRates.length > 0 ? Math.min(...refinRates) : null;
 
-      const portRateValue = (rule && rule.portability_rate_threshold) ? rule.portability_rate_threshold : fallbackPortRate;
-      const refinRateValue = (rule && rule.refin_portability_rate_threshold) ? rule.refin_portability_rate_threshold : fallbackRefinRate;
+      const hasPortThreshold = rule && rule.portability_rate_threshold !== null && rule.portability_rate_threshold !== undefined;
+      const portRateValue = hasPortThreshold ? rule.portability_rate_threshold : fallbackPortRate;
+
+      const hasRefinThreshold = rule && rule.refin_portability_rate_threshold !== null && rule.refin_portability_rate_threshold !== undefined;
+      const refinRateValue = hasRefinThreshold ? rule.refin_portability_rate_threshold : fallbackRefinRate;
 
       // Calcular Prazos
       let prazosAtivos = tablesForAgreement
@@ -335,8 +342,8 @@ export default function BancosPage() {
               ${renderPdfRow('Troco Mínimo', formatCurrency(minReleaseAmount))}
               ${renderPdfRow('Saldo Mínimo', formatCurrency(minDebtBalance))}
               
-              ${renderPdfRow('Taxa Mínima Portabilidade', portRateValue ? `${portRateValue}%` : 'Não informado')}
-              ${renderPdfRow('Taxa Mínima Refin/Port', refinRateValue ? `${refinRateValue}%` : 'Não informado')}
+              ${renderPdfRow('Taxa Mínima Portabilidade', (portRateValue !== null && portRateValue !== undefined) ? `${portRateValue}%` : 'Não informado')}
+              ${renderPdfRow('Taxa Mínima Refin/Port', (refinRateValue !== null && refinRateValue !== undefined) ? `${refinRateValue}%` : 'Não informado')}
             </tbody>
           </table>
 
@@ -584,14 +591,21 @@ export default function BancosPage() {
                       : "NÃO";
 
                     // 4. Calculate Fallback Rates
-                    const portRates = tablesForAgreement.map(t => t.min_port_rate || t.min_rate).filter(rate => rate > 0);
+                    const portRates = tablesForAgreement
+                      .map(t => (t.min_port_rate !== null && t.min_port_rate !== undefined) ? Number(t.min_port_rate) : Number(t.min_rate))
+                      .filter(rate => !isNaN(rate) && rate !== null);
                     const fallbackPortRate = portRates.length > 0 ? Math.min(...portRates) : null;
 
-                    const refinRates = tablesForAgreement.map(t => t.min_rate).filter(rate => rate > 0);
+                    const refinRates = tablesForAgreement
+                      .map(t => Number(t.min_rate))
+                      .filter(rate => !isNaN(rate) && rate !== null);
                     const fallbackRefinRate = refinRates.length > 0 ? Math.min(...refinRates) : null;
 
-                    const portRateValue = (rule && rule.portability_rate_threshold) ? rule.portability_rate_threshold : fallbackPortRate;
-                    const refinRateValue = (rule && rule.refin_portability_rate_threshold) ? rule.refin_portability_rate_threshold : fallbackRefinRate;
+                    const hasPortThreshold = rule && rule.portability_rate_threshold !== null && rule.portability_rate_threshold !== undefined;
+                    const portRateValue = hasPortThreshold ? rule.portability_rate_threshold : fallbackPortRate;
+
+                    const hasRefinThreshold = rule && rule.refin_portability_rate_threshold !== null && rule.refin_portability_rate_threshold !== undefined;
+                    const refinRateValue = hasRefinThreshold ? rule.refin_portability_rate_threshold : fallbackRefinRate;
 
                     // 5. Calculate Fallback Ticket & Installment Limit
                     const ticketValues = tablesForAgreement.map(t => Number(t.min_ticket)).filter(val => val > 0);
@@ -650,8 +664,8 @@ export default function BancosPage() {
                         <RuleItem icon={<Icons.Banknote size={18} />} label="Troco Mínimo" value={formatCurrency(releaseAmount)} />
                         <RuleItem icon={<Icons.Wallet size={18} />} label="Saldo Mínimo" value={formatCurrency(minDebtBalance)} />
                         
-                        <RuleItem icon={<Icons.TrendingDown size={18} />} label="Taxa Mínima Portabilidade" value={portRateValue ? `${portRateValue}%` : "Não informado"} />
-                        <RuleItem icon={<Icons.RefreshCw size={18} />} label="Taxa Mínima Refin/Port" value={refinRateValue ? `${refinRateValue}%` : "Não informado"} />
+                        <RuleItem icon={<Icons.TrendingDown size={18} />} label="Taxa Mínima Portabilidade" value={(portRateValue !== null && portRateValue !== undefined) ? `${portRateValue}%` : "Não informado"} />
+                        <RuleItem icon={<Icons.RefreshCw size={18} />} label="Taxa Mínima Refin/Port" value={(refinRateValue !== null && refinRateValue !== undefined) ? `${refinRateValue}%` : "Não informado"} />
                         
                         {rule?.excluded_origin_banks && (
                           <div className="mt-6 pt-4 border-t border-slate-100">
