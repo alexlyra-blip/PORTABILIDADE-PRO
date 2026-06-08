@@ -258,9 +258,9 @@ export default function DashboardPage() {
                           <span className="text-sm font-black text-blue-600">{sim.user_name.charAt(0)}</span>
                         )}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Consultor</p>
-                        <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase truncate">{sim.user_name}</h4>
+                        <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase break-words whitespace-normal">{sim.user_name}</h4>
                       </div>
                     </div>
 
