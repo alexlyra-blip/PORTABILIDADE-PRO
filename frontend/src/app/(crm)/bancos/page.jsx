@@ -158,13 +158,15 @@ export default function BancosPage() {
     }
   };
 
-  const filteredBanks = banks.filter(bank => {
-    return bank.name.toLowerCase().includes(searchTerm.toLowerCase());
-  });
-
   const getRuleForSelectedConvenio = (bank) => {
     return bank.rules?.find(r => matchAgreement(r.agreement, selectedConvenio));
   };
+
+  const filteredBanks = banks.filter(bank => {
+    const matchesSearch = bank.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const rule = getRuleForSelectedConvenio(bank);
+    return matchesSearch && rule && rule.active;
+  });
 
   const handleBankClick = async (bank) => {
     setSelectedBank(bank);
