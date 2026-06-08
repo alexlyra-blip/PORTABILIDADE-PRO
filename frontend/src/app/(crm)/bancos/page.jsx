@@ -14,8 +14,8 @@ const Icons = {
   Download: ({ size = 20 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
   ),
-  Landmark: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7 12 2" /></svg>
+  Landmark: ({ size = 20, className = "" }) => (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7 12 2" /></svg>
   ),
   X: ({ size = 20 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
@@ -31,8 +31,60 @@ const Icons = {
   ),
   AlertTriangle: ({ size = 20, color = "#f59e0b" }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+  ),
+  User: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+  ),
+  Calendar: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
+  ),
+  ShieldAlert: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>
+  ),
+  Ban: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" x2="19.07" y1="4.93" y2="19.07" /></svg>
+  ),
+  PenTool: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+  ),
+  UserCheck: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><polyline points="16 11 18 13 22 9" /></svg>
+  ),
+  Coins: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6" /><circle cx="18" cy="18" r="4" /><path d="M12 18a6 6 0 0 0-6-6" /></svg>
+  ),
+  Banknote: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><line x1="6" x2="6.01" y1="12" y2="12" /><line x1="18" x2="18.01" y1="12" y2="12" /></svg>
+  ),
+  Wallet: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" /><path d="M4 6v12a2 2 0 0 0 2 2h14v-4" /><path d="M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6z" /></svg>
+  ),
+  TrendingDown: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></svg>
+  ),
+  RefreshCw: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+  ),
+  Clock: ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
   )
 };
+
+async function toDataURL(url) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.error("Error converting image to base64:", e);
+    return null;
+  }
+}
 
 export default function BancosPage() {
   const [banks, setBanks] = useState([]);
@@ -43,13 +95,23 @@ export default function BancosPage() {
   const [selectedRuleId, setSelectedRuleId] = useState(null);
   const [bankTables, setBankTables] = useState([]);
   const [user, setUser] = useState(null);
+  const [logoBase64, setLogoBase64] = useState(null);
   const [mounted, setMounted] = useState(false);
   const pdfRef = useRef();
 
   useEffect(() => {
     setMounted(true);
     const savedUser = localStorage.getItem('user');
-    if (savedUser) setUser(JSON.parse(savedUser));
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
+      const logoUrl = getStaticUrl(parsedUser.logo_url || parsedUser.avatar_url);
+      if (logoUrl) {
+        toDataURL(logoUrl).then(base64 => {
+          if (base64) setLogoBase64(base64);
+        });
+      }
+    }
     
     loadBanks();
   }, []);
@@ -107,7 +169,7 @@ export default function BancosPage() {
           margin:       10,
           filename:     `Regras_${selectedBank.name}.pdf`,
           image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 1.5, useCORS: true, allowTaint: true, logging: true },
+          html2canvas:  { scale: 1.5, useCORS: true, allowTaint: false, logging: true },
           jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
         
@@ -264,10 +326,10 @@ export default function BancosPage() {
                   {/* PDF Only Header (Visible only when generating PDF, or just nice to have at top) */}
                   <div className="flex flex-col items-center mb-8 pb-8 border-b border-slate-100">
                     {(user?.logo_url || user?.avatar_url) && (
-                      <img src={getStaticUrl(user.logo_url || user.avatar_url)} alt="Logo Promotora" className="h-16 object-contain mb-4" />
+                      <img src={logoBase64 || getStaticUrl(user.logo_url || user.avatar_url)} alt="Logo Promotora" className="h-16 object-contain mb-4" crossOrigin="anonymous" />
                     )}
                     <h1 className="text-xl font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                      🏛️ {selectedBank.name}
+                      <Icons.Landmark size={24} className="text-blue-600 inline-block align-text-bottom mr-1" /> {selectedBank.name}
                     </h1>
                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
                       Regras para {(() => {
@@ -306,12 +368,12 @@ export default function BancosPage() {
 
                     return (
                       <div className="space-y-4">
-                        <RuleItem icon="👵" label="Idade" value={`De ${rule.min_age || 'N/A'} a ${rule.max_age || 'N/A'} anos`} />
-                        <RuleItem icon="📅" label="Prazos" value={prazosText} />
+                        <RuleItem icon={<Icons.User size={18} />} label="Idade" value={`De ${rule.min_age || 'N/A'} a ${rule.max_age || 'N/A'} anos`} />
+                        <RuleItem icon={<Icons.Calendar size={18} />} label="Prazos" value={prazosText} />
                         
                         {rule.agreement === "INSS" && (
                           <RuleItem 
-                            icon="♿" 
+                            icon={<Icons.ShieldAlert size={18} />} 
                             label="Aceita Invalidez" 
                             value={invalidezTexto}
                             status={rule.accepts_disability ? "success" : "error"}
@@ -320,22 +382,22 @@ export default function BancosPage() {
                         
                         {rule.agreement === "INSS" && (
                           <RuleItem 
-                            icon="🚫" 
+                            icon={<Icons.Ban size={18} />} 
                             label="Benefício não atendido" 
                             value={excluidos || "Nenhum restrito"} 
                             status="warning"
                           />
                         )}
                         
-                        <RuleItem icon="✍️" label="Aceita Analfabeto" value={rule.accepts_illiterate ? "SIM" : "NÃO"} status={rule.accepts_illiterate ? "success" : "error"} />
-                        <RuleItem icon="🕒" label="Aceita 60+" value={rule.accepts_60_plus ? "SIM" : "NÃO"} status={rule.accepts_60_plus ? "success" : "error"} />
+                        <RuleItem icon={<Icons.PenTool size={18} />} label="Aceita Analfabeto" value={rule.accepts_illiterate ? "SIM" : "NÃO"} status={rule.accepts_illiterate ? "success" : "error"} />
+                        <RuleItem icon={<Icons.Clock size={18} />} label="Aceita 60+" value={rule.accepts_60_plus ? "SIM" : "NÃO"} status={rule.accepts_60_plus ? "success" : "error"} />
                         
-                        <RuleItem icon="💵" label="Parcela Mínima" value={formatCurrency(rule.min_installment_value)} />
-                        <RuleItem icon="💰" label="Troco Mínimo" value={formatCurrency(rule.min_release_amount)} />
-                        <RuleItem icon="🏦" label="Saldo Mínimo" value={formatCurrency(rule.min_debt_balance)} />
+                        <RuleItem icon={<Icons.Coins size={18} />} label="Parcela Mínima" value={formatCurrency(rule.min_installment_value)} />
+                        <RuleItem icon={<Icons.Banknote size={18} />} label="Troco Mínimo" value={formatCurrency(rule.min_release_amount)} />
+                        <RuleItem icon={<Icons.Wallet size={18} />} label="Saldo Mínimo" value={formatCurrency(rule.min_debt_balance)} />
                         
-                        <RuleItem icon="📉" label="Taxa Mínima Portabilidade" value={rule.portability_rate_threshold ? `${rule.portability_rate_threshold}%` : "Não informado"} />
-                        <RuleItem icon="🔄" label="Taxa Mínima Refin/Port" value={rule.refin_portability_rate_threshold ? `${rule.refin_portability_rate_threshold}%` : "Não informado"} />
+                        <RuleItem icon={<Icons.TrendingDown size={18} />} label="Taxa Mínima Portabilidade" value={rule.portability_rate_threshold ? `${rule.portability_rate_threshold}%` : "Não informado"} />
+                        <RuleItem icon={<Icons.RefreshCw size={18} />} label="Taxa Mínima Refin/Port" value={rule.refin_portability_rate_threshold ? `${rule.refin_portability_rate_threshold}%` : "Não informado"} />
                         
                         {rule.excluded_origin_banks && (
                           <div className="mt-6 pt-4 border-t border-slate-100">
@@ -404,10 +466,19 @@ function RuleItem({ icon, label, value, status = "info" }) {
     return "text-slate-700 bg-slate-50 border-slate-100";
   };
 
+  const getIconColor = () => {
+    if (status === "success") return "text-emerald-500 bg-emerald-50/50";
+    if (status === "error") return "text-red-500 bg-red-50/50";
+    if (status === "warning") return "text-orange-500 bg-orange-50/50";
+    return "text-blue-500 bg-blue-50/50";
+  };
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-slate-50 gap-2">
       <div className="flex items-center gap-3">
-        <span className="text-xl">{icon}</span>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${getIconColor()}`}>
+          {icon}
+        </div>
         <span className="text-sm font-black text-slate-600 uppercase tracking-wider">{label}</span>
       </div>
       <div className={`px-4 py-1.5 rounded-xl text-sm font-bold border ${getStatusColor()} text-left sm:text-right w-full sm:w-auto`}>
