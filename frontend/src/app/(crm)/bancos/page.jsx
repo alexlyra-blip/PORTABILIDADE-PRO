@@ -89,6 +89,21 @@ async function toDataURL(url) {
   }
 }
 
+const matchAgreement = (ruleAgr, selectedAgr) => {
+  if (!ruleAgr || !selectedAgr) return false;
+  const r = ruleAgr.toUpperCase().replace(/\s/g, '_');
+  const s = selectedAgr.toUpperCase().replace(/\s/g, '_');
+  if (r === s) return true;
+  if (s === "FORCAS" && (r === "FORCAS" || r === "FORCAS_ARMADAS" || r === "FORÇAS_ARMADAS" || r === "FORÇAS" || r === "FORÇASARMADAS")) return true;
+  if (s === "GOV_EST" && (r === "GOV_EST" || r === "GOVERNOS" || r === "GOVERNO")) return true;
+  if (s === "CLT_PRIVADO" && (r === "CLT_PRIVADO" || r === "CLT" || r === "CLT_PRIVADO" || r === "CLT PRIVADO")) return true;
+  // Also vice-versa in case selected is display and rule is DB:
+  if (r === "FORCAS" && (s === "FORCAS" || s === "FORCAS_ARMADAS" || s === "FORÇAS_ARMADAS" || s === "FORÇAS" || s === "FORÇASARMADAS")) return true;
+  if (r === "GOV_EST" && (s === "GOV_EST" || s === "GOVERNOS" || s === "GOVERNO")) return true;
+  if (r === "CLT_PRIVADO" && (s === "CLT_PRIVADO" || s === "CLT" || s === "CLT_PRIVADO" || s === "CLT PRIVADO")) return true;
+  return false;
+};
+
 export default function BancosPage() {
   const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -132,15 +147,18 @@ export default function BancosPage() {
   };
 
   const filteredBanks = banks.filter(bank => {
-    const matchesSearch = bank.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const hasRulesForConvenio = bank.rules?.some(r => r.agreement === selectedConvenio && r.active);
-    return matchesSearch && hasRulesForConvenio;
+    return bank.name.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  const getRuleForSelectedConvenio = (bank) => {
+    return bank.rules?.find(r => matchAgreement(r.agreement, selectedConvenio));
+  };
 
   const handleBankClick = async (bank) => {
     setSelectedBank(bank);
-    const rule = bank.rules?.find(r => r.agreement === selectedConvenio && r.active);
+    const rule = bank.rules?.find(r => matchAgreement(r.agreement, selectedConvenio));
     if (rule) setSelectedRuleId(rule.id);
+    else setSelectedRuleId(null);
     
     // Fetch tables for this bank to get accurate prazos
     try {
@@ -153,7 +171,11 @@ export default function BancosPage() {
 
   const getSelectedRule = () => {
     if (!selectedBank) return null;
-    return selectedBank.rules?.find(r => r.id === selectedRuleId) || selectedBank.rules?.[0];
+    if (selectedRuleId) {
+      const rule = selectedBank.rules?.find(r => r.id === selectedRuleId);
+      if (rule) return rule;
+    }
+    return selectedBank.rules?.find(r => matchAgreement(r.agreement, selectedConvenio)) || null;
   };
 
   const exportPDF = async () => {
@@ -162,11 +184,23 @@ export default function BancosPage() {
     try {
       const html2pdf = (await import('html2pdf.js')).default;
       const rule = getSelectedRule();
-      if (!rule) return;
+
+      const activeAgreement = rule ? rule.agreement : selectedConvenio;
+      const activeSubAgreement = rule ? rule.sub_agreement : null;
+      const tablesForAgreement = bankTables.filter(t => t.active && (!t.agreement || matchAgreement(t.agreement, activeAgreement)) && (!t.sub_agreement || t.sub_agreement === activeSubAgreement));
+
+      // Fallback rates from bankTables
+      const portRates = tablesForAgreement.map(t => t.min_port_rate || t.min_rate).filter(rate => rate > 0);
+      const fallbackPortRate = portRates.length > 0 ? Math.min(...portRates) : null;
+
+      const refinRates = tablesForAgreement.map(t => t.min_rate).filter(rate => rate > 0);
+      const fallbackRefinRate = refinRates.length > 0 ? Math.min(...refinRates) : null;
+
+      const portRateValue = (rule && rule.portability_rate_threshold) ? rule.portability_rate_threshold : fallbackPortRate;
+      const refinRateValue = (rule && rule.refin_portability_rate_threshold) ? rule.refin_portability_rate_threshold : fallbackRefinRate;
 
       // Calcular Prazos
-      let prazosAtivos = bankTables
-        .filter(t => t.active && (!t.agreement || t.agreement === rule.agreement) && (!t.sub_agreement || t.sub_agreement === rule.sub_agreement))
+      let prazosAtivos = tablesForAgreement
         .map(t => t.term)
         .filter(Boolean);
       
@@ -178,24 +212,43 @@ export default function BancosPage() {
         else if (list.length === 2) prazosText = list.join(' e ');
         else prazosText = list.slice(0, -1).join(', ') + ' e ' + list[list.length - 1];
       } else {
-        prazosText = `Até ${rule.max_term || 'N/A'}X`;
+        prazosText = rule ? `Até ${rule.max_term || 'N/A'}X` : "Não informado";
       }
 
       // Calcular LOAS
-      let excluidos = rule.excluded_benefit_types || "";
-      if (rule.accepts_loas === false) {
+      let excluidos = rule?.excluded_benefit_types || "";
+      if (rule && rule.accepts_loas === false) {
         excluidos = excluidos ? `${excluidos}, 87 e 88 (LOAS)` : "87 e 88 (LOAS)";
       }
 
       // Calcular Invalidez
-      const mesesInvalidezStr = rule.disability_min_benefit_months ? ` e ${rule.disability_min_benefit_months} Meses` : '';
-      const invalidezTexto = rule.accepts_disability 
-        ? `SIM (Idade mínima ${rule.disability_min_age || 0} anos até ${rule.disability_max_age || 0} anos, Tempo de benefício de ${rule.disability_min_benefit_years || 0} Anos${mesesInvalidezStr})` 
+      const disabilityMinAge = rule?.disability_min_age || 0;
+      const disabilityMaxAge = rule?.disability_max_age || 0;
+      const disabilityMinYears = rule?.disability_min_benefit_years || 0;
+      const disabilityMinMonths = rule?.disability_min_benefit_months || 0;
+      const disabilityAccepts = rule?.accepts_disability || false;
+
+      const mesesInvalidezStr = disabilityMinMonths ? ` e ${disabilityMinMonths} Meses` : '';
+      const invalidezTexto = disabilityAccepts 
+        ? `SIM (Idade mínima ${disabilityMinAge} anos até ${disabilityMaxAge} anos, Tempo de benefício de ${disabilityMinYears} Anos${mesesInvalidezStr})` 
         : "NÃO";
+
+      const ruleMinAge = rule ? rule.min_age : null;
+      const ruleMaxAge = rule ? rule.max_age : null;
+
+      const ticketValues = tablesForAgreement.map(t => Number(t.min_ticket)).filter(val => val > 0);
+      const fallbackTicket = ticketValues.length > 0 ? Math.min(...ticketValues) : null;
+      const minReleaseAmount = (rule && rule.min_release_amount !== null && rule.min_release_amount !== undefined) ? rule.min_release_amount : fallbackTicket;
+
+      const installmentValues = tablesForAgreement.map(t => Number(t.min_installment)).filter(val => val > 0);
+      const fallbackInstallment = installmentValues.length > 0 ? Math.min(...installmentValues) : null;
+      const minInstallmentValue = (rule && rule.min_installment_value !== null && rule.min_installment_value !== undefined) ? rule.min_installment_value : fallbackInstallment;
+
+      const minDebtBalance = rule ? rule.min_debt_balance : null;
 
       // Bancos com Regras Específicas
       let regrasEspecificasHtml = "";
-      if (rule.origin_banks_min_paid) {
+      if (rule?.origin_banks_min_paid) {
         let items = [];
         try {
           const parsed = JSON.parse(rule.origin_banks_min_paid);
@@ -224,7 +277,7 @@ export default function BancosPage() {
 
       // Bancos Não Portados (Origem)
       let bancosNaoPortadosHtml = "";
-      if (rule.excluded_origin_banks) {
+      if (rule?.excluded_origin_banks) {
         bancosNaoPortadosHtml = `
           <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; page-break-inside: avoid;">
             <h4 style="font-size: 13px; font-weight: bold; color: #b91c1c; text-transform: uppercase; margin: 0 0 10px 0;">Bancos Não Portados (Origem)</h4>
@@ -247,28 +300,28 @@ export default function BancosPage() {
               🏛️ ${selectedBank.name}
             </h1>
             <p style="font-size: 13px; font-weight: bold; color: #64748b; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 2px;">
-              Regras do Convênio: ${rule.agreement} ${rule.sub_agreement ? '- ' + rule.sub_agreement : ''}
+              Regras do Convênio: ${activeAgreement} ${rule?.sub_agreement ? '- ' + rule.sub_agreement : ''}
             </p>
           </div>
 
           <!-- Rules List -->
           <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
             <tbody>
-              ${renderPdfRow('Idade', `De ${rule.min_age || 'N/A'} a ${rule.max_age || 'N/A'} anos`)}
+              ${renderPdfRow('Idade', (ruleMinAge || ruleMaxAge) ? `De ${ruleMinAge || 'N/A'} a ${ruleMaxAge || 'N/A'} anos` : 'Não informado')}
               ${renderPdfRow('Prazos', prazosText)}
               
-              ${rule.agreement === "INSS" ? renderPdfRow('Aceita Invalidez', invalidezTexto) : ''}
-              ${rule.agreement === "INSS" ? renderPdfRow('Benefício não atendido', excluidos || 'Nenhum restrito') : ''}
+              ${activeAgreement === "INSS" ? renderPdfRow('Aceita Invalidez', invalidezTexto) : ''}
+              ${activeAgreement === "INSS" ? renderPdfRow('Benefício não atendido', excluidos || 'Nenhum restrito') : ''}
               
-              ${renderPdfRow('Aceita Analfabeto', rule.accepts_illiterate ? 'SIM' : 'NÃO')}
-              ${renderPdfRow('Aceita 60+', rule.accepts_60_plus ? 'SIM' : 'NÃO')}
+              ${renderPdfRow('Aceita Analfabeto', rule ? (rule.accepts_illiterate ? 'SIM' : 'NÃO') : 'Não informado')}
+              ${renderPdfRow('Aceita 60+', rule ? (rule.accepts_60_plus ? 'SIM' : 'NÃO') : 'Não informado')}
               
-              ${renderPdfRow('Parcela Mínima', formatCurrency(rule.min_installment_value))}
-              ${renderPdfRow('Troco Mínimo', formatCurrency(rule.min_release_amount))}
-              ${renderPdfRow('Saldo Mínimo', formatCurrency(rule.min_debt_balance))}
+              ${renderPdfRow('Parcela Mínima', formatCurrency(minInstallmentValue))}
+              ${renderPdfRow('Troco Mínimo', formatCurrency(minReleaseAmount))}
+              ${renderPdfRow('Saldo Mínimo', formatCurrency(minDebtBalance))}
               
-              ${renderPdfRow('Taxa Mínima Portabilidade', rule.portability_rate_threshold ? `${rule.portability_rate_threshold}%` : 'Não informado')}
-              ${renderPdfRow('Taxa Mínima Refin/Port', rule.refin_portability_rate_threshold ? `${rule.refin_portability_rate_threshold}%` : 'Não informado')}
+              ${renderPdfRow('Taxa Mínima Portabilidade', portRateValue ? `${portRateValue}%` : 'Não informado')}
+              ${renderPdfRow('Taxa Mínima Refin/Port', refinRateValue ? `${refinRateValue}%` : 'Não informado')}
             </tbody>
           </table>
 
@@ -280,7 +333,7 @@ export default function BancosPage() {
 
       const opt = {
         margin:       10,
-        filename:     `Regras_${selectedBank.name}_${rule.agreement}.pdf`,
+        filename:     `Regras_${selectedBank.name}_${activeAgreement}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -337,9 +390,9 @@ export default function BancosPage() {
           >
             <option value="INSS">INSS</option>
             <option value="SIAPE">SIAPE</option>
-            <option value="EXERCITO">EXÉRCITO</option>
-            <option value="MARINHA">MARINHA</option>
-            <option value="AERONAUTICA">AERONÁUTICA</option>
+            <option value="FORCAS">FORÇAS ARMADAS</option>
+            <option value="GOV_EST">GOVERNO</option>
+            <option value="CLT_PRIVADO">CLT PRIVADO</option>
             <option value="FGTS">FGTS</option>
           </select>
         </div>
@@ -353,29 +406,39 @@ export default function BancosPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <AnimatePresence>
-            {filteredBanks.map(bank => (
-              <motion.div
-                key={bank.id}
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
-                onClick={() => handleBankClick(bank)}
-                className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group flex flex-col items-center text-center gap-4 relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                
-                <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden relative z-10 p-0">
-                  {bank.logo_url ? (
-                    <img src={getStaticUrl(bank.logo_url)} alt={bank.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Icons.Landmark size={32} />
+            {filteredBanks.map(bank => {
+              const rule = getRuleForSelectedConvenio(bank);
+              const isRuleActive = rule?.active;
+              return (
+                <motion.div
+                  key={bank.id}
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
+                  onClick={() => handleBankClick(bank)}
+                  className={`bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group flex flex-col items-center text-center gap-4 relative overflow-hidden ${!isRuleActive ? 'opacity-65' : ''}`}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  
+                  {!isRuleActive && (
+                    <span className="absolute top-3 right-3 bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider z-20">Desativado</span>
                   )}
-                </div>
-                
-                <div className="relative z-10 w-full">
-                  <h3 className="font-black text-slate-800 text-lg truncate w-full" title={bank.name}>{bank.name}</h3>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mt-1">Ver Regras</p>
-                </div>
-              </motion.div>
-            ))}
+
+                  <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden relative z-10 p-0">
+                    {bank.logo_url ? (
+                      <img src={getStaticUrl(bank.logo_url)} alt={bank.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Icons.Landmark size={32} />
+                    )}
+                  </div>
+                  
+                  <div className="relative z-10 w-full">
+                    <h3 className="font-black text-slate-800 text-lg truncate w-full" title={bank.name}>{bank.name}</h3>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mt-1">
+                      {isRuleActive ? "Ver Regras" : "Desativado"}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
       )}
@@ -410,9 +473,17 @@ export default function BancosPage() {
                       <div className="flex items-center gap-2 mt-2">
                         <select 
                           value={selectedRuleId || ""}
-                          onChange={(e) => setSelectedRuleId(Number(e.target.value))}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSelectedRuleId(val ? Number(val) : null);
+                          }}
                           className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-black uppercase tracking-widest outline-none cursor-pointer"
                         >
+                          {(!selectedRuleId || !selectedBank.rules?.some(r => r.id === selectedRuleId)) && (
+                            <option value="">
+                              {selectedConvenio} (Desativado)
+                            </option>
+                          )}
                           {selectedBank.rules?.map(r => (
                             <option key={r.id} value={r.id}>
                               {r.agreement} {r.sub_agreement ? `- ${r.sub_agreement}` : ""}
@@ -454,15 +525,23 @@ export default function BancosPage() {
 
                   {(() => {
                     const rule = getSelectedRule();
-                    if (!rule) return <p className="text-center text-slate-400 font-bold">Regras não cadastradas.</p>;
+                    const isRuleActive = rule?.active;
+                    const activeAgreement = rule ? rule.agreement : selectedConvenio;
+                    const activeSubAgreement = rule ? rule.sub_agreement : null;
 
-                    // Calcular Prazos baseados nas tabelas retornadas
-                    let prazosAtivos = bankTables
-                      .filter(t => t.active && (!t.agreement || t.agreement === rule.agreement) && (!t.sub_agreement || t.sub_agreement === rule.sub_agreement))
+                    // Filter tables for the current agreement & sub-agreement
+                    const tablesForAgreement = bankTables.filter(t => 
+                      t.active && 
+                      (!t.agreement || matchAgreement(t.agreement, activeAgreement)) && 
+                      (!t.sub_agreement || t.sub_agreement === activeSubAgreement)
+                    );
+
+                    // 1. Calculate prazos
+                    let prazosAtivos = tablesForAgreement
                       .map(t => t.term)
                       .filter(Boolean);
                     
-                    prazosAtivos = [...new Set(prazosAtivos)].sort((a,b)=>a-b);
+                    prazosAtivos = [...new Set(prazosAtivos)].sort((a, b) => a - b);
                     let prazosText = "";
                     if (prazosAtivos.length > 0) {
                       const list = prazosAtivos.map(p => `${p}X`);
@@ -470,36 +549,78 @@ export default function BancosPage() {
                       else if (list.length === 2) prazosText = list.join(' e ');
                       else prazosText = list.slice(0, -1).join(', ') + ' e ' + list[list.length - 1];
                     } else {
-                      prazosText = `Até ${rule.max_term || 'N/A'}X`;
+                      prazosText = rule ? `Até ${rule.max_term || 'N/A'}X` : "Não informado";
                     }
 
-                    // Calcular LOAS
-                    let excluidos = rule.excluded_benefit_types || "";
-                    if (rule.accepts_loas === false) {
+                    // 2. Calculate LOAS (INSS only)
+                    let excluidos = rule?.excluded_benefit_types || "";
+                    if (rule && rule.accepts_loas === false) {
                       excluidos = excluidos ? `${excluidos}, 87 e 88 (LOAS)` : "87 e 88 (LOAS)";
                     }
 
-                    // Calcular Invalidez
-                    const mesesInvalidezStr = rule.disability_min_benefit_months ? ` e ${rule.disability_min_benefit_months} Meses` : '';
-                    const invalidezTexto = rule.accepts_disability 
-                      ? `SIM (Idade mínima ${rule.disability_min_age || 0} anos até ${rule.disability_max_age || 0} anos, Tempo de benefício de ${rule.disability_min_benefit_years || 0} Anos${mesesInvalidezStr})` 
+                    // 3. Calculate Invalidez (INSS only)
+                    const disabilityAccepts = rule?.accepts_disability || false;
+                    const disabilityMinAge = rule?.disability_min_age || 0;
+                    const disabilityMaxAge = rule?.disability_max_age || 0;
+                    const disabilityMinYears = rule?.disability_min_benefit_years || 0;
+                    const disabilityMinMonths = rule?.disability_min_benefit_months || 0;
+                    const mesesInvalidezStr = disabilityMinMonths ? ` e ${disabilityMinMonths} Meses` : '';
+                    const invalidezTexto = disabilityAccepts 
+                      ? `SIM (Idade mínima ${disabilityMinAge} anos até ${disabilityMaxAge} anos, Tempo de benefício de ${disabilityMinYears} Anos${mesesInvalidezStr})` 
                       : "NÃO";
+
+                    // 4. Calculate Fallback Rates
+                    const portRates = tablesForAgreement.map(t => t.min_port_rate || t.min_rate).filter(rate => rate > 0);
+                    const fallbackPortRate = portRates.length > 0 ? Math.min(...portRates) : null;
+
+                    const refinRates = tablesForAgreement.map(t => t.min_rate).filter(rate => rate > 0);
+                    const fallbackRefinRate = refinRates.length > 0 ? Math.min(...refinRates) : null;
+
+                    const portRateValue = (rule && rule.portability_rate_threshold) ? rule.portability_rate_threshold : fallbackPortRate;
+                    const refinRateValue = (rule && rule.refin_portability_rate_threshold) ? rule.refin_portability_rate_threshold : fallbackRefinRate;
+
+                    // 5. Calculate Fallback Ticket & Installment Limit
+                    const ticketValues = tablesForAgreement.map(t => Number(t.min_ticket)).filter(val => val > 0);
+                    const fallbackTicket = ticketValues.length > 0 ? Math.min(...ticketValues) : null;
+                    const releaseAmount = (rule && rule.min_release_amount !== null && rule.min_release_amount !== undefined) ? rule.min_release_amount : fallbackTicket;
+
+                    const installmentValues = tablesForAgreement.map(t => Number(t.min_installment)).filter(val => val > 0);
+                    const fallbackInstallment = installmentValues.length > 0 ? Math.min(...installmentValues) : null;
+                    const installmentValue = (rule && rule.min_installment_value !== null && rule.min_installment_value !== undefined) ? rule.min_installment_value : fallbackInstallment;
+
+                    const minDebtBalance = rule ? rule.min_debt_balance : null;
 
                     return (
                       <div className="space-y-4">
-                        <RuleItem icon={<Icons.User size={18} />} label="Idade" value={`De ${rule.min_age || 'N/A'} a ${rule.max_age || 'N/A'} anos`} />
+                        {/* Warning Banner if Rule is Inactive or Missing */}
+                        {!isRuleActive && (
+                          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 flex items-start gap-3 mb-2">
+                            <div className="text-amber-500 shrink-0 mt-0.5">
+                              <Icons.AlertTriangle size={20} />
+                            </div>
+                            <div>
+                              <h4 className="font-black text-xs uppercase tracking-wider mb-0.5">Banco Desativado</h4>
+                              <p className="text-xs font-bold opacity-90">
+                                Este banco está desativado ou não possui regras cadastradas para o convênio {activeAgreement}. 
+                                As informações de taxas e prazos exibidas abaixo são baseadas nas tabelas ativas do banco.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        <RuleItem icon={<Icons.User size={18} />} label="Idade" value={(rule?.min_age || rule?.max_age) ? `De ${rule.min_age || 'N/A'} a ${rule.max_age || 'N/A'} anos` : 'Não informado'} />
                         <RuleItem icon={<Icons.Calendar size={18} />} label="Prazos" value={prazosText} />
                         
-                        {rule.agreement === "INSS" && (
+                        {activeAgreement === "INSS" && (
                           <RuleItem 
                             icon={<Icons.ShieldAlert size={18} />} 
                             label="Aceita Invalidez" 
                             value={invalidezTexto}
-                            status={rule.accepts_disability ? "success" : "error"}
+                            status={disabilityAccepts ? "success" : "error"}
                           />
                         )}
                         
-                        {rule.agreement === "INSS" && (
+                        {activeAgreement === "INSS" && (
                           <RuleItem 
                             icon={<Icons.Ban size={18} />} 
                             label="Benefício não atendido" 
@@ -508,17 +629,17 @@ export default function BancosPage() {
                           />
                         )}
                         
-                        <RuleItem icon={<Icons.PenTool size={18} />} label="Aceita Analfabeto" value={rule.accepts_illiterate ? "SIM" : "NÃO"} status={rule.accepts_illiterate ? "success" : "error"} />
-                        <RuleItem icon={<Icons.Clock size={18} />} label="Aceita 60+" value={rule.accepts_60_plus ? "SIM" : "NÃO"} status={rule.accepts_60_plus ? "success" : "error"} />
+                        <RuleItem icon={<Icons.PenTool size={18} />} label="Aceita Analfabeto" value={rule ? (rule.accepts_illiterate ? "SIM" : "NÃO") : "Não informado"} status={rule ? (rule.accepts_illiterate ? "success" : "error") : "info"} />
+                        <RuleItem icon={<Icons.Clock size={18} />} label="Aceita 60+" value={rule ? (rule.accepts_60_plus ? "SIM" : "NÃO") : "Não informado"} status={rule ? (rule.accepts_60_plus ? "success" : "error") : "info"} />
                         
-                        <RuleItem icon={<Icons.Receipt size={18} />} label="Parcela Mínima" value={formatCurrency(rule.min_installment_value)} />
-                        <RuleItem icon={<Icons.Banknote size={18} />} label="Troco Mínimo" value={formatCurrency(rule.min_release_amount)} />
-                        <RuleItem icon={<Icons.Wallet size={18} />} label="Saldo Mínimo" value={formatCurrency(rule.min_debt_balance)} />
+                        <RuleItem icon={<Icons.Receipt size={18} />} label="Parcela Mínima" value={formatCurrency(installmentValue)} />
+                        <RuleItem icon={<Icons.Banknote size={18} />} label="Troco Mínimo" value={formatCurrency(releaseAmount)} />
+                        <RuleItem icon={<Icons.Wallet size={18} />} label="Saldo Mínimo" value={formatCurrency(minDebtBalance)} />
                         
-                        <RuleItem icon={<Icons.TrendingDown size={18} />} label="Taxa Mínima Portabilidade" value={rule.portability_rate_threshold ? `${rule.portability_rate_threshold}%` : "Não informado"} />
-                        <RuleItem icon={<Icons.RefreshCw size={18} />} label="Taxa Mínima Refin/Port" value={rule.refin_portability_rate_threshold ? `${rule.refin_portability_rate_threshold}%` : "Não informado"} />
+                        <RuleItem icon={<Icons.TrendingDown size={18} />} label="Taxa Mínima Portabilidade" value={portRateValue ? `${portRateValue}%` : "Não informado"} />
+                        <RuleItem icon={<Icons.RefreshCw size={18} />} label="Taxa Mínima Refin/Port" value={refinRateValue ? `${refinRateValue}%` : "Não informado"} />
                         
-                        {rule.excluded_origin_banks && (
+                        {rule?.excluded_origin_banks && (
                           <div className="mt-6 pt-4 border-t border-slate-100">
                             <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-3">
                               <Icons.XCircle size={16} /> Bancos Não Portados (Origem)
@@ -531,7 +652,7 @@ export default function BancosPage() {
                           </div>
                         )}
 
-                        {rule.origin_banks_min_paid && (() => {
+                        {rule?.origin_banks_min_paid && (() => {
                           let items = [];
                           try {
                             const parsed = JSON.parse(rule.origin_banks_min_paid);
