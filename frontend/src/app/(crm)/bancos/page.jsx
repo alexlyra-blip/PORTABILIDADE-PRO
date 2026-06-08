@@ -104,6 +104,18 @@ const matchAgreement = (ruleAgr, selectedAgr) => {
   return false;
 };
 
+const getConvenioDisplayName = (convenio) => {
+  const mapping = {
+    "INSS": "INSS",
+    "SIAPE": "SIAPE",
+    "FORCAS": "FORÇAS ARMADAS",
+    "GOV_EST": "GOVERNO",
+    "CLT_PRIVADO": "CLT PRIVADO",
+    "FGTS": "FGTS"
+  };
+  return mapping[convenio] || convenio;
+};
+
 export default function BancosPage() {
   const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -414,12 +426,12 @@ export default function BancosPage() {
                   key={bank.id}
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
                   onClick={() => handleBankClick(bank)}
-                  className={`bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group flex flex-col items-center text-center gap-4 relative overflow-hidden ${!isRuleActive ? 'opacity-65' : ''}`}
+                  className={`bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group flex flex-col items-center text-center gap-4 relative overflow-hidden ${!isRuleActive ? 'opacity-80' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   
                   {!isRuleActive && (
-                    <span className="absolute top-3 right-3 bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider z-20">Desativado</span>
+                    <span className="absolute top-3 right-3 bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider z-20">{getConvenioDisplayName(selectedConvenio)} Inativo</span>
                   )}
 
                   <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden relative z-10 p-0">
@@ -433,7 +445,7 @@ export default function BancosPage() {
                   <div className="relative z-10 w-full">
                     <h3 className="font-black text-slate-800 text-lg truncate w-full" title={bank.name}>{bank.name}</h3>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 mt-1">
-                      {isRuleActive ? "Ver Regras" : "Desativado"}
+                      {isRuleActive ? "Ver Regras" : "Convênio Inativo"}
                     </p>
                   </div>
                 </motion.div>
@@ -481,7 +493,7 @@ export default function BancosPage() {
                         >
                           {(!selectedRuleId || !selectedBank.rules?.some(r => r.id === selectedRuleId)) && (
                             <option value="">
-                              {selectedConvenio} (Desativado)
+                              {getConvenioDisplayName(selectedConvenio)} (Inativo)
                             </option>
                           )}
                           {selectedBank.rules?.map(r => (
@@ -599,9 +611,9 @@ export default function BancosPage() {
                               <Icons.AlertTriangle size={20} />
                             </div>
                             <div>
-                              <h4 className="font-black text-xs uppercase tracking-wider mb-0.5">Banco Desativado</h4>
+                              <h4 className="font-black text-xs uppercase tracking-wider mb-0.5">Convênio Inativo</h4>
                               <p className="text-xs font-bold opacity-90">
-                                Este banco está desativado ou não possui regras cadastradas para o convênio {activeAgreement}. 
+                                Este convênio está inativo ou não possui regras cadastradas para o convênio {getConvenioDisplayName(activeAgreement)}. 
                                 As informações de taxas e prazos exibidas abaixo são baseadas nas tabelas ativas do banco.
                               </p>
                             </div>
