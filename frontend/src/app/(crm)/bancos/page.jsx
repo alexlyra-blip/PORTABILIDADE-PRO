@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, cloneElement, isValidElement } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { inssBanks } from "@/utils/constants";
@@ -8,17 +8,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 
 const Icons = {
-  Search: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+  Search: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
   ),
-  Download: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+  Download: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
   ),
-  Landmark: ({ size = 20, className = "" }) => (
-    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7 12 2" /></svg>
+  Landmark: ({ size = 20, color = "currentColor", className = "" }) => (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7 12 2" /></svg>
   ),
-  X: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+  X: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
   ),
   CheckCircle: ({ size = 20, color = "#10b981" }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
@@ -32,41 +32,44 @@ const Icons = {
   AlertTriangle: ({ size = 20, color = "#f59e0b" }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
   ),
-  User: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+  User: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
   ),
-  Calendar: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
+  Calendar: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
   ),
-  ShieldAlert: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>
+  ShieldAlert: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>
   ),
-  Ban: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" x2="19.07" y1="4.93" y2="19.07" /></svg>
+  Ban: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" x2="19.07" y1="4.93" y2="19.07" /></svg>
   ),
-  PenTool: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+  PenTool: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
   ),
-  UserCheck: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><polyline points="16 11 18 13 22 9" /></svg>
+  UserCheck: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><polyline points="16 11 18 13 22 9" /></svg>
   ),
-  Coins: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6" /><circle cx="18" cy="18" r="4" /><path d="M12 18a6 6 0 0 0-6-6" /></svg>
+  Coins: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6" /><circle cx="18" cy="18" r="4" /><path d="M12 18a6 6 0 0 0-6-6" /></svg>
   ),
-  Banknote: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><line x1="6" x2="6.01" y1="12" y2="12" /><line x1="18" x2="18.01" y1="12" y2="12" /></svg>
+  Banknote: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><line x1="6" x2="6.01" y1="12" y2="12" /><line x1="18" x2="18.01" y1="12" y2="12" /></svg>
   ),
-  Wallet: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" /><path d="M4 6v12a2 2 0 0 0 2 2h14v-4" /><path d="M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6z" /></svg>
+  Wallet: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" /><path d="M4 6v12a2 2 0 0 0 2 2h14v-4" /><path d="M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6z" /></svg>
   ),
-  TrendingDown: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></svg>
+  TrendingDown: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></svg>
   ),
-  RefreshCw: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+  RefreshCw: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
   ),
-  Clock: ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+  Clock: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+  ),
+  Receipt: ({ size = 20, color = "currentColor" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z" /><path d="M6 6h12" /><path d="M6 10h12" /><path d="M6 14h8" /></svg>
   )
 };
 
@@ -153,40 +156,150 @@ export default function BancosPage() {
     return selectedBank.rules?.find(r => r.id === selectedRuleId) || selectedBank.rules?.[0];
   };
 
-  const exportPDF = () => {
-    if (typeof window !== "undefined") {
-      import('html2pdf.js').then((module) => {
-        const html2pdf = module.default;
-        const element = pdfRef.current;
-        
-        // Temporarily remove max-height and overflow to prevent cutoff/crashing
-        const originalMaxHeight = element.style.maxHeight;
-        const originalOverflow = element.style.overflow;
-        element.style.maxHeight = 'none';
-        element.style.overflow = 'visible';
+  const exportPDF = async () => {
+    if (typeof window === "undefined" || !selectedBank) return;
 
-        const opt = {
-          margin:       10,
-          filename:     `Regras_${selectedBank.name}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 1.5, useCORS: true, allowTaint: false, logging: true },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        
-        html2pdf().set(opt).from(element).save().then(() => {
-          element.style.maxHeight = originalMaxHeight;
-          element.style.overflow = originalOverflow;
-        }).catch(e => {
-          console.error("Erro interno do html2pdf:", e);
-          element.style.maxHeight = originalMaxHeight;
-          element.style.overflow = originalOverflow;
-          alert("Ocorreu um erro ao renderizar o PDF. Verifique se há imagens corrompidas.");
-        });
-      }).catch(e => {
-        console.error("Erro ao importar html2pdf:", e);
-        alert("Ocorreu um erro ao carregar a ferramenta de PDF.");
-      });
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const rule = getSelectedRule();
+      if (!rule) return;
+
+      // Calcular Prazos
+      let prazosAtivos = bankTables
+        .filter(t => t.active && (!t.agreement || t.agreement === rule.agreement) && (!t.sub_agreement || t.sub_agreement === rule.sub_agreement))
+        .map(t => t.term)
+        .filter(Boolean);
+      
+      prazosAtivos = [...new Set(prazosAtivos)].sort((a,b)=>a-b);
+      let prazosText = "";
+      if (prazosAtivos.length > 0) {
+        const list = prazosAtivos.map(p => `${p}X`);
+        if (list.length === 1) prazosText = list[0];
+        else if (list.length === 2) prazosText = list.join(' e ');
+        else prazosText = list.slice(0, -1).join(', ') + ' e ' + list[list.length - 1];
+      } else {
+        prazosText = `Até ${rule.max_term || 'N/A'}X`;
+      }
+
+      // Calcular LOAS
+      let excluidos = rule.excluded_benefit_types || "";
+      if (rule.accepts_loas === false) {
+        excluidos = excluidos ? `${excluidos}, 87 e 88 (LOAS)` : "87 e 88 (LOAS)";
+      }
+
+      // Calcular Invalidez
+      const mesesInvalidezStr = rule.disability_min_benefit_months ? ` e ${rule.disability_min_benefit_months} Meses` : '';
+      const invalidezTexto = rule.accepts_disability 
+        ? `SIM (Idade mínima ${rule.disability_min_age || 0} anos até ${rule.disability_max_age || 0} anos, Tempo de benefício de ${rule.disability_min_benefit_years || 0} Anos${mesesInvalidezStr})` 
+        : "NÃO";
+
+      // Bancos com Regras Específicas
+      let regrasEspecificasHtml = "";
+      if (rule.origin_banks_min_paid) {
+        let items = [];
+        try {
+          const parsed = JSON.parse(rule.origin_banks_min_paid);
+          if (parsed && typeof parsed === 'object') {
+            items = Object.entries(parsed).map(([bank, parcelas]) => `${bank} ${parcelas} pagas`);
+          } else {
+            items = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
+          }
+        } catch (e) {
+          items = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
+        }
+
+        if (items.length > 0) {
+          regrasEspecificasHtml = `
+            <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; page-break-inside: avoid;">
+              <h4 style="font-size: 13px; font-weight: bold; color: #c2410c; text-transform: uppercase; margin: 0 0 10px 0;">Bancos com Regras Específicas</h4>
+              <div style="background-color: #fff7ed; border: 1px solid #ffedd5; padding: 12px; border-radius: 8px;">
+                <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #9a3412; line-height: 1.6; list-style-type: disc;">
+                  ${items.map(item => `<li>${item}</li>`).join('')}
+                </ul>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // Bancos Não Portados (Origem)
+      let bancosNaoPortadosHtml = "";
+      if (rule.excluded_origin_banks) {
+        bancosNaoPortadosHtml = `
+          <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; page-break-inside: avoid;">
+            <h4 style="font-size: 13px; font-weight: bold; color: #b91c1c; text-transform: uppercase; margin: 0 0 10px 0;">Bancos Não Portados (Origem)</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              ${rule.excluded_origin_banks.split(',').map(b => `
+                <span style="padding: 4px 8px; background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; font-size: 11px; font-weight: bold; border-radius: 6px; text-transform: uppercase; margin-right: 5px; margin-bottom: 5px; display: inline-block;">${b.trim()}</span>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      const element = document.createElement('div');
+      element.innerHTML = `
+        <div style="padding: 40px; font-family: Arial, sans-serif; color: #1e293b; max-width: 800px; margin: 0 auto; background-color: white;">
+          <!-- Header -->
+          <div style="display: flex; flex-direction: column; align-items: center; text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 25px;">
+            ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="height: 60px; object-fit: contain; margin-bottom: 15px;" />` : ''}
+            <h1 style="font-size: 24px; font-weight: bold; color: #1e293b; margin: 0; text-transform: uppercase; letter-spacing: 1px;">
+              🏛️ ${selectedBank.name}
+            </h1>
+            <p style="font-size: 13px; font-weight: bold; color: #64748b; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 2px;">
+              Regras do Convênio: ${rule.agreement} ${rule.sub_agreement ? '- ' + rule.sub_agreement : ''}
+            </p>
+          </div>
+
+          <!-- Rules List -->
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tbody>
+              ${renderPdfRow('Idade', `De ${rule.min_age || 'N/A'} a ${rule.max_age || 'N/A'} anos`)}
+              ${renderPdfRow('Prazos', prazosText)}
+              
+              ${rule.agreement === "INSS" ? renderPdfRow('Aceita Invalidez', invalidezTexto) : ''}
+              ${rule.agreement === "INSS" ? renderPdfRow('Benefício não atendido', excluidos || 'Nenhum restrito') : ''}
+              
+              ${renderPdfRow('Aceita Analfabeto', rule.accepts_illiterate ? 'SIM' : 'NÃO')}
+              ${renderPdfRow('Aceita 60+', rule.accepts_60_plus ? 'SIM' : 'NÃO')}
+              
+              ${renderPdfRow('Parcela Mínima', formatCurrency(rule.min_installment_value))}
+              ${renderPdfRow('Troco Mínimo', formatCurrency(rule.min_release_amount))}
+              ${renderPdfRow('Saldo Mínimo', formatCurrency(rule.min_debt_balance))}
+              
+              ${renderPdfRow('Taxa Mínima Portabilidade', rule.portability_rate_threshold ? `${rule.portability_rate_threshold}%` : 'Não informado')}
+              ${renderPdfRow('Taxa Mínima Refin/Port', rule.refin_portability_rate_threshold ? `${rule.refin_portability_rate_threshold}%` : 'Não informado')}
+            </tbody>
+          </table>
+
+          <!-- Bancos Não Portados & Regras Específicas -->
+          ${bancosNaoPortadosHtml}
+          ${regrasEspecificasHtml}
+        </div>
+      `;
+
+      const opt = {
+        margin:       10,
+        filename:     `Regras_${selectedBank.name}_${rule.agreement}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    } catch (e) {
+      console.error("Erro ao gerar PDF:", e);
+      alert("Ocorreu um erro ao gerar o PDF das regras.");
     }
+  };
+
+  const renderPdfRow = (label, value) => {
+    return `
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; font-size: 12px; font-weight: bold; color: #475569; text-transform: uppercase; width: 40%;">${label}</td>
+        <td style="padding: 10px 0; font-size: 12px; color: #1e293b; font-weight: bold; text-align: right;">${value}</td>
+      </tr>
+    `;
   };
 
   const formatCurrency = (val) => {
@@ -350,9 +463,15 @@ export default function BancosPage() {
                       .filter(Boolean);
                     
                     prazosAtivos = [...new Set(prazosAtivos)].sort((a,b)=>a-b);
-                    const prazosText = prazosAtivos.length > 0 
-                      ? prazosAtivos.map(p => `${p}X`).join(' e ') 
-                      : `Até ${rule.max_term || 'N/A'}X`;
+                    let prazosText = "";
+                    if (prazosAtivos.length > 0) {
+                      const list = prazosAtivos.map(p => `${p}X`);
+                      if (list.length === 1) prazosText = list[0];
+                      else if (list.length === 2) prazosText = list.join(' e ');
+                      else prazosText = list.slice(0, -1).join(', ') + ' e ' + list[list.length - 1];
+                    } else {
+                      prazosText = `Até ${rule.max_term || 'N/A'}X`;
+                    }
 
                     // Calcular LOAS
                     let excluidos = rule.excluded_benefit_types || "";
@@ -392,7 +511,7 @@ export default function BancosPage() {
                         <RuleItem icon={<Icons.PenTool size={18} />} label="Aceita Analfabeto" value={rule.accepts_illiterate ? "SIM" : "NÃO"} status={rule.accepts_illiterate ? "success" : "error"} />
                         <RuleItem icon={<Icons.Clock size={18} />} label="Aceita 60+" value={rule.accepts_60_plus ? "SIM" : "NÃO"} status={rule.accepts_60_plus ? "success" : "error"} />
                         
-                        <RuleItem icon={<Icons.Coins size={18} />} label="Parcela Mínima" value={formatCurrency(rule.min_installment_value)} />
+                        <RuleItem icon={<Icons.Receipt size={18} />} label="Parcela Mínima" value={formatCurrency(rule.min_installment_value)} />
                         <RuleItem icon={<Icons.Banknote size={18} />} label="Troco Mínimo" value={formatCurrency(rule.min_release_amount)} />
                         <RuleItem icon={<Icons.Wallet size={18} />} label="Saldo Mínimo" value={formatCurrency(rule.min_debt_balance)} />
                         
@@ -473,11 +592,22 @@ function RuleItem({ icon, label, value, status = "info" }) {
     return "text-blue-500 bg-blue-50/50";
   };
 
+  const getIconHexColor = () => {
+    if (status === "success") return "#10b981"; // emerald-500
+    if (status === "error") return "#ef4444"; // red-500
+    if (status === "warning") return "#f59e0b"; // orange-500
+    return "#3b82f6"; // blue-500
+  };
+
+  const clonedIcon = React.isValidElement(icon)
+    ? React.cloneElement(icon, { color: getIconHexColor() })
+    : icon;
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-slate-50 gap-2">
       <div className="flex items-center gap-3">
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${getIconColor()}`}>
-          {icon}
+          {clonedIcon}
         </div>
         <span className="text-sm font-black text-slate-600 uppercase tracking-wider">{label}</span>
       </div>
