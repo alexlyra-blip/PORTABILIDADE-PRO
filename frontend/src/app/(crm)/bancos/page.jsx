@@ -309,19 +309,23 @@ export default function BancosPage() {
                         <RuleItem icon="👵" label="Idade" value={`De ${rule.min_age || 'N/A'} a ${rule.max_age || 'N/A'} anos`} />
                         <RuleItem icon="📅" label="Prazos" value={prazosText} />
                         
-                        <RuleItem 
-                          icon="♿" 
-                          label="Aceita Invalidez" 
-                          value={invalidezTexto}
-                          status={rule.accepts_disability ? "success" : "error"}
-                        />
+                        {rule.agreement === "INSS" && (
+                          <RuleItem 
+                            icon="♿" 
+                            label="Aceita Invalidez" 
+                            value={invalidezTexto}
+                            status={rule.accepts_disability ? "success" : "error"}
+                          />
+                        )}
                         
-                        <RuleItem 
-                          icon="🚫" 
-                          label="Benefício não atendido" 
-                          value={excluidos || "Nenhum restrito"} 
-                          status="warning"
-                        />
+                        {rule.agreement === "INSS" && (
+                          <RuleItem 
+                            icon="🚫" 
+                            label="Benefício não atendido" 
+                            value={excluidos || "Nenhum restrito"} 
+                            status="warning"
+                          />
+                        )}
                         
                         <RuleItem icon="✍️" label="Aceita Analfabeto" value={rule.accepts_illiterate ? "SIM" : "NÃO"} status={rule.accepts_illiterate ? "success" : "error"} />
                         <RuleItem icon="🕒" label="Aceita 60+" value={rule.accepts_60_plus ? "SIM" : "NÃO"} status={rule.accepts_60_plus ? "success" : "error"} />
@@ -346,21 +350,36 @@ export default function BancosPage() {
                           </div>
                         )}
 
-                        {rule.origin_banks_min_paid && (
-                          <div className="mt-6 pt-4 border-t border-slate-100">
-                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-3">
-                              <Icons.AlertTriangle size={16} /> Bancos com Regras Específicas
-                            </h4>
-                            <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
-                               <ul className="text-sm text-orange-800 font-bold space-y-1">
-                                 {rule.origin_banks_min_paid.split(/,|\n/).map(item => item.trim()).filter(Boolean).map((item, idx) => {
-                                    const text = item.replace(/^-/, '').trim();
-                                    return <li key={idx}>- {text}</li>;
-                                 })}
-                               </ul>
+                        {rule.origin_banks_min_paid && (() => {
+                          let items = [];
+                          try {
+                            const parsed = JSON.parse(rule.origin_banks_min_paid);
+                            if (parsed && typeof parsed === 'object') {
+                              items = Object.entries(parsed).map(([bank, parcelas]) => `${bank} ${parcelas} pagas`);
+                            } else {
+                              items = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
+                            }
+                          } catch (e) {
+                            items = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
+                          }
+
+                          if (items.length === 0) return null;
+
+                          return (
+                            <div className="mt-6 pt-4 border-t border-slate-100">
+                              <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-3">
+                                <Icons.AlertTriangle size={16} /> Bancos com Regras Específicas
+                              </h4>
+                              <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
+                                 <ul className="text-sm text-orange-800 font-bold space-y-1">
+                                   {items.map((text, idx) => (
+                                      <li key={idx}>- {text}</li>
+                                   ))}
+                                 </ul>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     );
                   })()}
