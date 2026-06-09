@@ -514,9 +514,11 @@ function OfertasPageContent() {
                 </div>
                 <div className="text-center xl:text-left">
                   <h3 className="text-xs xl:text-sm font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight mt-1">
-                    {h.data?.banco || "INDISPONÍVEL"}
+                    {h.data?.banco || "SEM OFERTA ELEGÍVEL"}
                   </h3>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">{h.data?.tabela || "INDISPONÍVEL"}</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">
+                    {h.data?.tabela || (data?.rejeitados?.length > 0 ? "VER REQUISITOS ABAIXO" : "NENHUM BANCO")}
+                  </p>
                   {h.data && (() => {
                     const agr = inputData?.agreement || "INSS";
                     return (
@@ -702,6 +704,8 @@ function OfertasPageContent() {
                     if (m.includes("IDADE")) return "IDADE FORA DO LIMITE";
                     if (m.includes("ESPÉCIE") || m.includes("ESPECIE")) return "ESPÉCIE NÃO PERMITIDA";
                     if (m.includes("ANALFABETO")) return "NÃO ACEITA ANALFABETO";
+                    if (m.includes("PROMOTORA")) return "BLOQUEADO PELA PROMOTORA";
+                    if (m.includes("SEM TABELAS") || m.includes("SEM REGRA") || m.includes("SEM REGRAS")) return m;
                     if (m.includes("PARCELAS") || m.includes("PAGAS")) return m;
                     if (m.includes("VALOR MÍNIMO") || m.includes("TROCO") || m.includes("MÍNIMO")) return "TROCO MÍNIMO NÃO ATINGIDO";
                     if (m.includes("TABELA") || m.includes("REGRAS")) return "REGRAS DE TABELA NÃO ATENDIDAS";

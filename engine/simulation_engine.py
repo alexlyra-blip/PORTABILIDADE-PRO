@@ -227,6 +227,13 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         break
                 
                 if not tem_tabelas_convenio:
+                    rejeitados.append({
+                        "banco": banco.name,
+                        "bank_id": banco.id,
+                        "logo_url": banco.logo_url,
+                        "motivo": f"Sem tabelas configuradas para o convênio {convenio_input}.",
+                        "elegivel": False
+                    })
                     continue
 
                 # FILTRO 2: Promotora Blocklist para Bancos Destino
