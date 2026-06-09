@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
+import { Icons } from "@/components/Icons";
 
 interface BankRule {
   id?: number;
@@ -73,6 +74,7 @@ export default function BanksPage() {
     }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"basic" | "rules">("basic");
   const [selectedAgreement, setSelectedAgreement] = useState("INSS");
   const [selectedSubAgreement, setSelectedSubAgreement] = useState("");
   const [bankRules, setBankRules] = useState<any[]>([]);
@@ -136,6 +138,7 @@ export default function BanksPage() {
 
   const handleOpenModal = async (bank: any = null) => {
     setShowAddRuleForm(false);
+    setActiveTab("basic");
     if (bank) {
       setEditingBank(bank);
       try {
@@ -738,584 +741,679 @@ export default function BanksPage() {
       {modalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={handleCloseModal}></div>
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-white/20">
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-lg">
-                {editingBank && editingBank.name ? `Configurar: ${editingBank.name}` : "Novo Banco"}
-              </h3>
-              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 text-2xl font-light">×</button>
+          <div className="relative bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden animate-scale-up border border-slate-100 dark:border-white/10 flex flex-col max-h-[90vh]">
+            {/* Header Premium */}
+            <div className="bg-slate-50 dark:bg-white/5 px-8 py-5 border-b border-slate-100 dark:border-white/5 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-600/10 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg shadow-inner">
+                  🏦
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800 dark:text-white text-base tracking-tight uppercase">
+                    {editingBank && editingBank.name ? `Configurar: ${editingBank.name}` : "Novo Banco"}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Definições cadastrais e de elegibilidade</p>
+                </div>
+              </div>
+              
+              <button 
+                type="button"
+                onClick={handleCloseModal} 
+                className="p-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-500 dark:bg-white/5 dark:hover:bg-rose-500/20 dark:hover:text-rose-400 rounded-xl text-slate-400 dark:text-slate-500 transition-all duration-300 flex items-center justify-center shadow-inner"
+              >
+                <Icons.X size={16} />
+              </button>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex border-b border-slate-100 dark:border-white/5 px-8 bg-slate-50/50 dark:bg-white/5 gap-6 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab("basic")}
+                className={`py-4 px-2 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-2.5 ${
+                  activeTab === "basic"
+                    ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                    : "border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                }`}
+              >
+                <Icons.User size={16} />
+                Dados Gerais
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("rules")}
+                className={`py-4 px-2 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-2.5 ${
+                  activeTab === "rules"
+                    ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                    : "border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                }`}
+              >
+                <Icons.Layers size={16} />
+                Regras de Convênios
+              </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome do Banco *</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="input-admin"
-                    placeholder="Ex: Banco Itaú"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Prioridade</label>
-                  <input 
-                    type="number" 
-                    required
-                    value={formData.priority}
-                    onChange={(e) => setFormData({...formData, priority: e.target.value})}
-                    className="input-admin"
-                    placeholder="Ex: 1"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Logo do Banco</label>
-                  <div className="flex items-center gap-3">
-                    <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl border border-dashed border-slate-300 transition-all font-bold text-xs uppercase">
-                      <input type="file" className="hidden" onChange={handleLogoUpload} accept="image/*" />
-                      <span>📁 Enviar Arquivo</span>
-                    </label>
-                    {formData.logo_url && (
-                      <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-300 bg-white shadow-md flex-shrink-0">
-                        <img 
-                          src={getStaticUrl(formData.logo_url) || formData.logo_url} 
-                          className={`w-full h-full object-cover transition-all duration-500 ${
-                            formData.active ? "grayscale-0" : "grayscale opacity-50 contrast-75"
-                          }`} 
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-[9px] text-slate-400 mt-1 italic">Recomendado: 200x200px PNG/JPG</p>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100">
-                <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <span>⚖️</span> Regras de Aceitação
-                </h4>
-
-                <div className="mb-6 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex flex-col gap-3">
-                  <div className="flex items-center gap-3 w-full">
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1.5">Selecione o Convênio para configurar a Regra</label>
-                      {bankRules.length === 0 ? (
-                        <div className="text-xs font-semibold text-slate-400 italic py-2">
-                          Nenhuma regra cadastrada para este banco.
-                        </div>
-                      ) : (
-                        <select
-                          value={`${selectedAgreement}|||${selectedSubAgreement}`}
-                          onChange={(e) => {
-                            const [agr, sub] = e.target.value.split("|||");
-                            handleAgreementChange(agr, sub);
-                          }}
-                          className="w-full bg-white text-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
-                        >
-                          {bankRules.map((rule, idx) => {
-                            const label = `${rule.agreement}${rule.sub_agreement ? ` - ${rule.sub_agreement}` : ""}`;
-                            return (
-                              <option key={idx} value={`${rule.agreement}|||${rule.sub_agreement || ""}`}>
-                                {rule.agreement === "FORÇAS ARMADAS" ? `FORÇAS ARMADAS${rule.sub_agreement ? ` - ${rule.sub_agreement}` : " (GERAL)"}` : label}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      )}
-                    </div>
-                    
-                    {selectedAgreement && (
-                      <div className="flex items-end h-[60px] pb-0.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const rule = bankRules.find(r => r.agreement === selectedAgreement && (r.sub_agreement || "") === selectedSubAgreement);
-                            if (rule) handleDeleteRule(rule);
-                          }}
-                          className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl border border-rose-100 hover:border-transparent transition-all shadow-sm flex items-center justify-center gap-1.5 font-bold text-xs uppercase"
-                          title="Excluir esta Regra"
-                        >
-                          <span className="text-sm">🗑️</span> Excluir
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-3">
-                    {!showAddRuleForm ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowAddRuleForm(true)}
-                        className="w-full py-2.5 bg-white hover:bg-blue-50 text-blue-600 rounded-xl border border-dashed border-blue-200 font-bold text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
-                      >
-                        <span>＋</span> Adicionar Regra para um Convênio
-                      </button>
-                    ) : (
-                      <div className="bg-white p-4 rounded-xl border border-slate-100 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Nova Regra de Convênio</span>
-                          <button
-                            type="button"
-                            onClick={() => setShowAddRuleForm(false)}
-                            className="text-slate-400 hover:text-slate-600 text-xs font-bold uppercase"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-3">
-                          <div>
-                            <label className="block text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Tipo de Convênio</label>
-                            <select
-                              value={newAgreement}
-                              onChange={(e) => {
-                                setNewAgreement(e.target.value);
-                                setNewSubAgreement("");
-                              }}
-                              className="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold"
-                            >
-                              {["INSS", "SIAPE", "GOVERNOS", "FORÇAS ARMADAS", "CLT_PRIVADO"].map(agr => (
-                                <option key={agr} value={agr}>
-                                  {agr === "FORÇAS ARMADAS" ? "FORÇAS ARMADAS" : agr === "CLT_PRIVADO" ? "CLT PRIVADO" : agr}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          
-                          {newAgreement === "GOVERNOS" && (
-                            <div>
-                              <label className="block text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Estado (UF)</label>
-                              <select
-                                value={newSubAgreement}
-                                onChange={(e) => setNewSubAgreement(e.target.value)}
-                                className="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold"
-                              >
-                                <option value="">Selecione o Estado...</option>
-                                {[
-                                  { value: "AC", label: "AC - ACRE" }, { value: "AL", label: "AL - ALAGOAS" }, { value: "AP", label: "AP - AMAPÁ" },
-                                  { value: "AM", label: "AM - AMAZONAS" }, { value: "BA", label: "BA - BAHIA" }, { value: "CE", label: "CE - CEARÁ" },
-                                  { value: "DF", label: "DF - DISTRITO FEDERAL" }, { value: "ES", label: "ES - ESPÍRITO SANTO" }, { value: "GO", label: "GO - GOIÁS" },
-                                  { value: "MA", label: "MA - MARANHÃO" }, { value: "MT", label: "MT - MATO GROSSO" }, { value: "MS", label: "MS - MATO GROSSO DO SUL" },
-                                  { value: "MG", label: "MG - MINAS GERAIS" }, { value: "PA", label: "PA - PARÁ" }, { value: "PB", label: "PB - PARAÍBA" },
-                                  { value: "PR", label: "PR - PARANÁ" }, { value: "PE", label: "PE - PERNAMBUCO" }, { value: "PI", label: "PI - PIAUÍ" },
-                                  { value: "RJ", label: "RJ - RIO DE JANEIRO" }, { value: "RN", label: "RN - RIO GRANDE DO NORTE" }, { value: "RS", label: "RS - RIO GRANDE DO SUL" },
-                                  { value: "RO", label: "RO - RONDÔNIA" }, { value: "RR", label: "RR - RORAIMA" }, { value: "SC", label: "SC - SANTA CATARINA" },
-                                  { value: "SP", label: "SP - SÃO PAULO" }, { value: "SE", label: "SE - SERGIPE" }, { value: "TO", label: "TO - TOCANTINS" }
-                                ].map(sub => (
-                                  <option key={sub.value} value={sub.value}>{sub.label}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                          
-                          {newAgreement === "FORÇAS ARMADAS" && (
-                            <div>
-                              <label className="block text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Organização</label>
-                              <select
-                                value={newSubAgreement}
-                                onChange={(e) => setNewSubAgreement(e.target.value)}
-                                className="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold"
-                              >
-                                <option value="">Selecione o Ramo...</option>
-                                {["EXÉRCITO", "AERONÁUTICA", "MARINHA"].map(sub => (
-                                  <option key={sub} value={sub}>{sub}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <button
-                          type="button"
-                          onClick={handleAddNewRule}
-                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-emerald-500/20"
-                        >
-                          Adicionar Convênio
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {selectedAgreement && (
-                    <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-white/5 mt-2 shadow-sm">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                         Ativar Simulação ({formData.rules.agreement}{formData.rules.sub_agreement ? ` - ${formData.rules.sub_agreement}` : ""})?
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateRuleField("active", !formData.rules.active)}
-                        className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all border ${
-                          formData.rules.active !== false 
-                            ? "bg-emerald-500 text-white border-emerald-400 shadow-sm" 
-                            : "bg-rose-500 text-white border-rose-400 shadow-sm"
-                        }`}
-                      >
-                        {formData.rules.active !== false ? "ATIVADO" : "DESATIVADO"}
-                      </button>
-                    </div>
-                  )}
-
-                  <p className="text-[9px] text-slate-400 italic">Cada convênio tem suas próprias regras de idade e portabilidade.</p>
-                </div>
-                
-                {selectedAgreement ? (
-                  <div className="space-y-4 mt-4 animate-in fade-in duration-300">
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar flex flex-col min-h-0 bg-white dark:bg-slate-900">
+              <div className="p-8 space-y-6 flex-1">
+                {activeTab === "basic" ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in duration-300">
+                    <div className="space-y-6">
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Mínima</label>
+                        <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2.5">Nome do Banco *</label>
                         <input 
-                          type="number" 
-                          value={formData.rules.min_age}
-                          onChange={(e) => updateRuleField("min_age", parseInt(e.target.value) || 0)}
-                          className="input-admin !py-2"
+                          type="text" 
+                          required
+                          value={formData.name}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                          className="w-full py-3.5 px-5 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                          placeholder="Ex: Banco Itaú"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Máxima</label>
+                        <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2.5">Prioridade de Exibição</label>
                         <input 
                           type="number" 
-                          value={formData.rules.max_age}
-                          onChange={(e) => updateRuleField("max_age", parseInt(e.target.value) || 0)}
-                          className="input-admin !py-2"
+                          required
+                          value={formData.priority}
+                          onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                          className="w-full py-3.5 px-5 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                          placeholder="Ex: 1"
                         />
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Taxa Portabilidade (%)</label>
-                        <input 
-                          type="number" 
-                          step="0.01"
-                          value={formData.rules.portability_rate_threshold}
-                          onChange={(e) => updateRuleField("portability_rate_threshold", e.target.value)}
-                          className="input-admin !py-2"
-                          placeholder="Ex: 1.50"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Taxa Refin (%)</label>
-                        <input 
-                          type="number" 
-                          step="0.01"
-                          value={formData.rules.refin_portability_rate_threshold}
-                          onChange={(e) => updateRuleField("refin_portability_rate_threshold", e.target.value)}
-                          className="input-admin !py-2"
-                          placeholder="Ex: 1.60"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Valor Parcela Mín.</label>
-                        <input 
-                          type="number" 
-                          value={formData.rules.min_installment_value}
-                          onChange={(e) => updateRuleField("min_installment_value", e.target.value)}
-                          className="input-admin !py-2"
-                          placeholder="R$ 50,00"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Saldo Devedor Mín.</label>
-                        <input 
-                          type="number" 
-                          value={formData.rules.min_debt_balance}
-                          onChange={(e) => updateRuleField("min_debt_balance", e.target.value)}
-                          className="input-admin !py-2"
-                          placeholder="R$ 1000,00"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mín. Parc. Pagas (Geral)</label>
-                        <input 
-                          type="number" 
-                          value={formData.rules.min_paid_installments}
-                          onChange={(e) => updateRuleField("min_paid_installments", parseInt(e.target.value) || 0)}
-                          className="input-admin !py-2"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-6 mb-4 mt-6">
-                      {formData.rules.agreement === "INSS" && (
-                        <div className="p-4 bg-orange-50/30 rounded-2xl border border-orange-100">
-                          <label className="block text-[10px] font-bold text-orange-600 uppercase mb-2">Espécies de Benefício NÃO Atendidas (Bloquear)</label>
-                          <div className="flex gap-2 mb-3">
-                            <input 
-                              type="text" 
-                              list="inssSpecies"
-                              value={benefitTypeInput}
-                              onChange={(e) => setBenefitTypeInput(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addExcludedBenefitType())}
-                              className="input-admin !py-2 !text-xs flex-1"
-                              placeholder="Ex: 04, 32, 92..."
-                            />
-                            <datalist id="inssSpecies">
-                              {["04", "05", "06", "32", "33", "34", "92", "87", "88", "42", "21"].map(s => (
-                                <option key={s} value={s} />
-                              ))}
-                            </datalist>
-                            <button type="button" onClick={addExcludedBenefitType} className="px-4 bg-orange-600 text-white rounded-xl text-xs font-bold leading-none">+</button>
-                          </div>
-                          <div className="flex flex-wrap gap-2 min-h-fit py-2 items-center">
-                            {(formData.rules.excluded_benefit_types || "").split(',').filter(Boolean).map(species => (
-                              <span key={species} className="px-3 py-1 bg-orange-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
-                                ESPÉCIE {species.trim().toUpperCase()}
-                                <button type="button" onClick={() => removeExcludedBenefitType(species)} className="hover:scale-120 transition-all opacity-60 group-hover:opacity-100">×</button>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="p-4 bg-red-50/30 rounded-2xl border border-red-100">
-                        <label className="block text-[10px] font-bold text-red-600 uppercase mb-2">Bancos de Origem NÃO Portados (Excluir)</label>
-                        <div className="flex gap-2 mb-3">
-                          <input 
-                            type="text" 
-                            list="commonBanks"
-                            value={excludedInput}
-                            onChange={(e) => setExcludedInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addExcludedBank())}
-                            className="input-admin !py-2 !text-xs flex-1"
-                            placeholder="Escolha ou Digite o Banco..."
-                          />
-                          <button type="button" onClick={addExcludedBank} className="px-4 bg-red-600 text-white rounded-xl text-xs font-bold leading-none">+</button>
-                        </div>
-                        <div className="flex flex-wrap gap-2 min-h-fit py-2 items-center">
-                          {(formData.rules.excluded_origin_banks || "").split(',').filter(Boolean).map(bank => (
-                            <span key={bank} className="px-3 py-1 bg-red-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
-                              {bank.trim().toUpperCase()}
-                              <button type="button" onClick={() => removeExcludedBank(bank)} className="hover:scale-120 transition-all opacity-60 group-hover:opacity-100">×</button>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100">
-                        <label className="block text-[10px] font-bold text-emerald-600 uppercase mb-2">Regra Específica: Banco e Parcelas Pagas</label>
-                        <div className="flex gap-2 mb-3 items-start">
-                          <div className="flex-1">
-                            <label className="block text-[8px] font-bold text-slate-400 mb-1 ml-1 uppercase tracking-widest">Banco</label>
-                            <input 
-                              type="text" 
-                              list="commonBanks"
-                              value={bankCarInput}
-                              onChange={(e) => setBankCarInput(e.target.value)}
-                              className="input-admin !py-2 !text-xs w-full"
-                              placeholder="029 - ITAU..."
-                            />
-                            <datalist id="commonBanks">
-                              {["AGIBANK", "BMG", "BRADESCO", "CAIXA", "ITAU", "PAN", "SAFRA", "SANTANDER", "DAYCOVAL", "C6", "PICPAY", "INBURSA", "MERCANTIL"].map(b => (
-                                <option key={b} value={b} />
-                              ))}
-                            </datalist>
-                          </div>
-                          <div className="w-24">
-                            <label className="block text-[8px] font-bold text-slate-400 mb-1 ml-1 uppercase tracking-widest">Parcelas Pagas</label>
-                            <input 
-                              type="number" 
-                              value={parcCarInput}
-                              onChange={(e) => setParcCarInput(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addBankCarença())}
-                              className="input-admin !py-2 !text-xs w-full"
-                              placeholder="Min: 12"
-                            />
-                          </div>
-                          <button type="button" onClick={addBankCarença} className="px-5 bg-emerald-600 text-white rounded-xl text-xs font-bold leading-none mt-5 h-[38px] transition-all hover:scale-105 active:scale-95">+</button>
-                        </div>
-                        <div className="flex flex-wrap gap-2 min-h-fit py-2 items-center">
-                          {Object.entries(safeParse(formData.rules.origin_banks_min_paid, {})).map(([bank, parc]) => (
-                            <span key={bank} className="px-3 py-1 bg-emerald-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
-                              {bank}; {parc as string} PARC. PAGAS
-                              <button type="button" onClick={() => removeBankCarença(bank)} className="hover:scale-120 transition-all opacity-60 group-hover:opacity-100">×</button>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 bg-slate-50 rounded-xl border border-slate-100 p-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">Analfabeto</span>
-                        <div className="flex bg-white rounded-lg p-1 border border-slate-200">
-                          <button 
-                            type="button"
-                            onClick={() => updateRuleField("accepts_illiterate", true)}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${formData.rules.accepts_illiterate ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                          >
-                            SIM
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => updateRuleField("accepts_illiterate", false)}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${!formData.rules.accepts_illiterate ? "bg-red-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                          >
-                            NÃO
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">Aceita 60+</span>
-                        <div className="flex bg-white rounded-lg p-1 border border-slate-200">
-                          <button 
-                            type="button"
-                            onClick={() => updateRuleField("accepts_60_plus", true)}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${formData.rules.accepts_60_plus ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                          >
-                            SIM
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => updateRuleField("accepts_60_plus", false)}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${!formData.rules.accepts_60_plus ? "bg-red-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                          >
-                            NÃO
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">Saldo Devedor + Valor Liberado</span>
-                        <button 
-                          type="button"
-                          onClick={() => updateRuleField("use_balance_plus_released", !formData.rules.use_balance_plus_released)}
-                          className={`px-4 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
-                            formData.rules.use_balance_plus_released 
-                              ? "bg-blue-600 text-white border-blue-600 shadow-md" 
-                              : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
-                          }`}
-                        >
-                          {formData.rules.use_balance_plus_released ? "ATIVADO" : "DESATIVADO"}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 mt-6 border-t border-slate-100">
-                      <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <span>♿</span> Regras de Invalidez (04, 32, 92)
-                      </h4>
                       
-                      <div className="flex items-center justify-between mb-4 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-                        <span className="text-xs font-bold text-blue-700">Aceita Invalidez?</span>
-                        <button 
-                          type="button"
-                          onClick={() => updateRuleField("accepts_disability", !formData.rules.accepts_disability)}
-                          className={`px-4 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
-                            formData.rules.accepts_disability 
-                              ? "bg-emerald-600 text-white border-emerald-600 shadow-md" 
-                              : "bg-white text-slate-400 border-slate-200"
-                          }`}
-                        >
-                          {formData.rules.accepts_disability ? "SIM" : "NÃO"}
-                        </button>
-                      </div>
-
-                      {formData.rules.accepts_disability && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                          <div className="grid grid-cols-3 gap-4">
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Mínima</label>
-                              <input 
-                                type="number" 
-                                value={formData.rules.disability_min_age}
-                                onChange={(e) => updateRuleField("disability_min_age", e.target.value)}
-                                className="input-admin !py-2"
-                                placeholder="Mínima"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Idade Máxima</label>
-                              <input 
-                                type="number" 
-                                value={formData.rules.disability_max_age}
-                                onChange={(e) => updateRuleField("disability_max_age", e.target.value)}
-                                className="input-admin !py-2"
-                                placeholder="Máxima"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Isenção da DIB a partir</label>
-                              <input 
-                                type="number" 
-                                value={formData.rules.disability_grace_age}
-                                onChange={(e) => updateRuleField("disability_grace_age", e.target.value)}
-                                className="input-admin !py-2"
-                                placeholder="Ex: 60"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tempo Benefício (Anos)</label>
-                              <input 
-                                type="number" 
-                                value={formData.rules.disability_min_benefit_years}
-                                onChange={(e) => updateRuleField("disability_min_benefit_years", e.target.value)}
-                                className="input-admin !py-2"
-                                placeholder="Anos"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tempo Benefício (Meses)</label>
-                              <input 
-                                type="number" 
-                                value={formData.rules.disability_min_benefit_months}
-                                onChange={(e) => updateRuleField("disability_min_benefit_months", e.target.value)}
-                                className="input-admin !py-2"
-                                placeholder="Meses"
-                              />
-                            </div>
+                      {/* Toggle Premium para status ativo */}
+                      <div className="flex items-center justify-between p-5 bg-slate-50 dark:bg-white/5 rounded-3xl border border-slate-100 dark:border-white/5 shadow-inner">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">⚡</span>
+                          <div>
+                            <span className="block text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Ativo para Simulações</span>
+                            <span className="block text-[9px] text-slate-400 font-bold uppercase mt-0.5">Disponibilizar banco no simulador</span>
                           </div>
                         </div>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => setFormData({...formData, active: !formData.active})}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            formData.active ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              formData.active ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Logo Dropzone */}
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Identidade Visual (Logo)</label>
+                        <div className="relative border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-6 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center transition-all hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800/20 group h-[220px]">
+                          <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleLogoUpload} accept="image/*" />
+                          {formData.logo_url ? (
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="w-24 h-24 rounded-2xl overflow-hidden border border-slate-100 dark:border-white/10 bg-white shadow-xl flex items-center justify-center relative group-hover:scale-105 transition-all duration-300">
+                                <img 
+                                  src={getStaticUrl(formData.logo_url) || formData.logo_url} 
+                                  className={`w-full h-full object-cover transition-all duration-500 ${
+                                    formData.active ? "grayscale-0" : "grayscale opacity-50 contrast-75"
+                                  }`} 
+                                />
+                              </div>
+                              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest flex items-center gap-1.5 mt-1">
+                                📁 Alterar Logotipo
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 shadow-md flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-blue-500 transition-colors">
+                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                              </div>
+                              <div>
+                                <span className="block text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Fazer Upload de Logo</span>
+                                <span className="block text-[9px] text-slate-400 dark:text-slate-500 mt-1 italic uppercase tracking-wider">PNG, JPG (Máx 200x200px)</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="py-8 text-center bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-white/5 mt-4">
-                    <span className="text-2xl block mb-2">⚖️</span>
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Escolha ou Adicione um Convênio acima para configurar.</p>
+                  <div className="space-y-6 animate-in fade-in duration-300">
+                    {/* Seletor do convênio */}
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border border-slate-100 dark:border-white/5 space-y-4 shadow-inner">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Selecione o Convênio para configurar a Regra</label>
+                        {bankRules.length === 0 ? (
+                          <div className="text-xs font-semibold text-slate-400 italic py-2">
+                            Nenhuma regra cadastrada para este banco.
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {bankRules.map((rule, idx) => {
+                              const isActive = selectedAgreement === rule.agreement && (selectedSubAgreement || "") === (rule.sub_agreement || "");
+                              const label = `${rule.agreement}${rule.sub_agreement ? ` - ${rule.sub_agreement}` : ""}`;
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => handleAgreementChange(rule.agreement, rule.sub_agreement || "")}
+                                  className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                    isActive
+                                      ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20"
+                                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700/80"
+                                  }`}
+                                >
+                                  {rule.agreement === "FORÇAS ARMADAS" ? `FORÇAS ARMADAS${rule.sub_agreement ? ` - ${rule.sub_agreement}` : " (GERAL)"}` : label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedAgreement && (
+                        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200/50 dark:border-white/5">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-black text-slate-700 dark:text-white uppercase tracking-tight">Ativar Simulação para este Convênio:</span>
+                            <button
+                              type="button"
+                              onClick={() => updateRuleField("active", !formData.rules.active)}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                formData.rules.active !== false ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                  formData.rules.active !== false ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const rule = bankRules.find(r => r.agreement === selectedAgreement && (r.sub_agreement || "") === selectedSubAgreement);
+                              if (rule) handleDeleteRule(rule);
+                            }}
+                            className="px-4 py-2.5 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white dark:bg-rose-500/10 dark:hover:bg-rose-600 rounded-xl border border-rose-100 dark:border-transparent transition-all flex items-center justify-center gap-1.5 font-black text-[9px] uppercase tracking-widest"
+                          >
+                            <Icons.Trash size={12} />
+                            Excluir Regra
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Formulário de Nova Regra */}
+                    <div className="relative">
+                      {!showAddRuleForm ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowAddRuleForm(true)}
+                          className="w-full py-3 bg-white dark:bg-slate-900 hover:bg-blue-50/50 dark:hover:bg-blue-500/5 text-blue-600 dark:text-blue-400 rounded-2xl border border-dashed border-blue-200 dark:border-blue-500/20 font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <Icons.Plus size={14} /> Adicionar Regra para outro Convênio
+                        </button>
+                      ) : (
+                        <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-3xl border border-slate-100 dark:border-white/5 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                          <div className="flex justify-between items-center pb-2 border-b border-slate-200/50 dark:border-white/5">
+                            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Nova Regra de Convênio</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddRuleForm(false)}
+                              className="text-slate-400 hover:text-slate-600 text-[9px] font-black uppercase tracking-widest"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[8px] font-black text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-widest">Tipo de Convênio</label>
+                              <select
+                                value={newAgreement}
+                                onChange={(e) => {
+                                  setNewAgreement(e.target.value);
+                                  setNewSubAgreement("");
+                                }}
+                                className="w-full bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
+                              >
+                                {["INSS", "SIAPE", "GOVERNOS", "FORÇAS ARMADAS", "CLT_PRIVADO"].map(agr => (
+                                  <option key={agr} value={agr}>
+                                    {agr === "FORÇAS ARMADAS" ? "FORÇAS ARMADAS" : agr === "CLT_PRIVADO" ? "CLT PRIVADO" : agr}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            
+                            {newAgreement === "GOVERNOS" && (
+                              <div>
+                                <label className="block text-[8px] font-black text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-widest">Estado (UF)</label>
+                                <select
+                                  value={newSubAgreement}
+                                  onChange={(e) => setNewSubAgreement(e.target.value)}
+                                  className="w-full bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                >
+                                  <option value="">Selecione o Estado...</option>
+                                  {[
+                                    { value: "AC", label: "AC - ACRE" }, { value: "AL", label: "AL - ALAGOAS" }, { value: "AP", label: "AP - AMAPÁ" },
+                                    { value: "AM", label: "AM - AMAZONAS" }, { value: "BA", label: "BA - BAHIA" }, { value: "CE", label: "CE - CEARÁ" },
+                                    { value: "DF", label: "DF - DISTRITO FEDERAL" }, { value: "ES", label: "ES - ESPÍRITO SANTO" }, { value: "GO", label: "GO - GOIÁS" },
+                                    { value: "MA", label: "MA - MARANHÃO" }, { value: "MT", label: "MT - MATO GROSSO" }, { value: "MS", label: "MS - MATO GROSSO DO SUL" },
+                                    { value: "MG", label: "MG - MINAS GERAIS" }, { value: "PA", label: "PA - PARÁ" }, { value: "PB", label: "PB - PARAÍBA" },
+                                    { value: "PR", label: "PR - PARANÁ" }, { value: "PE", label: "PE - PERNAMBUCO" }, { value: "PI", label: "PI - PIAUÍ" },
+                                    { value: "RJ", label: "RJ - RIO DE JANEIRO" }, { value: "RN", label: "RN - RIO GRANDE DO NORTE" }, { value: "RS", label: "RS - RIO GRANDE DO SUL" },
+                                    { value: "RO", label: "RO - RONDÔNIA" }, { value: "RR", label: "RR - RORAIMA" }, { value: "SC", label: "SC - SANTA CATARINA" },
+                                    { value: "SP", label: "SP - SÃO PAULO" }, { value: "SE", label: "SE - SERGIPE" }, { value: "TO", label: "TO - TOCANTINS" }
+                                  ].map(sub => (
+                                    <option key={sub.value} value={sub.value}>{sub.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                            
+                            {newAgreement === "FORÇAS ARMADAS" && (
+                              <div>
+                                <label className="block text-[8px] font-black text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-widest">Organização</label>
+                                <select
+                                  value={newSubAgreement}
+                                  onChange={(e) => setNewSubAgreement(e.target.value)}
+                                  className="w-full bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                >
+                                  <option value="">Selecione o Ramo...</option>
+                                  {["EXÉRCITO", "AERONÁUTICA", "MARINHA"].map(sub => (
+                                    <option key={sub} value={sub}>{sub}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={handleAddNewRule}
+                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-emerald-500/20"
+                          >
+                            Adicionar Convênio
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Detalhes da Regra Ativa */}
+                    {selectedAgreement ? (
+                      <div className="space-y-6 mt-4">
+                        {/* Bloco de Idades e Taxas */}
+                        <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-3xl border border-slate-100 dark:border-white/5 space-y-4">
+                          <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2 mb-2">
+                            📊 Idades e Taxas
+                          </h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Idade Mínima</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.min_age}
+                                onChange={(e) => updateRuleField("min_age", parseInt(e.target.value) || 0)}
+                                className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Idade Máxima</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.max_age}
+                                onChange={(e) => updateRuleField("max_age", parseInt(e.target.value) || 0)}
+                                className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Taxa Portabilidade (%)</label>
+                              <input 
+                                type="number" 
+                                step="0.01"
+                                value={formData.rules.portability_rate_threshold}
+                                onChange={(e) => updateRuleField("portability_rate_threshold", e.target.value)}
+                                className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                placeholder="Ex: 1.50"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Taxa Refin (%)</label>
+                              <input 
+                                type="number" 
+                                step="0.01"
+                                value={formData.rules.refin_portability_rate_threshold}
+                                onChange={(e) => updateRuleField("refin_portability_rate_threshold", e.target.value)}
+                                className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                placeholder="Ex: 1.60"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bloco de Limites Financeiros */}
+                        <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-3xl border border-slate-100 dark:border-white/5 space-y-4">
+                          <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2 mb-2">
+                            💰 Limites Financeiros
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Parcela Mín.</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.min_installment_value}
+                                onChange={(e) => updateRuleField("min_installment_value", e.target.value)}
+                                className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                placeholder="R$ 50,00"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Saldo Devedor Mín.</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.min_debt_balance}
+                                onChange={(e) => updateRuleField("min_debt_balance", e.target.value)}
+                                className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                placeholder="R$ 1000,00"
+                              />
+                            </div>
+                            <div className="col-span-2 md:col-span-1">
+                              <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Parc. Pagas Mín.</label>
+                              <input 
+                                type="number" 
+                                value={formData.rules.min_paid_installments}
+                                onChange={(e) => updateRuleField("min_paid_installments", parseInt(e.target.value) || 0)}
+                                className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bloco de Políticas de Aceitação */}
+                        <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-3xl border border-slate-100 dark:border-white/5 space-y-4">
+                          <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2 mb-2">
+                            🛡️ Políticas de Aceitação
+                          </h4>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Aceita Analfabeto</span>
+                              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+                                <button 
+                                  type="button"
+                                  onClick={() => updateRuleField("accepts_illiterate", true)}
+                                  className={`px-3.5 py-1.5 text-[10px] font-black rounded-lg transition-all ${formData.rules.accepts_illiterate ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20" : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"}`}
+                                >
+                                  SIM
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={() => updateRuleField("accepts_illiterate", false)}
+                                  className={`px-3.5 py-1.5 text-[10px] font-black rounded-lg transition-all ${!formData.rules.accepts_illiterate ? "bg-rose-500 text-white shadow-md shadow-rose-500/20" : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"}`}
+                                >
+                                  NÃO
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Aceita Idade 60+</span>
+                              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+                                <button 
+                                  type="button"
+                                  onClick={() => updateRuleField("accepts_60_plus", true)}
+                                  className={`px-3.5 py-1.5 text-[10px] font-black rounded-lg transition-all ${formData.rules.accepts_60_plus ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20" : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"}`}
+                                >
+                                  SIM
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={() => updateRuleField("accepts_60_plus", false)}
+                                  className={`px-3.5 py-1.5 text-[10px] font-black rounded-lg transition-all ${!formData.rules.accepts_60_plus ? "bg-rose-500 text-white shadow-md shadow-rose-500/20" : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"}`}
+                                >
+                                  NÃO
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Saldo Devedor + Valor Liberado</span>
+                              <button 
+                                type="button"
+                                onClick={() => updateRuleField("use_balance_plus_released", !formData.rules.use_balance_plus_released)}
+                                className={`px-4 py-2 text-[10px] font-black rounded-xl border transition-all ${
+                                  formData.rules.use_balance_plus_released 
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20" 
+                                    : "bg-slate-50 dark:bg-slate-850 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                                }`}
+                              >
+                                {formData.rules.use_balance_plus_released ? "ATIVADO" : "DESATIVADO"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bloco de Restrições Específicas */}
+                        <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-3xl border border-slate-100 dark:border-white/5 space-y-5">
+                          <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                            🚫 Restrições Operacionais
+                          </h4>
+                          
+                          {formData.rules.agreement === "INSS" && (
+                            <div className="p-5 bg-orange-50/50 dark:bg-orange-500/5 rounded-2xl border border-orange-100 dark:border-orange-500/10">
+                              <label className="block text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-2.5">Espécies de Benefício Bloqueadas (NÃO Atendidas)</label>
+                              <div className="flex gap-2 mb-3">
+                                <input 
+                                  type="text" 
+                                  list="inssSpecies"
+                                  value={benefitTypeInput}
+                                  onChange={(e) => setBenefitTypeInput(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addExcludedBenefitType())}
+                                  className="flex-1 py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-orange-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                  placeholder="Ex: 04, 32, 92..."
+                                />
+                                <datalist id="inssSpecies">
+                                  {["04", "05", "06", "32", "33", "34", "92", "87", "88", "42", "21"].map(s => (
+                                    <option key={s} value={s} />
+                                  ))}
+                                </datalist>
+                                <button type="button" onClick={addExcludedBenefitType} className="px-4 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-sm font-bold flex items-center justify-center transition-all hover:scale-105 active:scale-95">+</button>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 py-1.5 items-center">
+                                {(formData.rules.excluded_benefit_types || "").split(',').filter(Boolean).map(species => (
+                                  <span key={species} className="px-3 py-1.5 bg-orange-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
+                                    ESPÉCIE {species.trim().toUpperCase()}
+                                    <button type="button" onClick={() => removeExcludedBenefitType(species)} className="hover:scale-125 transition-all opacity-60 group-hover:opacity-100 font-black text-sm">×</button>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="p-5 bg-red-50/50 dark:bg-red-500/5 rounded-2xl border border-red-100 dark:border-red-500/10">
+                            <label className="block text-[9px] font-black text-red-600 dark:text-red-400 uppercase tracking-wider mb-2.5">Bancos de Origem Bloqueados (NÃO Portados)</label>
+                            <div className="flex gap-2 mb-3">
+                              <input 
+                                type="text" 
+                                list="commonBanks"
+                                value={excludedInput}
+                                onChange={(e) => setExcludedInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addExcludedBank())}
+                                className="flex-1 py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-red-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                placeholder="Escolha ou digite o banco..."
+                              />
+                              <button type="button" onClick={addExcludedBank} className="px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-bold flex items-center justify-center transition-all hover:scale-105 active:scale-95">+</button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 py-1.5 items-center">
+                              {(formData.rules.excluded_origin_banks || "").split(',').filter(Boolean).map(bank => (
+                                <span key={bank} className="px-3 py-1.5 bg-red-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
+                                  {bank.trim().toUpperCase()}
+                                  <button type="button" onClick={() => removeExcludedBank(bank)} className="hover:scale-125 transition-all opacity-60 group-hover:opacity-100 font-black text-sm">×</button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="p-5 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100 dark:border-emerald-500/10">
+                            <label className="block text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2.5">Regra Específica: Parcelas Pagas por Banco de Origem</label>
+                            <div className="flex gap-3 mb-3 items-end">
+                              <div className="flex-1">
+                                <label className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Banco</label>
+                                <input 
+                                  type="text" 
+                                  list="commonBanks"
+                                  value={bankCarInput}
+                                  onChange={(e) => setBankCarInput(e.target.value)}
+                                  className="w-full py-2 px-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:ring-2 ring-emerald-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                  placeholder="Ex: C6..."
+                                />
+                                <datalist id="commonBanks">
+                                  {["AGIBANK", "BMG", "BRADESCO", "CAIXA", "ITAU", "PAN", "SAFRA", "SANTANDER", "DAYCOVAL", "C6", "PICPAY", "INBURSA", "MERCANTIL"].map(b => (
+                                    <option key={b} value={b} />
+                                  ))}
+                                </datalist>
+                              </div>
+                              <div className="w-28">
+                                <label className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Parcelas Mín.</label>
+                                <input 
+                                  type="number" 
+                                  value={parcCarInput}
+                                  onChange={(e) => setParcCarInput(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addBankCarença())}
+                                  className="w-full py-2 px-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:ring-2 ring-emerald-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                  placeholder="Mín: 12"
+                                />
+                              </div>
+                              <button type="button" onClick={addBankCarença} className="px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold flex items-center justify-center transition-all h-[36px] hover:scale-105 active:scale-95">+</button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 py-1.5 items-center">
+                              {Object.entries(safeParse(formData.rules.origin_banks_min_paid, {})).map(([bank, parc]) => (
+                                <span key={bank} className="px-3 py-1.5 bg-emerald-600/90 text-white text-[9px] font-black rounded-lg flex items-center gap-2 shadow-sm animate-fade-in group whitespace-nowrap">
+                                  {bank}: {parc as string} PARC.
+                                  <button type="button" onClick={() => removeBankCarença(bank)} className="hover:scale-125 transition-all opacity-60 group-hover:opacity-100 font-black text-sm">×</button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bloco de Regras de Invalidez */}
+                        <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-3xl border border-slate-100 dark:border-white/5 space-y-4">
+                          <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                            ♿ Regras de Invalidez (Espécies 04, 32, 92)
+                          </h4>
+                          
+                          <div className="flex items-center justify-between p-4 bg-blue-50/50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-500/10">
+                            <span className="text-xs font-bold text-blue-700 dark:text-blue-400">Aceita Beneficiários por Invalidez?</span>
+                            <button 
+                              type="button"
+                              onClick={() => updateRuleField("accepts_disability", !formData.rules.accepts_disability)}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-205 ease-in-out focus:outline-none ${
+                                formData.rules.accepts_disability 
+                                  ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/20" 
+                                  : "bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-800"
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                  formData.rules.accepts_disability ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          </div>
+
+                          {formData.rules.accepts_disability && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 pt-2">
+                              <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                  <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Idade Mínima</label>
+                                  <input 
+                                    type="number" 
+                                    value={formData.rules.disability_min_age}
+                                    onChange={(e) => updateRuleField("disability_min_age", e.target.value)}
+                                    className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                    placeholder="Mínima"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Idade Máxima</label>
+                                  <input 
+                                    type="number" 
+                                    value={formData.rules.disability_max_age}
+                                    onChange={(e) => updateRuleField("disability_max_age", e.target.value)}
+                                    className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                    placeholder="Máxima"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Isenção DIB a partir</label>
+                                  <input 
+                                    type="number" 
+                                    value={formData.rules.disability_grace_age}
+                                    onChange={(e) => updateRuleField("disability_grace_age", e.target.value)}
+                                    className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                    placeholder="Ex: 60"
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Tempo Benefício (Anos)</label>
+                                  <input 
+                                    type="number" 
+                                    value={formData.rules.disability_min_benefit_years}
+                                    onChange={(e) => updateRuleField("disability_min_benefit_years", e.target.value)}
+                                    className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                    placeholder="Anos"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1.5">Tempo Benefício (Meses)</label>
+                                  <input 
+                                    type="number" 
+                                    value={formData.rules.disability_min_benefit_months}
+                                    onChange={(e) => updateRuleField("disability_min_benefit_months", e.target.value)}
+                                    className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold placeholder-slate-400 focus:ring-2 ring-blue-500/20 text-slate-800 dark:text-white transition-all outline-none"
+                                    placeholder="Meses"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center bg-slate-50 dark:bg-slate-800/20 rounded-3xl border border-dashed border-slate-250 dark:border-slate-800 mt-4">
+                        <span className="text-3xl block mb-2">⚖️</span>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Escolha ou Adicione um Convênio acima para configurar suas regras.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center gap-3 py-2">
-                <input 
-                  type="checkbox" 
-                  id="active"
-                  checked={formData.active}
-                  onChange={(e) => setFormData({...formData, active: e.target.checked})}
-                  className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                />
-                <label htmlFor="active" className="text-sm font-semibold text-slate-600 cursor-pointer select-none">
-                  Banco Ativo para Simulações
-                </label>
-              </div>
-
-              <div className="flex gap-3 pt-4">
+              {/* Botões do Rodapé */}
+              <div className="flex gap-4 pt-6 border-t border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-900 p-8 rounded-b-[2.5rem] mt-auto shrink-0">
                 <button 
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-all"
+                  className="flex-1 py-3 px-5 text-sm font-black text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all uppercase tracking-wider flex items-center justify-center gap-2"
                 >
+                  <Icons.X size={14} />
                   Cancelar
                 </button>
                 <button 
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50"
+                  className="flex-1 py-3 px-5 text-sm font-black text-white bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 rounded-2xl transition-all shadow-xl shadow-blue-500/20 disabled:shadow-none flex items-center justify-center gap-2 uppercase tracking-wider"
                 >
+                  <Icons.Check size={14} />
                   {isSubmitting ? "Salvando..." : editingBank ? "Salvar Alterações" : "Criar Banco"}
                 </button>
               </div>
