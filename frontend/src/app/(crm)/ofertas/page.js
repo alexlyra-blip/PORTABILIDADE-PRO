@@ -414,7 +414,7 @@ function OfertasPageContent() {
           {/* Filtros de Prazo Premium e Badges de Contagem */}
           {(() => {
             const availableTerms = Array.from(new Set(contractResults.map(o => o.prazo || 84))).sort((a, b) => b - a);
-            if (availableTerms.length <= 1) return null;
+            if (availableTerms.length === 0) return null;
             return (
               <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-slate-100 dark:border-white/5">
                 <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mr-2">Prazos de Oferta:</span>
