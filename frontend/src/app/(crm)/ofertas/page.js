@@ -13,7 +13,7 @@ function OfertasPageContent() {
   const [inputData, setInputData] = useState(null);
   const [filterBank, setFilterBank] = useState("");
   const [sortBy, setSortBy] = useState("melhor_tabela");
-  const [selectedTermFilter, setSelectedTermFilter] = useState(108);
+  const [selectedTermFilter, setSelectedTermFilter] = useState(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const hexToRgb = (hex) => {
     if (!hex || typeof hex !== 'string') return "37, 99, 235";
@@ -78,8 +78,24 @@ function OfertasPageContent() {
   }, [user, hexToRgb]);
 
   useEffect(() => {
-    setSelectedTermFilter(108);
-  }, [activeContractId]);
+    if (data && data.ofertas && activeContractId) {
+      const contractResults = data.ofertas.filter(res => res?._contrato_id === activeContractId || !res?._contrato_id);
+      const terms = Array.from(new Set(contractResults.map(o => o.prazo || 84))).filter(Boolean);
+      if (terms.length > 0) {
+        if (terms.includes(108)) {
+          setSelectedTermFilter(108);
+        } else if (terms.includes(84)) {
+          setSelectedTermFilter(84);
+        } else {
+          setSelectedTermFilter(Math.max(...terms));
+        }
+      } else {
+        setSelectedTermFilter(null);
+      }
+    } else {
+      setSelectedTermFilter(null);
+    }
+  }, [activeContractId, data]);
 
   if (!data || !data.ofertas) return null;
 
