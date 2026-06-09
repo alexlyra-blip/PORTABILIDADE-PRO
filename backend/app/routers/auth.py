@@ -19,11 +19,12 @@ async def login(req: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
     if not user.active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sua conta está inativa. Entre em contato com o administrador.")
     
+    token = auth_service.create_access_token(subject=user.email)
+    
     from datetime import datetime, timezone
     user.last_access = datetime.now(timezone.utc)
+    user.current_token = token
     await db.commit()
-    
-    token = auth_service.create_access_token(subject=user.email)
     return {
         "access_token": token,
         "token_type": "bearer",

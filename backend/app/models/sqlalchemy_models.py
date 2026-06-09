@@ -48,6 +48,7 @@ class User(Base):
     dark_mode = Column(Boolean, default=False)
     phone = Column(String(15), nullable=True)
     last_access = Column(DateTime(timezone=True), nullable=True)
+    current_token = Column(Text, nullable=True)
 
     
     company = relationship("Company", back_populates="users")

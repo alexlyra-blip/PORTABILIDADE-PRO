@@ -31,6 +31,13 @@ async def get_current_user(authorization: Optional[str] = Header(None), db: Asyn
     if not user.active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
         
+    # Validar acesso único simultâneo
+    if user.current_token and user.current_token != token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sua sessão expirou pois este usuário se conectou em outro dispositivo."
+        )
+        
     return user
 
 async def get_admin_user(user: User = Depends(get_current_user)):
