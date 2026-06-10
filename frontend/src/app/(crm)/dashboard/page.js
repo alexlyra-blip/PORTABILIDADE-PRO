@@ -277,7 +277,7 @@ export default function DashboardPage() {
                           </div>
                           <div>
                             <h4 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase truncate max-w-[130px]">{bestResult.bank_name}</h4>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5 max-w-[130px] truncate" title={bestResult.table_name}>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5 max-w-[180px] break-words whitespace-normal" title={bestResult.table_name}>
                               {bestResult.table_name || "S/ Tabela"}
                             </p>
                           </div>
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Coluna 5: Valores */}
-                    <div className="border-l border-slate-100 dark:border-white/10 pl-4 text-right">
+                    <div className="border-l border-slate-100 dark:border-white/10 pl-4 text-left flex flex-col items-start justify-center">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
                         Contrato: R$ {(bestResult?.contract_value || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}
                       </p>
