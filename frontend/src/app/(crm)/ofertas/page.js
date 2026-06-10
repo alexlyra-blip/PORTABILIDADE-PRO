@@ -82,13 +82,7 @@ function OfertasPageContent() {
       const contractResults = data.ofertas.filter(res => res?._contrato_id === activeContractId || !res?._contrato_id);
       const terms = Array.from(new Set(contractResults.map(o => o.prazo || 84))).filter(Boolean);
       if (terms.length > 0) {
-        if (terms.includes(108)) {
-          setSelectedTermFilter(108);
-        } else if (terms.includes(84)) {
-          setSelectedTermFilter(84);
-        } else {
-          setSelectedTermFilter(Math.max(...terms));
-        }
+        setSelectedTermFilter(Math.max(...terms));
       } else {
         setSelectedTermFilter(null);
       }
@@ -410,295 +404,314 @@ function OfertasPageContent() {
             </div>
           </div>
         </div>
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl p-4 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-2xl sticky top-4 z-[40] space-y-3">
-          {/* Filtros de Prazo Premium e Badges de Contagem */}
-          {(() => {
-            const availableTerms = Array.from(new Set(contractResults.map(o => o.prazo || 84))).sort((a, b) => b - a);
-            if (availableTerms.length === 0) return null;
-            return (
-              <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-slate-100 dark:border-white/5">
-                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mr-2">Prazos de Oferta:</span>
-                {availableTerms.map(term => {
-                  const termCount = contractResults.filter(o => (o.prazo || 84) === term).length;
-                  return (
-                    <button
-                      key={term}
-                      onClick={() => setSelectedTermFilter(term)}
-                      className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === term ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'}`}
-                    >
-                      {term}X ({termCount})
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setSelectedTermFilter(null)}
-                  className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === null ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'}`}
-                >
-                  TODOS ({contractResults.length})
-                </button>
-              </div>
-            );
-          })()}
-
-          <div className="flex flex-col md:flex-row items-center gap-3 relative">
-            <div className="flex-1 w-full relative">
-              <input 
-                type="text" 
-                value={filterBank} 
-                onChange={(e) => setFilterBank(e.target.value)} 
-                onFocus={() => document.getElementById('bank-suggestions')?.classList.remove('hidden')} 
-                onBlur={() => setTimeout(() => document.getElementById('bank-suggestions')?.classList.add('hidden'), 200)} 
-                className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-3xl pl-14 pr-12 py-3 text-sm font-bold outline-none text-slate-800 dark:text-white" 
-                placeholder="Filtrar por Banco..." 
-              />
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-lg opacity-40">🔍</span>
-              
-              {filterBank && (
-                <button 
-                  onClick={() => setFilterBank("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-200 dark:bg-white/10 rounded-full text-slate-500 hover:bg-slate-300 transition-all"
-                >
-                  ×
-                </button>
-              )}
-              
-              <div id="bank-suggestions" className="hidden absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/10 shadow-2xl rounded-2xl p-2 z-[50] max-h-60 overflow-y-auto">
-                <button onMouseDown={() => setFilterBank("")} className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest">TODOS OS BANCOS</button>
-                {[...new Set(contractResults.map(r => r.banco).filter(Boolean))].map((bancoName) => (
-                   <button 
-                    key={bancoName} 
-                    onMouseDown={() => {
-                      setFilterBank(bancoName);
-                      // Forçar fechamento manual para garantir
-                      document.getElementById('bank-suggestions')?.classList.add('hidden');
-                    }} 
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest truncate"
-                   >
-                     {bancoName}
-                   </button>
-                ))}
-              </div>
+        {contractResults.length === 0 ? (
+          <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl space-y-4">
+            <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 border border-amber-500/20 shadow-md">
+              <span className="text-2xl">⚠️</span>
             </div>
-            <div className="flex p-1.5 bg-slate-100/80 dark:bg-white/10 rounded-3xl gap-1 shrink-0">
-              {[
-                { id: "melhor_tabela", label: "Tabela", icon: "🏆" },
-                { id: "maior_troco", label: "Troco", icon: "💰" },
-                { id: "menor_taxa", label: "Taxa", icon: "📈" }
-              ].map(opt => (
-                <button key={opt.id} onClick={() => setSortBy(opt.id)} className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 uppercase tracking-widest ${sortBy === opt.id ? "bg-white dark:bg-slate-700 text-blue-600 shadow-xl" : "text-slate-500 hover:text-slate-700"}`}>
-                  <span>{opt.icon}</span> {opt.label}
-                </button>
-              ))}
+            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Sem Ofertas Elegíveis</h3>
+            <p className="text-slate-500 dark:text-slate-400 font-bold text-xs max-w-md mx-auto leading-relaxed">
+              Não encontramos nenhuma oferta de portabilidade elegível para este contrato e convênio com as condições atuais.
+            </p>
+            <div className="pt-2">
+              <Link href="/simulador" className="inline-block px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all">
+                Nova Simulação
+              </Link>
             </div>
           </div>
-        </div>
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-8"
-          initial="visible"
-          animate="visible"
-          variants={{
-            visible: {
-              transition: { staggerChildren: 0.1 }
-            }
-          }}
-        >
-          {highlights.map((h) => (
-            <motion.div
-              layout
-              variants={{
-                hidden: { opacity: 0, y: 150, scale: 0.8, rotateX: 30 },
-                visible: { opacity: 1, y: 0, scale: 1, rotateX: 0 }
-              }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              key={h.id}
-              onClick={() => h.data && handleAccept(h.data)}
-              className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl flex flex-col hover:shadow-2xl cursor-pointer"
-              whileHover={{ y: -5, scale: 1.01, transition: { type: "spring", stiffness: 400 } }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span className={`px-3 py-1 ${h.bg} ${h.text} rounded-lg text-[9px] font-black underline decoration-2 underline-offset-4`}>{h.title}</span>
-                <span className="text-[9px] font-black text-slate-300 tracking-widest italic">{inputData?.agreement || "CONVÊNIO"}</span>
-              </div>
-
-              <div className="flex flex-col xl:flex-row items-center gap-3 mb-4 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100/50">
-                <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-lg border border-white bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                  {h.data?.logo_url ? (
-                    <img src={getStaticUrl(h.data.logo_url)} className="w-full h-full object-cover" alt="" />
-                  ) : (
-                    <span className="text-xl">🏛️</span>
-                  )}
-                </div>
-                <div className="text-center xl:text-left">
-                  <h3 className="text-xs xl:text-sm font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight mt-1">
-                    {h.data?.banco || "SEM OFERTA ELEGÍVEL"}
-                  </h3>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">
-                    {h.data?.tabela || (data?.rejeitados?.length > 0 ? "VER REQUISITOS ABAIXO" : "NENHUM BANCO")}
-                  </p>
-                  {h.data && (() => {
-                    const agr = inputData?.agreement || "INSS";
-                    return (
-                      <div className="flex items-center flex-wrap gap-1 mt-1">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm ${
-                          agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                          agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                          agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                          agr === 'GOV_EST' || agr === 'GOVERNOS' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                          'bg-slate-50 text-slate-500 border-slate-100'
-                        }`}>
-                          {agr === 'GOV_EST' || agr === 'GOVERNOS' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}
-                        </span>
-                        {inputData?.sub_agreement && (
-                           <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white text-slate-600 border border-slate-200 shadow-sm">
-                              {inputData.sub_agreement.split(' - ')[0]}
-                           </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              <div className="mt-auto space-y-3 pt-6 border-t border-slate-50 dark:border-white/5">
-                {h.data && (
-                  <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mb-3 text-xs text-slate-500 font-bold uppercase tracking-widest border border-slate-100 dark:border-white/5">
-                    <div className="flex flex-col gap-1.5">
-                      <span>Taxa Port: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_portabilidade_atual?.toFixed(2).replace('.', ',')}%</strong></span>
-                      <span>Taxa Refin: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_juros?.toFixed(2).replace('.', ',')}%</strong></span>
-                      <span className="text-[9px] text-blue-600 dark:text-blue-400 font-black">PRAZO: {h.data?.prazo || "84"}X</span>
-                    </div>
-                    <div className="text-right flex flex-col gap-1.5">
-                      <span>Total Contrato</span>
-                      <strong className="text-slate-800 dark:text-slate-200">
-                        {formatCurrency((activeContractData?.saldoDevedor ? parseFloat(String(activeContractData.saldoDevedor).replace(/[^\d,]/g, '').replace(',', '.')) : 0) + (h.data?.valor_liberado || 0))}
-                      </strong>
-                    </div>
-                  </div>
-                )}
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  <span>{h.label}</span>
-                  <span className={`text-xl font-black tracking-tighter ${h.text}`}>{h.metric}</span>
-                </div>
-                {h.id === "menor_taxa" && h.data && (
-                  <div className="flex justify-between items-center text-sm font-bold text-slate-400 uppercase tracking-widest">
-                    <span>Troco Liberado</span>
-                    <span className="text-xl font-black tracking-tighter text-emerald-600">{formatCurrency(h.data.valor_liberado)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center bg-blue-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-500/30">
-                  <span className="text-[10px] font-black uppercase">Parcela Final</span>
-                  <span className="text-xs font-black italic">{h.data ? formatCurrency(h.data.valor_parcela) : "R$ 0,00"}</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        <div className="space-y-6">
-          {Object.keys(groupedByBank).length === 0 ? (
-            <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl">
-               <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-xs">Nenhuma oferta correspondente aos filtros selecionados.</p>
-            </div>
-          ) : (
-            Object.entries(groupedByBank)
-              .sort(([bancoA, offersA], [bancoB, offersB]) => {
-                const pA = offersA[0]?.priority || 99;
-                const pB = offersB[0]?.priority || 99;
-                return pA - pB;
-              })
-              .map(([banco, offers], idx) => {
-                const currentOfferIdx = bankOfferIdx[banco] || 0;
-                const offer = offers[currentOfferIdx];
-                if (!offer) return null;
-
-              return (
-                <div key={idx} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-lg overflow-hidden transition-all hover:shadow-2xl">
-                  <div className="flex flex-col lg:flex-row gap-0 items-stretch">
-                    <div className="bg-slate-50 dark:bg-white/5 p-5 lg:p-6 lg:w-1/3 xl:w-[28%] flex flex-col justify-center gap-4 shrink-0 relative">
-                      <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-xl border-2 border-white">
-                          <img src={getStaticUrl(offer.logo_url)} className="w-full h-full object-cover" alt="" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          {(() => {
-                            const agr = inputData?.agreement || "INSS";
-                            return (
-                              <div className="flex items-center flex-wrap gap-1 mb-1">
-                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm truncate max-w-full ${
-                                  agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                  agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                  agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                  agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                                  agr === 'GOV_EST' || agr === 'GOVERNOS' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                  'bg-slate-50 text-slate-500 border-slate-100'
-                                }`}>
-                                  {agr === 'GOV_EST' || agr === 'GOVERNOS' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}
-                                </span>
-                                {inputData?.sub_agreement && (
-                                  <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white text-slate-600 border border-slate-200 shadow-sm">
-                                      {inputData.sub_agreement.split(' - ')[0]}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                          <h3 className="text-sm xl:text-base font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight break-words">{offer.banco}</h3>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest truncate">{offer.tabela}</p>
-                        </div>
-                      </div>
-                      {offers.length > 1 && (
-                        <button onClick={() => nextOffer(banco, offers.length)} className="mx-auto mt-1 text-[9px] font-black uppercase text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
-                          Ver Próxima <span className="bg-white/20 px-1 py-0.5 rounded-md">{currentOfferIdx + 1}/{offers.length}</span> ➔
+        ) : (
+          <>
+            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl p-4 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-2xl sticky top-4 z-[40] space-y-3">
+              {/* Filtros de Prazo Premium e Badges de Contagem */}
+              {(() => {
+                const availableTerms = Array.from(new Set(contractResults.map(o => o.prazo || 84))).sort((a, b) => b - a);
+                if (availableTerms.length === 0) return null;
+                return (
+                  <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-slate-100 dark:border-white/5">
+                    <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mr-2">Prazos de Oferta:</span>
+                    {availableTerms.map(term => {
+                      const termCount = contractResults.filter(o => (o.prazo || 84) === term).length;
+                      return (
+                        <button
+                          key={term}
+                          onClick={() => setSelectedTermFilter(term)}
+                          className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === term ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'}`}
+                        >
+                          {term}X ({termCount})
                         </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => setSelectedTermFilter(null)}
+                      className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTermFilter === null ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'}`}
+                    >
+                      TODOS ({contractResults.length})
+                    </button>
+                  </div>
+                );
+              })()}
+
+              <div className="flex flex-col md:flex-row items-center gap-3 relative">
+                <div className="flex-1 w-full relative">
+                  <input 
+                    type="text" 
+                    value={filterBank} 
+                    onChange={(e) => setFilterBank(e.target.value)} 
+                    onFocus={() => document.getElementById('bank-suggestions')?.classList.remove('hidden')} 
+                    onBlur={() => setTimeout(() => document.getElementById('bank-suggestions')?.classList.add('hidden'), 200)} 
+                    className="w-full bg-slate-50 dark:bg-white/5 border-none rounded-3xl pl-14 pr-12 py-3 text-sm font-bold outline-none text-slate-800 dark:text-white" 
+                    placeholder="Filtrar por Banco..." 
+                  />
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-lg opacity-40">🔍</span>
+                  
+                  {filterBank && (
+                    <button 
+                      onClick={() => setFilterBank("")}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-200 dark:bg-white/10 rounded-full text-slate-500 hover:bg-slate-300 transition-all"
+                    >
+                      ×
+                    </button>
+                  )}
+                  
+                  <div id="bank-suggestions" className="hidden absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/10 shadow-2xl rounded-2xl p-2 z-[50] max-h-60 overflow-y-auto">
+                    <button onMouseDown={() => setFilterBank("")} className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest">TODOS OS BANCOS</button>
+                    {[...new Set(contractResults.map(r => r.banco).filter(Boolean))].map((bancoName) => (
+                       <button 
+                        key={bancoName} 
+                        onMouseDown={() => {
+                          setFilterBank(bancoName);
+                          // Forçar fechamento manual para garantir
+                          document.getElementById('bank-suggestions')?.classList.add('hidden');
+                        }} 
+                        className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 transition-all uppercase tracking-widest truncate"
+                       >
+                         {bancoName}
+                       </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex p-1.5 bg-slate-100/80 dark:bg-white/10 rounded-3xl gap-1 shrink-0">
+                  {[
+                    { id: "melhor_tabela", label: "Tabela", icon: "🏆" },
+                    { id: "maior_troco", label: "Troco", icon: "💰" },
+                    { id: "menor_taxa", label: "Taxa", icon: "📈" }
+                  ].map(opt => (
+                    <button key={opt.id} onClick={() => setSortBy(opt.id)} className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 uppercase tracking-widest ${sortBy === opt.id ? "bg-white dark:bg-slate-700 text-blue-600 shadow-xl" : "text-slate-500 hover:text-slate-700"}`}>
+                      <span>{opt.icon}</span> {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-3 gap-8"
+              initial="visible"
+              animate="visible"
+              variants={{
+                visible: {
+                  transition: { staggerChildren: 0.1 }
+                }
+              }}
+            >
+              {highlights.map((h) => (
+                <motion.div
+                  layout
+                  variants={{
+                    hidden: { opacity: 0, y: 150, scale: 0.8, rotateX: 30 },
+                    visible: { opacity: 1, y: 0, scale: 1, rotateX: 0 }
+                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  key={h.id}
+                  onClick={() => h.data && handleAccept(h.data)}
+                  className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl flex flex-col hover:shadow-2xl cursor-pointer"
+                  whileHover={{ y: -5, scale: 1.01, transition: { type: "spring", stiffness: 400 } }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <span className={`px-3 py-1 ${h.bg} ${h.text} rounded-lg text-[9px] font-black underline decoration-2 underline-offset-4`}>{h.title}</span>
+                    <span className="text-[9px] font-black text-slate-300 tracking-widest italic">{inputData?.agreement || "CONVÊNIO"}</span>
+                  </div>
+
+                  <div className="flex flex-col xl:flex-row items-center gap-3 mb-4 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-100/50">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-lg border border-white bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                      {h.data?.logo_url ? (
+                        <img src={getStaticUrl(h.data.logo_url)} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <span className="text-xl">🏛️</span>
                       )}
                     </div>
-
-                    <div className="flex-1 w-full overflow-hidden">
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key={currentOfferIdx}
-                          initial={{ opacity: 0, scale: 0.9, filter: "blur(8px)" }}
-                          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                          exit={{ opacity: 0, scale: 1.1, filter: "blur(8px)" }}
-                          transition={{ duration: 0.5, type: "spring", bounce: 0.5 }}
-                          className="flex flex-col md:flex-row items-center justify-between gap-6 p-8 lg:px-8 xl:px-10 border-l border-slate-50 w-full h-full"
-                        >
-                          <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa Port.</p>
-                            <p className="text-2xl font-black text-blue-600 tracking-tighter">{offer.taxa_portabilidade_atual?.toFixed(2).replace('.', ',')}%</p>
+                    <div className="text-center xl:text-left">
+                      <h3 className="text-xs xl:text-sm font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight mt-1">
+                        {h.data?.banco || "SEM OFERTA ELEGÍVEL"}
+                      </h3>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">
+                        {h.data?.tabela || (data?.rejeitados?.length > 0 ? "VER REQUISITOS ABAIXO" : "NENHUM BANCO")}
+                      </p>
+                      {h.data && (() => {
+                        const agr = inputData?.agreement || "INSS";
+                        return (
+                          <div className="flex items-center flex-wrap gap-1 mt-1">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm ${
+                              agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                              agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                              agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                              agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                              agr === 'GOV_EST' || agr === 'GOVERNOS' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                              'bg-slate-50 text-slate-500 border-slate-100'
+                            }`}>
+                              {agr === 'GOV_EST' || agr === 'GOVERNOS' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}
+                            </span>
+                            {inputData?.sub_agreement && (
+                               <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white text-slate-600 border border-slate-200 shadow-sm">
+                                  {inputData.sub_agreement.split(' - ')[0]}
+                               </span>
+                            )}
                           </div>
-                          <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa Refin</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
-                              {offer.taxa_juros?.toFixed(2).replace('.', ',')}%
-                              <span className="text-[10px] text-slate-400 ml-1 font-bold">a.m.</span>
-                            </p>
-                            <p className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mt-1">Prazo: {offer.prazo || "84"}X</p>
-                          </div>
-                          <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Parcela Final</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(offer.valor_parcela)}</p>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Deduções inclusas</p>
-                          </div>
-                          <div className="space-y-0.5 bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 flex flex-col justify-center w-full md:w-auto shrink-0 md:min-w-[180px] xl:min-w-[210px] shadow-sm">
-                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center md:text-left">TROCO LIBERADO</p>
-                            <p className="text-2xl xl:text-3xl font-black text-emerald-600 tracking-tighter whitespace-nowrap text-center md:text-left">{formatCurrency(offer.valor_liberado)}</p>
-                          </div>
-                        </motion.div>
-                      </AnimatePresence>
-                    </div>
-
-                    <div className="p-6 lg:p-8 lg:w-1/5 xl:w-[18%] shrink-0 flex flex-col justify-center gap-2 border-t md:border-t-0 border-slate-50">
-                      <button onClick={() => handleAccept(offer)} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30 transition-all hover:-translate-y-1">Aceitar</button>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase text-center tracking-widest opacity-60">Geração de PDF Automática</p>
+                        );
+                      })()}
                     </div>
                   </div>
+
+                  <div className="mt-auto space-y-3 pt-6 border-t border-slate-50 dark:border-white/5">
+                    {h.data && (
+                      <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mb-3 text-xs text-slate-500 font-bold uppercase tracking-widest border border-slate-100 dark:border-white/5">
+                        <div className="flex flex-col gap-1.5">
+                          <span>Taxa Port: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_portabilidade_atual?.toFixed(2).replace('.', ',')}%</strong></span>
+                          <span>Taxa Refin: <strong className="text-slate-800 dark:text-slate-200">{h.data?.taxa_juros?.toFixed(2).replace('.', ',')}%</strong></span>
+                          <span className="text-[9px] text-blue-600 dark:text-blue-400 font-black">PRAZO: {h.data?.prazo || "84"}X</span>
+                        </div>
+                        <div className="text-right flex flex-col gap-1.5">
+                          <span>Total Contrato</span>
+                          <strong className="text-slate-800 dark:text-slate-200">
+                            {formatCurrency((activeContractData?.saldoDevedor ? parseFloat(String(activeContractData.saldoDevedor).replace(/[^\d,]/g, '').replace(',', '.')) : 0) + (h.data?.valor_liberado || 0))}
+                          </strong>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      <span>{h.label}</span>
+                      <span className={`text-xl font-black tracking-tighter ${h.text}`}>{h.metric}</span>
+                    </div>
+                    {h.id === "menor_taxa" && h.data && (
+                      <div className="flex justify-between items-center text-sm font-bold text-slate-400 uppercase tracking-widest">
+                        <span>Troco Liberado</span>
+                        <span className="text-xl font-black tracking-tighter text-emerald-600">{formatCurrency(h.data.valor_liberado)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center bg-blue-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-500/30">
+                      <span className="text-[10px] font-black uppercase">Parcela Final</span>
+                      <span className="text-xs font-black italic">{h.data ? formatCurrency(h.data.valor_parcela) : "R$ 0,00"}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            <div className="space-y-6">
+              {Object.keys(groupedByBank).length === 0 ? (
+                <div className="py-20 text-center bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl">
+                   <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-xs">Nenhuma oferta correspondente aos filtros selecionados.</p>
                 </div>
-              );
-            })
-          )}
-        </div>
+              ) : (
+                Object.entries(groupedByBank)
+                  .sort(([bancoA, offersA], [bancoB, offersB]) => {
+                    const pA = offersA[0]?.priority || 99;
+                    const pB = offersB[0]?.priority || 99;
+                    return pA - pB;
+                  })
+                  .map(([banco, offers], idx) => {
+                    const currentOfferIdx = bankOfferIdx[banco] || 0;
+                    const offer = offers[currentOfferIdx];
+                    if (!offer) return null;
+
+                  return (
+                    <div key={idx} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-lg overflow-hidden transition-all hover:shadow-2xl">
+                      <div className="flex flex-col lg:flex-row gap-0 items-stretch">
+                        <div className="bg-slate-50 dark:bg-white/5 p-5 lg:p-6 lg:w-1/3 xl:w-[28%] flex flex-col justify-center gap-4 shrink-0 relative">
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-xl border-2 border-white">
+                              <img src={getStaticUrl(offer.logo_url)} className="w-full h-full object-cover" alt="" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              {(() => {
+                                const agr = inputData?.agreement || "INSS";
+                                return (
+                                  <div className="flex items-center flex-wrap gap-1 mb-1">
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm truncate max-w-full ${
+                                      agr === 'INSS' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                      agr === 'SIAPE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                      agr === 'FORCAS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      agr === 'CLT_PRIVADO' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                                      agr === 'GOV_EST' || agr === 'GOVERNOS' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                      'bg-slate-50 text-slate-500 border-slate-100'
+                                    }`}>
+                                      {agr === 'GOV_EST' || agr === 'GOVERNOS' ? 'GOVERNO' : agr === 'FORCAS' ? 'FORÇAS' : agr === 'CLT_PRIVADO' ? 'CLT' : agr}
+                                    </span>
+                                    {inputData?.sub_agreement && (
+                                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white text-slate-600 border border-slate-200 shadow-sm">
+                                          {inputData.sub_agreement.split(' - ')[0]}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                              <h3 className="text-sm xl:text-base font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tight break-words">{offer.banco}</h3>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest truncate">{offer.tabela}</p>
+                            </div>
+                          </div>
+                          {offers.length > 1 && (
+                            <button onClick={() => nextOffer(banco, offers.length)} className="mx-auto mt-1 text-[9px] font-black uppercase text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
+                               Ver Próxima <span className="bg-white/20 px-1 py-0.5 rounded-md">{currentOfferIdx + 1}/{offers.length}</span> ➔
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex-1 w-full overflow-hidden">
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={currentOfferIdx}
+                              initial={{ opacity: 0, scale: 0.9, filter: "blur(8px)" }}
+                              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                              exit={{ opacity: 0, scale: 1.1, filter: "blur(8px)" }}
+                              transition={{ duration: 0.5, type: "spring", bounce: 0.5 }}
+                              className="flex flex-col md:flex-row items-center justify-between gap-6 p-8 lg:px-8 xl:px-10 border-l border-slate-50 w-full h-full"
+                            >
+                              <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa Port.</p>
+                                <p className="text-2xl font-black text-blue-600 tracking-tighter">{offer.taxa_portabilidade_atual?.toFixed(2).replace('.', ',')}%</p>
+                              </div>
+                              <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa Refin</p>
+                                <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
+                                  {offer.taxa_juros?.toFixed(2).replace('.', ',')}%
+                                  <span className="text-[10px] text-slate-400 ml-1 font-bold">a.m.</span>
+                                </p>
+                                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mt-1">Prazo: {offer.prazo || "84"}X</p>
+                              </div>
+                              <div className="space-y-0.5 w-full md:w-auto text-center md:text-left">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Parcela Final</p>
+                                <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(offer.valor_parcela)}</p>
+                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Deduções inclusas</p>
+                              </div>
+                              <div className="space-y-0.5 bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 flex flex-col justify-center w-full md:w-auto shrink-0 md:min-w-[180px] xl:min-w-[210px] shadow-sm">
+                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center md:text-left">TROCO LIBERADO</p>
+                                <p className="text-2xl xl:text-3xl font-black text-emerald-600 tracking-tighter whitespace-nowrap text-center md:text-left">{formatCurrency(offer.valor_liberado)}</p>
+                              </div>
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
+
+                        <div className="p-6 lg:p-8 lg:w-1/5 xl:w-[18%] shrink-0 flex flex-col justify-center gap-2 border-t md:border-t-0 border-slate-50">
+                          <button onClick={() => handleAccept(offer)} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30 transition-all hover:-translate-y-1">Aceitar</button>
+                          <p className="text-[9px] text-slate-400 font-bold uppercase text-center tracking-widest opacity-60">Geração de PDF Automática</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
 
         {/* SECTION: BANCOS REJEITADOS */}
         {data?.rejeitados && data.rejeitados.length > 0 && (
