@@ -335,7 +335,7 @@ export default function AdminPage() {
                         )}
                       </div>
                       <div>
-                        <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase truncate max-w-[150px]">{user.name}</h4>
+                        <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase break-words whitespace-normal max-w-[280px]">{user.name}</h4>
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{user.role}</p>
                       </div>
                     </div>

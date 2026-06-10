@@ -290,7 +290,7 @@ export default function DashboardPage() {
                     {/* Coluna 3: Convênio e Banco Portado */}
                     <div className="border-l border-slate-100 dark:border-white/10 pl-4">
                       <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase truncate">{sim.agreement || "S/ CONVÊNIO"}</h4>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5 max-w-[150px] truncate" title={sim.current_bank}>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5 max-w-[180px] break-words whitespace-normal" title={sim.current_bank}>
                         Portado: {getFullOriginBankName(sim.current_bank)}
                       </p>
                     </div>
