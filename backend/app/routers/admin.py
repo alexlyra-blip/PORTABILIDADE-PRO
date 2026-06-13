@@ -57,6 +57,25 @@ async def create_announcement(data: dict, db: AsyncSession = Depends(get_db), ad
 async def get_active_announcement(db: AsyncSession = Depends(get_db)):
     return await AdminService.get_active_announcement(db)
 
+@router.get("/announcements")
+async def list_announcements(db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
+    return await AdminService.get_all_announcements(db)
+
+@router.patch("/announcements/{announcement_id}")
+async def update_announcement(announcement_id: int, data: dict, db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
+    ann = await AdminService.update_announcement(db, announcement_id, data)
+    if not ann:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    return ann
+
+@router.delete("/announcements/{announcement_id}")
+async def delete_announcement(announcement_id: int, db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
+    success = await AdminService.delete_announcement(db, announcement_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    return {"message": "Announcement deleted"}
+
+
 # Banks
 @router.get("/banks", response_model=List[BankWithRulesResponse])
 async def list_banks(db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):

@@ -861,3 +861,32 @@ class AdminService:
         await db.commit()
         await db.refresh(db_ann)
         return db_ann
+
+    @staticmethod
+    async def update_announcement(db: AsyncSession, announcement_id: int, data: dict):
+        from app.models.sqlalchemy_models import Announcement
+        from sqlalchemy import update, select
+        result = await db.execute(select(Announcement).where(Announcement.id == announcement_id))
+        ann = result.scalar_one_or_none()
+        if not ann:
+            return None
+        if data.get("active") is True:
+            await db.execute(update(Announcement).values(active=False))
+        for k, v in data.items():
+            setattr(ann, k, v)
+        await db.commit()
+        await db.refresh(ann)
+        return ann
+
+    @staticmethod
+    async def delete_announcement(db: AsyncSession, announcement_id: int):
+        from app.models.sqlalchemy_models import Announcement
+        from sqlalchemy import select
+        result = await db.execute(select(Announcement).where(Announcement.id == announcement_id))
+        ann = result.scalar_one_or_none()
+        if not ann:
+            return False
+        await db.delete(ann)
+        await db.commit()
+        return True
+
