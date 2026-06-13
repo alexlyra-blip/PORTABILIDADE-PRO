@@ -253,7 +253,7 @@ export default function Sidebar() {
               <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><Icons.Users size={16} /></span>
               <span className="font-bold text-xs tracking-tight pointer-events-none">{user.role === 'promotora' ? 'Usuários' : 'Gestão Usuários'}</span>
             </Link>
-            {user.role === 'promotora' && (
+            {(user.role === 'promotora' || user.role === 'admin') && (
               <Link href="/admin/promotora-rules" className="flex items-center gap-4 px-4 py-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all group cursor-pointer">
                 <span className="opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-transform pointer-events-none"><Icons.SlidersHorizontal size={16} /></span>
                 <span className="font-bold text-xs tracking-tight pointer-events-none">Regra Bancos</span>

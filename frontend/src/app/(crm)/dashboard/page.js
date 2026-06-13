@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [filterDays, setFilterDays] = useState(30);
+  const [currentPage, setCurrentPage] = useState(1);
   const [role, setRole] = useState("vendedor");
 
   // Estado padrão imutável para evitar crashes (Fail-Safe)
@@ -130,6 +131,13 @@ export default function DashboardPage() {
     { title: "Taxa Média", desc: "Taxa Média", value: data.stats.avg_rate, icon: <Icons.Percent />, color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
   ];
 
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(data.recent_simulations.length / itemsPerPage) || 1;
+  const paginatedSimulations = data.recent_simulations.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="w-full max-w-[98%] mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700">
       
@@ -140,7 +148,10 @@ export default function DashboardPage() {
       >
         <select 
           value={filterDays} 
-          onChange={(e) => setFilterDays(Number(e.target.value))}
+          onChange={(e) => {
+            setFilterDays(Number(e.target.value));
+            setCurrentPage(1);
+          }}
           className="py-3 px-6 bg-white hover:bg-slate-50 text-slate-800 rounded-2xl border-none shadow-xl text-[11px] font-black uppercase tracking-widest outline-none cursor-pointer transition-all hover:-translate-y-0.5"
         >
           <option value={1} className="text-slate-800">Hoje</option>
@@ -232,15 +243,22 @@ export default function DashboardPage() {
       </div>
 
       {/* Simulacoes Recentes (Mesa de Operações) */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl overflow-hidden">
-        <div className="p-6 border-b border-slate-100 dark:border-white/5">
-           <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Mesa de Operações</h3>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Últimas Simulações Detalhadas</p>
+      <div id="operations-table" className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl overflow-hidden">
+        <div className="p-6 border-b border-slate-100 dark:border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+           <div>
+             <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Mesa de Operações</h3>
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Últimas Simulações Detalhadas</p>
+           </div>
+           {totalPages > 1 && (
+             <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-white/5 px-4 py-2 rounded-xl border border-slate-100 dark:border-white/5">
+               Página {currentPage} de {totalPages} ({data.recent_simulations.length} total)
+             </div>
+           )}
         </div>
         <div className="p-2 overflow-x-auto">
-          {data.recent_simulations.length > 0 ? (
+          {paginatedSimulations.length > 0 ? (
             <div className="min-w-[1000px] divide-y divide-slate-50 dark:divide-white/5">
-              {data.recent_simulations.slice(0, 10).map((sim, i) => {
+              {paginatedSimulations.map((sim, i) => {
                 // Get the best result to show in the table (highest release amount)
                 const results = sim.results || [];
                 const bestResult = results.length > 0 
@@ -323,6 +341,67 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Paging Footer Controls */}
+        {totalPages > 1 && (
+          <div className="p-6 border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/50 dark:bg-slate-950/20">
+            <button
+              onClick={() => {
+                setCurrentPage(prev => Math.max(prev - 1, 1));
+                const el = document.getElementById("operations-table");
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              disabled={currentPage === 1}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest disabled:opacity-40 transition-all select-none hover:-translate-y-0.5"
+            >
+              ← Anterior
+            </button>
+            
+            <div className="flex items-center gap-1.5 flex-wrap justify-center">
+              {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((page) => {
+                const isNear = Math.abs(page - currentPage) <= 2;
+                const isFirstOrLast = page === 1 || page === totalPages;
+                
+                if (!isNear && !isFirstOrLast) {
+                  if (page === 2 || page === totalPages - 1) {
+                    return <span key={page} className="text-slate-300 text-xs px-1 select-none">...</span>;
+                  }
+                  return null;
+                }
+                
+                return (
+                  <button
+                    key={page}
+                    onClick={() => {
+                      setCurrentPage(page);
+                      const el = document.getElementById("operations-table");
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className={`w-9 h-9 rounded-xl text-[10px] font-black transition-all ${
+                      currentPage === page
+                        ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
+                        : "bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <button
+              onClick={() => {
+                setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                const el = document.getElementById("operations-table");
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              disabled={currentPage === totalPages}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest disabled:opacity-40 transition-all select-none hover:-translate-y-0.5"
+            >
+              Próximo →
+            </button>
+          </div>
+        )}
       </div>
       
     </div>

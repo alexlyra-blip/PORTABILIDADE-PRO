@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import StatsCard from "@/components/admin/StatsCard";
+import AnnouncementManager from "@/components/admin/AnnouncementManager";
 import { api, getStaticUrl } from "@/utils/api";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -250,30 +251,36 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Divisão por Convênio */}
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl">
-          <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase mb-1">Convênios</h3>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Porcentagem das requisições</p>
-          
-          <div className="h-64 w-full">
-            {data.agreements.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={data.agreements} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                    {data.agreements.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 900, paddingTop: '20px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center rounded-2xl border-2 border-dashed border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5">
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhuma divisão</p>
-              </div>
-            )}
+        {/* Direita: Convênios + AnnouncementManager */}
+        <div className="flex flex-col gap-6">
+          {/* Divisão por Convênio */}
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl">
+            <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase mb-1">Convênios</h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Porcentagem das requisições</p>
+            
+            <div className="h-64 w-full">
+              {data.agreements.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={data.agreements} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                      {data.agreements.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 900, paddingTop: '20px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center rounded-2xl border-2 border-dashed border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5">
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhuma divisão</p>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* AnnouncementManager */}
+          <AnnouncementManager />
         </div>
       </div>
 

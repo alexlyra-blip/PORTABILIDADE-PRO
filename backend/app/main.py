@@ -52,6 +52,7 @@ def run_db_fix():
         cursor.execute('ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT;')
         cursor.execute('ALTER TABLE "promotora_rules" ALTER COLUMN "rule_value" TYPE TEXT;')
         try:
+            cursor.execute('ALTER TABLE "announcements" ADD COLUMN IF NOT EXISTS "image_url" TEXT;')
             cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;')
             cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;')
             cursor.execute('ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);')
@@ -123,6 +124,8 @@ async def startup_event():
                 try: conn_sq.execute("ALTER TABLE simulation_results ADD COLUMN term INTEGER")
                 except: pass
                 try: conn_sq.execute("ALTER TABLE simulation_results ADD COLUMN installment FLOAT")
+                except: pass
+                try: conn_sq.execute("ALTER TABLE announcements ADD COLUMN image_url TEXT")
                 except: pass
                 conn_sq.commit()
                 conn_sq.close()

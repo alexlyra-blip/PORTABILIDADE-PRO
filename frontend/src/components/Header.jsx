@@ -11,8 +11,12 @@ export default function Header() {
   const router = useRouter();
   const fileInputRef = useRef(null);
   const settingsRef = useRef(null);
+  const notificationRef = useRef(null);
 
   const [metaConfig, setMetaConfig] = useState({ valor_diario: 5000 });
+  const [announcement, setAnnouncement] = useState(null);
+  const [unread, setUnread] = useState(false);
+  const [showAnnPopover, setShowAnnPopover] = useState(false);
 
   useEffect(() => {
     const loadUser = () => {
@@ -28,6 +32,18 @@ export default function Header() {
 
       // Buscar dados para a meta
       api.get('/admin/dashboard-stats?days=1').then(res => setApiData(res)).catch(() => {});
+
+      // Buscar comunicado ativo para o sino
+      api.get('/admin/announcements/active').then(res => {
+        if (res && res.active) {
+          setAnnouncement(res);
+          const readKey = `announcement_read_${res.id}`;
+          setUnread(!localStorage.getItem(readKey));
+        } else {
+          setAnnouncement(null);
+          setUnread(false);
+        }
+      }).catch(() => {});
     };
     
     loadUser();
@@ -44,6 +60,9 @@ export default function Header() {
     const handleClickOutside = (e) => {
       if (settingsRef.current && !settingsRef.current.contains(e.target)) {
         setShowSettings(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(e.target)) {
+        setShowAnnPopover(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -141,6 +160,82 @@ export default function Header() {
         </div>
         
 
+
+        {/* Sino de Notificações */}
+        <div className="relative" ref={notificationRef}>
+          <button 
+            onClick={() => setShowAnnPopover(!showAnnPopover)}
+            className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors relative cursor-pointer"
+            title="Comunicados e Notificações"
+          >
+            <svg 
+              className={`w-6 h-6 transition-transform ${unread ? "animate-bounce" : "hover:rotate-12"}`} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {unread && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-[#0f172a] flex items-center justify-center animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+              </span>
+            )}
+          </button>
+          
+          {showAnnPopover && (
+            <div className="absolute right-0 mt-4 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in slide-in-from-top-2 p-5 text-left">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3 mb-4">
+                <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  🔔 Central de Avisos
+                </h3>
+                {unread && (
+                  <span className="text-[9px] font-black bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-md uppercase tracking-widest">Novo</span>
+                )}
+              </div>
+              
+              {announcement ? (
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase">{announcement.title}</h4>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                      {announcement.created_at ? new Date(announcement.created_at).toLocaleDateString('pt-BR') : ''}
+                    </p>
+                  </div>
+                  
+                  {announcement.image_url && (
+                    <div className="rounded-xl overflow-hidden border border-slate-100 dark:border-white/5 shadow-sm max-h-36 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+                      <img src={getStaticUrl(announcement.image_url) || ''} className="w-full h-full object-cover" alt="Card Notificação" />
+                    </div>
+                  )}
+                  
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed max-h-40 overflow-y-auto pr-1 whitespace-pre-line custom-scrollbar">
+                    {announcement.message}
+                  </div>
+                  
+                  {unread ? (
+                    <button 
+                      onClick={() => {
+                        localStorage.setItem(`announcement_read_${announcement.id}`, 'true');
+                        setUnread(false);
+                        setShowAnnPopover(false);
+                      }}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md shadow-blue-500/20 active:scale-95"
+                    >
+                      ✓ Marcar como Lido
+                    </button>
+                  ) : (
+                    <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest text-center">✓ Você já visualizou este comunicado</p>
+                  )}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                  Nenhum comunicado disponível.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="relative" ref={settingsRef}>
           <div 

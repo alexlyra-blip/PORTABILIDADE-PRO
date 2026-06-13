@@ -118,6 +118,21 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
             if r.rule_key == 'origin_bank_config': p_origin_config = json.loads(r.rule_value)
             if r.rule_key == 'origin_bank_blocklist': p_origin_blocklist = json.loads(r.rule_value)
 
+        # Get Admin Rules (Global Rules)
+        admin_rules_res = await db.execute(
+            select(PromotoraRule)
+            .join(User, PromotoraRule.promotora_id == User.id)
+            .where(User.role == 'admin')
+        )
+        admin_rules_list = admin_rules_res.scalars().all()
+        admin_priority_config = []
+        admin_origin_config = []
+        admin_origin_blocklist = []
+        for r in admin_rules_list:
+            if r.rule_key == 'priority_config': admin_priority_config = json.loads(r.rule_value)
+            if r.rule_key == 'origin_bank_config': admin_origin_config = json.loads(r.rule_value)
+            if r.rule_key == 'origin_bank_blocklist': admin_origin_blocklist = json.loads(r.rule_value)
+
         # 0.1 Validate Promotora Origin Bank Rules (PRIORIDADE MÁXIMA)
         import re
         def get_clean_words(text):
@@ -131,6 +146,38 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
         input_words = get_clean_words(full_origin_name)
         parcelas_pagas = prazo_total - prazo_restante
         
+        # Check Admin Origin Rules
+        for rule in admin_origin_config:
+            rule_bank_name = str(rule.get('origin_bank', '')).upper()
+            rule_words = get_clean_words(rule_bank_name)
+            is_match = False
+            if rule_words and input_words and len(rule_words.intersection(input_words)) > 0:
+                is_match = True
+            elif rule_bank_name and (rule_bank_name in full_origin_name or full_origin_name in rule_bank_name):
+                is_match = True
+                
+            if is_match:
+                min_paid = int(rule.get('min_paid', 0))
+                if parcelas_pagas < min_paid:
+                    return {
+                        "ofertas": [],
+                        "rejeitados": [{
+                            "banco": "BLOQUEIO REGRAS ADMINISTRADOR",
+                            "motivo": f"A regra geral do administrador exige no mínimo {min_paid} parcelas pagas para o banco {rule_bank_name}. (Identificado: {full_origin_name} com {parcelas_pagas} pagas)",
+                            "elegivel": False
+                        }],
+                        "total_bancos_analisados": 0,
+                        "total_aprovados": 0,
+                        "total_rejeitados": 1,
+                        "cliente": {
+                            "nome": getattr(cliente_input, "nome_cliente", ""),
+                            "cpf": getattr(cliente_input, "cpf_cliente", ""),
+                            "saldo_devedor": saldo_devedor,
+                            "valor_parcela": parcela_atual
+                        }
+                    }
+
+        # Check Promotora Origin Rules
         for rule in p_origin_config:
             rule_bank_name = str(rule.get('origin_bank', '')).upper()
             rule_words = get_clean_words(rule_bank_name)
@@ -164,6 +211,36 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     }
 
         # 0.2 Validate Origin Bank Blocklist
+        # Check Admin Origin Blocklist
+        for rule in admin_origin_blocklist:
+            rule_bank_name = str(rule.get('origin_bank', '')).upper()
+            rule_words = set(re.findall(r'[A-Z0-9]{2,}', rule_bank_name)) if rule_bank_name else set()
+            is_match = False
+            if rule_words and input_words and len(rule_words.intersection(input_words)) > 0:
+                is_match = True
+            elif rule_bank_name and (rule_bank_name in full_origin_name or full_origin_name in rule_bank_name):
+                is_match = True
+                
+            if is_match:
+                return {
+                    "ofertas": [],
+                    "rejeitados": [{
+                        "banco": "BLOQUEIO REGRAS ADMINISTRADOR",
+                        "motivo": f"O administrador bloqueou a portabilidade de contratos originados na instituição {rule_bank_name}.",
+                        "elegivel": False
+                    }],
+                    "total_bancos_analisados": 0,
+                    "total_aprovados": 0,
+                    "total_rejeitados": 1,
+                    "cliente": {
+                        "nome": getattr(cliente_input, "nome_cliente", ""),
+                        "cpf": getattr(cliente_input, "cpf_cliente", ""),
+                        "saldo_devedor": saldo_devedor,
+                        "valor_parcela": parcela_atual
+                    }
+                }
+
+        # Check Promotora Origin Blocklist
         for rule in p_origin_blocklist:
             rule_bank_name = str(rule.get('origin_bank', '')).upper()
             rule_words = set(re.findall(r'[A-Z0-9]{2,}', rule_bank_name)) if rule_bank_name else set()
@@ -194,6 +271,17 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
 
         # 0.3 Fetch Blocked Simulation Banks (Target Banks)
         from app.models.sqlalchemy_models import UserBankVisibility
+        # Admin Visibilities
+        admin_vis_res = await db.execute(
+            select(UserBankVisibility)
+            .join(User, UserBankVisibility.user_id == User.id)
+            .where(User.role == 'admin')
+        )
+        admin_visibilities = admin_vis_res.scalars().all()
+        admin_blocked_sim_banks = [v.bank_name.upper() for v in admin_visibilities if not v.is_visible]
+        admin_visible_sim_banks = [v.bank_name.upper() for v in admin_visibilities if v.is_visible]
+
+        # Promotora Visibilities
         vis_res = await db.execute(select(UserBankVisibility).where(UserBankVisibility.user_id == promotora_id))
         visibilities = vis_res.scalars().all()
         blocked_sim_banks = [v.bank_name.upper() for v in visibilities if not v.is_visible]
@@ -236,8 +324,30 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     })
                     continue
 
-                # FILTRO 2: Promotora Blocklist para Bancos Destino
+                # FILTRO 2: Promotora/Admin Blocklist para Bancos Destino
                 banco_name_upper = banco.name.upper()
+                
+                # Check Admin
+                if admin_visible_sim_banks and banco_name_upper not in admin_visible_sim_banks:
+                    rejeitados.append({
+                        "banco": banco.name,
+                        "bank_id": banco.id,
+                        "logo_url": banco.logo_url,
+                        "motivo": "Bloqueado para simulação pelas regras do Administrador",
+                        "elegivel": False
+                    })
+                    continue
+                if banco_name_upper in admin_blocked_sim_banks:
+                    rejeitados.append({
+                        "banco": banco.name,
+                        "bank_id": banco.id,
+                        "logo_url": banco.logo_url,
+                        "motivo": "Bloqueado para simulação pelas regras do Administrador",
+                        "elegivel": False
+                    })
+                    continue
+
+                # Check Promotora
                 if visible_sim_banks and banco_name_upper not in visible_sim_banks:
                     continue # Ignore banks not in whitelist
                 if banco_name_upper in blocked_sim_banks:
@@ -476,15 +586,19 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
             except Exception as e:
                 continue
         
-        # Aplicar Prioridades da Promotora
+        # Aplicar Prioridades do Administrador e da Promotora
         for approved in bancos_aprovados:
+            for p in admin_priority_config:
+                if str(p.get('convenio', '')).upper() == str(cliente_input.convenio).upper() and int(p.get('bank_id', 0)) == approved['bank_id']:
+                    approved['admin_priority'] = int(p.get('priority', 99))
+                    break
             for p in p_priority_config:
                 if str(p.get('convenio', '')).upper() == str(cliente_input.convenio).upper() and int(p.get('bank_id', 0)) == approved['bank_id']:
                     approved['promotora_priority'] = int(p.get('priority', 99))
                     break
         
-        # Ordena por prioridade da promotora (se houver), depois prioridade global do banco, e por fim MAIOR valor liberado
-        bancos_aprovados.sort(key=lambda x: (x.get("promotora_priority", 99), x.get("priority", 99), -x["valor_liberado"]))
+        # Ordena por prioridade do admin (se houver), depois prioridade da promotora (se houver), depois prioridade global do banco, e por fim MAIOR valor liberado
+        bancos_aprovados.sort(key=lambda x: (x.get("admin_priority", 99), x.get("promotora_priority", 99), x.get("priority", 99), -x["valor_liberado"]))
         resultado_final = bancos_aprovados
                 
         # 6. Salva a simulação no Banco de Dados

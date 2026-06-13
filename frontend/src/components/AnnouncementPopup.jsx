@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api } from "@/utils/api";
+import { api, getStaticUrl } from "@/utils/api";
 
 export default function AnnouncementPopup() {
   const [announcement, setAnnouncement] = useState(null);
@@ -71,6 +71,16 @@ export default function AnnouncementPopup() {
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Notificação do Sistema</p>
               </div>
             </div>
+            
+            {announcement.image_url && (
+              <div className="mb-6 rounded-2xl overflow-hidden border border-slate-100 dark:border-white/10 shadow-md max-h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+                <img 
+                  src={getStaticUrl(announcement.image_url)} 
+                  className="w-full h-full object-contain max-h-[300px]" 
+                  alt="Comunicado" 
+                />
+              </div>
+            )}
             
             <div className="text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-100 dark:border-white/5 font-medium whitespace-pre-line">
               {announcement.message}

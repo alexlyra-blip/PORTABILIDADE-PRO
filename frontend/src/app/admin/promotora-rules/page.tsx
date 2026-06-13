@@ -236,9 +236,9 @@ export default function PromotoraRulesPage() {
   return (
     <div className="p-4 lg:p-8 space-y-8 bg-slate-50 min-h-screen">
       <PageHeader
-        title="Configurações de Regras da"
-        highlight="Promotora"
-        subtitle="Personalize prioridades de bancos e restrições de instituições de origem."
+        title={loggedUser?.role === 'admin' ? "Configurações de Regras do" : "Configurações de Regras da"}
+        highlight={loggedUser?.role === 'admin' ? "Administrador" : "Promotora"}
+        subtitle={loggedUser?.role === 'admin' ? "Personalize as regras gerais e bloqueios globais que afetarão todas as equipes." : "Personalize prioridades de bancos e restrições de instituições de origem."}
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -385,7 +385,7 @@ export default function PromotoraRulesPage() {
                     <span className="w-10 h-10 bg-red-600 text-white text-xs font-black rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-red-100"><Icons.Ban size={16} /></span>
                     <div>
                       <p className="text-sm font-black text-slate-900">{b.name}</p>
-                      <p className="text-[10px] font-bold text-red-500 uppercase tracking-[0.2em]">Bloqueado para toda equipe</p>
+                      <p className="text-[10px] font-bold text-red-500 uppercase tracking-[0.2em]">{loggedUser?.role === 'admin' ? "Bloqueado Globalmente" : "Bloqueado para toda equipe"}</p>
                     </div>
                   </div>
                   <button onClick={() => unblockSimBank(b.name)} className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors" title="Desbloquear"><Icons.RefreshCw size={16} /></button>

@@ -833,7 +833,7 @@ class AdminService:
                             "is_approved": r.is_approved
                         } for r in s.results
                     ]
-                } for s in simulations[:10]
+                } for s in simulations
             ]
         }
         AdminService._dashboard_cache[cache_key] = (response_data, now)

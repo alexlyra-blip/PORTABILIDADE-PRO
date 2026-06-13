@@ -8,6 +8,7 @@ class AnnouncementBase(BaseModel):
     title: Optional[str] = None
     message: str
     active: bool = True
+    image_url: Optional[str] = None
 
 class AnnouncementCreate(AnnouncementBase):
     pass
