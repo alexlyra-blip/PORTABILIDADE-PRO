@@ -384,3 +384,17 @@ async def export_stats_pdf(days: int = 30, db: AsyncSession = Depends(get_db), c
         media_type="application/pdf", 
         headers={"Content-Disposition": f"attachment; filename=relatorio_vendas_{days}d.pdf"}
     )
+
+@router.get("/active-theme")
+async def get_active_theme(db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
+    theme = await AdminService.get_active_theme(db)
+    return {"theme": theme}
+
+@router.post("/active-theme")
+async def set_active_theme(payload: dict, db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
+    theme = payload.get("theme", "default")
+    if theme not in ["default", "sao_joao", "copa_mundo"]:
+        raise HTTPException(status_code=400, detail="Tema inválido")
+    updated_theme = await AdminService.set_active_theme(db, admin.id, theme)
+    return {"theme": updated_theme}
+

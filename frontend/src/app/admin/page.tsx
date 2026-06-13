@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import StatsCard from "@/components/admin/StatsCard";
 import AnnouncementManager from "@/components/admin/AnnouncementManager";
+import ThemeManager from "@/components/admin/ThemeManager";
 import { api, getStaticUrl } from "@/utils/api";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -281,6 +282,9 @@ export default function AdminPage() {
 
           {/* AnnouncementManager */}
           <AnnouncementManager />
+
+          {/* ThemeManager */}
+          <ThemeManager />
         </div>
       </div>
 

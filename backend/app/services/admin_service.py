@@ -890,3 +890,36 @@ class AdminService:
         await db.commit()
         return True
 
+    @staticmethod
+    async def get_active_theme(db: AsyncSession):
+        from app.models.sqlalchemy_models import User, PromotoraRule
+        from sqlalchemy.future import select
+        admin_result = await db.execute(select(User.id).where(User.role == "admin").limit(1))
+        admin_id = admin_result.scalar_one_or_none()
+        if not admin_id:
+            return "default"
+        theme_result = await db.execute(
+            select(PromotoraRule.rule_value)
+            .where(PromotoraRule.promotora_id == admin_id, PromotoraRule.rule_key == "active_theme")
+        )
+        theme = theme_result.scalar_one_or_none()
+        return theme or "default"
+
+    @staticmethod
+    async def set_active_theme(db: AsyncSession, admin_id: int, theme: str):
+        from app.models.sqlalchemy_models import PromotoraRule
+        from sqlalchemy.future import select
+        rule_result = await db.execute(
+            select(PromotoraRule)
+            .where(PromotoraRule.promotora_id == admin_id, PromotoraRule.rule_key == "active_theme")
+        )
+        rule = rule_result.scalar_one_or_none()
+        if rule:
+            rule.rule_value = theme
+        else:
+            rule = PromotoraRule(promotora_id=admin_id, rule_key="active_theme", rule_value=theme)
+            db.add(rule)
+        await db.commit()
+        return theme
+
+
