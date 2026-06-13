@@ -17,6 +17,7 @@ export default function Header() {
   const [announcement, setAnnouncement] = useState(null);
   const [unread, setUnread] = useState(false);
   const [showAnnPopover, setShowAnnPopover] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   useEffect(() => {
     const loadUser = () => {
@@ -205,7 +206,13 @@ export default function Header() {
                   
                   {announcement.image_url && (
                     <div className="rounded-xl overflow-hidden border border-slate-100 dark:border-white/5 shadow-sm max-h-36 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-                      <img src={getStaticUrl(announcement.image_url) || ''} className="w-full h-full object-cover" alt="Card Notificação" />
+                      <img 
+                        src={getStaticUrl(announcement.image_url) || ''} 
+                        className="w-full h-full object-cover cursor-zoom-in hover:scale-[1.02] transition-transform" 
+                        onClick={() => setIsZoomed(true)}
+                        alt="Card Notificação" 
+                        title="Clique para ampliar"
+                      />
                     </div>
                   )}
                   
@@ -301,6 +308,25 @@ export default function Header() {
           )}
         </div>
       </div>
+      {/* Lightbox para zoom do Card no Header */}
+      {isZoomed && announcement && announcement.image_url && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md cursor-zoom-out" onClick={() => setIsZoomed(false)}>
+          <div className="relative max-w-[95vw] max-h-[90vh] z-10 flex flex-col items-center select-none" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={getStaticUrl(announcement.image_url)} 
+              className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/10 cursor-zoom-out"
+              onClick={() => setIsZoomed(false)}
+              alt="Card Ampliado" 
+            />
+            <button 
+              onClick={() => setIsZoomed(false)}
+              className="mt-6 px-8 py-3 bg-white text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl active:scale-95"
+            >
+              Fechar Visualização
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

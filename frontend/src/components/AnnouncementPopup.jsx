@@ -7,6 +7,7 @@ import { api, getStaticUrl } from "@/utils/api";
 export default function AnnouncementPopup() {
   const [announcement, setAnnouncement] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   useEffect(() => {
     const fetchAnnouncement = async () => {
@@ -76,8 +77,10 @@ export default function AnnouncementPopup() {
               <div className="mb-6 rounded-2xl overflow-hidden border border-slate-100 dark:border-white/10 shadow-md max-h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900">
                 <img 
                   src={getStaticUrl(announcement.image_url)} 
-                  className="w-full h-full object-contain max-h-[300px]" 
+                  className="w-full h-full object-contain max-h-[300px] cursor-zoom-in hover:scale-[1.01] transition-transform" 
+                  onClick={() => setIsZoomed(true)}
                   alt="Comunicado" 
+                  title="Clique para ampliar"
                 />
               </div>
             )}
@@ -97,6 +100,40 @@ export default function AnnouncementPopup() {
           </motion.div>
         </div>
       )}
+      
+      {/* Lightbox para zoom do Card */}
+      <AnimatePresence>
+        {isZoomed && announcement && announcement.image_url && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 cursor-zoom-out"
+              onClick={() => setIsZoomed(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-[95vw] max-h-[90vh] z-10 flex flex-col items-center select-none"
+            >
+              <img 
+                src={getStaticUrl(announcement.image_url)} 
+                className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl cursor-zoom-out border border-white/10"
+                onClick={() => setIsZoomed(false)}
+                alt="Card Ampliado" 
+              />
+              <button 
+                onClick={() => setIsZoomed(false)}
+                className="mt-6 px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/10 active:scale-95 shadow-2xl"
+              >
+                Fechar Visualização
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }
