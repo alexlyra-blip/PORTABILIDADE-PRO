@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { api } from "@/utils/api";
 import PageHeader from "@/components/PageHeader";
+import { Icons } from "@/components/Icons";
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -21,6 +22,11 @@ const RANDOM_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#
 
 export default function RelatorioPage() {
   const [contracts, setContracts] = useState([]);
+  const contractsRef = useRef(contracts);
+  useEffect(() => {
+    contractsRef.current = contracts;
+  }, [contracts]);
+
   const [dailyData, setDailyData] = useState([]);
   const [quantityData, setQuantityData] = useState([]);
   const [convenioData, setConvenioData] = useState([]);
@@ -112,19 +118,22 @@ export default function RelatorioPage() {
           try {
              const parsed = JSON.parse(savedMetaRaw);
              setMeta(prev => {
-                if (prev.valor_diario === parsed.valor_diario) return prev;
-                const newMeta = { ...prev, valor_diario: parsed.valor_diario };
-                let calculatedAlvo = Number(newMeta.valor_diario);
-                if (newMeta.tipo === 'semanal') calculatedAlvo = Number(newMeta.valor_diario) * 5;
-                if (newMeta.tipo === 'mensal') calculatedAlvo = Number(newMeta.valor_diario) * 22;
-                newMeta.valor_alvo = calculatedAlvo;
+                if (prev.valor_diario === parsed.valor_diario && prev.tipo === parsed.tipo && prev.valor_alvo === parsed.valor_alvo) return prev;
+                const newMeta = { ...prev, ...parsed };
+                setTimeout(() => {
+                   processChartData(contractsRef.current, newMeta);
+                }, 0);
                 return newMeta;
              });
           } catch(e) {}
        }
     };
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('meta-updated', handleStorageChange);
+    return () => {
+       window.removeEventListener('storage', handleStorageChange);
+       window.removeEventListener('meta-updated', handleStorageChange);
+    };
   }, []);
 
   const updateMeta = (updates) => {
@@ -143,7 +152,7 @@ export default function RelatorioPage() {
       valor_diario: newMeta.valor_diario,
       valor_alvo: newMeta.valor_alvo
     }));
-    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('meta-updated'));
     
     setMeta(newMeta);
     processChartData(contracts, newMeta);
@@ -327,9 +336,15 @@ export default function RelatorioPage() {
         highlight="Resultados" 
         subtitle="Análise de Produção Consignado"
       >
-        <button onClick={downloadReport} className="px-6 py-4 bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-600/30 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all flex items-center gap-2"><span>📥</span> Baixar Relatório CIP</button>
-        <Link href="/meus-contratos" className="px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all">Contratos</Link>
-        <Link href="/simulador" className="px-8 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-blue-500/30 hover:scale-105 transition-all">Nova Simulação</Link>
+        <button onClick={downloadReport} className="px-6 py-4 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-600/30 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all flex items-center gap-2">
+          <Icons.Download size={14} /> Baixar Relatório CIP
+        </button>
+        <Link href="/meus-contratos" className="px-8 py-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all flex items-center gap-2">
+          <Icons.FileText size={14} className="text-slate-700 dark:text-slate-300" /> Contratos
+        </Link>
+        <Link href="/simulador" className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-blue-500/30 hover:scale-105 transition-all flex items-center gap-2">
+          <Icons.Plus size={14} className="text-white" /> Nova Simulação
+        </Link>
       </PageHeader>
 
       {totals.qtd === 0 ? (

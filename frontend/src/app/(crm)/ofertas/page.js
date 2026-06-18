@@ -7,6 +7,7 @@ import { api, getStaticUrl } from "@/utils/api";
 import PageHeader from "@/components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
+import { Icons } from "@/components/Icons";
 
 function OfertasPageContent() {
   const router = useRouter();
@@ -272,6 +273,7 @@ function OfertasPageContent() {
 
       });
       localStorage.setItem('accepted_contracts', JSON.stringify(existingContracts));
+      window.dispatchEvent(new Event('contracts-updated'));
 
       setTimeout(() => {
         router.push('/meus-contratos');
@@ -349,8 +351,8 @@ function OfertasPageContent() {
               </div>
             </div>
 
-            <button onClick={() => window.print()} className="print:hidden bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 text-[10px] font-black uppercase px-4 py-2 rounded-xl shadow-lg transition-all flex items-center gap-2 whitespace-nowrap">
-              📄 Imprimir
+            <button onClick={() => window.print()} className="print:hidden bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white border border-slate-800 dark:border-slate-700 text-[10px] font-black uppercase px-5 py-3 rounded-2xl shadow-lg transition-all hover:scale-105 flex items-center gap-2 whitespace-nowrap">
+              <Icons.Printer size={14} className="text-white" /> Imprimir
             </button>
           </div>
           <div className="flex flex-col md:flex-row items-center gap-4">

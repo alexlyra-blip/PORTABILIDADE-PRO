@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api, getStaticUrl } from "@/utils/api";
 import PageHeader from "@/components/PageHeader";
+import { Icons } from "@/components/Icons";
 
 export default function MeusContratosPage() {
    const [contracts, setContracts] = useState([]);
@@ -86,6 +87,7 @@ export default function MeusContratosPage() {
       });
       setContracts(updated);
       localStorage.setItem("accepted_contracts", JSON.stringify(updated));
+      window.dispatchEvent(new Event('contracts-updated'));
    };
 
    const deleteContract = (id) => {
@@ -93,6 +95,7 @@ export default function MeusContratosPage() {
          const updated = contracts.filter(c => c.id !== id);
          setContracts(updated);
          localStorage.setItem("accepted_contracts", JSON.stringify(updated));
+         window.dispatchEvent(new Event('contracts-updated'));
       }
    };
 
@@ -105,6 +108,7 @@ export default function MeusContratosPage() {
       });
       setContracts(updated);
       localStorage.setItem("accepted_contracts", JSON.stringify(updated));
+      window.dispatchEvent(new Event('contracts-updated'));
    };
 
    const startEditing = (contract) => {
@@ -135,6 +139,7 @@ export default function MeusContratosPage() {
       });
       setContracts(updated);
       localStorage.setItem("accepted_contracts", JSON.stringify(updated));
+      window.dispatchEvent(new Event('contracts-updated'));
       setEditingId(null);
    };
 
@@ -240,11 +245,15 @@ export default function MeusContratosPage() {
             highlight="Contratos" 
             subtitle="Gestão de Propostas Aprovadas"
          >
-            <Link href="/ofertas" className="px-8 py-5 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex items-center gap-2">
-               🎯 Oportunidades
+            <Link href="/ofertas" className="px-8 py-5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white border border-slate-800 dark:border-slate-700 rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex items-center gap-2">
+               <Icons.Target size={14} className="text-white" /> Oportunidades
             </Link>
-            <Link href="/relatorio" className="px-8 py-5 bg-white text-blue-600 border border-blue-100 rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-lg hover:shadow-xl transition-all hover:scale-105">📊 Dashboard</Link>
-            <Link href="/simulador" className="px-8 py-5 bg-blue-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-blue-500/20 transition-all hover:scale-105">Nova Simulação</Link>
+            <Link href="/relatorio" className="px-8 py-5 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/80 text-blue-600 border border-blue-100 dark:border-blue-900/30 rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2">
+               <Icons.BarChart size={14} className="text-blue-600" /> Dashboard
+            </Link>
+            <Link href="/simulador" className="px-8 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-blue-500/20 transition-all hover:scale-105 flex items-center gap-2">
+               <Icons.Plus size={14} className="text-white" /> Nova Simulação
+            </Link>
          </PageHeader>
 
          {/* Estatísticas */}

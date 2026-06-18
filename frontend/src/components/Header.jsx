@@ -13,7 +13,7 @@ export default function Header() {
   const settingsRef = useRef(null);
   const notificationRef = useRef(null);
 
-  const [metaConfig, setMetaConfig] = useState({ valor_diario: 5000 });
+  const [metaConfig, setMetaConfig] = useState({ tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000 });
   const [announcement, setAnnouncement] = useState(null);
   const [unread, setUnread] = useState(false);
   const [showAnnPopover, setShowAnnPopover] = useState(false);
@@ -51,11 +51,16 @@ export default function Header() {
     
     // Escuta mudanças na meta em outras janelas/páginas
     const handleStorageChange = (e) => {
-       if (e.key === 'meta_config') {
-          setMetaConfig(JSON.parse(e.newValue));
+       if (!e || e.key === 'meta_config' || e.type === 'meta-updated' || e.type === 'contracts-updated' || e.key === 'accepted_contracts') {
+          const savedMeta = localStorage.getItem('meta_config');
+          if (savedMeta) {
+             setMetaConfig(JSON.parse(savedMeta));
+          }
        }
     };
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('meta-updated', handleStorageChange);
+    window.addEventListener('contracts-updated', handleStorageChange);
     window.addEventListener('user-updated', loadUser);
     
     const handleClickOutside = (e) => {
@@ -71,6 +76,9 @@ export default function Header() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       window.removeEventListener('user-updated', loadUser);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('meta-updated', handleStorageChange);
+      window.removeEventListener('contracts-updated', handleStorageChange);
     };
   }, []);
 
@@ -79,16 +87,71 @@ export default function Header() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
-  const updateMetaDiaria = (newVal) => {
-    const updated = { ...metaConfig, valor_diario: Number(newVal) };
-    
-    // Calcula o valor alvo padrão se for mensal (x22)
-    updated.valor_alvo = updated.tipo === 'semanal' ? updated.valor_diario * 5 : updated.valor_diario * 22;
-    
+  const updateMetaValue = (newVal) => {
+    const val = Number(newVal);
+    const tipo = metaConfig.tipo || 'mensal';
+    let updated = { ...metaConfig };
+    if (tipo === 'diaria') {
+      updated.valor_diario = val;
+      updated.valor_alvo = val * 22;
+    } else if (tipo === 'semanal') {
+      updated.valor_alvo = val;
+      updated.valor_diario = Math.round(val / 5);
+    } else { // mensal
+      updated.valor_alvo = val;
+      updated.valor_diario = Math.round(val / 22);
+    }
     setMetaConfig(updated);
     localStorage.setItem('meta_config', JSON.stringify(updated));
-    // Dispara evento para outras abas/componentes
-    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('meta-updated'));
+  };
+
+  const getMetaStats = () => {
+    if (typeof window === 'undefined') {
+      return { progresso: 0, target: 110000, label: 'Meta Mensal' };
+    }
+    const savedContracts = localStorage.getItem("accepted_contracts");
+    let contracts = [];
+    if (savedContracts) {
+      try {
+        contracts = JSON.parse(savedContracts) || [];
+      } catch (e) {}
+    }
+
+    const tipo = metaConfig.tipo || 'mensal';
+    const target = tipo === 'diaria' ? Number(metaConfig.valor_diario || 5000) : Number(metaConfig.valor_alvo || 110000);
+
+    let progresso = 0;
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    contracts.forEach(item => {
+      const vContrato = Number(item.valor_contrato || item.parcela || 0);
+      let isInPeriod = false;
+      const itemDate = item.data_aceite ? new Date(item.data_aceite + "T12:00:00") : null;
+      
+      if (item.data_aceite) {
+        if (tipo === 'mensal') {
+          const itemMonth = item.data_aceite.substring(0, 7);
+          const todayMonth = todayStr.substring(0, 7);
+          if (itemMonth === todayMonth) isInPeriod = true;
+        } else if (tipo === 'semanal' && itemDate) {
+          const diff = today.getTime() - itemDate.getTime();
+          if (diff >= -86400000 && diff < 7 * 24 * 60 * 60 * 1000) isInPeriod = true;
+        } else if (tipo === 'diaria') {
+          if (item.data_aceite === todayStr) isInPeriod = true;
+        }
+      }
+      if (isInPeriod) {
+        progresso += vContrato;
+      }
+    });
+
+    let label = 'Meta Mensal';
+    if (tipo === 'semanal') label = 'Meta Semanal';
+    if (tipo === 'diaria') label = 'Meta Diária';
+
+    return { progresso, target, label };
   };
 
   const handleLogout = () => {
@@ -139,28 +202,26 @@ export default function Header() {
       </div>
 
       <div className="flex items-center space-x-6 relative">
-        <div className="hidden md:flex items-center bg-slate-50 dark:bg-white/5 rounded-2xl px-4 py-2 border border-slate-200 dark:border-white/10 shadow-sm gap-2">
-          <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Meta Diária:</span>
-          <div className="flex items-center gap-1 font-black text-sm">
-            <span className="text-emerald-600 dark:text-emerald-400">
-              {(() => {
-                 const todayStr = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-                 const todayData = apiData?.historical?.find(d => d.name === todayStr);
-                 const valor = Number(todayData?.valor_propostas || 0);
-                 return `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 0})}`;
-              })()}
-            </span>
-            <span className="text-slate-400">/</span>
-            <input 
-              type="number" 
-              value={metaConfig.valor_diario}
-              onChange={(e) => updateMetaDiaria(e.target.value)}
-              className="bg-transparent w-16 text-blue-600 outline-none border-b border-transparent hover:border-blue-300 focus:border-blue-500 transition-all text-center"
-            />
-          </div>
-        </div>
-        
-
+        {(() => {
+          const stats = getMetaStats();
+          return (
+            <div className="hidden md:flex items-center bg-slate-50 dark:bg-white/5 rounded-2xl px-4 py-2 border border-slate-200 dark:border-white/10 shadow-sm gap-2">
+              <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">{stats.label}:</span>
+              <div className="flex items-center gap-1 font-black text-sm">
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  {`R$ ${stats.progresso.toLocaleString('pt-BR', {minimumFractionDigits: 0})}`}
+                </span>
+                <span className="text-slate-400">/</span>
+                <input 
+                  type="number" 
+                  value={stats.target}
+                  onChange={(e) => updateMetaValue(e.target.value)}
+                  className="bg-transparent w-20 text-blue-600 outline-none border-b border-transparent hover:border-blue-300 focus:border-blue-500 transition-all text-center font-black"
+                />
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Sino de Notificações */}
         <div className="relative" ref={notificationRef}>

@@ -54,7 +54,49 @@ function SimuladorPageContent() {
   const [speciesSearch, setSpeciesSearch] = useState("");
   const [agreementSearch, setAgreementSearch] = useState("");
   const [subAgreementSearch, setSubAgreementSearch] = useState("");
-  const norm = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+  const norm = s => {
+    if (!s) return "";
+    let clean = s.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    // Replace any Unicode corruptions or wildcards
+    clean = clean.replace(/ITA[\uFFFD\?]/g, "ITAU").replace(/OL[\uFFFD\?]/g, "OLE").replace(/PARAN[\uFFFD\?]/g, "PARANA");
+    return clean;
+  };
+
+  const getAgreementLogoUrl = (agreement) => {
+    if (!agreement) return null;
+    const logoObj = subLogos.find(l => {
+      const n = norm(l.name);
+      return n && (n === norm(agreement) || n === "INSS" && norm(agreement) === "INSS");
+    });
+    return logoObj?.logo_url ? getStaticUrl(logoObj.logo_url) : null;
+  };
+
+  const getSubAgreementLogoUrl = (subAgreement, agreement) => {
+    if (!subAgreement) return null;
+    const logoObj = subLogos.find(l => {
+      const nL = norm(l.name);
+      const nS = norm(subAgreement);
+      
+      // Exact match
+      if (nL === nS) return true;
+      
+      // Suffix match (e.g. for SIAPE "01- ATIVO" and "SIAPE - ATIVO")
+      if ((nS.endsWith("ATIVO") && nL.endsWith("ATIVO")) ||
+          (nS.endsWith("APOSENTADO") && nL.endsWith("APOSENTADO")) ||
+          (nS.endsWith("PENSIONISTA") && nL.endsWith("PENSIONISTA"))) {
+        return true;
+      }
+      
+      // Prefix/abbreviation match for states under GOVERNOS (e.g., l.name is "SP", subAgreement is "SP - SÃO PAULO")
+      if (agreement === "GOVERNOS") {
+        const stateCode = subAgreement.split(" - ")[0].trim();
+        if (nL === norm(stateCode)) return true;
+      }
+      
+      return false;
+    });
+    return logoObj?.logo_url ? getStaticUrl(logoObj.logo_url) : null;
+  };
 
   // Mock de logos caso o DB esteja vazio
   const defaultLogos = [
@@ -111,6 +153,22 @@ function SimuladorPageContent() {
         api.get('/admin/sub-logos')
           .then(logos => {
             const mappedLogos = (logos || []).map(l => {
+              // Derive parent if not present in backend database
+              if (!l.parent) {
+                const uName = (l.name || "").toUpperCase();
+                if (uName.startsWith("INSS")) {
+                  l.parent = "INSS";
+                } else if (uName.startsWith("SIAPE")) {
+                  l.parent = "SIAPE";
+                } else if (uName.includes("EXERCITO") || uName.includes("EXÉRCITO") || uName.includes("MARINHA") || uName.includes("AERONAUTICA") || uName.includes("AERONÁUTICA")) {
+                  l.parent = "FORÇAS ARMADAS";
+                } else if (uName.includes("SP -") || uName.includes("MG -") || uName.includes("RJ -") || uName.includes("GOVERNOS") || uName.includes("ESTADO") || uName.includes("GOV_EST") || ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"].some(state => uName === state || uName.startsWith(state + " -"))) {
+                  l.parent = "GOVERNOS";
+                } else if (uName.startsWith("CLT")) {
+                  l.parent = "CLT PRIVADO";
+                }
+              }
+
               if (l.name === "FORCAS") l.name = "FORÇAS ARMADAS";
               if (l.name === "GOV_EST") l.name = "GOVERNOS";
               if (l.name === "CLT_PRIVADO") l.name = "CLT PRIVADO";
@@ -705,9 +763,18 @@ function SimuladorPageContent() {
                       className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between font-black text-slate-800 hover:bg-slate-100 transition-all uppercase text-sm"
                     >
                       <div className="flex items-center gap-3">
-                         {formData.agreement && subLogos.find(l => { const n = norm(l.name); return n && n === norm(formData.agreement); })?.logo_url && (
-                           <img src={getStaticUrl(subLogos.find(l => { const n = norm(l.name); return n && n === norm(formData.agreement); }).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
-                         )}
+                         {(() => {
+                           const url = getAgreementLogoUrl(formData.agreement);
+                           if (url) return <img src={url} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />;
+                           if (formData.agreement) {
+                             return (
+                               <div className="w-8 h-8 rounded-lg bg-blue-600/10 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                 {formData.agreement.substring(0, 2).toUpperCase()}
+                               </div>
+                             );
+                           }
+                           return null;
+                         })()}
                          {formData.agreement || "SELECIONAR CONVÊNIO"}
                       </div>
                       <Icons.ChevronDown />
@@ -732,13 +799,13 @@ function SimuladorPageContent() {
                                  const logoObj = subLogos.find(l => norm(l.name) === norm(name));
                                  return (
                                    <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); setAgreementSearch(""); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
-                                     {logoObj?.logo_url ? (
-                                       <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
-                                          <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" />
-                                       </div>
-                                     ) : (
-                                       <div className="w-10 h-10 bg-white/50 rounded-xl shrink-0 border shadow-sm"></div>
-                                     )}
+                                     <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
+                                       {logoObj?.logo_url ? (
+                                         <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" />
+                                       ) : (
+                                         <span className="text-xs font-black text-slate-400">{name.substring(0, 2).toUpperCase()}</span>
+                                       )}
+                                     </div>
                                      <span className="text-[10px] font-black uppercase text-left">{name}</span>
                                    </button>
                                  );
@@ -808,9 +875,19 @@ function SimuladorPageContent() {
                             disabled={!formData.agreement}
                           >
                             <div className="flex items-center gap-3">
-                               {formData.sub_agreement && subLogos.find(l => { const n = norm(l.name); return n && n === norm(formData.sub_agreement); })?.logo_url && (
-                                 <img src={getStaticUrl(subLogos.find(l => { const n = norm(l.name); return n && n === norm(formData.sub_agreement); }).logo_url)} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />
-                               )}
+                               {(() => {
+                                 const url = getSubAgreementLogoUrl(formData.sub_agreement, formData.agreement);
+                                 if (url) return <img src={url} className="w-8 h-8 rounded-lg object-cover bg-white shadow-sm" />;
+                                 if (formData.sub_agreement) {
+                                   const monogram = formData.sub_agreement.includes("-") ? formData.sub_agreement.split("-")[1].trim().substring(0, 2).toUpperCase() : formData.sub_agreement.substring(0, 2).toUpperCase();
+                                   return (
+                                     <div className="w-8 h-8 rounded-lg bg-blue-600/10 text-blue-600 flex items-center justify-center font-bold text-[10px] shrink-0">
+                                       {monogram}
+                                     </div>
+                                   );
+                                 }
+                                 return null;
+                               })()}
                                {formData.sub_agreement || (formData.agreement === "SIAPE" ? "SITUAÇÃO FUNCIONAL" : formData.agreement === "FORÇAS ARMADAS" ? "CATEGORIA" : formData.agreement === "GOVERNOS" ? "ESTADOS" : "SUB-CONVÊNIO")}
                             </div>
                           <Icons.ChevronDown />
@@ -841,20 +918,36 @@ function SimuladorPageContent() {
                                       return filterList(subLogosFiltered).map(l => (
                                         <button key={l.id} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: l.name })); setSubDropdownOpen(false); setSubAgreementSearch(""); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${norm(formData.sub_agreement) === norm(l.name) ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
                                           <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
-                                             <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-cover" />
+                                             {l.logo_url ? (
+                                               <img src={getStaticUrl(l.logo_url)} className="w-full h-full object-cover" />
+                                             ) : (
+                                               <span className="text-xs font-black text-slate-400">{l.name.substring(0, 2).toUpperCase()}</span>
+                                             )}
                                           </div>
                                           <span className="text-[10px] font-black uppercase text-left">{l.name}</span>
                                         </button>
                                       ));
+                                    } else if (formData.agreement === "INSS") {
+                                       return filterList(["INSS - APOSENTADO", "INSS - PENSIONISTA", "INSS - BPC / LOAS"]).map(name => {
+                                           const logoUrl = getSubAgreementLogoUrl(name, "INSS");
+                                           return (
+                                             <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); setSubAgreementSearch(""); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border font-black text-[10px] uppercase ${formData.sub_agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                                               <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
+                                                 {logoUrl ? <img src={logoUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-400">IN</div>}
+                                               </div>
+                                               <span className="text-[10px] font-black uppercase text-left">{name}</span>
+                                             </button>
+                                           );
+                                       });
                                     } else if (formData.agreement === "FORÇAS ARMADAS") {
                                        return filterList(["EXÉRCITO", "MARINHA", "AERONÁUTICA"]).map(name => {
                                            const logoObj = subLogos.find(l => norm(l.name) === norm(name));
                                            return (
                                              <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: name })); setSubDropdownOpen(false); setSubAgreementSearch(""); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border font-black text-[10px] uppercase ${formData.sub_agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
                                                <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
-                                                 {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100"></div>}
+                                                 {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-400">FO</div>}
                                                </div>
-                                               {name}
+                                               <span className="text-[10px] font-black uppercase text-left">{name}</span>
                                              </button>
                                            );
                                        });
@@ -890,9 +983,9 @@ function SimuladorPageContent() {
                                            return (
                                              <button key={state.value} type="button" onClick={() => { setFormData(p => ({ ...p, sub_agreement: state.label })); setSubDropdownOpen(false); setSubAgreementSearch(""); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border font-black text-[10px] uppercase ${formData.sub_agreement === state.label ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
                                                <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
-                                                 {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100"></div>}
+                                                 {logoObj?.logo_url ? <img src={getStaticUrl(logoObj.logo_url)} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-400">{state.value}</div>}
                                                </div>
-                                               {state.label}
+                                               <span className="text-[10px] font-black uppercase text-left">{state.label}</span>
                                              </button>
                                            );
                                        });
@@ -963,7 +1056,7 @@ function SimuladorPageContent() {
                                   if (!selectedBank) return "SELECIONAR BANCO";
                                   const bankLabel = selectedBank.label || "";
                                   const bankName = bankLabel.includes('-') ? bankLabel.substring(bankLabel.indexOf('-') + 1).trim() : bankLabel;
-                                  const dbBank = dbBanks.find(db => db.name && bankLabel.toUpperCase().includes(db.name.toUpperCase()));
+                                  const dbBank = dbBanks.find(db => db.name && norm(bankLabel).includes(norm(db.name)));
                                   const subLogoObj = subLogos.find(l => { 
                                     const nL = norm(l.name); 
                                     return nL && (nL === norm(bankName) || norm(bankLabel).includes(nL)); 
@@ -971,7 +1064,24 @@ function SimuladorPageContent() {
                                   const logoUrl = subLogoObj?.logo_url || dbBank?.logo_url;
                                   return (
                                     <>
-                                      {logoUrl && <img src={getStaticUrl(logoUrl)} className="w-6 h-6 rounded-md bg-white object-cover" />}
+                                      <div className="w-6 h-6 rounded-md bg-white border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
+                                        {logoUrl ? (
+                                          <>
+                                            <img 
+                                              src={getStaticUrl(logoUrl)} 
+                                              onError={(e) => { e.target.style.display = 'none'; const f = e.target.parentNode.querySelector('.img-fallback'); if (f) f.style.display = 'flex'; }} 
+                                              className="w-full h-full object-cover" 
+                                            />
+                                            <div className="img-fallback hidden w-full h-full items-center justify-center font-bold text-[8px] text-slate-400 bg-slate-100 uppercase">
+                                              {bankName.substring(0, 2)}
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center font-bold text-[8px] text-slate-400 bg-slate-100 uppercase">
+                                            {bankName.substring(0, 2)}
+                                          </div>
+                                        )}
+                                      </div>
                                       {bankLabel}
                                     </>
                                   );
@@ -996,7 +1106,7 @@ function SimuladorPageContent() {
                                    .filter(bank => !bankSearch || bank.label.toUpperCase().includes(bankSearch.toUpperCase()))
                                    .map(bank => {
                                       const bankName = bank.label.substring(bank.label.indexOf('-') + 1).trim();
-                                      const dbBank = dbBanks.find(db => db.name && bank.label.toUpperCase().includes(db.name.toUpperCase()));
+                                      const dbBank = dbBanks.find(db => db.name && norm(bank.label).includes(norm(db.name)));
                                       const subLogoObj = subLogos.find(l => {
                                         const nL = norm(l.name);
                                         return nL && (nL === norm(bankName) || norm(bank.label).includes(nL));
@@ -1004,7 +1114,24 @@ function SimuladorPageContent() {
                                       const logoUrl = subLogoObj?.logo_url || dbBank?.logo_url;
                                       return (
                                         <button key={bank.value} type="button" onClick={() => { setContracts(contracts.map((c, i) => i === activeContractIndex ? { ...c, banco: bank.value } : c)); setDropdownOpen(p => ({ ...p, [contracts[activeContractIndex].id]: false })); setBankSearch(""); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-[11px] font-bold text-slate-700 hover:bg-blue-50 transition-all uppercase">
-                                          {logoUrl ? <img src={getStaticUrl(logoUrl)} className="w-6 h-6 rounded-md bg-white object-cover" /> : <div className="w-6 h-6 rounded-md bg-slate-200 border border-slate-300 flex-shrink-0"></div>}
+                                          <div className="w-6 h-6 rounded-md bg-white border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
+                                            {logoUrl ? (
+                                              <>
+                                                <img 
+                                                  src={getStaticUrl(logoUrl)} 
+                                                  onError={(e) => { e.target.style.display = 'none'; const f = e.target.parentNode.querySelector('.img-fallback'); if (f) f.style.display = 'flex'; }} 
+                                                  className="w-full h-full object-cover" 
+                                                />
+                                                <div className="img-fallback hidden w-full h-full items-center justify-center font-bold text-[8px] text-slate-400 bg-slate-100 uppercase">
+                                                  {bankName.substring(0, 2)}
+                                                </div>
+                                              </>
+                                            ) : (
+                                              <div className="w-full h-full flex items-center justify-center font-bold text-[8px] text-slate-400 bg-slate-100 uppercase">
+                                                {bankName.substring(0, 2)}
+                                              </div>
+                                            )}
+                                          </div>
                                           {bank.label}
                                         </button>
                                       );
