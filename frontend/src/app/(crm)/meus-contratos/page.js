@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api, getStaticUrl } from "@/utils/api";
+import PageHeader from "@/components/PageHeader";
 
 export default function MeusContratosPage() {
    const [contracts, setContracts] = useState([]);
@@ -234,24 +235,17 @@ export default function MeusContratosPage() {
    return (
       <div className="w-full max-w-[98%] mx-auto px-4 py-6 space-y-8 animate-fade-in">
          {/* Header */}
-         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-            <div className="flex items-center gap-6">
-               <div className="w-16 h-16 rounded-3xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-500/30">
-                  <span className="text-white text-3xl font-black italic">PRO</span>
-               </div>
-               <div>
-                  <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tighter">Meus Contratos</h1>
-                  <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Gestão de Propostas Aprovadas</p>
-               </div>
-            </div>
-            <div className="flex items-center flex-wrap gap-4">
-               <Link href="/ofertas" className="px-8 py-5 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex items-center gap-2">
-                  🎯 Oportunidades
-               </Link>
-               <Link href="/relatorio" className="px-8 py-5 bg-white text-blue-600 border border-blue-100 rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-lg hover:shadow-xl transition-all hover:scale-105">📊 Dashboard</Link>
-               <Link href="/simulador" className="px-8 py-5 bg-blue-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-blue-500/20 transition-all hover:scale-105">Nova Simulação</Link>
-            </div>
-         </div>
+         <PageHeader 
+            title="Meus" 
+            highlight="Contratos" 
+            subtitle="Gestão de Propostas Aprovadas"
+         >
+            <Link href="/ofertas" className="px-8 py-5 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex items-center gap-2">
+               🎯 Oportunidades
+            </Link>
+            <Link href="/relatorio" className="px-8 py-5 bg-white text-blue-600 border border-blue-100 rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-lg hover:shadow-xl transition-all hover:scale-105">📊 Dashboard</Link>
+            <Link href="/simulador" className="px-8 py-5 bg-blue-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-blue-500/20 transition-all hover:scale-105">Nova Simulação</Link>
+         </PageHeader>
 
          {/* Estatísticas */}
          {(() => {

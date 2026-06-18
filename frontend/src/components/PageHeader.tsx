@@ -36,27 +36,20 @@ export default function PageHeader({ title, highlight, subtitle, children }) {
   }, []);
 
   return (
-    <div 
-      className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden mb-8"
-      style={{
-        background: `linear-gradient(135deg, ${userColor} 0%, ${userColorSec} 100%)`
-      }}
-    >
-      <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-      
-      <div className="relative z-10">
-        <h1 className="text-3xl font-black text-white tracking-tight uppercase mb-1">
-          {title} {highlight && <span style={{ color: highlightColor }}>{highlight}</span>}
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10 pb-6 border-b border-slate-100 dark:border-slate-800/50 brand-themed w-full max-w-[98%] mx-auto">
+      <div className="space-y-2">
+        <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter drop-shadow-sm uppercase">
+          {title} {highlight && <span style={{ color: brandColor }}>{highlight}</span>}
         </h1>
         {subtitle && (
-          <p className="text-white/70 font-bold text-[10px] uppercase tracking-widest mt-1">
+          <p className="text-slate-500 dark:text-slate-400 font-bold italic text-sm uppercase tracking-[0.3em]">
             {subtitle}
           </p>
         )}
       </div>
 
       {children && (
-        <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto md:justify-end">
           {children}
         </div>
       )}

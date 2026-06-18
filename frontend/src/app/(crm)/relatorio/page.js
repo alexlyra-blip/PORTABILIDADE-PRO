@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/utils/api";
+import PageHeader from "@/components/PageHeader";
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -321,22 +322,15 @@ export default function RelatorioPage() {
 
   return (
     <div className="w-full max-w-[98%] mx-auto px-4 py-6 space-y-8 animate-fade-in">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-        <div className="flex items-center gap-6">
-          <div className="w-16 h-16 rounded-3xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-500/30">
-             <span className="text-white text-3xl font-black italic">PRO</span>
-          </div>
-          <div>
-            <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tighter">Dashboard de Resultados</h1>
-            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Análise de Produção Consignado</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button onClick={downloadReport} className="px-6 py-4 bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-600/30 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all flex items-center gap-2"><span>📥</span> Baixar Relatório CIP</button>
-          <Link href="/meus-contratos" className="px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all">Contratos</Link>
-          <Link href="/simulador" className="px-8 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-blue-500/30 hover:scale-105 transition-all">Nova Simulação</Link>
-        </div>
-      </div>
+      <PageHeader 
+        title="Dashboard de" 
+        highlight="Resultados" 
+        subtitle="Análise de Produção Consignado"
+      >
+        <button onClick={downloadReport} className="px-6 py-4 bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-600/30 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all flex items-center gap-2"><span>📥</span> Baixar Relatório CIP</button>
+        <Link href="/meus-contratos" className="px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all">Contratos</Link>
+        <Link href="/simulador" className="px-8 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-blue-500/30 hover:scale-105 transition-all">Nova Simulação</Link>
+      </PageHeader>
 
       {totals.qtd === 0 ? (
           <div className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] border border-slate-100 dark:border-white/10 text-center shadow-sm">

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, getStaticUrl } from "@/utils/api";
+import PageHeader from "@/components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 
@@ -300,18 +301,13 @@ function OfertasPageContent() {
 
 
       <div className="w-full max-w-[1200px] mx-auto px-4 py-6 space-y-6 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-500/30">
-              <span className="text-white text-xl font-black italic">PRO</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tighter">Oportunidades Disponíveis</h1>
-              <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-0.5">Simulativo para: {inputData?.nome_cliente || "Geral"}</p>
-            </div>
-          </div>
+        <PageHeader 
+          title="Oportunidades" 
+          highlight="Disponíveis" 
+          subtitle={`Simulativo para: ${inputData?.nome_cliente || "Geral"}`}
+        >
           <Link href="/simulador" className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/20 transition-all hover:scale-105">← Início</Link>
-        </div>
+        </PageHeader>
 
 
 
