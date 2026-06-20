@@ -146,7 +146,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen lg:h-screen w-full bg-slate-50 dark:bg-[#0b1120] relative flex items-center justify-center p-4 lg:p-0 overflow-x-hidden lg:overflow-hidden font-sans transition-colors duration-300">
+    <div 
+      className="min-h-screen lg:h-screen w-full relative flex items-center justify-center p-4 lg:p-0 overflow-x-hidden lg:overflow-hidden font-sans transition-all duration-300"
+      style={{
+        background: `linear-gradient(135deg, ${branding.sidebarColor} 0%, color-mix(in srgb, ${branding.sidebarColor} 15%, black) 100%)`
+      }}
+    >
       
       {/* Estilos CSS Inline para Animações e Efeitos Premium */}
       <style>{`
@@ -354,12 +359,18 @@ export default function LoginPage() {
 
             {/* Top Logo Header (Restored 3xl size and hover rotation animations) */}
             <div className="flex items-center gap-3.5 mb-5 hover:-translate-y-0.5 transition-all duration-300 group cursor-pointer w-fit">
-              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20 transform rotate-6 group-hover:rotate-12 transition-transform duration-300">
+              <div 
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-xl transform rotate-6 group-hover:rotate-12 transition-transform duration-300"
+                style={{ 
+                  backgroundColor: branding.brandColor,
+                  boxShadow: `0 10px 20px -5px ${branding.brandColor}40`
+                }}
+              >
                 <Icons.Zap className="w-6 h-6 text-white animate-pulse" />
               </div>
               <div>
-                <h1 className="text-3xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
-                  PORTABILIDADE <span className="text-blue-600">PRO</span>
+                <h1 className="text-3xl font-black text-white leading-none tracking-tight">
+                  PORTABILIDADE <span style={{ color: branding.brandColor }}>PRO</span>
                 </h1>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Inteligência e tecnologia em crédito consignado</p>
               </div>
@@ -369,11 +380,11 @@ export default function LoginPage() {
             <div className="flex items-center justify-between gap-6 mb-5">
               {/* Slogan details */}
               <div className="flex-1 max-w-[340px]">
-                <h2 className="text-3xl xl:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-none mb-3">
+                <h2 className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-none mb-3">
                   Mais inteligência.<br />
-                  <span className="text-blue-600">Mais resultado.</span>
+                  <span className="transition-all duration-300" style={{ color: branding.brandColor }}>Mais resultado.</span>
                 </h2>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs font-semibold text-slate-300 leading-relaxed">
                   A plataforma completa para portabilidade de crédito consignado com tecnologia, segurança e precisão.
                 </p>
               </div>
@@ -400,38 +411,47 @@ export default function LoginPage() {
                 />
 
                 {/* Floating metrics card 1 (Top right) */}
-                <div className="absolute top-[10%] -right-10 float-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2 px-3 shadow-xl flex items-center gap-3.5 z-20 w-[142px]">
+                <div className="absolute top-[10%] -right-10 float-1 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-2 px-3 shadow-xl flex items-center gap-3.5 z-20 w-[142px]">
                   <div className="flex-1 text-left">
-                    <h4 className="text-[7px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Taxa reduzida</h4>
-                    <p className="text-sm font-black text-blue-600 dark:text-blue-400 leading-none mt-1">-37%</p>
-                    <span className="text-[6px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-wider block mt-1">Economia média</span>
+                    <h4 className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Taxa reduzida</h4>
+                    <p className="text-sm font-black leading-none mt-1" style={{ color: branding.brandColor }}>-37%</p>
+                    <span className="text-[6px] text-slate-500 uppercase font-black tracking-wider block mt-1">Economia média</span>
                   </div>
-                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                    <Icons.BarChartUp size={12} />
+                  <div 
+                    className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${branding.brandColor}15` }}
+                  >
+                    <Icons.BarChartUp size={12} style={{ color: branding.brandColor }} />
                   </div>
                 </div>
 
                 {/* Floating metrics card 2 (Middle right) */}
-                <div className="absolute top-[42%] -right-16 float-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2 px-3 shadow-xl flex items-center gap-3.5 z-20 w-[142px]">
+                <div className="absolute top-[42%] -right-16 float-2 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-2 px-3 shadow-xl flex items-center gap-3.5 z-20 w-[142px]">
                   <div className="flex-1 text-left">
-                    <h4 className="text-[7px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Contratos ativos</h4>
-                    <p className="text-sm font-black text-blue-600 dark:text-blue-400 leading-none mt-1">+12.842</p>
-                    <span className="text-[6px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-wider block mt-1">Este mês</span>
+                    <h4 className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Contratos ativos</h4>
+                    <p className="text-sm font-black leading-none mt-1" style={{ color: branding.brandColor }}>+12.842</p>
+                    <span className="text-[6px] text-slate-500 uppercase font-black tracking-wider block mt-1">Este mês</span>
                   </div>
-                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                    <Icons.Check size={12} />
+                  <div 
+                    className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${branding.brandColor}15` }}
+                  >
+                    <Icons.Check size={12} style={{ color: branding.brandColor }} />
                   </div>
                 </div>
 
                 {/* Floating metrics card 3 (Bottom right - Brought back per user request) */}
-                <div className="absolute top-[74%] -right-10 float-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2 px-3 shadow-xl flex items-center gap-3.5 z-20 w-[142px]">
+                <div className="absolute top-[74%] -right-10 float-1 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-2 px-3 shadow-xl flex items-center gap-3.5 z-20 w-[142px]">
                   <div className="flex-1 text-left">
-                    <h4 className="text-[7px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Valor processado</h4>
-                    <p className="text-sm font-black text-blue-600 dark:text-blue-400 leading-none mt-1">R$ 284M</p>
-                    <span className="text-[6px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-wider block mt-1">Este mês</span>
+                    <h4 className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">Valor processado</h4>
+                    <p className="text-sm font-black leading-none mt-1" style={{ color: branding.brandColor }}>R$ 284M</p>
+                    <span className="text-[6px] text-slate-500 uppercase font-black tracking-wider block mt-1">Este mês</span>
                   </div>
-                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                    <Icons.HandCoins size={12} />
+                  <div 
+                    className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${branding.brandColor}15` }}
+                  >
+                    <Icons.HandCoins size={12} style={{ color: branding.brandColor }} />
                   </div>
                 </div>
               </div>
@@ -440,44 +460,53 @@ export default function LoginPage() {
             {/* Bottom 3 highlights row */}
             <div className="grid grid-cols-3 gap-4 w-full max-w-xl">
               {/* IA */}
-              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
-                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/10 flex items-center justify-center mb-3 shadow-inner shrink-0">
-                  <Icons.Brain className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-inner shrink-0"
+                  style={{ backgroundColor: `${branding.brandColor}15` }}
+                >
+                  <Icons.Brain className="w-5 h-5" style={{ color: branding.brandColor }} />
                 </div>
                 <div className="text-left">
-                  <h4 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Inteligência Artificial</h4>
+                  <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mb-1">Inteligência Artificial</h4>
                   <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
                     Análise inteligente de dados para encontrar as melhores oportunidades de portabilidade.
                   </p>
-                  <div className="w-10 h-1 bg-blue-600 rounded-full mt-3"></div>
+                  <div className="w-10 h-1 rounded-full mt-3" style={{ backgroundColor: branding.brandColor }}></div>
                 </div>
               </div>
 
               {/* Segurança */}
-              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
-                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/10 flex items-center justify-center mb-3 shadow-inner shrink-0">
-                  <Icons.ShieldLock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-inner shrink-0"
+                  style={{ backgroundColor: `${branding.brandColor}15` }}
+                >
+                  <Icons.ShieldLock className="w-5 h-5" style={{ color: branding.brandColor }} />
                 </div>
                 <div className="text-left">
-                  <h4 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Segurança LGPD</h4>
+                  <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mb-1">Segurança LGPD</h4>
                   <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
                     Total conformidade com a LGPD e criptografia avançada para proteger seus dados.
                   </p>
-                  <div className="w-10 h-1 bg-blue-600 rounded-full mt-3"></div>
+                  <div className="w-10 h-1 rounded-full mt-3" style={{ backgroundColor: branding.brandColor }}></div>
                 </div>
               </div>
 
               {/* Cálculos */}
-              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
-                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/10 flex items-center justify-center mb-3 shadow-inner shrink-0">
-                  <Icons.BarChartUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-inner shrink-0"
+                  style={{ backgroundColor: `${branding.brandColor}15` }}
+                >
+                  <Icons.BarChartUp className="w-5 h-5" style={{ color: branding.brandColor }} />
                 </div>
                 <div className="text-left">
-                  <h4 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Cálculos Financeiros</h4>
+                  <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mb-1">Cálculos Financeiros</h4>
                   <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
                     Cálculos precisos e simulações avançadas para máxima assertividade nos resultados.
                   </p>
-                  <div className="w-10 h-1 bg-blue-600 rounded-full mt-3"></div>
+                  <div className="w-10 h-1 rounded-full mt-3" style={{ backgroundColor: branding.brandColor }}></div>
                 </div>
               </div>
             </div>
@@ -485,9 +514,9 @@ export default function LoginPage() {
         </div>
 
         {/* Footer Features Links */}
-        <div className="w-full border-t border-slate-200/50 dark:border-white/5 pt-3.5 flex flex-wrap justify-center lg:justify-between items-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest relative z-10">
+        <div className="w-full border-t border-white/5 pt-3.5 flex flex-wrap justify-center lg:justify-between items-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest relative z-10">
           <div className="flex gap-2 items-center">
-            <Icons.Layers size={12} className="text-blue-500" />
+            <Icons.Layers size={12} style={{ color: branding.brandColor }} />
             Tecnologia de ponta
           </div>
           <div className="flex gap-2 items-center">
@@ -495,11 +524,11 @@ export default function LoginPage() {
             Conformidade regulatória
           </div>
           <div className="flex gap-2 items-center">
-            <Icons.Headphones size={12} className="text-indigo-500" />
+            <Icons.Headphones size={12} style={{ color: branding.brandColor }} />
             Suporte especializado
           </div>
           <div className="flex gap-2 items-center">
-            <Icons.RefreshCw size={12} className="text-orange-500" />
+            <Icons.RefreshCw size={12} style={{ color: branding.brandColor }} />
             Atualizações contínuas
           </div>
         </div>
