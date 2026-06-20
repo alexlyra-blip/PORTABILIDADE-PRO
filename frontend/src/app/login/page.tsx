@@ -279,8 +279,17 @@ export default function LoginPage() {
           </div>
 
           {/* COLUNA DIREITA: Branding e Info (Apenas visível em desktops, redimensionado para evitar rolagem) */}
-          <div className="hidden lg:col-span-7 lg:flex flex-col justify-center px-8 xl:px-12 text-left w-full h-full select-none">
+          <div className="hidden lg:col-span-7 lg:flex flex-col justify-center px-8 xl:px-12 text-left w-full h-full select-none relative">
             
+            {/* Light Cityscape Background Image (faded) from user request */}
+            <div className="absolute inset-0 -z-20 pointer-events-none overflow-hidden rounded-[2.5rem]">
+              <img 
+                src="/city_skyline.png" 
+                alt="Cityscape Skyline" 
+                className="w-full h-full object-cover opacity-15 dark:opacity-[0.04] transition-all duration-300"
+              />
+            </div>
+
             {/* Top Logo Header */}
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20 transform rotate-6">
@@ -308,12 +317,19 @@ export default function LoginPage() {
               </div>
 
               {/* Corporate Couple Photo backdrop from user request (replaces h-52 block) */}
-              <div className="flex-1 relative h-[240px] xl:h-[280px] flex items-end justify-center overflow-visible">
-                {/* Decorative background shapes */}
-                <div className="absolute inset-0 bg-blue-50/40 dark:bg-slate-900/40 rounded-[2.5rem] border border-slate-100/50 dark:border-white/5 -z-10 overflow-hidden shadow-inner">
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-xl"></div>
-                  <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-xl"></div>
-                </div>
+              <div className="flex-1 relative h-[240px] xl:h-[280px] flex items-end justify-center overflow-visible pr-8">
+                
+                {/* Giant blue logo shape 'P' behind the couple, matching the mockup */}
+                <svg className="absolute top-[48%] left-[45%] -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px] -z-10 opacity-[0.95] select-none pointer-events-none" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M60 170V45c0-8.3 6.7-15 15-15h45c33.1 0 60 26.9 60 60s-27 60-60 60H90" stroke="url(#pGrad)" strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
+                  <defs>
+                    <linearGradient id="pGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#2563eb" />
+                      <stop offset="50%" stopColor="#1d4ed8" />
+                      <stop offset="100%" stopColor="#1e3a8a" />
+                    </linearGradient>
+                  </defs>
+                </svg>
 
                 <img 
                   src="/login_corporate_couple.png" 
@@ -321,25 +337,39 @@ export default function LoginPage() {
                   className="h-full w-auto object-contain relative z-10 select-none pointer-events-none drop-shadow-2xl" 
                 />
 
-                {/* Floating metrics card 1 */}
-                <div className="absolute top-4 -left-10 float-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2.5 shadow-xl flex items-center gap-2 z-20">
-                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs shrink-0">
-                    <Icons.Target size={12} className="text-blue-600" />
+                {/* Floating metrics card 1 (Top right) */}
+                <div className="absolute top-[10%] -right-10 float-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2 px-3 shadow-xl flex items-center gap-3.5 z-20 w-[142px]">
+                  <div className="flex-1 text-left">
+                    <h4 className="text-[7px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Taxa reduzida</h4>
+                    <p className="text-sm font-black text-blue-600 dark:text-blue-400 leading-none mt-1">-37%</p>
+                    <span className="text-[6px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-wider block mt-1">Economia média</span>
                   </div>
-                  <div>
-                    <h4 className="text-[7px] font-black text-slate-800 dark:text-white uppercase leading-none">Taxa reduzida</h4>
-                    <p className="text-xs font-black text-blue-600 dark:text-blue-400 leading-none mt-1">-37%</p>
+                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <Icons.BarChartUp size={12} />
                   </div>
                 </div>
 
-                {/* Floating metrics card 2 */}
-                <div className="absolute bottom-6 -right-4 float-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2.5 shadow-xl flex items-center gap-2 z-20">
-                  <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0">
-                    <Icons.Check size={12} className="text-emerald-600" />
+                {/* Floating metrics card 2 (Middle right) */}
+                <div className="absolute top-[42%] -right-16 float-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2 px-3 shadow-xl flex items-center gap-3.5 z-20 w-[142px]">
+                  <div className="flex-1 text-left">
+                    <h4 className="text-[7px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Contratos ativos</h4>
+                    <p className="text-sm font-black text-blue-600 dark:text-blue-400 leading-none mt-1">+12.842</p>
+                    <span className="text-[6px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-wider block mt-1">Este mês</span>
                   </div>
-                  <div>
-                    <h4 className="text-[7px] font-black text-slate-800 dark:text-white uppercase leading-none">Contratos ativos</h4>
-                    <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 leading-none mt-1">+12.842</p>
+                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <Icons.Check size={12} />
+                  </div>
+                </div>
+
+                {/* Floating metrics card 3 (Bottom right - Brought back per user request) */}
+                <div className="absolute top-[74%] -right-10 float-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2 px-3 shadow-xl flex items-center gap-3.5 z-20 w-[142px]">
+                  <div className="flex-1 text-left">
+                    <h4 className="text-[7px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Valor processado</h4>
+                    <p className="text-sm font-black text-blue-600 dark:text-blue-400 leading-none mt-1">R$ 284M</p>
+                    <span className="text-[6px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-wider block mt-1">Este mês</span>
+                  </div>
+                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <Icons.HandCoins size={12} />
                   </div>
                 </div>
               </div>
@@ -349,40 +379,43 @@ export default function LoginPage() {
             <div className="grid grid-cols-3 gap-4 w-full max-w-xl">
               {/* IA */}
               <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center mb-2.5 shadow-inner shrink-0">
-                  <Icons.Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/10 flex items-center justify-center mb-3 shadow-inner shrink-0">
+                  <Icons.Brain className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Inteligência Artificial</h4>
-                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-normal">
+                <div className="text-left">
+                  <h4 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Inteligência Artificial</h4>
+                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
                     Análise inteligente de dados para encontrar as melhores oportunidades de portabilidade.
                   </p>
+                  <div className="w-10 h-1 bg-blue-600 rounded-full mt-3"></div>
                 </div>
               </div>
 
               {/* Segurança */}
               <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-2.5 shadow-inner shrink-0">
-                  <Icons.ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/10 flex items-center justify-center mb-3 shadow-inner shrink-0">
+                  <Icons.ShieldLock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Segurança LGPD</h4>
-                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-normal">
+                <div className="text-left">
+                  <h4 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Segurança LGPD</h4>
+                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
                     Total conformidade com a LGPD e criptografia avançada para proteger seus dados.
                   </p>
+                  <div className="w-10 h-1 bg-blue-600 rounded-full mt-3"></div>
                 </div>
               </div>
 
               {/* Cálculos */}
               <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-2.5 shadow-inner shrink-0">
-                  <Icons.BarChart className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/10 flex items-center justify-center mb-3 shadow-inner shrink-0">
+                  <Icons.BarChartUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Cálculos Financeiros</h4>
-                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-normal">
+                <div className="text-left">
+                  <h4 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Cálculos Financeiros</h4>
+                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
                     Cálculos precisos e simulações avançadas para máxima assertividade nos resultados.
                   </p>
+                  <div className="w-10 h-1 bg-blue-600 rounded-full mt-3"></div>
                 </div>
               </div>
             </div>
