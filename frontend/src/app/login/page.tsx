@@ -13,6 +13,8 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [rememberedEmail, setRememberedEmail] = useState("");
 
   // Dynamic branding state loaded dynamically from email input
   const [branding, setBranding] = useState({
@@ -24,12 +26,16 @@ export default function LoginPage() {
 
   // Load remembered settings on mount
   useEffect(() => {
+    setMounted(true);
     const savedRemember = localStorage.getItem('remember_me') === 'true';
     if (savedRemember) {
       setRememberMe(true);
       const savedEmail = localStorage.getItem('remembered_email');
       const savedBranding = localStorage.getItem('remembered_branding');
-      if (savedEmail) setEmail(savedEmail);
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberedEmail(savedEmail);
+      }
       if (savedBranding) {
         try {
           setBranding(JSON.parse(savedBranding));
@@ -40,8 +46,34 @@ export default function LoginPage() {
 
   // Fetch branding based on email input
   useEffect(() => {
+    if (!mounted) return;
+
     const fetchBranding = async () => {
       const emailTrimmed = email.trim();
+      
+      // If email is empty, reset to default branding
+      if (!emailTrimmed) {
+        setBranding({
+          name: "Portabilidade PRO",
+          logoUrl: null,
+          brandColor: "#2563eb",
+          sidebarColor: "#0f172a"
+        });
+        return;
+      }
+
+      // If email matches the saved email, don't query the API. Keep the saved branding!
+      if (rememberedEmail && emailTrimmed.toLowerCase() === rememberedEmail.trim().toLowerCase()) {
+        const savedBranding = localStorage.getItem('remembered_branding');
+        if (savedBranding) {
+          try {
+            setBranding(JSON.parse(savedBranding));
+            return;
+          } catch (e) {}
+        }
+      }
+
+      // Fetch from API for new email inputs
       if (/.+@.+\..+/.test(emailTrimmed)) {
         try {
           const res = await api.get(`/auth/branding?email=${encodeURIComponent(emailTrimmed)}`);
@@ -57,7 +89,7 @@ export default function LoginPage() {
           // Ignore error, keep default
         }
       } else {
-        // Reset to default if cleared
+        // Reset to default if cleared/invalid
         setBranding({
           name: "Portabilidade PRO",
           logoUrl: null,
@@ -69,7 +101,7 @@ export default function LoginPage() {
 
     const timer = setTimeout(fetchBranding, 400); // debounce API requests
     return () => clearTimeout(timer);
-  }, [email]);
+  }, [email, rememberedEmail, mounted]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,7 +243,7 @@ export default function LoginPage() {
                     </span>
                     <input 
                       type="email" 
-                      value={email}
+                      value={mounted ? email : ""}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="seu.nome@promotora.com"
                       className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl pl-11 pr-4 py-3 text-xs text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold"
@@ -253,7 +285,7 @@ export default function LoginPage() {
                   <label className="flex items-center gap-1.5 text-slate-500 cursor-pointer">
                     <input 
                       type="checkbox" 
-                      checked={rememberMe}
+                      checked={mounted ? rememberMe : false}
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="rounded border-slate-300 dark:border-white/10 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
                     />
