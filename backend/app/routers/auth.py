@@ -44,3 +44,33 @@ async def login(req: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
             "is_temporary_password": user.is_temporary_password,
         }
     }
+
+@router.get("/branding")
+async def get_branding(email: str, db: AsyncSession = Depends(get_db)):
+    from app.models.sqlalchemy_models import User
+    
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        return {
+            "name": "Portabilidade PRO",
+            "logo_url": None,
+            "brand_color": "#2563eb",
+            "sidebar_color": "#0f172a"
+        }
+        
+    branding_user = user
+    if user.role == "vendedor" and user.broker_id:
+        broker_result = await db.execute(select(User).where(User.id == user.broker_id))
+        broker = broker_result.scalar_one_or_none()
+        if broker:
+            branding_user = broker
+            
+    return {
+        "name": branding_user.name,
+        "logo_url": branding_user.logo_url or branding_user.avatar_url,
+        "brand_color": branding_user.brand_color or "#2563eb",
+        "sidebar_color": branding_user.sidebar_color or "#0f172a"
+    }
+
