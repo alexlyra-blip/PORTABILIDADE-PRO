@@ -390,7 +390,7 @@ export default function LoginPage() {
               </div>
 
               {/* Corporate Couple Photo backdrop from user request (replaces h-52 block) */}
-              <div className="flex-1 relative h-[290px] xl:h-[330px] flex items-end justify-center overflow-visible pr-8">
+              <div className="flex-1 relative h-[325px] xl:h-[365px] flex items-end justify-center overflow-visible pr-8">
                 
                 {/* Giant blue logo shape 'P' behind the couple, matching the mockup */}
                 <svg className="absolute top-[48%] left-[45%] -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] -z-10 opacity-[0.95] select-none pointer-events-none" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -407,7 +407,7 @@ export default function LoginPage() {
                 <img 
                   src="/login_corporate_couple.png" 
                   alt="Parceiros Portabilidade PRO" 
-                  className="h-full w-auto object-contain relative z-10 select-none pointer-events-none drop-shadow-2xl scale-105" 
+                  className="h-full w-auto object-contain relative z-10 select-none pointer-events-none drop-shadow-2xl scale-110" 
                 />
 
                 {/* Floating metrics card 1 (Top right) */}
