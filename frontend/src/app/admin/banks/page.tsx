@@ -897,18 +897,32 @@ export default function BanksPage() {
                               const isActive = selectedAgreement === rule.agreement && (selectedSubAgreement || "") === (rule.sub_agreement || "");
                               const label = `${rule.agreement}${rule.sub_agreement ? ` - ${rule.sub_agreement}` : ""}`;
                               return (
-                                <button
+                                <div
                                   key={idx}
-                                  type="button"
                                   onClick={() => handleAgreementChange(rule.agreement, rule.sub_agreement || "")}
-                                  className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                  className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all cursor-pointer flex items-center gap-2 select-none hover:-translate-y-0.5 active:scale-98 duration-200 ${
                                     isActive
                                       ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20"
                                       : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700/80"
                                   }`}
                                 >
-                                  {rule.agreement === "FORÇAS ARMADAS" ? `FORÇAS ARMADAS${rule.sub_agreement ? ` - ${rule.sub_agreement}` : " (GERAL)"}` : label}
-                                </button>
+                                  <span>
+                                    {rule.agreement === "FORÇAS ARMADAS" ? `FORÇAS ARMADAS${rule.sub_agreement ? ` - ${rule.sub_agreement}` : " (GERAL)"}` : label}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteRule(rule);
+                                    }}
+                                    className={`p-1 rounded-md transition-all hover:bg-rose-500/20 hover:text-rose-400 ${
+                                      isActive ? "text-white/70 hover:text-white" : "text-slate-400 dark:text-slate-500 hover:text-rose-600"
+                                    }`}
+                                    title="Excluir Convênio"
+                                  >
+                                    <Icons.Trash size={12} />
+                                  </button>
+                                </div>
                               );
                             })}
                           </div>
@@ -943,7 +957,7 @@ export default function BanksPage() {
                             className="px-4 py-2.5 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white dark:bg-rose-500/10 dark:hover:bg-rose-600 rounded-xl border border-rose-100 dark:border-transparent transition-all flex items-center justify-center gap-1.5 font-black text-[9px] uppercase tracking-widest"
                           >
                             <Icons.Trash size={12} />
-                            Excluir Regra
+                            Remover Convênio
                           </button>
                         </div>
                       )}

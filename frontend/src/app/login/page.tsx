@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api, getStaticUrl } from "@/utils/api";
+import { Icons } from "@/components/Icons";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +26,6 @@ export default function LoginPage() {
   useEffect(() => {
     const fetchBranding = async () => {
       const emailTrimmed = email.trim();
-      // Only query if the input matches a basic email format
       if (/.+@.+\..+/.test(emailTrimmed)) {
         try {
           const res = await api.get(`/auth/branding?email=${encodeURIComponent(emailTrimmed)}`);
@@ -87,27 +87,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-[#0b1120] relative flex items-center justify-center p-4 lg:p-0 overflow-x-hidden font-sans transition-colors duration-300">
+    <div className="min-h-screen lg:h-screen w-full bg-slate-50 dark:bg-[#0b1120] relative flex items-center justify-center p-4 lg:p-0 overflow-x-hidden lg:overflow-hidden font-sans transition-colors duration-300">
       
       {/* Estilos CSS Inline para Animações e Efeitos Premium */}
       <style>{`
         @keyframes floatSlow {
           0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
+          50% { transform: translateY(-6px); }
         }
         @keyframes floatMedium {
           0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-12px); }
+          50% { transform: translateY(-10px); }
         }
         .float-1 { animation: floatSlow 6s ease-in-out infinite; }
         .float-2 { animation: floatMedium 5s ease-in-out infinite; }
-        .float-3 { animation: floatSlow 7s ease-in-out infinite; }
         
         .login-bg-curve {
           position: absolute;
-          width: 600px;
-          height: 600px;
-          background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0) 70%);
+          width: 500px;
+          height: 500px;
+          background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0) 70%);
           border-radius: 50%;
           filter: blur(80px);
           pointer-events: none;
@@ -120,14 +119,14 @@ export default function LoginPage() {
       <div className="login-bg-curve bottom-0 right-0"></div>
 
       {/* Main Grid Wrapper */}
-      <div className="w-full max-w-[1440px] mx-auto min-h-screen flex flex-col justify-between relative z-10 p-6 lg:p-12">
+      <div className="w-full max-w-[1400px] mx-auto min-h-screen lg:h-screen lg:min-h-0 flex flex-col justify-between relative z-10 p-4 lg:p-10">
         
         {/* Middle Content */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center w-full my-auto">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center w-full my-auto lg:h-0 lg:min-h-0">
           
           {/* COLUNA ESQUERDA: Login Form Card */}
           <div className="lg:col-span-5 flex flex-col items-center lg:items-end justify-center w-full">
-            <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] p-8 lg:p-10 shadow-2xl border border-slate-100 dark:border-white/5 w-full max-w-[460px] relative overflow-hidden transition-all duration-300">
+            <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] p-7 lg:p-8 shadow-2xl border border-slate-100 dark:border-white/5 w-full max-w-[430px] relative overflow-hidden transition-all duration-300">
               
               {/* Top Accent Gradient Border */}
               <div 
@@ -135,76 +134,74 @@ export default function LoginPage() {
                 style={{ backgroundColor: branding.brandColor }}
               ></div>
 
-              {/* Logo / Avatar Circle */}
-              <div className="flex justify-center mb-6">
+              {/* Logo / Avatar Circle (Fixed to cover completely with object-cover and no borders/padding) */}
+              <div className="flex justify-center mb-5">
                 <div 
-                  className="w-24 h-24 rounded-full bg-slate-50 dark:bg-slate-900 border-2 flex items-center justify-center p-1 shadow-inner relative group transition-all duration-300"
+                  className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-900 border-2 flex items-center justify-center shadow-inner relative overflow-hidden transition-all duration-300"
                   style={{ borderColor: `${branding.brandColor}30` }}
                 >
-                  <div className="w-full h-full rounded-full bg-white dark:bg-slate-800 flex items-center justify-center overflow-hidden">
-                    {branding.logoUrl ? (
-                      <img src={getStaticUrl(branding.logoUrl)} alt="Logo Promotora" className="w-full h-full object-contain" />
-                    ) : (
-                      <div 
-                        className="w-full h-full flex items-center justify-center font-black text-2xl transition-all duration-300 text-white"
-                        style={{ backgroundColor: branding.brandColor }}
-                      >
-                        {branding.name.substring(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
+                  {branding.logoUrl ? (
+                    <img 
+                      src={getStaticUrl(branding.logoUrl)} 
+                      alt="Logo Promotora" 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <div 
+                      className="w-full h-full flex items-center justify-center font-black text-xl transition-all duration-300 text-white"
+                      style={{ backgroundColor: branding.brandColor }}
+                    >
+                      {branding.name.substring(0, 2).toUpperCase()}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Welcome text */}
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-none mb-2">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight leading-none mb-1.5">
                   Bem-vindo(a), <span className="transition-all duration-300" style={{ color: branding.brandColor }}>{branding.name}</span>
                 </h2>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Acesse sua conta para continuar</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acesse sua conta para continuar</p>
               </div>
 
               {error && (
-                <div className="mb-6 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 p-4 rounded-2xl text-xs font-black uppercase tracking-wider text-center">
+                <div className="mb-5 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 p-3 rounded-2xl text-[10px] font-black uppercase tracking-wider text-center">
                   ⚠️ {error}
                 </div>
               )}
 
               {/* Form */}
-              <form onSubmit={handleLogin} className="space-y-5">
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">E-mail Profissional</label>
+                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">E-mail Profissional</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                      </svg>
+                      <Icons.Mail className="w-4 h-4 text-slate-400" />
                     </span>
                     <input 
                       type="email" 
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="seu.nome@promotora.com"
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl pl-11 pr-4 py-3.5 text-xs text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl pl-11 pr-4 py-3 text-xs text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Senha de Acesso</label>
+                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Senha de Acesso</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
+                      <Icons.Lock className="w-4 h-4 text-slate-400" />
                     </span>
                     <input 
                       type={showPassword ? "text" : "password"} 
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Digite sua senha"
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl pl-11 pr-11 py-3.5 text-xs text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl pl-11 pr-11 py-3 text-xs text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold"
                       required
                     />
                     <button 
@@ -213,27 +210,22 @@ export default function LoginPage() {
                       className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-white"
                     >
                       {showPassword ? (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
+                        <Icons.EyeOff className="w-4 h-4" />
                       ) : (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
+                        <Icons.Eye className="w-4 h-4" />
                       )}
                     </button>
                   </div>
                 </div>
 
                 {/* Remember and Forgot password */}
-                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider select-none">
-                  <label className="flex items-center gap-2 text-slate-500 cursor-pointer">
+                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider select-none">
+                  <label className="flex items-center gap-1.5 text-slate-500 cursor-pointer">
                     <input 
                       type="checkbox" 
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-slate-300 dark:border-white/10 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                      className="rounded border-slate-300 dark:border-white/10 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
                     />
                     Lembrar de mim
                   </label>
@@ -245,10 +237,10 @@ export default function LoginPage() {
                 <button 
                   type="submit" 
                   disabled={loading}
-                  className="w-full text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl shadow-xl transition-all flex justify-center items-center gap-2 disabled:opacity-70 active:scale-98"
+                  className="w-full text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl shadow-xl transition-all flex justify-center items-center gap-2 disabled:opacity-70 active:scale-98 cursor-pointer"
                   style={{ 
                     backgroundColor: branding.brandColor,
-                    boxShadow: `0 10px 20px -5px ${branding.brandColor}40`
+                    boxShadow: `0 8px 18px -4px ${branding.brandColor}40`
                   }}
                 >
                   {loading ? (
@@ -259,45 +251,24 @@ export default function LoginPage() {
                   ) : (
                     <>
                       Entrar
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
+                      <Icons.ArrowRight className="w-3.5 h-3.5 text-white" />
                     </>
                   )}
-                </button>
-
-                <div className="relative flex items-center justify-center my-6">
-                  <div className="w-full border-t border-slate-100 dark:border-white/5"></div>
-                  <span className="absolute bg-white dark:bg-[#0f172a] px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">ou</span>
-                </div>
-
-                <button 
-                  type="button" 
-                  className="w-full bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-white/5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5 active:scale-98"
-                >
-                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                  Entrar com SSO
                 </button>
               </form>
 
               {/* Secure bottom badge */}
-              <div className="mt-8 flex justify-center items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
+              <div className="mt-5 flex justify-center items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                <Icons.Lock className="w-3 h-3 text-slate-400" />
                 Ambiente seguro e criptografado
               </div>
             </div>
             
             {/* Small secure tag below card */}
-            <div className="hidden lg:flex w-full max-w-[460px] justify-start mt-6 pl-4">
-              <div className="flex items-center gap-3 bg-white/40 dark:bg-[#0f172a]/40 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-2xl p-4 max-w-[280px]">
+            <div className="hidden lg:flex w-full max-w-[430px] justify-start mt-3 pl-4">
+              <div className="flex items-center gap-3 bg-white/40 dark:bg-[#0f172a]/40 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-2xl p-3 max-w-[270px]">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
+                  <Icons.ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="text-left">
                   <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase leading-none">Ambiente 100% Seguro</h4>
@@ -307,162 +278,133 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* COLUNA DIREITA: Branding e Info (Apenas visível em desktops) */}
-          <div className="hidden lg:col-span-7 lg:flex flex-col justify-center px-12 text-left w-full h-full select-none">
+          {/* COLUNA DIREITA: Branding e Info (Apenas visível em desktops, redimensionado para evitar rolagem) */}
+          <div className="hidden lg:col-span-7 lg:flex flex-col justify-center px-8 xl:px-12 text-left w-full h-full select-none">
             
             {/* Top Logo Header */}
-            <div className="flex items-center gap-3 mb-10">
-              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20 transform rotate-6">
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20 transform rotate-6">
+                <Icons.Zap className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
+                <h1 className="text-xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
                   PORTABILIDADE <span className="text-blue-600">PRO</span>
                 </h1>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Inteligência e tecnologia em crédito consignado</p>
               </div>
             </div>
 
-            {/* Central Slogan */}
-            <div className="mb-8">
-              <h2 className="text-4xl lg:text-5xl font-black text-slate-800 dark:text-white tracking-tight leading-none mb-4">
-                Mais inteligência.<br />
-                <span className="text-blue-600">Mais resultado.</span>
-              </h2>
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 max-w-lg leading-relaxed">
-                A plataforma completa para portabilidade de crédito consignado com tecnologia, segurança e precisão.
-              </p>
-            </div>
-
-            {/* Isometric SVG Dashboard Vector Illustration with Dynamic Floating Cards */}
-            <div className="relative w-full max-w-xl h-60 bg-gradient-to-tr from-blue-50/50 to-indigo-50/20 dark:from-slate-900/50 dark:to-slate-850/10 rounded-[3rem] border border-slate-100 dark:border-white/5 flex items-center justify-center p-8 overflow-hidden shadow-inner mb-8">
-              <svg viewBox="0 0 400 200" className="w-full h-full max-h-[180px]">
-                {/* Grid Background Lines */}
-                <path d="M 0 100 L 400 100 M 200 0 L 200 200" stroke="rgba(37, 99, 235, 0.05)" strokeWidth="1.5" />
-                <circle cx="200" cy="100" r="80" fill="none" stroke="rgba(37, 99, 235, 0.04)" strokeWidth="2" />
-                <circle cx="200" cy="100" r="140" fill="none" stroke="rgba(37, 99, 235, 0.03)" strokeWidth="1" />
-
-                {/* Dashboard mock lines */}
-                <path d="M 80,140 Q 140,80 200,120 T 320,60" fill="none" stroke="#2563eb" strokeWidth="4" strokeLinecap="round" opacity="0.8" />
-                <path d="M 80,140 Q 140,80 200,120 T 320,60 L 320,180 L 80,180 Z" fill="url(#chartFill)" opacity="0.1" />
-
-                {/* Vector graphics of businesspeople (Abstract Illustration) */}
-                {/* Person 1 (Woman) */}
-                <g transform="translate(140, 50)" opacity="0.9">
-                  <circle cx="30" cy="30" r="12" fill="#3b82f6" />
-                  <path d="M 15,65 Q 15,45 30,45 Q 45,45 45,65 Z" fill="#1e40af" />
-                </g>
-                {/* Person 2 (Man) */}
-                <g transform="translate(200, 45)" opacity="0.9">
-                  <circle cx="30" cy="25" r="12" fill="#10b981" />
-                  <path d="M 15,60 Q 15,40 30,40 Q 45,40 45,60 Z" fill="#065f46" />
-                </g>
-                
-                {/* Tablet device mock */}
-                <rect x="175" y="85" width="50" height="35" rx="4" fill="#0f172a" stroke="#475569" strokeWidth="2.5" transform="rotate(-5 200 100)" />
-                <rect x="180" y="89" width="40" height="27" rx="1.5" fill="#3b82f6" opacity="0.9" transform="rotate(-5 200 100)" />
-
-                <defs>
-                  <linearGradient id="chartFill" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#2563eb" />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-              </svg>
-
-              {/* Floating metrics card 1 */}
-              <div className="absolute top-8 left-8 float-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl p-4 shadow-xl flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                  📈
-                </div>
-                <div>
-                  <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase leading-none">Taxa reduzida</h4>
-                  <p className="text-xs font-black text-blue-600 dark:text-blue-400 leading-none mt-1.5">-37%</p>
-                  <span className="text-[7px] text-slate-400 uppercase font-black tracking-wider block mt-1">Economia média</span>
-                </div>
+            {/* Slogan + Couple Section (Laid out next to each other to save huge vertical space) */}
+            <div className="flex items-center justify-between gap-6 mb-5">
+              {/* Slogan details */}
+              <div className="flex-1 max-w-[340px]">
+                <h2 className="text-3xl xl:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-none mb-3">
+                  Mais inteligência.<br />
+                  <span className="text-blue-600">Mais resultado.</span>
+                </h2>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
+                  A plataforma completa para portabilidade de crédito consignado com tecnologia, segurança e precisão.
+                </p>
               </div>
 
-              {/* Floating metrics card 2 */}
-              <div className="absolute bottom-10 left-12 float-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl p-4 shadow-xl flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                  💼
+              {/* Corporate Couple Photo backdrop from user request (replaces h-52 block) */}
+              <div className="flex-1 relative h-[240px] xl:h-[280px] flex items-end justify-center overflow-visible">
+                {/* Decorative background shapes */}
+                <div className="absolute inset-0 bg-blue-50/40 dark:bg-slate-900/40 rounded-[2.5rem] border border-slate-100/50 dark:border-white/5 -z-10 overflow-hidden shadow-inner">
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-xl"></div>
+                  <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-xl"></div>
                 </div>
-                <div>
-                  <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase leading-none">Contratos ativos</h4>
-                  <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 leading-none mt-1.5">+12.842</p>
-                  <span className="text-[7px] text-slate-400 uppercase font-black tracking-wider block mt-1">Este mês</span>
-                </div>
-              </div>
 
-              {/* Floating metrics card 3 */}
-              <div className="absolute top-16 right-8 float-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl p-4 shadow-xl flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                  💰
+                <img 
+                  src="/login_corporate_couple.png" 
+                  alt="Parceiros Portabilidade PRO" 
+                  className="h-full w-auto object-contain relative z-10 select-none pointer-events-none drop-shadow-2xl" 
+                />
+
+                {/* Floating metrics card 1 */}
+                <div className="absolute top-4 -left-10 float-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2.5 shadow-xl flex items-center gap-2 z-20">
+                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs shrink-0">
+                    <Icons.Target size={12} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-[7px] font-black text-slate-800 dark:text-white uppercase leading-none">Taxa reduzida</h4>
+                    <p className="text-xs font-black text-blue-600 dark:text-blue-400 leading-none mt-1">-37%</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase leading-none">Valor processado</h4>
-                  <p className="text-xs font-black text-indigo-600 dark:text-indigo-400 leading-none mt-1.5">R$ 284M</p>
-                  <span className="text-[7px] text-slate-400 uppercase font-black tracking-wider block mt-1">Este mês</span>
+
+                {/* Floating metrics card 2 */}
+                <div className="absolute bottom-6 -right-4 float-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 rounded-2xl p-2.5 shadow-xl flex items-center gap-2 z-20">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0">
+                    <Icons.Check size={12} className="text-emerald-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-[7px] font-black text-slate-800 dark:text-white uppercase leading-none">Contratos ativos</h4>
+                    <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 leading-none mt-1">+12.842</p>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Bottom 3 highlights row */}
-            <div className="grid grid-cols-3 gap-4 w-full">
+            <div className="grid grid-cols-3 gap-4 w-full max-w-xl">
               {/* IA */}
-              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-md">
-                <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg mb-4 shadow-inner">
-                  🧠
+              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center mb-2.5 shadow-inner shrink-0">
+                  <Icons.Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                <h4 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-2">Inteligência Artificial</h4>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
-                  Análise inteligente de dados para encontrar as melhores oportunidades de portabilidade.
-                </p>
+                <div>
+                  <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Inteligência Artificial</h4>
+                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-normal">
+                    Análise inteligente de dados para encontrar as melhores oportunidades de portabilidade.
+                  </p>
+                </div>
               </div>
 
               {/* Segurança */}
-              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-md">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg mb-4 shadow-inner">
-                  🛡️
+              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-2.5 shadow-inner shrink-0">
+                  <Icons.ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <h4 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-2">Segurança LGPD</h4>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
-                  Total conformidade com a LGPD e criptografia avançada para proteger seus dados.
-                </p>
+                <div>
+                  <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Segurança LGPD</h4>
+                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-normal">
+                    Total conformidade com a LGPD e criptografia avançada para proteger seus dados.
+                  </p>
+                </div>
               </div>
 
               {/* Cálculos */}
-              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[2rem] p-6 shadow-md">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg mb-4 shadow-inner">
-                  📊
+              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-2.5 shadow-inner shrink-0">
+                  <Icons.BarChart className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <h4 className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-2">Cálculos Financeiros</h4>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
-                  Cálculos precisos e simulações avançadas para máxima assertividade nos resultados.
-                </p>
+                <div>
+                  <h4 className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Cálculos Financeiros</h4>
+                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-normal">
+                    Cálculos precisos e simulações avançadas para máxima assertividade nos resultados.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Footer Features Links */}
-        <div className="w-full border-t border-slate-200/50 dark:border-white/5 pt-6 flex flex-wrap justify-center lg:justify-between items-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest relative z-10">
-          <div className="flex gap-1 items-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+        <div className="w-full border-t border-slate-200/50 dark:border-white/5 pt-3.5 flex flex-wrap justify-center lg:justify-between items-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest relative z-10">
+          <div className="flex gap-2 items-center">
+            <Icons.Layers size={12} className="text-blue-500" />
             Tecnologia de ponta
           </div>
-          <div className="flex gap-1 items-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <div className="flex gap-2 items-center">
+            <Icons.ShieldCheck size={12} className="text-emerald-500" />
             Conformidade regulatória
           </div>
-          <div className="flex gap-1 items-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+          <div className="flex gap-2 items-center">
+            <Icons.Headphones size={12} className="text-indigo-500" />
             Suporte especializado
           </div>
-          <div className="flex gap-1 items-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+          <div className="flex gap-2 items-center">
+            <Icons.RefreshCw size={12} className="text-orange-500" />
             Atualizações contínuas
           </div>
         </div>
