@@ -22,6 +22,22 @@ export default function LoginPage() {
     sidebarColor: "#0f172a"
   });
 
+  // Load remembered settings on mount
+  useEffect(() => {
+    const savedRemember = localStorage.getItem('remember_me') === 'true';
+    if (savedRemember) {
+      setRememberMe(true);
+      const savedEmail = localStorage.getItem('remembered_email');
+      const savedBranding = localStorage.getItem('remembered_branding');
+      if (savedEmail) setEmail(savedEmail);
+      if (savedBranding) {
+        try {
+          setBranding(JSON.parse(savedBranding));
+        } catch (e) {}
+      }
+    }
+  }, []);
+
   // Fetch branding based on email input
   useEffect(() => {
     const fetchBranding = async () => {
@@ -69,6 +85,17 @@ export default function LoginPage() {
       
       // Update local storage branding color to sync instantly
       localStorage.setItem('active_theme_color', response.user.brand_color || '#2563eb');
+      
+      // Save Remember Me details
+      if (rememberMe) {
+        localStorage.setItem('remember_me', 'true');
+        localStorage.setItem('remembered_email', email.trim());
+        localStorage.setItem('remembered_branding', JSON.stringify(branding));
+      } else {
+        localStorage.removeItem('remember_me');
+        localStorage.removeItem('remembered_email');
+        localStorage.removeItem('remembered_branding');
+      }
       
       if (response.user.role === 'admin') {
         router.push("/admin");
@@ -134,11 +161,14 @@ export default function LoginPage() {
                 style={{ backgroundColor: branding.brandColor }}
               ></div>
 
-              {/* Logo / Avatar Circle (Fixed to cover completely with object-cover and no borders/padding) */}
+              {/* Logo / Avatar Circle (Fixed size w-28 h-28, covers fully with object-cover, custom shadow and float animation) */}
               <div className="flex justify-center mb-5">
                 <div 
-                  className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-900 border-2 flex items-center justify-center shadow-inner relative overflow-hidden transition-all duration-300"
-                  style={{ borderColor: `${branding.brandColor}30` }}
+                  className="w-28 h-28 rounded-full bg-slate-100 dark:bg-slate-900 border-2 flex items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer float-1"
+                  style={{ 
+                    borderColor: `${branding.brandColor}30`,
+                    boxShadow: `0 0 25px ${branding.brandColor}25`
+                  }}
                 >
                   {branding.logoUrl ? (
                     <img 
@@ -148,7 +178,7 @@ export default function LoginPage() {
                     />
                   ) : (
                     <div 
-                      className="w-full h-full flex items-center justify-center font-black text-xl transition-all duration-300 text-white"
+                      className="w-full h-full flex items-center justify-center font-black text-2xl transition-all duration-300 text-white"
                       style={{ backgroundColor: branding.brandColor }}
                     >
                       {branding.name.substring(0, 2).toUpperCase()}
@@ -290,13 +320,13 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Top Logo Header */}
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20 transform rotate-6">
-                <Icons.Zap className="w-5 h-5 text-white" />
+            {/* Top Logo Header (Restored 3xl size and hover rotation animations) */}
+            <div className="flex items-center gap-3.5 mb-5 hover:-translate-y-0.5 transition-all duration-300 group cursor-pointer w-fit">
+              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20 transform rotate-6 group-hover:rotate-12 transition-transform duration-300">
+                <Icons.Zap className="w-6 h-6 text-white animate-pulse" />
               </div>
               <div>
-                <h1 className="text-xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
+                <h1 className="text-3xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
                   PORTABILIDADE <span className="text-blue-600">PRO</span>
                 </h1>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Inteligência e tecnologia em crédito consignado</p>
