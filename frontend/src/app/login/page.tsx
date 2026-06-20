@@ -166,21 +166,21 @@ export default function LoginPage() {
         .float-1 { animation: floatSlow 6s ease-in-out infinite; }
         .float-2 { animation: floatMedium 5s ease-in-out infinite; }
         
-        .login-bg-curve {
-          position: absolute;
-          width: 500px;
-          height: 500px;
-          background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0) 70%);
-          border-radius: 50%;
-          filter: blur(80px);
-          pointer-events: none;
-          z-index: 0;
-        }
       `}</style>
 
-      {/* Background blobs */}
-      <div className="login-bg-curve top-0 left-0"></div>
-      <div className="login-bg-curve bottom-0 right-0"></div>
+      {/* Background blobs (Dynamic brand-colored glow circles matching the previous gradient style) */}
+      <div 
+        className="absolute top-[10%] left-[10%] w-[600px] h-[600px] rounded-full blur-[140px] pointer-events-none z-0 transition-all duration-500"
+        style={{
+          background: `radial-gradient(circle, ${branding.brandColor}20 0%, transparent 75%)`
+        }}
+      ></div>
+      <div 
+        className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full blur-[140px] pointer-events-none z-0 transition-all duration-500"
+        style={{
+          background: `radial-gradient(circle, ${branding.brandColor}15 0%, transparent 75%)`
+        }}
+      ></div>
 
       {/* Main Grid Wrapper */}
       <div className="w-full max-w-[1400px] mx-auto min-h-screen lg:h-screen lg:min-h-0 flex flex-col justify-between relative z-10 p-4 lg:p-10">
@@ -331,9 +331,9 @@ export default function LoginPage() {
               </div>
             </div>
             
-            {/* Small secure tag below card */}
-            <div className="hidden lg:flex w-full max-w-[430px] justify-start mt-3 pl-4">
-              <div className="flex items-center gap-3 bg-white/40 dark:bg-[#0f172a]/40 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-2xl p-3 max-w-[270px]">
+            {/* Small secure tag below card (Same width as login card for professional alignment) */}
+            <div className="hidden lg:flex w-full max-w-[430px] mt-3">
+              <div className="flex items-center gap-3 bg-white/40 dark:bg-[#0f172a]/40 backdrop-blur-md border border-slate-100 dark:border-white/5 rounded-2xl p-3 w-full shadow-lg">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                   <Icons.ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
@@ -390,10 +390,10 @@ export default function LoginPage() {
               </div>
 
               {/* Corporate Couple Photo backdrop from user request (replaces h-52 block) */}
-              <div className="flex-1 relative h-[240px] xl:h-[280px] flex items-end justify-center overflow-visible pr-8">
+              <div className="flex-1 relative h-[290px] xl:h-[330px] flex items-end justify-center overflow-visible pr-8">
                 
                 {/* Giant blue logo shape 'P' behind the couple, matching the mockup */}
-                <svg className="absolute top-[48%] left-[45%] -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px] -z-10 opacity-[0.95] select-none pointer-events-none" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg className="absolute top-[48%] left-[45%] -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] -z-10 opacity-[0.95] select-none pointer-events-none" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M60 170V45c0-8.3 6.7-15 15-15h45c33.1 0 60 26.9 60 60s-27 60-60 60H90" stroke="url(#pGrad)" strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
                   <defs>
                     <linearGradient id="pGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -407,7 +407,7 @@ export default function LoginPage() {
                 <img 
                   src="/login_corporate_couple.png" 
                   alt="Parceiros Portabilidade PRO" 
-                  className="h-full w-auto object-contain relative z-10 select-none pointer-events-none drop-shadow-2xl" 
+                  className="h-full w-auto object-contain relative z-10 select-none pointer-events-none drop-shadow-2xl scale-105" 
                 />
 
                 {/* Floating metrics card 1 (Top right) */}
@@ -462,10 +462,13 @@ export default function LoginPage() {
               {/* IA */}
               <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
                 <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-inner shrink-0"
-                  style={{ backgroundColor: `${branding.brandColor}15` }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-lg shrink-0 transition-transform duration-300 hover:scale-110"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${branding.brandColor} 0%, color-mix(in srgb, ${branding.brandColor} 70%, black) 100%)`,
+                    boxShadow: `0 4px 12px -2px ${branding.brandColor}50`
+                  }}
                 >
-                  <Icons.Brain className="w-5 h-5" style={{ color: branding.brandColor }} />
+                  <Icons.Brain className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
                   <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mb-1">Inteligência Artificial</h4>
@@ -479,10 +482,13 @@ export default function LoginPage() {
               {/* Segurança */}
               <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
                 <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-inner shrink-0"
-                  style={{ backgroundColor: `${branding.brandColor}15` }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-lg shrink-0 transition-transform duration-300 hover:scale-110"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${branding.brandColor} 0%, color-mix(in srgb, ${branding.brandColor} 70%, black) 100%)`,
+                    boxShadow: `0 4px 12px -2px ${branding.brandColor}50`
+                  }}
                 >
-                  <Icons.ShieldLock className="w-5 h-5" style={{ color: branding.brandColor }} />
+                  <Icons.ShieldLock className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
                   <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mb-1">Segurança LGPD</h4>
@@ -496,10 +502,13 @@ export default function LoginPage() {
               {/* Cálculos */}
               <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
                 <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-inner shrink-0"
-                  style={{ backgroundColor: `${branding.brandColor}15` }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-lg shrink-0 transition-transform duration-300 hover:scale-110"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${branding.brandColor} 0%, color-mix(in srgb, ${branding.brandColor} 70%, black) 100%)`,
+                    boxShadow: `0 4px 12px -2px ${branding.brandColor}50`
+                  }}
                 >
-                  <Icons.BarChartUp className="w-5 h-5" style={{ color: branding.brandColor }} />
+                  <Icons.BarChartUp className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
                   <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mb-1">Cálculos Financeiros</h4>
