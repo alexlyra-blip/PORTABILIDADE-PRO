@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icons } from "@/components/Icons";
 
 export default function Header() {
   const [user, setUser] = useState({ name: "Administrador", role: "admin", avatar_url: "", logo_url: "", brand_color: "" });
@@ -41,21 +42,23 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Avatar Container with rounded corners to match Sidebar */}
-          <div className="w-11 h-11 rounded-xl bg-slate-50 border-2 border-slate-200 flex items-center justify-center overflow-hidden shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer group">
-            {user.avatar_url || user.logo_url ? (
-              <img 
-                src={getStaticUrl(user.avatar_url || user.logo_url) || ''} 
-                alt="Admin" 
-                className="w-full h-full object-cover transition-transform group-hover:scale-110" 
-              />
-            ) : (
-              <span className="text-sm font-black text-slate-400">{user.name?.[0]?.toUpperCase() || 'A'}</span>
-            )}
+          {/* Avatar Container with brand colored border like in simulation page */}
+          <div className="w-11 h-11 rounded-2xl p-0.5 shadow-md border border-slate-200/50" style={{ backgroundColor: user.brand_color || '#3b82f6' }}>
+            <div className="w-full h-full rounded-xl bg-white flex items-center justify-center overflow-hidden">
+              {user.avatar_url || user.logo_url ? (
+                <img 
+                  src={getStaticUrl(user.avatar_url || user.logo_url) || ''} 
+                  alt="Admin" 
+                  className="w-full h-full object-cover transition-transform hover:scale-110" 
+                />
+              ) : (
+                <span className="text-sm font-black text-slate-700">{user.name?.[0]?.toUpperCase() || 'A'}</span>
+              )}
+            </div>
           </div>
           
-          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-black border border-blue-100 shadow-sm hover:bg-blue-600 hover:text-white transition-colors cursor-help" title="Modo Administrativo Ativo">
-            🛡️
+          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shadow-sm hover:bg-blue-600 hover:text-white transition-colors cursor-help" title="Modo Administrativo Ativo">
+            <Icons.Shield size={18} />
           </div>
         </div>
       </div>

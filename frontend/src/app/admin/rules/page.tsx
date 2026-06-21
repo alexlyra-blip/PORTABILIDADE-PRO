@@ -351,14 +351,18 @@ export default function RulesPage() {
                        <div className="space-y-4 mb-6">
                           {/* Espécies */}
                           <div className="flex flex-wrap gap-2">
-                             <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.accepts_disability ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500 opacity-60'}`}>
-                                <Icons.Wheelchair size={14} />
-                                <span className="text-[9px] font-black uppercase tracking-widest">{rule.accepts_disability ? 'Invalidez OK' : 'Não Invalidez'}</span>
-                             </div>
-                             <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.accepts_loas ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500 opacity-60'}`}>
-                                <Icons.HandCoins size={14} />
-                                <span className="text-[9px] font-black uppercase tracking-widest">{rule.accepts_loas ? 'LOAS OK' : 'Não LOAS'}</span>
-                             </div>
+                             {agr === "INSS" && (
+                                <>
+                                  <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.accepts_disability ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500 opacity-60'}`}>
+                                     <Icons.Wheelchair size={14} />
+                                     <span className="text-[9px] font-black uppercase tracking-widest">{rule.accepts_disability ? 'Invalidez OK' : 'Não Invalidez'}</span>
+                                  </div>
+                                  <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.accepts_loas ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500 opacity-60'}`}>
+                                     <Icons.HandCoins size={14} />
+                                     <span className="text-[9px] font-black uppercase tracking-widest">{rule.accepts_loas ? 'LOAS OK' : 'Não LOAS'}</span>
+                                  </div>
+                                </>
+                             )}
                              <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${rule.literacy_required ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
                                 <Icons.BookOpen size={14} />
                                 <span className="text-[9px] font-black uppercase tracking-widest">{rule.literacy_required ? 'Só Alfabetizado' : 'Aceita Analfabeto'}</span>
@@ -474,34 +478,43 @@ export default function RulesPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-3 justify-center">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Restrições de Espécie (INSS)</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer group">
-                      <input 
-                        type="checkbox" 
-                        checked={!formData.accepts_disability} 
-                        onChange={(e) => setFormData({...formData, accepts_disability: !e.target.checked})} 
-                        className="w-5 h-5 rounded border-slate-300 text-red-600 focus:ring-red-500"
-                      />
-                      <span className="text-sm font-bold text-slate-600 group-hover:text-red-600 transition-colors">Não Aceita Invalidez</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer group">
-                      <input 
-                        type="checkbox" 
-                        checked={!formData.accepts_loas} 
-                        onChange={(e) => setFormData({...formData, accepts_loas: !e.target.checked})} 
-                        className="w-5 h-5 rounded border-slate-300 text-red-600 focus:ring-red-500"
-                      />
-                      <span className="text-sm font-bold text-slate-600 group-hover:text-red-600 transition-colors">Não Aceita LOAS</span>
-                    </label>
+                {formData.agreement === "INSS" ? (
+                  <>
+                    <div className="flex flex-col gap-3 justify-center">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Restrições de Espécie (INSS)</label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="checkbox" 
+                            checked={!formData.accepts_disability} 
+                            onChange={(e) => setFormData({...formData, accepts_disability: !e.target.checked})} 
+                            className="w-5 h-5 rounded border-slate-300 text-red-600 focus:ring-red-500"
+                          />
+                          <span className="text-sm font-bold text-slate-600 group-hover:text-red-600 transition-colors">Não Aceita Invalidez</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="checkbox" 
+                            checked={!formData.accepts_loas} 
+                            onChange={(e) => setFormData({...formData, accepts_loas: !e.target.checked})} 
+                            className="w-5 h-5 rounded border-slate-300 text-red-600 focus:ring-red-500"
+                          />
+                          <span className="text-sm font-bold text-slate-600 group-hover:text-red-600 transition-colors">Não Aceita LOAS</span>
+                        </label>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium italic">* Aceita todas as espécies por padrão, exceto as marcadas acima.</p>
+                    </div>
+                    <div>
+                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Mín. Parcelas Pagas (Geral)</label>
+                       <input type="number" value={formData.min_paid_installments} onChange={(e) => setFormData({...formData, min_paid_installments: e.target.value})} className="input-admin" placeholder="Ex: 12" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="col-span-2">
+                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Mín. Parcelas Pagas (Geral)</label>
+                     <input type="number" value={formData.min_paid_installments} onChange={(e) => setFormData({...formData, min_paid_installments: e.target.value})} className="input-admin" placeholder="Ex: 12" />
                   </div>
-                  <p className="text-[10px] text-slate-400 font-medium italic">* Aceita todas as espécies por padrão, exceto as marcadas acima.</p>
-                </div>
-                <div>
-                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Mín. Parcelas Pagas (Geral)</label>
-                   <input type="number" value={formData.min_paid_installments} onChange={(e) => setFormData({...formData, min_paid_installments: e.target.value})} className="input-admin" placeholder="Ex: 12" />
-                </div>
+                )}
               </div>
 
               {/* Seção 2: Portabilidade & Bancos */}
@@ -541,14 +554,16 @@ export default function RulesPage() {
                       <label htmlFor="a60" className="text-sm font-semibold text-slate-600 cursor-pointer select-none">Aceita Clientes 60+?</label>
                     </div>
                  </div>
-                 <div className="flex items-center gap-3 border-l pl-4 border-slate-100">
-                    <input type="checkbox" id="inv_cfg" checked={formData.accepts_disability} onChange={(e) => setFormData({...formData, accepts_disability: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-blue-600 cursor-pointer" />
-                    <label htmlFor="inv_cfg" className="text-sm font-bold text-blue-600 cursor-pointer select-none">Configurar carência para Invalidez?</label>
-                 </div>
+                 {formData.agreement === "INSS" && (
+                   <div className="flex items-center gap-3 border-l pl-4 border-slate-100">
+                      <input type="checkbox" id="inv_cfg" checked={formData.accepts_disability} onChange={(e) => setFormData({...formData, accepts_disability: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-blue-600 cursor-pointer" />
+                      <label htmlFor="inv_cfg" className="text-sm font-bold text-blue-600 cursor-pointer select-none">Configurar carência para Invalidez?</label>
+                   </div>
+                 )}
               </div>
 
               {/* Seção 3: Regras para Invalidez */}
-              {formData.accepts_disability && (
+              {formData.agreement === "INSS" && formData.accepts_disability && (
                 <div className="p-4 bg-red-50/30 rounded-2xl border border-red-100 space-y-4 animate-slide-up">
                   <h4 className="text-xs font-black text-red-800 uppercase tracking-widest">III. Trava de Concessão (Invalidez)</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

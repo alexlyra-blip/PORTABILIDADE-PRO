@@ -64,6 +64,7 @@ export default function BancosPage() {
   const [user, setUser] = useState(null);
   const [logoBase64, setLogoBase64] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [promotoraRules, setPromotoraRules] = useState([]);
   const pdfRef = useRef();
 
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function BancosPage() {
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
+      loadPromotoraRules(parsedUser);
       const logoUrl = getStaticUrl(parsedUser.logo_url || parsedUser.avatar_url);
       if (logoUrl) {
         toDataURL(logoUrl).then(base64 => {
@@ -82,6 +84,18 @@ export default function BancosPage() {
     
     loadBanks();
   }, []);
+
+  const loadPromotoraRules = async (currentUser) => {
+    try {
+      const uId = (currentUser.role === 'admin' || currentUser.role === 'promotora') ? currentUser.id : (currentUser.broker_id || currentUser.id);
+      if (uId) {
+        const rules = await api.get(`/admin/users/${uId}/rules`);
+        setPromotoraRules(rules || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar regras da promotora:", error);
+    }
+  };
 
   const loadBanks = async () => {
     try {
@@ -205,45 +219,71 @@ export default function BancosPage() {
 
       const minDebtBalance = rule ? rule.min_debt_balance : null;
 
+      // Blocked origin banks from promoter
+      const blockedOriginRuleObj = promotoraRules.find(r => r.rule_key === 'origin_bank_blocklist');
+      const blockedOriginBanks = blockedOriginRuleObj ? JSON.parse(blockedOriginRuleObj.rule_value) : [];
+
+      // Specific origin bank rules from promoter
+      const originRuleObj = promotoraRules.find(r => r.rule_key === 'origin_bank_config');
+      const promoterOriginRules = originRuleObj ? JSON.parse(originRuleObj.rule_value) : [];
+
       // Bancos com Regras Específicas
-      let regrasEspecificasHtml = "";
+      let combinedSpecificRules = [];
       if (rule?.origin_banks_min_paid) {
-        let items = [];
         try {
           const parsed = JSON.parse(rule.origin_banks_min_paid);
           if (parsed && typeof parsed === 'object') {
-            items = Object.entries(parsed).map(([bank, parcelas]) => `${bank} ${parcelas} pagas`);
+            combinedSpecificRules = Object.entries(parsed).map(([bank, parcelas]) => `${bank} ${parcelas} pagas`);
           } else {
-            items = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
+            combinedSpecificRules = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
           }
         } catch (e) {
-          items = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
+          combinedSpecificRules = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
         }
+      }
+      if (promoterOriginRules.length > 0) {
+        combinedSpecificRules = [
+          ...combinedSpecificRules,
+          ...promoterOriginRules.map(r => `${r.origin_bank} ${r.min_paid} pagas (Regra da Promotora)`)
+        ];
+      }
 
-        if (items.length > 0) {
-          regrasEspecificasHtml = `
-            <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; page-break-inside: avoid;">
-              <h4 style="font-size: 13px; font-weight: bold; color: #c2410c; text-transform: uppercase; margin: 0 0 10px 0;">Bancos com Regras Específicas</h4>
-              <div style="background-color: #fff7ed; border: 1px solid #ffedd5; padding: 12px; border-radius: 8px;">
-                <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #9a3412; line-height: 1.6; list-style-type: disc;">
-                  ${items.map(item => `<li>${item}</li>`).join('')}
-                </ul>
-              </div>
+      let regrasEspecificasHtml = "";
+      if (combinedSpecificRules.length > 0) {
+        regrasEspecificasHtml = `
+          <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; page-break-inside: avoid;">
+            <h4 style="font-size: 13px; font-weight: bold; color: #c2410c; text-transform: uppercase; margin: 0 0 10px 0;">Bancos com Regras Específicas</h4>
+            <div style="background-color: #fff7ed; border: 1px solid #ffedd5; padding: 12px; border-radius: 8px;">
+              <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #9a3412; line-height: 1.6; list-style-type: disc;">
+                ${combinedSpecificRules.map(item => `<li>${item}</li>`).join('')}
+              </ul>
             </div>
-          `;
-        }
+          </div>
+        `;
       }
 
       // Bancos Não Portados (Origem)
       let bancosNaoPortadosHtml = "";
-      if (rule?.excluded_origin_banks) {
+      const hasExcludedBanks = rule?.excluded_origin_banks;
+      const hasBlockedPromoBanks = blockedOriginBanks && blockedOriginBanks.length > 0;
+      if (hasExcludedBanks || hasBlockedPromoBanks) {
+        const bankBadges = [];
+        if (hasExcludedBanks) {
+          rule.excluded_origin_banks.split(',').forEach(b => {
+            bankBadges.push(`<span style="padding: 4px 8px; background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; font-size: 11px; font-weight: bold; border-radius: 6px; text-transform: uppercase; margin-right: 5px; margin-bottom: 5px; display: inline-block;">${b.trim()}</span>`);
+          });
+        }
+        if (hasBlockedPromoBanks) {
+          blockedOriginBanks.forEach(b => {
+            bankBadges.push(`<span style="padding: 4px 8px; background-color: #fee2e2; border: 1px solid #fecaca; color: #b91c1c; font-size: 11px; font-weight: bold; border-radius: 6px; text-transform: uppercase; margin-right: 5px; margin-bottom: 5px; display: inline-block;">${b.trim()} (PROMOTORA)</span>`);
+          });
+        }
+
         bancosNaoPortadosHtml = `
           <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; page-break-inside: avoid;">
             <h4 style="font-size: 13px; font-weight: bold; color: #b91c1c; text-transform: uppercase; margin: 0 0 10px 0;">Bancos Não Portados (Origem)</h4>
             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-              ${rule.excluded_origin_banks.split(',').map(b => `
-                <span style="padding: 4px 8px; background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; font-size: 11px; font-weight: bold; border-radius: 6px; text-transform: uppercase; margin-right: 5px; margin-bottom: 5px; display: inline-block;">${b.trim()}</span>
-              `).join('')}
+              ${bankBadges.join('')}
             </div>
           </div>
         `;
@@ -604,33 +644,58 @@ export default function BancosPage() {
                         <RuleItem icon={<Icons.TrendingDown size={18} />} label="Taxa Mínima Portabilidade" value={(portRateValue !== null && portRateValue !== undefined) ? `${portRateValue}%` : "Não informado"} />
                         <RuleItem icon={<Icons.RefreshCw size={18} />} label="Taxa Mínima Refin/Port" value={(refinRateValue !== null && refinRateValue !== undefined) ? `${refinRateValue}%` : "Não informado"} />
                         
-                        {rule?.excluded_origin_banks && (
-                          <div className="mt-6 pt-4 border-t border-slate-100">
-                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-3">
-                              <Icons.XCircle size={16} /> Bancos Não Portados (Origem)
-                            </h4>
-                            <div className="flex flex-wrap gap-2">
-                              {rule.excluded_origin_banks.split(',').map(b => (
-                                <span key={b} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[11px] font-black tracking-widest uppercase border border-red-100">{b.trim()}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        {(() => {
+                          const blockedOriginRuleObj = promotoraRules.find(r => r.rule_key === 'origin_bank_blocklist');
+                          const blockedOriginBanks = blockedOriginRuleObj ? JSON.parse(blockedOriginRuleObj.rule_value) : [];
 
-                        {rule?.origin_banks_min_paid && (() => {
-                          let items = [];
-                          try {
-                            const parsed = JSON.parse(rule.origin_banks_min_paid);
-                            if (parsed && typeof parsed === 'object') {
-                              items = Object.entries(parsed).map(([bank, parcelas]) => `${bank} ${parcelas} pagas`);
-                            } else {
-                              items = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
+                          const hasExcludedBanks = rule?.excluded_origin_banks;
+                          const hasBlockedPromoBanks = blockedOriginBanks && blockedOriginBanks.length > 0;
+
+                          if (!hasExcludedBanks && !hasBlockedPromoBanks) return null;
+
+                          return (
+                            <div className="mt-6 pt-4 border-t border-slate-100">
+                              <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-3">
+                                <Icons.XCircle size={16} /> Bancos Não Portados (Origem)
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {rule?.excluded_origin_banks && rule.excluded_origin_banks.split(',').map(b => (
+                                  <span key={b} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[11px] font-black tracking-widest uppercase border border-red-100">{b.trim()}</span>
+                                ))}
+                                {blockedOriginBanks.map(b => (
+                                  <span key={b + '-promo'} className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-[11px] font-black tracking-widest uppercase border border-red-200 shadow-sm flex items-center gap-1">
+                                    {b.trim()} <span className="text-[9px] opacity-70">(PROMOTORA)</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {(() => {
+                          const originRuleObj = promotoraRules.find(r => r.rule_key === 'origin_bank_config');
+                          const promoterOriginRules = originRuleObj ? JSON.parse(originRuleObj.rule_value) : [];
+
+                          let bankSpecificItems = [];
+                          if (rule?.origin_banks_min_paid) {
+                            try {
+                              const parsed = JSON.parse(rule.origin_banks_min_paid);
+                              if (parsed && typeof parsed === 'object') {
+                                bankSpecificItems = Object.entries(parsed).map(([bank, parcelas]) => `${bank} ${parcelas} pagas`);
+                              } else {
+                                bankSpecificItems = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
+                              }
+                            } catch (e) {
+                              bankSpecificItems = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
                             }
-                          } catch (e) {
-                            items = rule.origin_banks_min_paid.split(/,|\n/).map(item => item.replace(/^-/, '').trim()).filter(Boolean);
                           }
 
-                          if (items.length === 0) return null;
+                          const combinedSpecificRules = [
+                            ...bankSpecificItems,
+                            ...promoterOriginRules.map(r => `${r.origin_bank} ${r.min_paid} pagas (Regra da Promotora)`)
+                          ];
+
+                          if (combinedSpecificRules.length === 0) return null;
 
                           return (
                             <div className="mt-6 pt-4 border-t border-slate-100">
@@ -639,7 +704,7 @@ export default function BancosPage() {
                               </h4>
                               <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
                                  <ul className="text-sm text-orange-800 font-bold space-y-1">
-                                   {items.map((text, idx) => (
+                                   {combinedSpecificRules.map((text, idx) => (
                                       <li key={idx}>- {text}</li>
                                    ))}
                                  </ul>

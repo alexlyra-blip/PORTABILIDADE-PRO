@@ -261,7 +261,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db), current_use
 
 # Configuracoes de Regras e Bancos
 @router.get("/users/{user_id}/rules")
-async def get_user_rules(user_id: int, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_manager_user)):
+async def get_user_rules(user_id: int, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     return await AdminService.get_promotora_rules(db, user_id)
 
 @router.post("/users/{user_id}/rules")
