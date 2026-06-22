@@ -15,7 +15,7 @@ from sqlalchemy import select, text
 from app.database import engine, Base, AsyncSessionLocal
 from app.models.sqlalchemy_models import User, Bank
 
-from app.routers import auth, banks, users, admin, pdf, simulacao
+from app.routers import auth, banks, users, admin, pdf, simulacao, chat
 
 # Database Migration Hack (Safe for Windows env)
 # Remove old sqlite migrate call
@@ -201,7 +201,7 @@ app.add_middleware(
 os.makedirs("uploads/logos", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-from app.routers import auth, banks, users, admin, pdf, simulacao, external
+from app.routers import auth, banks, users, admin, pdf, simulacao, external, chat
 
 # ... (restante dos imports e lógica)
 
@@ -213,6 +213,7 @@ app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(pdf.router, prefix="/api/pdf", tags=["Proposals"])
 app.include_router(simulacao.router, prefix="/api", tags=["Simulation"])
 app.include_router(external.router, prefix="/api", tags=["External Integration"])
+app.include_router(chat.router, prefix="/api", tags=["Chatbot"])
 
 @app.get("/health")
 def health_check():
