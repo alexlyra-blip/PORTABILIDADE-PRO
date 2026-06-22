@@ -200,9 +200,22 @@ async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: i
         traceback.print_exc()
         return f"Erro ao processar simulação: {str(e)}"
 
+def get_welcome_menu(first_name: str) -> str:
+    return (
+        f"👋 Olá, *{first_name}*! Eu sou o *Gutto*, o seu assistente virtual especialista em portabilidade de crédito consignado. 🤖✨\n\n"
+        "Como posso ajudar você hoje? Digite o **número** ou a **palavra-chave** da opção desejada: 👇\n\n"
+        "1️⃣ **Simular** (fazer uma simulação rápida de portabilidade)\n"
+        "2️⃣ **Regras** (consultar as regras de aceitação de um banco)\n"
+        "3️⃣ **Perguntar** (tirar uma dúvida, ex: \"Qual banco aceita analfabeto?\")"
+    )
+
 def get_current_step_instruction(session: dict) -> str:
     state = session.get("state")
-    if state == "waiting_convenio":
+    if state == "waiting_initial_choice":
+        return "Escolha uma das opções: 1️⃣ Simular | 2️⃣ Regras | 3️⃣ Perguntar"
+    elif state == "waiting_rules_bank":
+        return "Digite o nome do banco que deseja consultar (Ex: C6, Pan, Bradesco):"
+    elif state == "waiting_convenio":
         return "Escolha o seu convênio:\n👉 INSS\n👉 SIAPE\n👉 GOVERNO\n👉 FORÇAS ARMADAS\n👉 CLT PRIVADO"
     elif state == "waiting_banco_origem":
         return "Informe o nome do Banco de Origem (atual):"
@@ -220,7 +233,7 @@ def get_current_step_instruction(session: dict) -> str:
         return "Informe o número da espécie do benefício (ou digite 'não sei' para continuar):"
     elif state == "waiting_analfabeto":
         return "O cliente é analfabeto? (Digite SIM ou NÃO):"
-    return "Como posso te ajudar? Digite *simular* para iniciar uma nova simulação."
+    return "Como posso te ajudar? Digite *simular* ou *menu* para ver as opções."
 
 @router.post("/external/chat")
 async def chat_interaction(
@@ -231,6 +244,58 @@ async def chat_interaction(
     sender = input_data.sender
     message = input_data.message.strip()
     msg_lower = message.lower()
+    
+    # Normalize message to perform a robust substring check (strip punctuation but keep word characters)
+    clean_msg = re.sub(r'[^\w\s]', '', msg_lower).strip()
+    
+    # Substrings that identify outgoing bot messages or external warning messages
+    ignore_substrings = [
+        "sou o gutto",
+        "como posso ajudar voce hoje",
+        "como posso ajudar você hoje",
+        "simular fazer uma simulacao",
+        "simular fazer uma simulação",
+        "iniciando simulacao de portabilidade",
+        "iniciando simulação de portabilidade",
+        "convenio selecionado",
+        "convênio selecionado",
+        "banco de origem",
+        "idade do cliente",
+        "valor da parcela",
+        "saldo devedor",
+        "prazo total",
+        "parcelas restantes",
+        "especie do beneficio",
+        "espécie do benefício",
+        "cliente analfabeto",
+        "simulacao concluida com sucesso",
+        "simulação concluída com sucesso",
+        "infelizmente nenhuma oferta foi aprovada",
+        "regras de aceitacao",
+        "regras de aceitação",
+        "bancos que aceitam",
+        "regras para invalidez",
+        "bancos que aceitam loas",
+        "regras de idade por banco",
+        "este numero nao esta autorizado",
+        "este número não está autorizado",
+        "favor entrar em contato com a sua promotora",
+        "numero nao cadastrado",
+        "número não cadastrado",
+        "opcao invalida",
+        "opção inválida",
+        "banco nao reconhecido",
+        "banco não reconhecido",
+        "retomando a simulacao",
+        "retomando a simulação",
+        "tabelas com ofertas"
+    ]
+    
+    if any(sub in clean_msg or sub in msg_lower for sub in ignore_substrings):
+        return {
+            "status": "ignored",
+            "reply": ""
+        }
     
     # 1. Phone number validation
     result_users = await db.execute(select(User).where(User.active == True))
@@ -249,6 +314,7 @@ async def chat_interaction(
         }
         
     user_id = matched_user.id
+    first_name = matched_user.name.split()[0] if matched_user.name else "Corretor"
     
     # Initialize session if not exists
     if sender not in CHAT_SESSIONS:
@@ -274,11 +340,11 @@ async def chat_interaction(
     session["last_message"] = message
     
     # Intercept Reset or Simular request
-    if msg_lower in ["reset", "sair", "cancelar", "/start", "simular", "novo", "nova simulação"]:
+    if msg_lower in ["reset", "sair", "cancelar", "/start", "simular", "novo", "nova simulação", "menu", "voltar"]:
         last_time = session.get("last_request_time", 0.0)
         last_msg = session.get("last_message", "")
         CHAT_SESSIONS[sender] = {
-            "state": "waiting_convenio",
+            "state": "waiting_initial_choice",
             "convenio": None,
             "banco_origem": None,
             "idade": None,
@@ -294,22 +360,14 @@ async def chat_interaction(
         session = CHAT_SESSIONS[sender]
         return {
             "status": "success",
-            "reply": (
-                f"👋 Olá! Eu sou o Gutto, o seu assistente virtual especialista em portabilidade de crédito consignado. 🤖✨\n\n"
-                f"Para iniciarmos a sua simulação personalizada e rápida, por favor, me informe qual é o seu convênio? 👇\n\n"
-                "👉 *INSS*\n"
-                "👉 *SIAPE*\n"
-                "👉 *GOVERNO*\n"
-                "👉 *FORÇAS ARMADAS*\n"
-                "👉 *CLT PRIVADO*"
-            )
+            "reply": get_welcome_menu(first_name)
         }
 
     # Intercept Rules Queries at any time
-    if "regra" in msg_lower or "aceita" in msg_lower or "idade" in msg_lower or "analfabeto" in msg_lower or "invalidez" in msg_lower or "loas" in msg_lower:
+    if "regra" in msg_lower or "aceita" in msg_lower or "analfabeto" in msg_lower or "invalidez" in msg_lower or "loas" in msg_lower:
         rules_reply = await query_rules(message, db)
         if rules_reply:
-            if session.get("state") != "idle" and session.get("state") != "simulated":
+            if session.get("state") not in ["idle", "waiting_initial_choice", "simulated"]:
                 current_step_msg = get_current_step_instruction(session)
                 return {
                     "status": "success",
@@ -374,21 +432,85 @@ async def chat_interaction(
     # State Machine Handling
     state = session.get("state")
     
-    if state == "idle":
-        session["state"] = "waiting_convenio"
-        return {
-            "status": "success",
-            "reply": (
-                "👋 Olá! Eu sou o *Gutto*, o seu assistente virtual especialista em portabilidade de crédito consignado. 🤖✨\n\n"
-                "Para iniciarmos a sua simulação personalizada e rápida, por favor, me informe qual é o seu **Convênio**? 👇\n\n"
-                "👉 *INSS*\n"
-                "👉 *SIAPE*\n"
-                "👉 *GOVERNO*\n"
-                "👉 *FORÇAS ARMADAS*\n"
-                "👉 *CLT PRIVADO*"
-            )
-        }
-        
+    if state == "idle" or state == "waiting_initial_choice":
+        # Check initial choices
+        if msg_lower in ["1", "simular", "simula", "simulacao", "simulação"]:
+            session["state"] = "waiting_convenio"
+            return {
+                "status": "success",
+                "reply": (
+                    "🚀 *Iniciando Simulação de Portabilidade!*\n\n"
+                    "Para começarmos, por favor me informe qual é o seu **Convênio**? 👇\n\n"
+                    "👉 *INSS*\n"
+                    "👉 *SIAPE*\n"
+                    "👉 *GOVERNO*\n"
+                    "👉 *FORÇAS ARMADAS*\n"
+                    "👉 *CLT PRIVADO*"
+                )
+            }
+        elif msg_lower in ["2", "regras", "regra", "banco", "bancos"]:
+            session["state"] = "waiting_rules_bank"
+            return {
+                "status": "success",
+                "reply": (
+                    "🏛️ *Consultar Regras de Bancos*\n\n"
+                    "Por favor, digite o nome do banco que deseja consultar (Ex: *C6*, *Pan*, *Bradesco*):"
+                )
+            }
+        elif msg_lower in ["3", "perguntar", "pergunta", "duvida", "dúvida"]:
+            return {
+                "status": "success",
+                "reply": (
+                    "❓ *Tirar Dúvida sobre Regras*\n\n"
+                    "Você pode fazer perguntas diretas sobre as regras dos bancos!\n"
+                    "Exemplos:\n"
+                    "• _Qual banco aceita analfabeto?_\n"
+                    "• _Quem aceita LOAS?_\n"
+                    "• _Regras do C6_\n\n"
+                    "Pode digitar a sua pergunta agora: 👇"
+                )
+            }
+        else:
+            # Check if it matches a direct rules query (e.g. "quem aceita loas?")
+            rules_reply = await query_rules(message, db)
+            if rules_reply:
+                return {"status": "success", "reply": rules_reply}
+            
+            # If not understood, initialize state to waiting_initial_choice and show menu
+            session["state"] = "waiting_initial_choice"
+            return {
+                "status": "success",
+                "reply": get_welcome_menu(first_name)
+            }
+            
+    elif state == "waiting_rules_bank":
+        # Get rules for specific bank
+        rules_reply = await query_rules(message, db)
+        if rules_reply:
+            session["state"] = "waiting_initial_choice"
+            return {
+                "status": "success",
+                "reply": (
+                    f"{rules_reply}\n\n"
+                    "💡 *Dica:* Para fazer outra consulta ou iniciar uma simulação, escolha uma opção do menu:\n\n"
+                    "1️⃣ **Simular** | 2️⃣ **Ver Regras** | 3️⃣ **Perguntar**"
+                )
+            }
+        else:
+            if msg_lower in ["cancelar", "sair", "voltar", "menu"]:
+                session["state"] = "waiting_initial_choice"
+                return {
+                    "status": "success",
+                    "reply": get_welcome_menu(first_name)
+                }
+            return {
+                "status": "success",
+                "reply": (
+                    "⚠️ *Banco não reconhecido.*\n\n"
+                    "Por favor, digite o nome de um banco cadastrado (Ex: *C6*, *Pan*, *Itaú*, *Bradesco*) ou digite *cancelar* para voltar ao menu:"
+                )
+            }
+            
     elif state == "waiting_convenio":
         # Parse Convenio
         val = msg_lower
