@@ -249,12 +249,31 @@ async def chat_interaction(
     
     # Initialize session if not exists
     if sender not in CHAT_SESSIONS:
-        CHAT_SESSIONS[sender] = {"state": "idle"}
+        CHAT_SESSIONS[sender] = {
+            "state": "idle",
+            "last_request_time": 0.0,
+            "last_message": ""
+        }
         
     session = CHAT_SESSIONS[sender]
+
+    # Time-lock and duplicate request protection (rate limit)
+    import time
+    current_time = time.time()
+    last_time = session.get("last_request_time", 0.0)
+    last_msg = session.get("last_message", "")
+    if (current_time - last_time < 1.5) and (message == last_msg):
+        return {
+            "status": "ignored",
+            "reply": ""
+        }
+    session["last_request_time"] = current_time
+    session["last_message"] = message
     
     # Intercept Reset or Simular request
     if msg_lower in ["reset", "sair", "cancelar", "/start", "simular", "novo", "nova simulação"]:
+        last_time = session.get("last_request_time", 0.0)
+        last_msg = session.get("last_message", "")
         CHAT_SESSIONS[sender] = {
             "state": "waiting_convenio",
             "convenio": None,
@@ -265,8 +284,11 @@ async def chat_interaction(
             "total_term": None,
             "remaining_term": None,
             "analfabeto": False,
-            "benefit_species": None
+            "benefit_species": None,
+            "last_request_time": last_time,
+            "last_message": last_msg
         }
+        session = CHAT_SESSIONS[sender]
         return {
             "status": "success",
             "reply": (
@@ -383,12 +405,12 @@ async def chat_interaction(
                 "reply": "Desculpe, não entendi. Escolha um dos convênios abaixo:\n👉 INSS\n👉 SIAPE\n👉 GOVERNO\n👉 FORÇAS ARMADAS\n👉 CLT PRIVADO"
             }
         session["state"] = "waiting_banco_origem"
-        return {"status": "success", "reply": "Ótimo! Agora, por favor, informe o nome do **Banco de Origem** (atual):"}
+        return {"status": "success", "reply": f"👍 *Convênio selecionado:* {session['convenio']}\n\nAgora, por favor, informe o nome do **Banco de Origem** (atual):"}
         
     elif state == "waiting_banco_origem":
         session["banco_origem"] = message.upper()
         session["state"] = "waiting_idade"
-        return {"status": "success", "reply": "Perfeito! Qual é a **idade** do cliente?"}
+        return {"status": "success", "reply": f"👍 *Banco de Origem:* {session['banco_origem']}\n\nPerfeito! Qual é a **idade** do cliente?"}
         
     elif state == "waiting_idade":
         val = parse_integer(message)
@@ -396,7 +418,7 @@ async def chat_interaction(
             return {"status": "success", "reply": "Por favor, informe uma idade válida entre 18 e 100 anos:"}
         session["idade"] = val
         session["state"] = "waiting_parcela"
-        return {"status": "success", "reply": "Qual é o **valor da parcela** atual do contrato (R$)?"}
+        return {"status": "success", "reply": f"👍 *Idade do cliente:* {val} anos\n\nQual é o **valor da parcela** atual do contrato (R$)?"}
         
     elif state == "waiting_parcela":
         val = parse_float(message)
@@ -404,7 +426,7 @@ async def chat_interaction(
             return {"status": "success", "reply": "Por favor, informe um valor de parcela válido (ex: 150,00):"}
         session["parcela"] = val
         session["state"] = "waiting_saldo"
-        return {"status": "success", "reply": "Qual é o **saldo devedor estimado** (R$)?"}
+        return {"status": "success", "reply": f"👍 *Valor da parcela:* R$ {val:.2f}\n\nQual é o **saldo devedor estimado** (R$)?"}
         
     elif state == "waiting_saldo":
         val = parse_float(message)
@@ -412,7 +434,7 @@ async def chat_interaction(
             return {"status": "success", "reply": "Por favor, informe um saldo devedor válido (ex: 5.000,00):"}
         session["saldo_devedor"] = val
         session["state"] = "waiting_prazo_total"
-        return {"status": "success", "reply": "Qual é o **prazo total** do contrato original (meses)? Ex: 84 ou 120:"}
+        return {"status": "success", "reply": f"👍 *Saldo devedor:* R$ {val:.2f}\n\nQual é o **prazo total** do contrato original (meses)? Ex: 84 ou 120:"}
         
     elif state == "waiting_prazo_total":
         val = parse_integer(message)
@@ -420,7 +442,7 @@ async def chat_interaction(
             return {"status": "success", "reply": "Por favor, informe um prazo total válido em meses (ex: 84):"}
         session["total_term"] = val
         session["state"] = "waiting_prazo_restante"
-        return {"status": "success", "reply": "Quantas **parcelas restantes** (a pagar) faltam?"}
+        return {"status": "success", "reply": f"👍 *Prazo total:* {val} meses\n\nQuantas **parcelas restantes** (a pagar) faltam?"}
         
     elif state == "waiting_prazo_restante":
         val = parse_integer(message)
@@ -431,28 +453,32 @@ async def chat_interaction(
         # Check if INSS requires extra fields
         if session["convenio"] == "INSS":
             session["state"] = "waiting_especie"
-            return {"status": "success", "reply": "Informe o número da **espécie do benefício** (ex: 41, ou digite 'não sei' para continuar):"}
+            return {"status": "success", "reply": f"👍 *Parcelas restantes:* {val}\n\nComo o convênio é INSS, informe o número da **espécie do benefício** (ex: 41, ou digite 'não sei' para continuar):"}
         else:
             # Skip directly to simulation
             reply = await run_simulation_and_respond(session, db, user_id=user_id)
-            return {"status": "success", "reply": reply}
+            return {"status": "success", "reply": f"👍 *Parcelas restantes:* {val}\n\n⏳ _Processando simulação..._\n\n{reply}"}
             
     elif state == "waiting_especie":
         if msg_lower in ["não sei", "nao sei", "ignorar", "pular", "não"]:
             session["benefit_species"] = None
+            spec_str = "Não informada"
         else:
             session["benefit_species"] = message
+            spec_str = message
         session["state"] = "waiting_analfabeto"
-        return {"status": "success", "reply": "O cliente é **analfabeto**? (Responda *SIM* ou *NÃO*):"}
+        return {"status": "success", "reply": f"👍 *Espécie do benefício:* {spec_str}\n\nO cliente é **analfabeto**? (Responda *SIM* ou *NÃO*):"}
         
     elif state == "waiting_analfabeto":
         if "sim" in msg_lower:
             session["analfabeto"] = True
+            analf_str = "Sim"
         else:
             session["analfabeto"] = False
+            analf_str = "Não"
             
         reply = await run_simulation_and_respond(session, db, user_id=user_id)
-        return {"status": "success", "reply": reply}
+        return {"status": "success", "reply": f"👍 *Cliente analfabeto:* {analf_str}\n\n⏳ _Processando simulação..._\n\n{reply}"}
 
     # Default fallback
     return {
