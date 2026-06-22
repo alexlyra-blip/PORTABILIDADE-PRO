@@ -25,8 +25,11 @@ class ChatMessageInput(BaseModel):
 def normalize_phone(phone_str: str) -> str:
     if not phone_str:
         return ""
+    # If there is a '@s.whatsapp.net' or companion device suffix like ':76', strip them first
+    # e.g. "558191283133:76@s.whatsapp.net" -> "558191283133"
+    cleaned = phone_str.split("@")[0].split(":")[0]
     # keep only digits
-    digits = "".join(c for c in phone_str if c.isdigit())
+    digits = "".join(c for c in cleaned if c.isdigit())
     # remove leading 0 if present (e.g. 081991283133 -> 81991283133)
     if digits.startswith("0") and len(digits) >= 10:
         digits = digits[1:]
