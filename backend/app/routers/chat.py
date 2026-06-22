@@ -5,7 +5,7 @@ from app.database import get_db
 from app.services.admin_service import AdminService
 from app.services.simulador_service import SimuladorService
 from app.models.models import SimulacaoInput
-from app.models.sqlalchemy_models import Bank
+from app.models.sqlalchemy_models import Bank, User
 from app.routers.external import verify_n8n_key
 from pydantic import BaseModel
 from typing import Optional
@@ -21,6 +21,32 @@ CHAT_SESSIONS = {}
 class ChatMessageInput(BaseModel):
     sender: str
     message: str
+
+def normalize_phone(phone_str: str) -> str:
+    if not phone_str:
+        return ""
+    # keep only digits
+    digits = "".join(c for c in phone_str if c.isdigit())
+    # remove leading 55 if present and length is 12 or 13 (Brazil country code)
+    if digits.startswith("55") and len(digits) >= 10:
+        digits = digits[2:]
+    return digits
+
+def phones_match(phone1: str, phone2: str) -> bool:
+    norm1 = normalize_phone(phone1)
+    norm2 = normalize_phone(phone2)
+    if not norm1 or not norm2:
+        return False
+    if norm1 == norm2:
+        return True
+    # Brazilian number match logic: check last 8 digits and the 2 digits of DDD before them
+    if len(norm1) >= 10 and len(norm2) >= 10:
+        ddd1 = norm1[:2]
+        ddd2 = norm2[:2]
+        last8_1 = norm1[-8:]
+        last8_2 = norm2[-8:]
+        return ddd1 == ddd2 and last8_1 == last8_2
+    return False
 
 def parse_float(msg: str) -> Optional[float]:
     clean = msg.replace("R$", "").replace("r$", "").strip()
@@ -105,7 +131,7 @@ async def query_rules(message: str, db: AsyncSession) -> Optional[str]:
 
     return None
 
-async def run_simulation_and_respond(session: dict, db: AsyncSession) -> str:
+async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: int) -> str:
     try:
         # Convert and construct inputs
         input_data = SimulacaoInput(
@@ -121,7 +147,7 @@ async def run_simulation_and_respond(session: dict, db: AsyncSession) -> str:
             nome_cliente="Cliente WhatsApp"
         )
         
-        res = await SimuladorService.executar(input_data, db, user_id=1)
+        res = await SimuladorService.executar(input_data, db, user_id=user_id)
         session["last_result"] = res
         
         ofertas = res.get("ofertas", [])
@@ -200,6 +226,24 @@ async def chat_interaction(
     message = input_data.message.strip()
     msg_lower = message.lower()
     
+    # 1. Phone number validation
+    result_users = await db.execute(select(User).where(User.active == True))
+    active_users = result_users.scalars().all()
+    
+    matched_user = None
+    for u in active_users:
+        if u.phone and phones_match(sender, u.phone):
+            matched_user = u
+            break
+            
+    if not matched_user:
+        return {
+            "status": "success",
+            "reply": "❌ *Número não cadastrado.*\n\nFavor entrar em contato com a sua promotora para cadastrar seu número de WhatsApp no sistema."
+        }
+        
+    user_id = matched_user.id
+    
     # Initialize session if not exists
     if sender not in CHAT_SESSIONS:
         CHAT_SESSIONS[sender] = {"state": "idle"}
@@ -223,8 +267,8 @@ async def chat_interaction(
         return {
             "status": "success",
             "reply": (
-                "👋 Olá! Eu sou o Gutto, o seu assistente virtual especialista em portabilidade de crédito consignado. 🤖✨\n\n"
-                "Para iniciarmos a sua simulação personalizada e rápida, por favor, me informe qual é o seu convênio? 👇\n\n"
+                f"👋 Olá! Eu sou o Gutto, o seu assistente virtual especialista em portabilidade de crédito consignado. 🤖✨\n\n"
+                f"Para iniciarmos a sua simulação personalizada e rápida, por favor, me informe qual é o seu convênio? 👇\n\n"
                 "👉 *INSS*\n"
                 "👉 *SIAPE*\n"
                 "👉 *GOVERNO*\n"
@@ -387,7 +431,7 @@ async def chat_interaction(
             return {"status": "success", "reply": "Informe o número da **espécie do benefício** (ex: 41, ou digite 'não sei' para continuar):"}
         else:
             # Skip directly to simulation
-            reply = await run_simulation_and_respond(session, db)
+            reply = await run_simulation_and_respond(session, db, user_id=user_id)
             return {"status": "success", "reply": reply}
             
     elif state == "waiting_especie":
@@ -404,7 +448,7 @@ async def chat_interaction(
         else:
             session["analfabeto"] = False
             
-        reply = await run_simulation_and_respond(session, db)
+        reply = await run_simulation_and_respond(session, db, user_id=user_id)
         return {"status": "success", "reply": reply}
 
     # Default fallback
