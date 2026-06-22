@@ -27,7 +27,10 @@ def normalize_phone(phone_str: str) -> str:
         return ""
     # keep only digits
     digits = "".join(c for c in phone_str if c.isdigit())
-    # remove leading 55 if present and length is 12 or 13 (Brazil country code)
+    # remove leading 0 if present (e.g. 081991283133 -> 81991283133)
+    if digits.startswith("0") and len(digits) >= 10:
+        digits = digits[1:]
+    # remove leading 55 if present and length is 10 or more
     if digits.startswith("55") and len(digits) >= 10:
         digits = digits[2:]
     return digits
