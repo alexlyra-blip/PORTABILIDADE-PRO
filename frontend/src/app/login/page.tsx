@@ -82,13 +82,12 @@ export default function LoginPage() {
         return;
       }
 
-      // If email matches the saved email, don't query the API. Keep the saved branding!
+      // If email matches the saved email, load the saved branding first to show it immediately
       if (rememberedEmail && emailTrimmed.toLowerCase() === rememberedEmail.trim().toLowerCase()) {
         const savedBranding = localStorage.getItem('remembered_branding');
         if (savedBranding) {
           try {
             setBranding(JSON.parse(savedBranding));
-            return;
           } catch (e) {}
         }
       }
@@ -414,7 +413,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-black text-white leading-none tracking-tight">
-                  PORTABILIDADE <span style={{ color: branding.brandColor }}>PRO</span>
+                  PORTABILIDADE <span style={{ color: branding.highlightColor || branding.brandColor }}>PRO</span>
                 </h1>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Inteligência e tecnologia em crédito consignado</p>
               </div>
@@ -426,7 +425,7 @@ export default function LoginPage() {
               <div className="flex-1 max-w-[340px]">
                 <h2 className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-none mb-3">
                   Mais inteligência.<br />
-                  <span className="transition-all duration-300" style={{ color: branding.brandColor }}>Mais resultado.</span>
+                  <span className="transition-all duration-300" style={{ color: branding.highlightColor || branding.brandColor }}>Mais resultado.</span>
                 </h2>
                 <p className="text-xs font-semibold text-slate-300 leading-relaxed">
                   A plataforma completa para portabilidade de crédito consignado com tecnologia, segurança e precisão.
@@ -438,11 +437,11 @@ export default function LoginPage() {
                 
                 {/* Giant blue logo shape 'P' behind the couple, matching the mockup */}
                 <svg className="absolute top-[48%] left-[45%] -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] -z-10 opacity-[0.95] select-none pointer-events-none" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M60 170V45c0-8.3 6.7-15 15-15h45c33.1 0 60 26.9 60 60s-27 60-60 60H90" stroke="url(#pGrad)" strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M60 170V45c0-8.3 6.7-15 15-15h45c33.1 0 60 26.9 60 60s-27 60-60 60H90" stroke={`url(#pGrad-${(branding.highlightColor || branding.brandColor).replace('#', '')})`} strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
                   <defs>
-                    <linearGradient id="pGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id={`pGrad-${(branding.highlightColor || branding.brandColor).replace('#', '')}`} x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor={branding.highlightColor || branding.brandColor} />
-                      <stop offset="100%" stopColor={branding.brandColor} />
+                      <stop offset="100%" stopColor={`color-mix(in srgb, ${branding.highlightColor || branding.brandColor} 65%, black)`} />
                     </linearGradient>
                   </defs>
                 </svg>
