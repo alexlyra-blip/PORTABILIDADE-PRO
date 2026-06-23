@@ -21,12 +21,23 @@ export default function LoginPage() {
     name: "Portabilidade PRO",
     logoUrl: null,
     brandColor: "#2563eb",
-    sidebarColor: "#0f172a"
+    sidebarColor: "#0f172a",
+    highlightColor: "#2563eb",
+    sidebarColorSecondary: ""
   });
 
   // Load remembered settings on mount
   useEffect(() => {
     setMounted(true);
+    
+    // Load last active branding (cached regardless of remember_me) to show identity immediately
+    const cachedBranding = localStorage.getItem('last_active_branding');
+    if (cachedBranding) {
+      try {
+        setBranding(JSON.parse(cachedBranding));
+      } catch (e) {}
+    }
+
     const savedRemember = localStorage.getItem('remember_me') === 'true';
     if (savedRemember) {
       setRememberMe(true);
@@ -51,13 +62,22 @@ export default function LoginPage() {
     const fetchBranding = async () => {
       const emailTrimmed = email.trim();
       
-      // If email is empty, reset to default branding
+      // If email is empty, try to load from last active branding cache first
       if (!emailTrimmed) {
+        const cachedBranding = localStorage.getItem('last_active_branding');
+        if (cachedBranding) {
+          try {
+            setBranding(JSON.parse(cachedBranding));
+            return;
+          } catch (e) {}
+        }
         setBranding({
           name: "Portabilidade PRO",
           logoUrl: null,
           brandColor: "#2563eb",
-          sidebarColor: "#0f172a"
+          sidebarColor: "#0f172a",
+          highlightColor: "#2563eb",
+          sidebarColorSecondary: ""
         });
         return;
       }
@@ -78,23 +98,36 @@ export default function LoginPage() {
         try {
           const res = await api.get(`/auth/branding?email=${encodeURIComponent(emailTrimmed)}`);
           if (res) {
-            setBranding({
+            const newBranding = {
               name: res.name || "Portabilidade PRO",
               logoUrl: res.logo_url || null,
               brandColor: res.brand_color || "#2563eb",
-              sidebarColor: res.sidebar_color || "#0f172a"
-            });
+              sidebarColor: res.sidebar_color || "#0f172a",
+              highlightColor: res.highlight_color || res.brand_color || "#2563eb",
+              sidebarColorSecondary: res.sidebar_color_secondary || ""
+            };
+            setBranding(newBranding);
+            localStorage.setItem('last_active_branding', JSON.stringify(newBranding));
           }
         } catch (err) {
           // Ignore error, keep default
         }
       } else {
-        // Reset to default if cleared/invalid
+        // Reset to last active branding or defaults if cleared/invalid
+        const cachedBranding = localStorage.getItem('last_active_branding');
+        if (cachedBranding) {
+          try {
+            setBranding(JSON.parse(cachedBranding));
+            return;
+          } catch (e) {}
+        }
         setBranding({
           name: "Portabilidade PRO",
           logoUrl: null,
           brandColor: "#2563eb",
-          sidebarColor: "#0f172a"
+          sidebarColor: "#0f172a",
+          highlightColor: "#2563eb",
+          sidebarColorSecondary: ""
         });
       }
     };
@@ -118,11 +151,22 @@ export default function LoginPage() {
       // Update local storage branding color to sync instantly
       localStorage.setItem('active_theme_color', response.user.brand_color || '#2563eb');
       
+      // Cache the logged in user's branding
+      const userBranding = {
+        name: response.user.name || "Portabilidade PRO",
+        logoUrl: response.user.logo_url || response.user.avatar_url || null,
+        brandColor: response.user.brand_color || "#2563eb",
+        sidebarColor: response.user.sidebar_color || "#0f172a",
+        highlightColor: response.user.highlight_color || response.user.brand_color || "#2563eb",
+        sidebarColorSecondary: response.user.sidebar_color_secondary || ""
+      };
+      localStorage.setItem('last_active_branding', JSON.stringify(userBranding));
+      
       // Save Remember Me details
       if (rememberMe) {
         localStorage.setItem('remember_me', 'true');
         localStorage.setItem('remembered_email', email.trim());
-        localStorage.setItem('remembered_branding', JSON.stringify(branding));
+        localStorage.setItem('remembered_branding', JSON.stringify(userBranding));
       } else {
         localStorage.removeItem('remember_me');
         localStorage.removeItem('remembered_email');
@@ -397,9 +441,8 @@ export default function LoginPage() {
                   <path d="M60 170V45c0-8.3 6.7-15 15-15h45c33.1 0 60 26.9 60 60s-27 60-60 60H90" stroke="url(#pGrad)" strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
                   <defs>
                     <linearGradient id="pGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#2563eb" />
-                      <stop offset="50%" stopColor="#1d4ed8" />
-                      <stop offset="100%" stopColor="#1e3a8a" />
+                      <stop offset="0%" stopColor={branding.highlightColor || branding.brandColor} />
+                      <stop offset="100%" stopColor={branding.brandColor} />
                     </linearGradient>
                   </defs>
                 </svg>

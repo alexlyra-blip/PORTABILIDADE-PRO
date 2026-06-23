@@ -71,6 +71,8 @@ async def get_branding(email: str, db: AsyncSession = Depends(get_db)):
         "name": branding_user.name,
         "logo_url": branding_user.logo_url or branding_user.avatar_url,
         "brand_color": branding_user.brand_color or "#2563eb",
-        "sidebar_color": branding_user.sidebar_color or "#0f172a"
+        "sidebar_color": branding_user.sidebar_color or "#0f172a",
+        "highlight_color": branding_user.highlight_color or branding_user.brand_color or "#2563eb",
+        "sidebar_color_secondary": branding_user.sidebar_color_secondary or ""
     }
 
