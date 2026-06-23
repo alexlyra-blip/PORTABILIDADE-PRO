@@ -18,11 +18,13 @@ interface PromotoraRule {
 interface Bank {
   id: number;
   name: string;
+  logo_url?: string;
 }
 
 interface SubLogo {
   id: number;
   name: string;
+  logo_url?: string;
 }
 
 export default function PromotoraRulesPage() {
@@ -47,6 +49,35 @@ export default function PromotoraRulesPage() {
   // Simulation Bank Blocklist
   const [visibleBanks, setVisibleBanks] = useState<Bank[]>([]);
   const [newBlockedSimBank, setNewBlockedSimBank] = useState("");
+
+  const getBankLogo = (bankName: string, savedLogoUrl?: string | null) => {
+    if (savedLogoUrl) return savedLogoUrl;
+    if (!bankName) return null;
+    
+    const norm = (s: string) => {
+      if (!s) return "";
+      return s.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]/g, '').trim();
+    };
+    
+    const searchName = bankName.includes('-') ? bankName.split('-')[1].trim() : bankName;
+    const searchNorm = norm(searchName);
+    
+    // 1. Try to find in subLogos (secondary logos)
+    const matchedSub = subLogos.find(l => {
+      const lN = norm(l.name);
+      return lN === searchNorm || lN.includes(searchNorm) || searchNorm.includes(lN);
+    });
+    if (matchedSub?.logo_url) return matchedSub.logo_url;
+    
+    // 2. Try to find in main banks
+    const matchedBank = banks.find(b => {
+      const bN = norm(b.name);
+      return bN === searchNorm || bN.includes(searchNorm) || searchNorm.includes(bN);
+    });
+    if (matchedBank?.logo_url) return matchedBank.logo_url;
+    
+    return null;
+  };
 
   useEffect(() => {
     const u = localStorage.getItem('user');
@@ -151,18 +182,18 @@ export default function PromotoraRulesPage() {
     savePriorities(updated);
   };
 
-    const addOriginRule = () => {
+  const addOriginRule = () => {
     if (!newOriginRule.origin_bank || !newOriginRule.min_paid) return;
     const bankItem = inssBanks.find(b => b.value === newOriginRule.origin_bank);
     if (!bankItem) return;
     
-    // Find matching logo if possible
-    const matchedBank = banks.find(b => bankItem.label.toUpperCase().includes(b.name.toUpperCase()));
+    // Find matching logo if possible using the getBankLogo helper
+    const matchedLogo = getBankLogo(bankItem.label);
     
     const updated = [...originRules, { 
       ...newOriginRule, 
       origin_bank: bankItem.label,
-      logo_url: matchedBank ? matchedBank.logo_url : null,
+      logo_url: matchedLogo,
       id: Date.now() 
     }];
     saveOriginRules(updated);
@@ -179,11 +210,12 @@ export default function PromotoraRulesPage() {
     const bankItem = inssBanks.find(b => b.value === newBlockedOriginBank);
     if (!bankItem) return;
 
-    const matchedBank = banks.find(b => bankItem.label.toUpperCase().includes(b.name.toUpperCase()));
+    // Find matching logo if possible using the getBankLogo helper
+    const matchedLogo = getBankLogo(bankItem.label);
 
     const updated = [...blockedOriginBanks, { 
       origin_bank: bankItem.label, 
-      logo_url: matchedBank ? matchedBank.logo_url : null,
+      logo_url: matchedLogo,
       id: Date.now() 
     }];
     saveBlockedOriginBanks(updated);
@@ -433,7 +465,7 @@ export default function PromotoraRulesPage() {
                 >
                   <div className="flex items-center gap-4">
                     {(() => {
-                      const computedLogo = r.logo_url || banks.find(b => r.origin_bank.toUpperCase().includes(b.name.toUpperCase()))?.logo_url;
+                      const computedLogo = getBankLogo(r.origin_bank, r.logo_url);
                       return computedLogo ? (
                         <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm shrink-0">
                           <img src={getStaticUrl(computedLogo) || ""} className="w-full h-full object-contain" alt="" />
@@ -503,7 +535,7 @@ export default function PromotoraRulesPage() {
                 >
                   <div className="flex items-center gap-4">
                     {(() => {
-                      const computedLogo = r.logo_url || banks.find(b => r.origin_bank.toUpperCase().includes(b.name.toUpperCase()))?.logo_url;
+                      const computedLogo = getBankLogo(r.origin_bank, r.logo_url);
                       return computedLogo ? (
                         <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm shrink-0">
                           <img src={getStaticUrl(computedLogo) || ""} className="w-full h-full object-contain" alt="" />
