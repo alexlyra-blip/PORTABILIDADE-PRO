@@ -353,6 +353,20 @@ class AdminService:
             if user_data.get("role") not in ["vendedor", "corretor"]:
                 user_data["role"] = "vendedor"
             
+            # Herdar cores da promotora se estiverem com os valores padrão ou vazios
+            if not user_data.get("brand_color") or user_data.get("brand_color") == "#2563eb":
+                user_data["brand_color"] = current_user.brand_color
+            if not user_data.get("sidebar_color") or user_data.get("sidebar_color") == "#0f172a":
+                user_data["sidebar_color"] = current_user.sidebar_color
+            if not user_data.get("sidebar_color_secondary") or user_data.get("sidebar_color_secondary") == "#1e293b":
+                user_data["sidebar_color_secondary"] = current_user.sidebar_color_secondary
+            if not user_data.get("highlight_color") or user_data.get("highlight_color") == "#2563eb":
+                user_data["highlight_color"] = current_user.highlight_color or current_user.brand_color
+            if not user_data.get("logo_url"):
+                user_data["logo_url"] = current_user.logo_url
+            if not user_data.get("avatar_url"):
+                user_data["avatar_url"] = current_user.avatar_url
+            
         if "password" in user_data:
             user_data["password_hash"] = auth_service.get_password_hash(user_data.pop("password"))
         

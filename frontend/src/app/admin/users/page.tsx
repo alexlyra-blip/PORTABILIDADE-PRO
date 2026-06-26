@@ -88,9 +88,17 @@ export default function UsersPage() {
         active: user.active ?? true, phone: user.phone || "" });
     } else {
       setEditingUser(null);
-      setFormData({ name: "", email: "", role: "corretor", password: "", seller_limit: 0,
-        brand_color: "#2563eb", sidebar_color: "#0f172a", sidebar_color_secondary: "#1e293b", highlight_color: "#2563eb",
-        logo_url: "", avatar_url: "", is_temporary_password: true, active: true, phone: "" });
+      const isPromo = loggedUser?.role === 'promotora';
+      setFormData({ 
+        name: "", email: "", role: "corretor", password: "", seller_limit: 0,
+        brand_color: isPromo && loggedUser.brand_color ? loggedUser.brand_color : "#2563eb", 
+        sidebar_color: isPromo && loggedUser.sidebar_color ? loggedUser.sidebar_color : "#0f172a", 
+        sidebar_color_secondary: isPromo && loggedUser.sidebar_color_secondary ? loggedUser.sidebar_color_secondary : "#1e293b", 
+        highlight_color: isPromo && (loggedUser.highlight_color || loggedUser.brand_color) ? (loggedUser.highlight_color || loggedUser.brand_color) : "#2563eb",
+        logo_url: isPromo && loggedUser.logo_url ? loggedUser.logo_url : "", 
+        avatar_url: isPromo && loggedUser.avatar_url ? loggedUser.avatar_url : "", 
+        is_temporary_password: true, active: true, phone: "" 
+      });
     }
     setModalOpen(true);
   };
