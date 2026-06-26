@@ -14,7 +14,8 @@ const nextConfig = {
   },
   experimental: {
     cpus: 1,
-    workerThreads: false
+    workerThreads: false,
+    memoryBasedWorkersCount: true
   },
     async rewrites() {
         return [
