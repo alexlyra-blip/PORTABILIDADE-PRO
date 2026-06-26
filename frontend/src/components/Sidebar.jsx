@@ -127,7 +127,7 @@ export default function Sidebar() {
         {/* Username Banner */}
         <div className="mb-4 text-center flex flex-col items-center w-full">
           <p className="text-[11px] font-black uppercase tracking-wider opacity-80 mb-0.5 text-center" style={{ color: user.highlight_color || user.brand_color || '#60a5fa' }}>Bem-vindo(a)</p>
-          <h2 className="text-base font-black text-white truncate max-w-[180px] drop-shadow-md text-center mx-auto">{user.name}</h2>
+          <h2 className="text-base font-black text-white break-words whitespace-normal leading-tight drop-shadow-md text-center mx-auto max-w-[200px]">{user.name}</h2>
         </div>
 
         {/* Branding Row */}

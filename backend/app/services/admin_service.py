@@ -590,9 +590,9 @@ class AdminService:
         if current_user.role == "admin":
             sim_query = select(Simulation)
         elif current_user.role == "promotora":
-            sim_query = select(Simulation).where((Simulation.user_id == current_user.id) | (Simulation.user_id.in_(
-                select(User.id).where(User.broker_id == current_user.id)
-            )))
+            sim_query = select(Simulation).join(User, Simulation.user_id == User.id).where(
+                (User.id == current_user.id) | (User.broker_id == current_user.id)
+            )
         else: # vendedor / corretor
             sim_query = select(Simulation).where(Simulation.user_id == current_user.id)
 
