@@ -1,7 +1,7 @@
 import re
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from app.models.sqlalchemy_models import Bank, BankRule, BankTable, Coefficient, User, Company, Simulation, SimulationResult, UserBankVisibility, PromotoraRule
@@ -289,11 +289,10 @@ class AdminService:
         if current_user.role == "admin":
             result = await db.execute(select(User))
         elif current_user.role == "promotora":
-            # Promotora só vê vendedores criados por ela
+            # Promotora vê a si mesma e os usuários criados por ela
             result = await db.execute(
                 select(User).where(
-                    User.broker_id == current_user.id, 
-                    User.role == "vendedor"
+                    or_(User.broker_id == current_user.id, User.id == current_user.id)
                 )
             )
         else: # vendedor
@@ -319,8 +318,7 @@ class AdminService:
     async def count_sellers_by_broker(db: AsyncSession, broker_id: int) -> int:
         result = await db.execute(
             select(func.count(User.id)).where(
-                User.broker_id == broker_id,
-                User.role == "vendedor"
+                User.broker_id == broker_id
             )
         )
         return result.scalar() or 0

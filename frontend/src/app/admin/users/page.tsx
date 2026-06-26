@@ -12,7 +12,7 @@ interface User {
   sidebar_color?: string; sidebar_color_secondary?: string; highlight_color?: string;
   active?: boolean; phone?: string;
   subscription_expires_at?: string; users_count?: number;
-  promotora_id?: number;
+  promotora_id?: number; broker_id?: number;
   simulations_count?: number;
   last_access?: string;
   broker_name?: string;
@@ -150,7 +150,11 @@ export default function UsersPage() {
       <PageHeader 
         title="Gestão de" 
         highlight="Equipe" 
-        subtitle="Administre permissões, limites e assinaturas dos usuários."
+        subtitle={
+          loggedUser?.role === 'promotora'
+            ? `Você utilizou ${users.filter(u => u.broker_id === loggedUser.id).length} de ${loggedUser.seller_limit || '∞'} usuários permitidos.`
+            : "Administre permissões, limites e assinaturas dos usuários."
+        }
       />
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
         <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-full">
@@ -196,7 +200,7 @@ export default function UsersPage() {
             const daysLeft = getDaysLeft(user.subscription_expires_at);
             const isPromo = user.role === 'promotora';
             const isBlocked = user.active === false;
-            const usedUsers = users.filter(u => u.promotora_id === user.id).length;
+            const usedUsers = users.filter(u => u.broker_id === user.id).length;
             return (
               <div key={user.id} className={`bg-slate-50 dark:bg-white/5 p-6 rounded-[2.5rem] border transition-all group relative overflow-hidden ${isBlocked ? 'border-red-200 dark:border-red-900/30 bg-red-50/30' : 'border-slate-100 dark:border-white/5 hover:border-blue-500/30'}`}>
                 {/* Header */}
