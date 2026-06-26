@@ -299,16 +299,35 @@ class AdminService:
             result = await db.execute(select(User).where(User.id == current_user.id))
             
         users = result.scalars().all()
+        if not users:
+            return []
+
+        user_ids = [u.id for u in users]
+        
+        # Otimização: Obter todas as simulações agrupadas em uma única query
+        simulations_res = await db.execute(
+            select(Simulation.user_id, func.count(Simulation.id))
+            .where(Simulation.user_id.in_(user_ids))
+            .group_by(Simulation.user_id)
+        )
+        sim_counts = {row[0]: row[1] for row in simulations_res.all()}
+
+        # Otimização: Obter todos os brokers em uma única query
+        broker_ids = list(set([u.broker_id for u in users if u.broker_id]))
+        broker_names = {}
+        if broker_ids:
+            broker_res = await db.execute(
+                select(User.id, User.name).where(User.id.in_(broker_ids))
+            )
+            broker_names = {row[0]: row[1] for row in broker_res.all()}
+
         # Compute simulations count for each user
         for u in users:
-            count = await db.execute(select(func.count(Simulation.id)).where(Simulation.user_id == u.id))
-            u.simulations_count = count.scalar() or 0
+            u.simulations_count = sim_counts.get(u.id, 0)
             
             # Identify creator
             if u.broker_id:
-                broker_res = await db.execute(select(User).where(User.id == u.broker_id))
-                broker = broker_res.scalar_one_or_none()
-                u.broker_name = broker.name if broker else "Sistema"
+                u.broker_name = broker_names.get(u.broker_id, "Sistema")
             else:
                 u.broker_name = "Administrador"
             
