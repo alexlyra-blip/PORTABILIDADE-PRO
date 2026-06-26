@@ -16,4 +16,5 @@ ENV PYTHONPATH=/app:/engine
 RUN mkdir -p uploads/logos uploads/avatars && chmod -R 777 uploads
 EXPOSE 8000
 
-CMD ["sh", "-c", "python init_db.py; python update_db.py; python seed_data.py; uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Remove DB checks/migrations from startup to optimize boot time/CPU
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

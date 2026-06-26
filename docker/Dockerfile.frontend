@@ -1,14 +1,12 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Limita o uso de memória do Node para 768MB para forçar o Garbage Collector antes do limite do SO
 ENV NODE_OPTIONS="--max-old-space-size=768"
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY ./frontend/package*.json ./
 
-# Instalação com flags para economizar memória e ignorar a falta de lockfile
 RUN npm install --legacy-peer-deps --no-audit --no-fund --loglevel=error
 
 COPY ./frontend ./
@@ -18,6 +16,22 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ARG BACKEND_URL
 ENV BACKEND_URL=$BACKEND_URL
 RUN npm run build
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=768"
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package*.json ./
+
+# Optional: if you need next.config.js/mjs
+COPY --from=builder /app/next.config.* ./
+
+RUN npm install --legacy-peer-deps --omit=dev --no-audit --no-fund --loglevel=error
 
 EXPOSE 3000
 
