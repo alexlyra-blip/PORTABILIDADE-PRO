@@ -566,9 +566,18 @@ export default function LoginPage() {
 
         {/* Footer Features Links */}
         <div className="w-full border-t border-white/5 pt-3.5 flex flex-wrap justify-center lg:justify-between items-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest relative z-10">
-          <div className="flex gap-2 items-center">
-            <Icons.Layers size={12} style={{ color: branding.brandColor }} />
-            Tecnologia de ponta
+          <div className="flex gap-2 items-center relative group cursor-default" title="Inteligência Artificial Ativa">
+            <div className="relative flex items-center justify-center">
+              <Icons.Bot size={14} className="text-slate-300 group-hover:text-emerald-400 transition-colors" />
+              {/* Radar light */}
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-80"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]"></span>
+              </span>
+            </div>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-400 to-slate-500 group-hover:from-emerald-400 group-hover:to-emerald-200 transition-all duration-300">
+              Módulo de IA
+            </span>
           </div>
           <div className="flex gap-2 items-center">
             <Icons.ShieldCheck size={12} className="text-emerald-500" />
