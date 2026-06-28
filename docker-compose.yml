@@ -8,6 +8,18 @@ services:
     volumes:
       - redis_data:/data
 
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mudar_senha_em_producao}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   backend:
     build: 
       context: .
@@ -15,10 +27,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://postgres:mudar_senha_em_producao@db:5432/postgres}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     depends_on:
       - redis
+      - db
     volumes:
       - ./backend:/app
       - ./engine:/engine
@@ -37,3 +50,4 @@ services:
 
 volumes:
   redis_data:
+  postgres_data:
