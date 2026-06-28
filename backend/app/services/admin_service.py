@@ -592,6 +592,10 @@ class AdminService:
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
         import time
+        import logging
+        logger = logging.getLogger("admin_service")
+        start_time_total = time.time()
+        
         cache_key = f"{current_user.id}_{days}"
         now = time.time()
         
@@ -599,6 +603,8 @@ class AdminService:
             cached_data, timestamp = AdminService._dashboard_cache[cache_key]
             if now - timestamp < AdminService._dashboard_cache_ttl:
                 return cached_data
+
+        logger.warning(f"🚀 [DASHBOARD] Iniciando get_dashboard_stats para {current_user.name} (Role: {current_user.role})")
 
         # Base query for simulations
         if current_user.role == "admin":
@@ -611,7 +617,10 @@ class AdminService:
             sim_query = select(Simulation).where(Simulation.user_id == current_user.id)
 
         period_ago = datetime.utcnow() - timedelta(days=days)
-        sim_query = sim_query.where(Simulation.created_at >= period_ago).order_by(Simulation.created_at.desc()).limit(3000)
+        sim_query = sim_query.where(Simulation.created_at >= period_ago).order_by(Simulation.created_at.desc()).limit(150)
+        
+        logger.warning(f"🚀 [DASHBOARD] Executando query principal de simulations no banco...")
+        t_query = time.time()
         
         # Load relationships
         result = await db.execute(
@@ -621,6 +630,7 @@ class AdminService:
             )
         )
         simulations = result.scalars().all()
+        logger.warning(f"🚀 [DASHBOARD] Query retornou {len(simulations)} registros em {time.time() - t_query:.3f} segundos")
 
         # Total System Counts
         total_banks_res = await db.execute(select(func.count(Bank.id)))
@@ -631,12 +641,16 @@ class AdminService:
         
         total_simulations_res = await db.execute(select(func.count(Simulation.id)))
         total_simulations = total_simulations_res.scalar() or 0
+        
+        logger.warning(f"🚀 [DASHBOARD] Counts globais concluídos")
 
         # Get bank metadata mapping
         banks_result = await db.execute(select(Bank))
         all_banks = banks_result.scalars().all()
         banks_map = {b.id: b.name for b in all_banks}
         banks_logo_map = {b.id: b.logo_url for b in all_banks}
+        
+        t_loop = time.time()
 
         # Aggregate stats
         bank_counts = {} # bank_id -> dict
@@ -867,6 +881,9 @@ class AdminService:
                 } for s in simulations
             ]
         }
+
+        logger.warning(f"🚀 [DASHBOARD] Processamento concluído em {time.time() - start_time_total:.3f} segundos totais (Loop Python levou {time.time() - t_loop:.3f} segs)")
+
         AdminService._dashboard_cache[cache_key] = (response_data, now)
         return response_data
     @staticmethod
