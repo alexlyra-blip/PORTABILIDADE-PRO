@@ -714,25 +714,22 @@ class AdminService:
         # Fast SQL Aggregations for Results
         logger.warning(f"🚀 [DASHBOARD] Iniciando agregações SQL para Results...")
         
-        # Base results query
-        res_query = select(SimulationResult).join(Simulation)
-        if current_user.role == "admin":
-            pass
-        elif current_user.role == "promotora":
-            res_query = res_query.join(User, Simulation.user_id == User.id).where(
-                (User.id == current_user.id) | (User.broker_id == current_user.id)
-            )
-        else:
-            res_query = res_query.where(Simulation.user_id == current_user.id)
-            
-        res_query = res_query.where(Simulation.created_at >= thirty_days_ago)
+        def get_base_query(*cols):
+            q = select(*cols).select_from(SimulationResult).join(Simulation)
+            if current_user.role == "promotora":
+                q = q.join(User, Simulation.user_id == User.id).where(
+                    (User.id == current_user.id) | (User.broker_id == current_user.id)
+                )
+            elif current_user.role != "admin":
+                q = q.where(Simulation.user_id == current_user.id)
+            return q.where(Simulation.created_at >= thirty_days_ago)
         
         # Bank stats
-        bank_stats_q = select(
+        bank_stats_q = get_base_query(
             SimulationResult.bank_id,
             func.count(SimulationResult.id),
             func.sum(SimulationResult.release_amount)
-        ).select_from(res_query.subquery()).group_by(SimulationResult.bank_id)
+        ).group_by(SimulationResult.bank_id)
         
         try:
             b_stats = await db.execute(bank_stats_q)
@@ -750,27 +747,27 @@ class AdminService:
             logger.error(f"Erro em bank_stats: {e}")
             
         # Table stats
-        table_stats_q = select(
+        table_stats_q = get_base_query(
             SimulationResult.table_name,
             func.count(SimulationResult.id),
             func.max(SimulationResult.bank_id)
-        ).select_from(res_query.subquery()).where(SimulationResult.table_name != None).group_by(SimulationResult.table_name)
+        ).where(SimulationResult.table_name != None).group_by(SimulationResult.table_name)
         
         try:
             t_stats = await db.execute(table_stats_q)
             for tname, count, bid in t_stats:
                 table_counts[tname] = {"count": count, "bank_id": bid}
         except Exception as e:
-            pass
+            logger.error(f"Erro em table_stats: {e}")
             
         # Avg rate
-        rate_stats_q = select(func.avg(SimulationResult.offered_rate)).select_from(res_query.subquery()).where(SimulationResult.offered_rate > 0)
+        rate_stats_q = get_base_query(func.avg(SimulationResult.offered_rate)).where(SimulationResult.offered_rate > 0)
         try:
             r_stats = await db.execute(rate_stats_q)
             avg_val = r_stats.scalar()
             if avg_val: rates.append(float(avg_val))
         except Exception as e:
-            pass
+            logger.error(f"Erro em rate_stats: {e}")
 
         # Top Values
         top_10_banks = sorted(bank_counts.values(), key=lambda x: x.get("total_volume", 0.0), reverse=True)[:10]
