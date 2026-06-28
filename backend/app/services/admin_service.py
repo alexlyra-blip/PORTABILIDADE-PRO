@@ -530,16 +530,16 @@ class AdminService:
         query = select(Simulation).options(selectinload(Simulation.results), selectinload(Simulation.user))
         
         if current_user.role == "admin":
-            result = await db.execute(query.order_by(Simulation.created_at.desc()))
+            result = await db.execute(query.order_by(Simulation.created_at.desc()).limit(500))
         elif current_user.role == "promotora":
             result = await db.execute(
                 query.join(User).where((User.id == current_user.id) | (User.broker_id == current_user.id))
-                .order_by(Simulation.created_at.desc())
+                .order_by(Simulation.created_at.desc()).limit(500)
             )
         else:
             result = await db.execute(
                 query.where(Simulation.user_id == current_user.id)
-                .order_by(Simulation.created_at.desc())
+                .order_by(Simulation.created_at.desc()).limit(500)
             )
             
         return result.scalars().all()
@@ -611,7 +611,7 @@ class AdminService:
             sim_query = select(Simulation).where(Simulation.user_id == current_user.id)
 
         period_ago = datetime.utcnow() - timedelta(days=days)
-        sim_query = sim_query.where(Simulation.created_at >= period_ago).order_by(Simulation.created_at.desc())
+        sim_query = sim_query.where(Simulation.created_at >= period_ago).order_by(Simulation.created_at.desc()).limit(3000)
         
         # Load relationships
         result = await db.execute(
