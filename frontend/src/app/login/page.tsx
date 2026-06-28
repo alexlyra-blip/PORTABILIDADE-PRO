@@ -420,7 +420,7 @@ export default function LoginPage() {
             </div>
 
             {/* Slogan + Couple Section (Laid out next to each other to save huge vertical space) */}
-            <div className="flex items-center justify-between gap-6 mb-5">
+            <div className="flex items-center justify-between gap-6 mb-3">
               {/* Slogan details */}
               <div className="flex-1 max-w-[340px]">
                 <h2 className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-none mb-3">
@@ -433,10 +433,10 @@ export default function LoginPage() {
               </div>
 
               {/* Corporate Couple Photo backdrop from user request (replaces h-52 block) */}
-              <div className="flex-1 relative h-[325px] xl:h-[365px] flex items-end justify-center overflow-visible pr-8">
+              <div className="flex-1 relative h-[270px] xl:h-[300px] flex items-end justify-center overflow-visible pr-8">
                 
                 {/* Giant blue logo shape 'P' behind the couple, matching the mockup */}
-                <svg className="absolute top-[48%] left-[45%] -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] -z-10 opacity-[0.95] select-none pointer-events-none" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg className="absolute top-[48%] left-[45%] -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] -z-10 opacity-[0.95] select-none pointer-events-none" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M60 170V45c0-8.3 6.7-15 15-15h45c33.1 0 60 26.9 60 60s-27 60-60 60H90" stroke={`url(#pGrad-${(branding.highlightColor || branding.brandColor).replace('#', '')})`} strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
                   <defs>
                     <linearGradient id={`pGrad-${(branding.highlightColor || branding.brandColor).replace('#', '')}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -565,7 +565,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer Features Links */}
-        <div className="w-full border-t border-white/5 pt-3.5 flex flex-wrap justify-center lg:justify-between items-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest relative z-10">
+        <div className="w-full border-t border-white/5 pt-3.5 mt-3 flex flex-wrap justify-center lg:justify-between items-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest relative z-10">
           <div className="flex gap-2 items-center relative group cursor-default bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20" title="Inteligência Artificial Ativa">
             <div className="relative flex items-center justify-center">
               <Icons.Bot size={18} className="text-emerald-400" />
