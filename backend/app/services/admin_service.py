@@ -625,7 +625,8 @@ class AdminService:
         # Load relationships
         result = await db.execute(
             sim_query.options(
-                selectinload(Simulation.user)
+                selectinload(Simulation.user),
+                selectinload(Simulation.results)
             )
         )
         simulations = result.scalars().all()
