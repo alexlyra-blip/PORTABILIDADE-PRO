@@ -502,62 +502,62 @@ export default function LoginPage() {
             {/* Bottom 3 highlights row */}
             <div className="grid grid-cols-3 gap-4 w-full max-w-xl">
               {/* IA */}
-              <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
+              <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between group cursor-default">
                 <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-lg shrink-0 transition-transform duration-300 hover:scale-110"
+                  className="w-12 h-12 rounded-full flex items-center justify-center mb-3 shadow-lg shrink-0 transition-transform duration-300 group-hover:scale-110"
                   style={{ 
                     background: `linear-gradient(135deg, ${branding.brandColor} 0%, color-mix(in srgb, ${branding.brandColor} 70%, black) 100%)`,
                     boxShadow: `0 4px 12px -2px ${branding.brandColor}50`
                   }}
                 >
-                  <Icons.Brain className="w-5 h-5 text-white" />
+                  <Icons.Bot className="w-6 h-6 text-white" />
                 </div>
                 <div className="text-left">
-                  <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mb-1">Inteligência Artificial</h4>
-                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1">Inteligência Artificial</h4>
+                  <p className="text-[9px] text-slate-300 font-bold uppercase tracking-wider leading-relaxed">
                     Análise inteligente de dados para encontrar as melhores oportunidades de portabilidade.
                   </p>
-                  <div className="w-10 h-1 rounded-full mt-3" style={{ backgroundColor: branding.brandColor }}></div>
+                  <div className="w-10 h-1.5 rounded-full mt-3" style={{ backgroundColor: branding.brandColor }}></div>
                 </div>
               </div>
 
               {/* Segurança */}
-              <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
+              <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between group cursor-default">
                 <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-lg shrink-0 transition-transform duration-300 hover:scale-110"
+                  className="w-12 h-12 rounded-full flex items-center justify-center mb-3 shadow-lg shrink-0 transition-transform duration-300 group-hover:scale-110"
                   style={{ 
                     background: `linear-gradient(135deg, ${branding.brandColor} 0%, color-mix(in srgb, ${branding.brandColor} 70%, black) 100%)`,
                     boxShadow: `0 4px 12px -2px ${branding.brandColor}50`
                   }}
                 >
-                  <Icons.ShieldLock className="w-5 h-5 text-white" />
+                  <Icons.ShieldLock className="w-6 h-6 text-white" />
                 </div>
                 <div className="text-left">
-                  <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mb-1">Segurança LGPD</h4>
-                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1">Segurança LGPD</h4>
+                  <p className="text-[9px] text-slate-300 font-bold uppercase tracking-wider leading-relaxed">
                     Total conformidade com a LGPD e criptografia avançada para proteger seus dados.
                   </p>
-                  <div className="w-10 h-1 rounded-full mt-3" style={{ backgroundColor: branding.brandColor }}></div>
+                  <div className="w-10 h-1.5 rounded-full mt-3" style={{ backgroundColor: branding.brandColor }}></div>
                 </div>
               </div>
 
               {/* Cálculos */}
-              <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between">
+              <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[1.75rem] p-4 shadow-sm flex flex-col justify-between group cursor-default">
                 <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center mb-3 shadow-lg shrink-0 transition-transform duration-300 hover:scale-110"
+                  className="w-12 h-12 rounded-full flex items-center justify-center mb-3 shadow-lg shrink-0 transition-transform duration-300 group-hover:scale-110"
                   style={{ 
                     background: `linear-gradient(135deg, ${branding.brandColor} 0%, color-mix(in srgb, ${branding.brandColor} 70%, black) 100%)`,
                     boxShadow: `0 4px 12px -2px ${branding.brandColor}50`
                   }}
                 >
-                  <Icons.BarChartUp className="w-5 h-5 text-white" />
+                  <Icons.BarChartUp className="w-6 h-6 text-white" />
                 </div>
                 <div className="text-left">
-                  <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mb-1">Cálculos Financeiros</h4>
-                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider mb-1">Cálculos Financeiros</h4>
+                  <p className="text-[9px] text-slate-300 font-bold uppercase tracking-wider leading-relaxed">
                     Cálculos precisos e simulações avançadas para máxima assertividade nos resultados.
                   </p>
-                  <div className="w-10 h-1 rounded-full mt-3" style={{ backgroundColor: branding.brandColor }}></div>
+                  <div className="w-10 h-1.5 rounded-full mt-3" style={{ backgroundColor: branding.brandColor }}></div>
                 </div>
               </div>
             </div>
@@ -566,17 +566,17 @@ export default function LoginPage() {
 
         {/* Footer Features Links */}
         <div className="w-full border-t border-white/5 pt-3.5 flex flex-wrap justify-center lg:justify-between items-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest relative z-10">
-          <div className="flex gap-2 items-center relative group cursor-default" title="Inteligência Artificial Ativa">
+          <div className="flex gap-2 items-center relative group cursor-default bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20" title="Inteligência Artificial Ativa">
             <div className="relative flex items-center justify-center">
-              <Icons.Bot size={14} className="text-slate-300 group-hover:text-emerald-400 transition-colors" />
+              <Icons.Bot size={18} className="text-emerald-400" />
               {/* Radar light */}
-              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-80"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,1)]"></span>
               </span>
             </div>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-400 to-slate-500 group-hover:from-emerald-400 group-hover:to-emerald-200 transition-all duration-300">
-              Módulo de IA
+            <span className="text-[10px] text-emerald-400 font-bold drop-shadow-md">
+              Módulo de IA Ativo
             </span>
           </div>
           <div className="flex gap-2 items-center">
