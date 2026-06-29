@@ -99,6 +99,11 @@ function SimuladorPageContent() {
   const [dropdownOpen, setDropdownOpen] = useState({});
   const [subDropdownOpen, setSubDropdownOpen] = useState(false);
   
+  const [extractModalOpen, setExtractModalOpen] = useState(false);
+  const [extractLoading, setExtractLoading] = useState(false);
+  const [extractedData, setExtractedData] = useState(null);
+  const [selectedExtractLoanIndex, setSelectedExtractLoanIndex] = useState(null);
+
   useEffect(() => {
     if (formData.agreement !== "INSS" || !formData.benefit_species) {
       setPossuiDoisCartoes("nao");
@@ -253,6 +258,62 @@ function SimuladorPageContent() {
     const filtered = contracts.filter(c => c.id !== id);
     setContracts(filtered);
     setActiveContractIndex(Math.max(0, activeContractIndex - 1));
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      alert("Por favor, selecione um arquivo PDF.");
+      return;
+    }
+    setExtractLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await api.post("/pdf-extractor/inss", fd, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      if (res.success && res.data) {
+        setExtractedData(res.data);
+        setExtractModalOpen(true);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao ler o PDF. Tente novamente.");
+    } finally {
+      setExtractLoading(false);
+    }
+    e.target.value = null; // reset input
+  };
+
+  const handleUseLoan = () => {
+    if (selectedExtractLoanIndex === null || !extractedData) return;
+    const selectedLoan = extractedData.emprestimos_ativos[selectedExtractLoanIndex];
+    
+    setFormData(prev => ({
+      ...prev,
+      nome_cliente: extractedData.cliente || prev.nome_cliente,
+      agreement: "INSS"
+    }));
+
+    // Formata os valores de volta para o padrão de máscara do front (R$ 0,00)
+    const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val).replace(/\s/g, " ");
+
+    const newContracts = [...contracts];
+    newContracts[0] = {
+      ...newContracts[0],
+      banco: selectedLoan.banco,
+      parcela: formatCurrency(selectedLoan.parcela),
+      saldoDevedor: formatCurrency(selectedLoan.saldo_devedor),
+      prazoTotal: selectedLoan.prazo_total.toString(),
+      prazoRestante: selectedLoan.prazo_restante.toString(),
+      parcelasPagas: (selectedLoan.prazo_total - selectedLoan.prazo_restante).toString(),
+      taxaAtual: selectedLoan.taxa_mensal.toString().replace(".", ","),
+      taxaAjustada: selectedLoan.taxa_mensal.toString().replace(".", ",")
+    };
+    setContracts(newContracts);
+    setExtractModalOpen(false);
   };
 
   const handleChange = (e) => {
@@ -549,6 +610,26 @@ function SimuladorPageContent() {
           
           {/* Lado Esquerdo: Dados do Cliente */}
           <div className="xl:col-span-4 space-y-8">
+            
+            {/* INSS PDF Extractor Dropzone */}
+            <div className="bg-blue-600 p-1 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+              <div className="bg-white dark:bg-slate-900 rounded-[2.25rem] p-6 relative z-10 flex flex-col items-center justify-center text-center border-4 border-dashed border-blue-100 dark:border-blue-900/50 hover:border-blue-400 transition-colors">
+                <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                  <Icons.FileText size={28} />
+                </div>
+                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">Extrato INSS</h4>
+                <p className="text-[10px] text-slate-500 font-bold uppercase mb-4">Envie o PDF para preencher automático</p>
+                
+                <label className="relative cursor-pointer group/btn">
+                  <input type="file" accept="application/pdf" className="hidden" onChange={handleFileUpload} disabled={extractLoading} />
+                  <div className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${extractLoading ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/30'}`}>
+                    {extractLoading ? 'Processando PDF...' : 'Selecionar PDF'}
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/5 rounded-full -mr-20 -mt-20 group-hover:scale-125 transition-transform duration-1000"></div>
               
@@ -1164,6 +1245,102 @@ function SimuladorPageContent() {
           </div>
         </form>
       </div>
+
+      {/* EXTRACT MODAL */}
+      {extractModalOpen && extractedData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setExtractModalOpen(false)}></div>
+          <div className="relative bg-slate-50 rounded-[3rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-scale-up">
+            
+            <div className="px-8 py-6 bg-white border-b border-slate-100 flex justify-between items-center z-10 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                  <Icons.FileText size={24} />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800 text-xl uppercase tracking-tight">{extractedData.cliente || "Cliente Não Identificado"}</h3>
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-md inline-block mt-1">
+                    {extractedData.beneficio} • {extractedData.especie}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setExtractModalOpen(false)} className="w-10 h-10 bg-slate-100 hover:bg-red-100 hover:text-red-500 text-slate-400 rounded-xl flex items-center justify-center transition-colors text-xl font-black">×</button>
+            </div>
+
+            <div className="p-8 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 custom-scrollbar">
+              <div className="lg:col-span-4 space-y-6">
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl relative overflow-hidden">
+                  <div className={`absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 opacity-10 ${extractedData.margem_disponivel > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Resumo da Margem</h4>
+                  
+                  <div className="space-y-4 relative z-10">
+                    <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Máximo</span>
+                      <span className="text-xs font-black text-slate-800">R$ {extractedData.margem_maxima.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Utilizado</span>
+                      <span className="text-xs font-black text-slate-800">R$ {extractedData.margem_comprometida.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                    <div className={`p-4 rounded-2xl ${extractedData.margem_disponivel > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'} border`}>
+                      <span className={`block text-[9px] font-black uppercase tracking-widest mb-1 ${extractedData.margem_disponivel > 0 ? 'text-emerald-600' : 'text-red-600'}`}>Margem Disponível</span>
+                      <span className={`block text-2xl font-black ${extractedData.margem_disponivel > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {extractedData.margem_disponivel > 0 ? '' : '- '}
+                        R$ {Math.abs(extractedData.margem_disponivel).toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-8">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">Empréstimos Ativos ({extractedData.emprestimos_ativos?.length || 0})</h4>
+                <div className="space-y-4">
+                  {extractedData.emprestimos_ativos?.length === 0 ? (
+                    <div className="p-8 text-center bg-white rounded-[2rem] border border-dashed border-slate-200">
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Nenhum empréstimo ativo encontrado.</p>
+                    </div>
+                  ) : (
+                    extractedData.emprestimos_ativos.map((loan, idx) => (
+                      <label key={idx} className={`block relative bg-white p-5 rounded-[2rem] border-2 cursor-pointer transition-all hover:shadow-xl ${selectedExtractLoanIndex === idx ? 'border-blue-500 shadow-blue-500/20' : 'border-slate-100'}`}>
+                        <div className="flex items-center gap-4">
+                          <input type="radio" name="selected_loan" className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-300 focus:ring-blue-500" checked={selectedExtractLoanIndex === idx} onChange={() => setSelectedExtractLoanIndex(idx)} />
+                          
+                          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Banco</p>
+                              <p className="text-xs font-black text-slate-800 uppercase line-clamp-1" title={loan.banco}>{loan.banco}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Parcela / Taxa</p>
+                              <p className="text-xs font-black text-slate-800">R$ {loan.parcela.toFixed(2).replace('.', ',')} <span className="text-emerald-500 ml-1">({loan.taxa_mensal.toFixed(2)}%)</span></p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Prazo Restante</p>
+                              <p className="text-xs font-black text-slate-800">{loan.prazo_restante} <span className="text-slate-400 text-[10px]">de {loan.prazo_total}</span></p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Saldo Devedor</p>
+                              <p className="text-sm font-black text-blue-600">R$ {loan.saldo_devedor.toFixed(2).replace('.', ',')}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-white border-t border-slate-100 flex justify-end gap-4 z-10 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
+               <button type="button" onClick={() => setExtractModalOpen(false)} className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest transition-colors">Cancelar</button>
+               <button type="button" onClick={handleUseLoan} disabled={selectedExtractLoanIndex === null} className="px-8 py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-500/30 transition-all hover:-translate-y-1">
+                 Importar Contrato Selecionado
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

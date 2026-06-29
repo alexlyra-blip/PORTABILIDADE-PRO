@@ -1,0 +1,155 @@
+from fastapi import APIRouter, UploadFile, File, HTTPException
+import pdfplumber
+import io
+import re
+from datetime import datetime
+import math
+
+router = APIRouter()
+
+def parse_currency(value_str):
+    if not value_str: return 0.0
+    try:
+        clean_str = re.sub(r'[R$\s]', '', value_str)
+        clean_str = clean_str.replace('.', '').replace(',', '.')
+        return float(clean_str)
+    except:
+        return 0.0
+
+def clean_bank_name(banco_str):
+    if not banco_str: return "BANCO DESCONHECIDO"
+    # Remove prefixo numérico (ex: "626 - BANCO C6...")
+    cleaned = re.sub(r'^\d+\s*-\s*', '', banco_str)
+    # Tenta casar com bancos conhecidos
+    upper_cleaned = cleaned.upper()
+    if 'C6' in upper_cleaned: return 'BANCO C6'
+    if 'PAN' in upper_cleaned: return 'BANCO PAN'
+    if 'DAYCOVAL' in upper_cleaned: return 'BANCO DAYCOVAL'
+    if 'ITA' in upper_cleaned: return 'BANCO ITAÚ'
+    if 'BRADESCO' in upper_cleaned: return 'BANCO BRADESCO'
+    if 'BGN' in upper_cleaned or 'CETELEM' in upper_cleaned: return 'BANCO CETELEM'
+    if 'OLE' in upper_cleaned or 'OLÉ' in upper_cleaned: return 'BANCO OLÉ'
+    if 'SANTANDER' in upper_cleaned: return 'BANCO SANTANDER'
+    if 'MERCANTIL' in upper_cleaned: return 'BANCO MERCANTIL'
+    if 'SAFRA' in upper_cleaned: return 'BANCO SAFRA'
+    if 'BMG' in upper_cleaned: return 'BANCO BMG'
+    return cleaned.strip()
+
+@router.post("/inss")
+async def extract_inss_pdf(file: UploadFile = File(...)):
+    if file.content_type != 'application/pdf':
+        raise HTTPException(400, "O arquivo deve ser um PDF")
+
+    try:
+        contents = await file.read()
+        pdf_stream = io.BytesIO(contents)
+        
+        extracted_data = {
+            "cliente": "",
+            "beneficio": "",
+            "especie": "",
+            "margem_maxima": 0.0,
+            "margem_comprometida": 0.0,
+            "margem_disponivel": 0.0,
+            "emprestimos_ativos": []
+        }
+
+        with pdfplumber.open(pdf_stream) as pdf:
+            # Página 1: Dados Pessoais
+            if len(pdf.pages) > 0:
+                p1_text = pdf.pages[0].extract_text()
+                lines = p1_text.split('\n')
+                for i, line in enumerate(lines):
+                    if "HISTÓRICO DE" in line.upper() or "EMPRÉSTIMO CONSIGNADO" in line.upper():
+                        # O nome costuma ser logo abaixo do título
+                        if i + 1 < len(lines) and lines[i+1].strip():
+                            if lines[i+1].strip().upper() not in ["HISTÓRICO DE", "EMPRÉSTIMO CONSIGNADO", "BENEFÍCIO"]:
+                                extracted_data["cliente"] = lines[i+1].strip()
+                            elif i + 2 < len(lines) and lines[i+2].strip() not in ["BENEFÍCIO"]:
+                                extracted_data["cliente"] = lines[i+2].strip()
+
+                    if "PENSAO POR MORTE" in line.upper() or "APOSENTADORIA" in line.upper() or "AMPARO SOCIAL" in line.upper() or "BPC" in line.upper():
+                        extracted_data["especie"] = line.strip()
+
+                    match_ben = re.search(r'Nº Benefício:\s*([\d\.\-]+)', line)
+                    if match_ben:
+                        extracted_data["beneficio"] = match_ben.group(1)
+            
+            # Páginas restantes: Margem e Empréstimos
+            for page in pdf.pages:
+                text = page.extract_text() or ""
+                
+                # Procura margem no texto
+                match_max = re.search(r'MÁXIMO DE COMPROMETIMENTO PERMITIDO\s+R\$\s*([\d\.,]+)', text)
+                match_comp = re.search(r'TOTAL COMPROMETIDO\s+R\$\s*([\d\.,]+)', text)
+                
+                if match_max: extracted_data["margem_maxima"] = parse_currency(match_max.group(1))
+                if match_comp: extracted_data["margem_comprometida"] = parse_currency(match_comp.group(1))
+                
+                # Extrai tabelas
+                tables = page.extract_tables()
+                for table in tables:
+                    if not table or len(table) < 2: continue
+                    # Verifica se é a tabela de Empréstimos
+                    # Vamos verificar se a tabela possui muitas colunas e se tem ATIVO
+                    for row in table:
+                        if not row: continue
+                        clean_row = [str(c).replace('\n', ' ').strip() if c else "" for c in row]
+                        
+                        # Verifica se é uma linha de empréstimo (Normalmente tem mais de 10 colunas, "ATIVO" na coluna 2 ou 3)
+                        is_loan_row = len(clean_row) > 10 and any("ATIVO" in c.upper() for c in clean_row[:4])
+                        if is_loan_row:
+                            try:
+                                # Identificar colunas baseadas no padrão INSS (0-based)
+                                # [0:Contrato, 1:Banco, 2:Situação, 3:Origem, 4:Data Inclusão, 5:Início, 6:Fim, 7:Qtd, 8:Parcela, ..., 14:Taxa Mensal]
+                                contrato = clean_row[0]
+                                banco_raw = clean_row[1]
+                                inicio_desconto = clean_row[5]
+                                
+                                # Limpeza do prazo (ex: "84")
+                                prazo_str = clean_row[7]
+                                prazo_total = int(re.sub(r'\D', '', prazo_str)) if prazo_str else 0
+                                
+                                parcela = parse_currency(clean_row[8])
+                                taxa_mensal = parse_currency(clean_row[14])
+
+                                # Cálculo do saldo devedor
+                                meses_pagos = 0
+                                se_iniciou = re.match(r'(\d{2})/(\d{4})', inicio_desconto)
+                                if se_iniciou:
+                                    mes, ano = map(int, se_iniciou.groups())
+                                    hoje = datetime.today()
+                                    meses_pagos = (hoje.year - ano) * 12 + (hoje.month - mes)
+                                    if meses_pagos < 0: meses_pagos = 0
+                                
+                                prazo_restante = max(0, prazo_total - meses_pagos)
+                                
+                                saldo_devedor = 0.0
+                                if prazo_restante > 0 and taxa_mensal > 0:
+                                    taxa_dec = taxa_mensal / 100.0
+                                    saldo_devedor = parcela * ((1 - math.pow(1 + taxa_dec, -prazo_restante)) / taxa_dec)
+                                elif prazo_restante > 0 and taxa_mensal == 0:
+                                    saldo_devedor = parcela * prazo_restante
+
+                                extracted_data["emprestimos_ativos"].append({
+                                    "banco": clean_bank_name(banco_raw),
+                                    "contrato": contrato,
+                                    "parcela": parcela,
+                                    "prazo_total": prazo_total,
+                                    "prazo_restante": prazo_restante,
+                                    "taxa_mensal": taxa_mensal,
+                                    "saldo_devedor": round(saldo_devedor, 2)
+                                })
+                            except Exception as e:
+                                print("Erro parseando linha:", clean_row, e)
+                                pass
+
+        # Calcular margem
+        extracted_data["margem_disponivel"] = round(extracted_data["margem_maxima"] - extracted_data["margem_comprometida"], 2)
+
+        return {"success": True, "data": extracted_data}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f"Falha na extração: {str(e)}")

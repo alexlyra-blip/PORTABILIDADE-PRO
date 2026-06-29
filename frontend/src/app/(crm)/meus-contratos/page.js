@@ -15,32 +15,25 @@ export default function MeusContratosPage() {
    const [editingId, setEditingId] = useState(null);
    const [editData, setEditData] = useState({ cliente: "", cpf: "", numero_proposta: "" });
 
+   const fetchContracts = async () => {
+      try {
+         const res = await api.get("/contracts/");
+         let parsed = Array.isArray(res) ? res : res.data;
+         parsed.forEach(c => {
+            if (!c.status) c.status = 'PENDENTE';
+         });
+         setContracts(parsed);
+      } catch (err) {
+         console.error("Erro ao buscar contratos:", err);
+      }
+   };
+
    useEffect(() => {
       const userStr = localStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
       setCurrentUser(user);
 
-      const saved = localStorage.getItem("accepted_contracts");
-      if (saved) {
-         let parsed = JSON.parse(saved);
-         parsed.forEach(c => {
-            if (!c.status) c.status = 'PENDENTE';
-         });
-
-         // Filtrar visibilidade:
-         // Admin vê tudo no localStorage (que é local à máquina)
-         // Promotora vê o dela + time dela
-         // Vendedor vê só o dele
-         if (user && user.role !== 'admin') {
-            if (user.role === 'promotora') {
-               parsed = parsed.filter(c => c.user_id === user.id || c.broker_id === user.id || !c.user_id); // !c.user_id para legados se necessário
-            } else {
-               parsed = parsed.filter(c => c.user_id === user.id);
-            }
-         }
-
-         setContracts(parsed);
-      }
+      fetchContracts();
 
       Promise.all([
          api.get("/admin/banks").catch(() => []),
@@ -51,64 +44,68 @@ export default function MeusContratosPage() {
       });
    }, []);
 
-   const updateStatus = (id, newStatus) => {
-      const updated = contracts.map(c => {
-         if (c.id === id) {
-            let updatedContract = {
-               ...c,
-               status: newStatus,
-               status_updated_at: Date.now()
-            };
+   const updateStatus = async (id, newStatus) => {
+      const current = contracts.find(c => c.id === id);
+      if (!current) return;
+      
+      let updatePayload = {
+         status: newStatus,
+         status_updated_at: Date.now().toString()
+      };
 
-            if (newStatus === 'AG. RETORNO CIP' && c.status !== 'AG. RETORNO CIP') {
-               const today = new Date();
-               let daysAdded = 0;
-               while (daysAdded < 5) {
-                  today.setDate(today.getDate() + 1);
-                  if (today.getDay() !== 0 && today.getDay() !== 6) {
-                     daysAdded++;
-                  }
-               }
-               updatedContract.data_cip = today.toISOString().split('T')[0];
-            } else if (newStatus === 'SALDO QUITADO') {
-               updatedContract.refin_status = 'AG. AVERBAÇÃO PORT';
-               if (!updatedContract.port_status) {
-                  updatedContract.port_status = 'AG. AVERBAÇÃO';
-               }
-            } else if (newStatus === 'PAGO') {
-               updatedContract.data_pago = new Date().toISOString().split('T')[0];
-               updatedContract.refin_status = 'AVERBADO';
-            } else if (newStatus === 'REPROVADO') {
-               updatedContract.data_reprovado = new Date().toISOString().split('T')[0];
+      if (newStatus === 'AG. RETORNO CIP' && current.status !== 'AG. RETORNO CIP') {
+         const today = new Date();
+         let daysAdded = 0;
+         while (daysAdded < 5) {
+            today.setDate(today.getDate() + 1);
+            if (today.getDay() !== 0 && today.getDay() !== 6) {
+               daysAdded++;
             }
-            return updatedContract;
          }
-         return c;
-      });
-      setContracts(updated);
-      localStorage.setItem("accepted_contracts", JSON.stringify(updated));
-      window.dispatchEvent(new Event('contracts-updated'));
-   };
+         updatePayload.data_cip = today.toISOString().split('T')[0];
+      } else if (newStatus === 'SALDO QUITADO') {
+         updatePayload.refin_status = 'AG. AVERBAÇÃO PORT';
+         if (!current.port_status) {
+            updatePayload.port_status = 'AG. AVERBAÇÃO';
+         }
+      } else if (newStatus === 'PAGO') {
+         updatePayload.data_pago = new Date().toISOString().split('T')[0];
+         updatePayload.refin_status = 'AVERBADO';
+      } else if (newStatus === 'REPROVADO') {
+         updatePayload.data_reprovado = new Date().toISOString().split('T')[0];
+      }
 
-   const deleteContract = (id) => {
-      if (window.confirm("Tem certeza que deseja excluir esta proposta?")) {
-         const updated = contracts.filter(c => c.id !== id);
-         setContracts(updated);
-         localStorage.setItem("accepted_contracts", JSON.stringify(updated));
+      try {
+         await api.patch(`/contracts/${id}`, updatePayload);
+         setContracts(prev => prev.map(c => c.id === id ? { ...c, ...updatePayload } : c));
          window.dispatchEvent(new Event('contracts-updated'));
+      } catch (err) {
+         console.error("Erro ao atualizar status", err);
+         alert("Erro ao atualizar status");
       }
    };
 
-   const updatePortStatus = (id, newPortStatus) => {
-      const updated = contracts.map(c => {
-         if (c.id === id) {
-            return { ...c, port_status: newPortStatus };
+   const deleteContract = async (id) => {
+      if (window.confirm("Tem certeza que deseja excluir esta proposta?")) {
+         try {
+            await api.delete(`/contracts/${id}`);
+            setContracts(prev => prev.filter(c => c.id !== id));
+            window.dispatchEvent(new Event('contracts-updated'));
+         } catch (err) {
+            console.error("Erro ao excluir contrato", err);
+            alert("Erro ao excluir contrato");
          }
-         return c;
-      });
-      setContracts(updated);
-      localStorage.setItem("accepted_contracts", JSON.stringify(updated));
-      window.dispatchEvent(new Event('contracts-updated'));
+      }
+   };
+
+   const updatePortStatus = async (id, newPortStatus) => {
+      try {
+         await api.patch(`/contracts/${id}`, { port_status: newPortStatus });
+         setContracts(prev => prev.map(c => c.id === id ? { ...c, port_status: newPortStatus } : c));
+         window.dispatchEvent(new Event('contracts-updated'));
+      } catch (err) {
+         console.error("Erro ao atualizar port status", err);
+      }
    };
 
    const startEditing = (contract) => {
@@ -125,22 +122,21 @@ export default function MeusContratosPage() {
       setEditData({ cliente: "", cpf: "", numero_proposta: "" });
    };
 
-   const saveEdit = (id) => {
-      const updated = contracts.map(c => {
-         if (c.id === id) {
-            return {
-               ...c,
-               cliente: editData.cliente,
-               cpf: editData.cpf,
-               numero_proposta: editData.numero_proposta
-            };
-         }
-         return c;
-      });
-      setContracts(updated);
-      localStorage.setItem("accepted_contracts", JSON.stringify(updated));
-      window.dispatchEvent(new Event('contracts-updated'));
-      setEditingId(null);
+   const saveEdit = async (id) => {
+      try {
+         const updatePayload = {
+            cliente: editData.cliente,
+            cpf: editData.cpf,
+            numero_proposta: editData.numero_proposta
+         };
+         await api.patch(`/contracts/${id}`, updatePayload);
+         setContracts(prev => prev.map(c => c.id === id ? { ...c, ...updatePayload } : c));
+         window.dispatchEvent(new Event('contracts-updated'));
+         setEditingId(null);
+      } catch (err) {
+         console.error("Erro ao salvar edição", err);
+         alert("Erro ao editar contrato");
+      }
    };
 
    const formatCurrencyLocal = (value) => {

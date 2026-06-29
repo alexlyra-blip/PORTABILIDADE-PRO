@@ -247,9 +247,8 @@ function OfertasPageContent() {
       a.download = `proposta_${offer.banco}.pdf`;
       a.click();
 
-      // Salvar contrato aceito para a tela Meus Contratos e Relatórios
-      const existingContracts = JSON.parse(localStorage.getItem('accepted_contracts') || '[]');
-      existingContracts.push({
+      // Salvar contrato aceito para a tela Meus Contratos e Relatórios via API
+      const newContract = {
         id: Date.now().toString(),
         user_id: user.id,
         user_name: user.name || "Consultor",
@@ -270,10 +269,14 @@ function OfertasPageContent() {
         saldo_devedor: activeContractData?.saldoDevedor ? (typeof activeContractData.saldoDevedor === 'string' ? parseFloat(activeContractData.saldoDevedor.replace(/[^\d,]/g, '').replace(',', '.')) : activeContractData.saldoDevedor) : 5000.00,
         prazo_restante: activeContractData?.prazoTotal ? (Math.max(0, parseInt(activeContractData.prazoTotal) - parseInt(activeContractData.parcelasPagas || "0"))) : 56,
         orig_parcela: activeContractData?.original_parcela ? (typeof activeContractData.original_parcela === 'string' ? parseFloat(activeContractData.original_parcela.replace(/[^\d,]/g, '').replace(',', '.')) : activeContractData.original_parcela) : (parseFloat(activeContractData?.parcela) || parseFloat(inputData?.parcela) || offer.valor_parcela || 0)
+      };
 
-      });
-      localStorage.setItem('accepted_contracts', JSON.stringify(existingContracts));
-      window.dispatchEvent(new Event('contracts-updated'));
+      try {
+        await api.post('/contracts/', newContract);
+        window.dispatchEvent(new Event('contracts-updated'));
+      } catch (err) {
+        console.error("Erro ao salvar contrato na API", err);
+      }
 
       setTimeout(() => {
         router.push('/meus-contratos');

@@ -51,60 +51,17 @@ export default function RelatorioPage() {
 
     const loadInitialData = () => {
       setMeta(prev => ({ ...prev, ...currentMeta }));
-
-      // Processa contratos locais IMEDIATAMENTE
-      const localDataRaw = localStorage.getItem("accepted_contracts");
-      if (localDataRaw) {
-        try {
-          const localData = JSON.parse(localDataRaw);
-          if (localData && localData.length > 0) {
-            setContracts(localData);
-            processChartData(localData, currentMeta);
-          }
-        } catch(e) {}
-      }
     };
 
     const fetchServerData = async () => {
       try {
-        const res = await api.get('/admin/simulations');
-        const serverData = res.data || res;
+        const res = await api.get('/contracts/');
+        const serverData = Array.isArray(res) ? res : res.data;
         
-        // Mapeia o formato da API para o formato esperado pelo dashboard
-        const formattedContracts = serverData.map(sim => {
-          const bestResult = sim.results
-            ?.filter(r => r.is_approved)
-            ?.sort((a, b) => (b.release_amount || 0) - (a.release_amount || 0))[0];
-
-          return {
-            id: sim.id,
-            cliente: sim.client_name,
-            cpf: sim.client_cpf,
-            banco: bestResult?.bank_name || "N/A",
-            convenio: sim.agreement,
-            valor_contrato: (sim.debt_balance || 0) + (bestResult?.release_amount || 0),
-            valor_troco: bestResult?.release_amount || 0,
-            parcela: sim.installment_value || 0,
-            status: 'PAGO', // Simplificado para o dashboard de resultados
-            data_aceite: sim.created_at?.split('T')[0],
-            user_id: sim.user_id
-          };
-        });
-
-        setContracts(formattedContracts);
-        processChartData(formattedContracts, currentMeta);
+        setContracts(serverData);
+        processChartData(serverData, currentMeta);
       } catch (error) {
         console.error("Erro ao carregar relatório:", error);
-        
-        // Fallback para localStorage se a API falhar
-        const saved = localStorage.getItem("accepted_contracts");
-        if (saved) {
-           try {
-              let parsed = JSON.parse(saved);
-              setContracts(parsed);
-              processChartData(parsed, currentMeta);
-           } catch(e) {}
-        }
       }
     };
 
@@ -174,15 +131,7 @@ export default function RelatorioPage() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
-    const savedContracts = localStorage.getItem("accepted_contracts");
-    let allData = data;
-
-    if (savedContracts) {
-       try {
-          const parsed = JSON.parse(savedContracts);
-          if (parsed && parsed.length > 0) allData = parsed;
-       } catch(e) {}
-    }
+    const allData = data || [];
 
     allData.forEach(item => {
       const vContrato = Number(item.valor_contrato || item.parcela || 0);
