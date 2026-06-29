@@ -273,6 +273,28 @@ function SimuladorPageContent() {
       fd.append("file", file);
       const res = await api.postFormData("/pdf-extractor/inss", fd);
       if (res.success && res.data) {
+        if (res.data.data_extrato) {
+          const [dia, mes, ano] = res.data.data_extrato.split('/');
+          const extratoDate = new Date(`${ano}-${mes}-${dia}T00:00:00`);
+          const today = new Date();
+          const diffTime = today.getTime() - extratoDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays > 30) {
+            alert(`Extrato inválido! A data do extrato (${res.data.data_extrato}) é superior a 30 dias. O prazo máximo aceito é de 30 dias.`);
+            setExtractLoading(false);
+            e.target.value = null;
+            return;
+          } else if (diffDays > 15) {
+            const proceed = window.confirm(`Atenção: O extrato foi gerado há ${diffDays} dias (${res.data.data_extrato}). Extratos com mais de 15 dias podem estar desatualizados. Deseja continuar mesmo assim?`);
+            if (!proceed) {
+              setExtractLoading(false);
+              e.target.value = null;
+              return;
+            }
+          }
+        }
+
         setExtractedData(res.data);
         setExtractModalOpen(true);
       }
