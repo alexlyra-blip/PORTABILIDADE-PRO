@@ -18,22 +18,8 @@ def parse_currency(value_str):
 
 def clean_bank_name(banco_str):
     if not banco_str: return "BANCO DESCONHECIDO"
-    # Remove prefixo numérico (ex: "626 - BANCO C6...")
-    cleaned = re.sub(r'^\d+\s*-\s*', '', banco_str)
-    # Tenta casar com bancos conhecidos
-    upper_cleaned = cleaned.upper()
-    if 'C6' in upper_cleaned: return 'BANCO C6'
-    if 'PAN' in upper_cleaned: return 'BANCO PAN'
-    if 'DAYCOVAL' in upper_cleaned: return 'BANCO DAYCOVAL'
-    if 'ITA' in upper_cleaned: return 'BANCO ITAÚ'
-    if 'BRADESCO' in upper_cleaned: return 'BANCO BRADESCO'
-    if 'BGN' in upper_cleaned or 'CETELEM' in upper_cleaned: return 'BANCO CETELEM'
-    if 'OLE' in upper_cleaned or 'OLÉ' in upper_cleaned: return 'BANCO OLÉ'
-    if 'SANTANDER' in upper_cleaned: return 'BANCO SANTANDER'
-    if 'MERCANTIL' in upper_cleaned: return 'BANCO MERCANTIL'
-    if 'SAFRA' in upper_cleaned: return 'BANCO SAFRA'
-    if 'BMG' in upper_cleaned: return 'BANCO BMG'
-    return cleaned.strip()
+    # Mantém o código do banco na string para facilitar o match no front-end
+    return " ".join(banco_str.split())
 
 @router.post("/inss")
 async def extract_inss_pdf(file: UploadFile = File(...)):

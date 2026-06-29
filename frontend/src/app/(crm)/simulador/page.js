@@ -337,7 +337,11 @@ function SimuladorPageContent() {
       }
     }
 
+    const extractedCodeMatch = selectedLoan.banco.match(/^(\d{3})/);
+    const extractedCode = extractedCodeMatch ? extractedCodeMatch[1] : null;
+
     const foundInssBank = inssBanks.find(b => {
+      if (extractedCode && b.value === extractedCode) return true;
       const bn = norm(b.label);
       return bn.includes(bankNameToSearch);
     });
@@ -1391,7 +1395,12 @@ function SimuladorPageContent() {
                             </div>
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Banco</p>
-                              <p className="text-xs font-black text-slate-800 uppercase line-clamp-1" title={loan.banco}>{loan.banco}</p>
+                              <div className="flex items-start gap-1.5">
+                                <div className="mt-0.5 text-blue-500">
+                                  <Icons.Landmark className="w-3.5 h-3.5" />
+                                </div>
+                                <p className="text-xs font-black text-slate-800 uppercase">{loan.banco}</p>
+                              </div>
                             </div>
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Parcela / Taxa</p>

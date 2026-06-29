@@ -272,7 +272,7 @@ function OfertasPageContent() {
       };
 
       try {
-        await api.post('/contracts/', newContract);
+        await api.post('/contracts', newContract);
         window.dispatchEvent(new Event('contracts-updated'));
       } catch (err) {
         console.error("Erro ao salvar contrato na API", err);
