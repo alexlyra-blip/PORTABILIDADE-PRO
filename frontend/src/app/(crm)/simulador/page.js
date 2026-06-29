@@ -1326,7 +1326,7 @@ function SimuladorPageContent() {
 
       {/* EXTRACT MODAL */}
       {extractModalOpen && extractedData && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setExtractModalOpen(false)}></div>
           <div className="relative bg-slate-50 rounded-[3rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-scale-up">
             
@@ -1345,22 +1345,22 @@ function SimuladorPageContent() {
               <button onClick={() => setExtractModalOpen(false)} className="w-10 h-10 bg-slate-100 hover:bg-red-100 hover:text-red-500 text-slate-400 rounded-xl flex items-center justify-center transition-colors text-xl font-black">×</button>
             </div>
 
-            <div className="p-8 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 custom-scrollbar">
-              <div className="lg:col-span-4 space-y-6">
+            <div className="p-8 overflow-y-auto flex-1 flex flex-col gap-8 custom-scrollbar">
+              <div className="space-y-6">
                 <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl relative overflow-hidden">
                   <div className={`absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 opacity-10 ${extractedData.margem_disponivel > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Resumo da Margem</h4>
                   
-                  <div className="space-y-4 relative z-10">
-                    <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase">Máximo</span>
-                      <span className="text-xs font-black text-slate-800">R$ {extractedData.margem_maxima.toFixed(2).replace('.', ',')}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 items-center">
+                    <div className="flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Máximo</span>
+                      <span className="text-xl font-black text-slate-800">R$ {extractedData.margem_maxima.toFixed(2).replace('.', ',')}</span>
                     </div>
-                    <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase">Utilizado</span>
-                      <span className="text-xs font-black text-slate-800">R$ {extractedData.margem_comprometida.toFixed(2).replace('.', ',')}</span>
+                    <div className="flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6 md:pl-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Utilizado</span>
+                      <span className="text-xl font-black text-slate-800">R$ {extractedData.margem_comprometida.toFixed(2).replace('.', ',')}</span>
                     </div>
-                    <div className={`p-4 rounded-2xl ${extractedData.margem_disponivel > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'} border`}>
+                    <div className={`p-4 rounded-2xl ${extractedData.margem_disponivel > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'} border flex flex-col justify-center`}>
                       <span className={`block text-[9px] font-black uppercase tracking-widest mb-1 ${extractedData.margem_disponivel > 0 ? 'text-emerald-600' : 'text-red-600'}`}>Margem Disponível</span>
                       <span className={`block text-2xl font-black ${extractedData.margem_disponivel > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                         {extractedData.margem_disponivel > 0 ? '' : '- '}
@@ -1371,7 +1371,7 @@ function SimuladorPageContent() {
                 </div>
               </div>
 
-              <div className="lg:col-span-8">
+              <div>
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">Empréstimos Ativos ({extractedData.emprestimos_ativos?.length || 0})</h4>
                 <div className="space-y-4">
                   {extractedData.emprestimos_ativos?.length === 0 ? (
