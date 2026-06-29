@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { api, getStaticUrl } from "@/utils/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1361,8 +1362,8 @@ function SimuladorPageContent() {
       </div>
 
       {/* EXTRACT MODAL */}
-      {extractModalOpen && extractedData && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {extractModalOpen && extractedData && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setExtractModalOpen(false)}></div>
           <div className="relative bg-slate-50 rounded-[3rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-scale-up">
             
@@ -1438,13 +1439,13 @@ function SimuladorPageContent() {
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Parcela / Taxa</p>
                               <p className="text-xs font-black text-slate-800">R$ {loan.parcela.toFixed(2).replace('.', ',')} <span className="text-emerald-500 ml-1">({loan.taxa_mensal.toFixed(2)}%)</span></p>
                             </div>
-                            <div>
+                            <div className="hidden md:block">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Prazo Restante</p>
-                              <p className="text-xs font-black text-slate-800">{loan.prazo_restante} <span className="text-slate-400 text-[10px]">de {loan.prazo_total}</span></p>
+                              <p className="text-xs font-black text-slate-800"><span className="text-slate-800">{loan.prazo_restante}</span> <span className="text-slate-400 font-bold">de {loan.prazo_total}</span></p>
                             </div>
-                            <div>
+                            <div className="hidden md:block">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Saldo Devedor</p>
-                              <p className="text-sm font-black text-blue-600">R$ {loan.saldo_devedor.toFixed(2).replace('.', ',')}</p>
+                              <p className="text-xs font-black text-blue-600">R$ {loan.saldo_devedor.toFixed(2).replace('.', ',')}</p>
                             </div>
                           </div>
                         </div>
@@ -1455,14 +1456,22 @@ function SimuladorPageContent() {
               </div>
             </div>
 
-            <div className="p-6 bg-white border-t border-slate-100 flex justify-end gap-4 z-10 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
-               <button type="button" onClick={() => setExtractModalOpen(false)} className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest transition-colors">Cancelar</button>
-               <button type="button" onClick={handleUseLoan} disabled={selectedExtractLoanIndex === null} className="px-8 py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-500/30 transition-all hover:-translate-y-1">
-                 Importar Contrato Selecionado
-               </button>
+            <div className="p-8 bg-slate-50 border-t border-slate-200 flex justify-center gap-4 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+              <button onClick={() => setExtractModalOpen(false)} className="px-8 py-4 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-widest text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">Cancelar</button>
+              <button 
+                onClick={() => {
+                  handleUseLoan();
+                  setExtractModalOpen(false);
+                }} 
+                disabled={selectedExtractLoanIndex === null}
+                className="px-8 py-4 rounded-2xl bg-blue-400 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-xs transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Importar Contrato Selecionado
+              </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
