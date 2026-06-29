@@ -17,7 +17,7 @@ import { Icons } from "@/components/Icons";
 export default function AdminPage() {
   const [role, setRole] = useState("vendedor");
   const [loading, setLoading] = useState(true);
-  const [filterDays, setFilterDays] = useState(30);
+  const [filterDays, setFilterDays] = useState(1);
 
   // Arquitetura Fail-Safe: Estado totalmente imutável e estruturado para evitar qualquer quebra.
   const [data, setData] = useState({

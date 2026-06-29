@@ -15,7 +15,7 @@ import { Icons } from "@/components/Icons";
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [filterDays, setFilterDays] = useState(30);
+  const [filterDays, setFilterDays] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [role, setRole] = useState("vendedor");
 

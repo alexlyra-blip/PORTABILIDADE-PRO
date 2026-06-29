@@ -262,7 +262,7 @@ export default function UsersPage() {
     const children = filteredUsers.filter(u => u.broker_id === user.id);
     return (
       <div key={user.id} className="flex flex-col gap-4 w-full">
-        <div className={level === 0 ? "w-full md:w-[400px]" : "w-full md:w-[380px]"}>
+        <div className="w-full">
           {renderUserCard(user)}
         </div>
         
@@ -329,7 +329,37 @@ export default function UsersPage() {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum colaborador encontrado</p>
             </div>
           ) : (
-            rootUsers.map(user => renderUserNode(user, 0))
+            <div className="flex flex-col gap-8">
+              {/* Admins no topo */}
+              {rootUsers.filter(u => u.role === 'admin').length > 0 && (
+                <div className="w-full bg-slate-50 dark:bg-slate-800/50 p-6 md:p-8 rounded-[3rem] border border-slate-100 dark:border-white/5 shadow-inner">
+                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 pl-4 border-l-2 border-blue-500">Administração Superior</h4>
+                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                     {rootUsers.filter(u => u.role === 'admin').map(user => (
+                       <div key={user.id} className="w-full">
+                         {renderUserNode(user, 0)}
+                       </div>
+                     ))}
+                   </div>
+                </div>
+              )}
+              
+              {/* Promotoras / Outros em colunas (Masonry) */}
+              {rootUsers.filter(u => u.role !== 'admin').length > 0 && (
+                <div>
+                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 pl-4 border-l-2 border-emerald-500">Rede de Parceiros e Promotoras</h4>
+                   <div className="columns-1 md:columns-2 xl:columns-3 gap-6">
+                     {rootUsers.filter(u => u.role !== 'admin').map(user => (
+                       <div key={user.id} className="break-inside-avoid mb-6">
+                         <div className="bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-white/5 rounded-[3rem] p-4 md:p-6 shadow-sm hover:shadow-lg transition-all">
+                            {renderUserNode(user, 0)}
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
