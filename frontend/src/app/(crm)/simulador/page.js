@@ -324,25 +324,26 @@ function SimuladorPageContent() {
       else if (spClean.includes("BPC") || spClean.includes("LOAS")) matchedSpecies = "87";
     }
 
-    // Tenta encontrar o banco correspondente
-    let matchedBank = selectedLoan.banco;
+    // Tenta encontrar o banco correspondente para o dropdown (inssBanks)
+    let matchedBank = "";
     const bClean = norm(selectedLoan.banco);
-    const foundBank = dbBanks.find(b => {
-      const bn = norm(b.name);
-      return bn === bClean || bn.includes(bClean) || bClean.includes(bn);
+    
+    let bankNameToSearch = bClean;
+    const heuristics = ["C6", "PAN", "DAYCOVAL", "ITA", "BRADESCO", "MERCANTIL", "SAFRA", "BMG", "OLE", "OLÉ"];
+    for (const h of heuristics) {
+      if (bClean.includes(norm(h))) {
+        bankNameToSearch = norm(h);
+        break;
+      }
+    }
+
+    const foundInssBank = inssBanks.find(b => {
+      const bn = norm(b.label);
+      return bn.includes(bankNameToSearch);
     });
 
-    if (foundBank) {
-      matchedBank = foundBank.name;
-    } else {
-      // Fallbacks comuns
-      const heuristics = ["C6", "PAN", "DAYCOVAL", "ITA", "BRADESCO", "MERCANTIL", "SAFRA", "BMG"];
-      for (const h of heuristics) {
-        if (bClean.includes(h)) {
-          const matched = dbBanks.find(b => norm(b.name).includes(h));
-          if (matched) { matchedBank = matched.name; break; }
-        }
-      }
+    if (foundInssBank) {
+      matchedBank = foundInssBank.value;
     }
     
     setFormData(prev => ({

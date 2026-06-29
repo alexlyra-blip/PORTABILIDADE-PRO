@@ -106,6 +106,10 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                         is_loan_row = len(clean_row) > 10 and any("ATIVO" in c.upper() for c in clean_row[:4])
                         if is_loan_row:
                             try:
+                                # Filtro extra para ignorar cabeçalhos (que caem na regra de ter a palavra ATIVO)
+                                if "ATIVOS" in clean_row[0].upper() or not any(char.isdigit() for char in clean_row[0]):
+                                    continue
+
                                 # Identificar colunas baseadas no padrão INSS (0-based)
                                 # [0:Contrato, 1:Banco, 2:Situação, 3:Origem, 4:Data Inclusão, 5:Início, 6:Fim, 7:Qtd, 8:Parcela, ..., 14:Taxa Mensal]
                                 contrato = clean_row[0]
