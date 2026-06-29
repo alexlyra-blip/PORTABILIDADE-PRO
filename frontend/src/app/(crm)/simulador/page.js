@@ -884,6 +884,7 @@ function SimuladorPageContent() {
                                 onChange={(e) => setAgreementSearch(e.target.value)} 
                                 className="w-full h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase outline-none focus:border-blue-500"
                                 onClick={(e) => e.stopPropagation()}
+                                autoFocus
                               />
                            </div>
                            <div className="overflow-y-auto grid grid-cols-2 gap-2 pr-1">
@@ -936,6 +937,7 @@ function SimuladorPageContent() {
                                         onChange={(e) => setSpeciesSearch(e.target.value)} 
                                         className="w-full h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase outline-none focus:border-blue-500"
                                         onClick={(e) => e.stopPropagation()}
+                                        autoFocus
                                       />
                                    </div>
                                    <div className="overflow-y-auto space-y-1">
@@ -997,6 +999,7 @@ function SimuladorPageContent() {
                                     onChange={(e) => setSubAgreementSearch(e.target.value)} 
                                     className="w-full h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase outline-none focus:border-blue-500"
                                     onClick={(e) => e.stopPropagation()}
+                                    autoFocus
                                   />
                                </div>
                                <div className="overflow-y-auto grid grid-cols-2 gap-2 pr-1">
@@ -1193,6 +1196,7 @@ function SimuladorPageContent() {
                                     onChange={(e) => setBankSearch(e.target.value)} 
                                     className="w-full h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase outline-none focus:border-blue-500"
                                     onClick={(e) => e.stopPropagation()}
+                                    autoFocus
                                   />
                                </div>
                                <div className="overflow-y-auto space-y-1">
