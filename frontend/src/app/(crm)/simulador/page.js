@@ -345,6 +345,16 @@ function SimuladorPageContent() {
       taxaAtual: selectedLoan.taxa_mensal.toString().replace(".", ","),
       taxaAjustada: selectedLoan.taxa_mensal.toString().replace(".", ",")
     };
+    
+    // Verifica se tem margem negativa e preenche os campos automaticamente
+    if (extractedData.margem_disponivel < 0) {
+      setPossuiDoisCartoes("sim");
+      setValorMargemNegativa(formatCurrency(Math.abs(extractedData.margem_disponivel)));
+    } else {
+      setPossuiDoisCartoes("nao");
+      setValorMargemNegativa("");
+    }
+
     setContracts(newContracts);
     setExtractModalOpen(false);
   };
