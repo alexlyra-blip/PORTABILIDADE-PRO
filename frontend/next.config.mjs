@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const isDevWindows = process.platform === 'win32';
-const BACKEND_URL = process.env.BACKEND_URL || (isDevWindows ? 'http://127.0.0.1:8000' : 'http://portabilidadepro-backend:8000');
+const BACKEND_URL = process.env.BACKEND_URL || (isDevWindows ? 'http://127.0.0.1:8000' : 'http://portabilidade-api:8000');
 
 console.log(`[NextConfig] Using Backend URL: ${BACKEND_URL}`);
 
