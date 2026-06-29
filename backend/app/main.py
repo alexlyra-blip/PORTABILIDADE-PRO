@@ -96,28 +96,10 @@ async def startup_event():
         print("✅ Estrutura do banco de dados verificada/criada.")
         
     # Tenta adicionar as colunas novas caso seja um banco antigo (Supabase/Postgres)
-    # Roda cada ALTER TABLE separadamente para evitar que um erro aborte a transação inteira
-    alter_queries = [
-        'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_access" TIMESTAMP WITH TIME ZONE;',
-        'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "current_token" TEXT;',
-        'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sidebar_color_secondary" VARCHAR(50);',
-        'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "highlight_color" VARCHAR(7);',
-        'ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;',
-        'ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;',
-        'ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);',
-        'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_max_age" INTEGER;',
-        'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_grace_age" INTEGER;',
-        'ALTER TABLE "announcements" ADD COLUMN IF NOT EXISTS "image_url" TEXT;'
-    ]
+    # REMOVIDO: Executar ALTER TABLE no startup trava o banco se houver transações pendentes (Lock Queue).
+    # As colunas já foram adicionadas manualmente.
     
-    for q in alter_queries:
-        try:
-            async with engine.begin() as conn:
-                await conn.execute(text(q))
-        except Exception as e:
-            print(f"⚠️ Aviso ao atualizar coluna nativa via Asyncpg: {e}")
-    
-    print("✅ Verificação de colunas (ALTER TABLE) concluída via Asyncpg.")
+    print("✅ Verificação de banco ignorada para evitar locks.")
 
     # Migração SQLite Local para nova coluna abater_margem_hp12c
     try:
