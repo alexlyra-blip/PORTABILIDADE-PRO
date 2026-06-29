@@ -1361,7 +1361,11 @@ function SimuladorPageContent() {
                         <div className="flex items-center gap-4">
                           <input type="radio" name="selected_loan" className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-300 focus:ring-blue-500" checked={selectedExtractLoanIndex === idx} onChange={() => setSelectedExtractLoanIndex(idx)} />
                           
-                          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                          <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-4 items-center">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Contrato</p>
+                              <p className="text-xs font-black text-slate-800 uppercase tracking-wide">{loan.contrato}</p>
+                            </div>
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Banco</p>
                               <p className="text-xs font-black text-slate-800 uppercase line-clamp-1" title={loan.banco}>{loan.banco}</p>
