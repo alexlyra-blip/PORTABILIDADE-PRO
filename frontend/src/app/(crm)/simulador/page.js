@@ -1390,7 +1390,7 @@ function SimuladorPageContent() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 items-center">
                     <div className="flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Máximo</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Margem Consignável</span>
                       <span className="text-xl font-black text-slate-800">R$ {extractedData.margem_maxima.toFixed(2).replace('.', ',')}</span>
                     </div>
                     <div className="flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6 md:pl-2">
