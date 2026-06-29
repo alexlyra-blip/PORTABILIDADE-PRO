@@ -54,6 +54,7 @@ class User(Base):
     
     company = relationship("Company", back_populates="users")
     simulations = relationship("Simulation", back_populates="user")
+    contracts = relationship("Contract", back_populates="user", cascade="all, delete-orphan")
     sellers = relationship("User", foreign_keys="User.broker_id", back_populates="broker")
     broker = relationship("User", foreign_keys="User.broker_id", remote_side="User.id", back_populates="sellers")
     
@@ -236,3 +237,39 @@ class SubAgreementLogo(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), unique=True, index=True)
     logo_url = Column(Text, nullable=True)
+
+class Contract(Base):
+    __tablename__ = "contracts"
+
+    id = Column(String(50), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_name = Column(String(100), nullable=True)
+    user_role = Column(String(50), nullable=True)
+    broker_id = Column(Integer, nullable=True)
+    data_aceite = Column(String(50), nullable=True)
+    data_hora = Column(String(50), nullable=True)
+    cliente = Column(String(150), nullable=True)
+    cpf = Column(String(20), nullable=True)
+    banco = Column(String(100), nullable=True)
+    convenio = Column(String(100), nullable=True)
+    parcela = Column(Float, nullable=True)
+    tabela = Column(String(100), nullable=True)
+    taxa = Column(Float, nullable=True)
+    valor_contrato = Column(Float, nullable=True)
+    valor_troco = Column(Float, nullable=True)
+    instituicao_origem = Column(String(100), nullable=True)
+    saldo_devedor = Column(Float, nullable=True)
+    prazo_restante = Column(Integer, nullable=True)
+    orig_parcela = Column(Float, nullable=True)
+    status = Column(String(50), default="PENDENTE")
+    data_cip = Column(String(50), nullable=True)
+    numero_proposta = Column(String(100), nullable=True)
+    
+    # Extra fields used by frontend
+    status_updated_at = Column(String(50), nullable=True)
+    refin_status = Column(String(50), nullable=True)
+    port_status = Column(String(50), nullable=True)
+    data_pago = Column(String(50), nullable=True)
+    data_reprovado = Column(String(50), nullable=True)
+
+    user = relationship("User", back_populates="contracts")

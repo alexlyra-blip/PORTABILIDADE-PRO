@@ -6,7 +6,7 @@ from app.services.admin_service import AdminService
 from app.services.simulador_service import SimuladorService
 from app.models.models import SimulacaoInput
 from app.models.sqlalchemy_models import Bank, User
-from app.routers.external import verify_n8n_key
+from .external import verify_n8n_key
 from pydantic import BaseModel
 from typing import Optional
 import re
