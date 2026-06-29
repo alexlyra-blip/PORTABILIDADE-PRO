@@ -15,7 +15,7 @@ from sqlalchemy import select, text
 from app.database import engine, Base, AsyncSessionLocal
 from app.models.sqlalchemy_models import User, Bank
 
-from app.routers import auth, banks, users, admin, pdf, simulacao, chat
+from app.routers import auth, banks, users, admin, pdf, simulacao, chat, contracts
 
 # Database Migration Hack (Safe for Windows env)
 # Remove old sqlite migrate call
@@ -90,10 +90,26 @@ async def catch_exceptions_middleware(request, call_next):
 
 @app.on_event("startup")
 async def startup_event():
-    # 1. CRIA AS TABELAS AUTOMATICAMENTE SE NÃO EXISTIREM
+    # 1. CRIA AS TABELAS AUTOMATICAMENTE SE NÃO EXISTIREM E ATUALIZA COLUNAS FALTANTES
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         print("✅ Estrutura do banco de dados verificada/criada.")
+        
+        # Tenta adicionar as colunas novas caso seja um banco antigo (Supabase/Postgres)
+        try:
+            await conn.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_access" TIMESTAMP WITH TIME ZONE;'))
+            await conn.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "current_token" TEXT;'))
+            await conn.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sidebar_color_secondary" VARCHAR(50);'))
+            await conn.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "highlight_color" VARCHAR(7);'))
+            await conn.execute(text('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;'))
+            await conn.execute(text('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;'))
+            await conn.execute(text('ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);'))
+            await conn.execute(text('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_max_age" INTEGER;'))
+            await conn.execute(text('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_grace_age" INTEGER;'))
+            await conn.execute(text('ALTER TABLE "announcements" ADD COLUMN IF NOT EXISTS "image_url" TEXT;'))
+            print("✅ Atualização de colunas (ALTER TABLE) concluída via Asyncpg.")
+        except Exception as e:
+            print(f"⚠️ Aviso ao atualizar colunas nativas via Asyncpg: {e}")
 
     # Migração SQLite Local para nova coluna abater_margem_hp12c
     try:
@@ -214,6 +230,7 @@ app.include_router(pdf.router, prefix="/api/pdf", tags=["Proposals"])
 app.include_router(simulacao.router, prefix="/api", tags=["Simulation"])
 app.include_router(external.router, prefix="/api", tags=["External Integration"])
 app.include_router(chat.router, prefix="/api", tags=["Chatbot"])
+app.include_router(contracts.router, prefix="/api", tags=["Contracts"])
 
 @app.get("/health")
 def health_check():
