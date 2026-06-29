@@ -271,9 +271,7 @@ function SimuladorPageContent() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await api.post("/pdf-extractor/inss", fd, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      const res = await api.postFormData("/pdf-extractor/inss", fd);
       if (res.success && res.data) {
         setExtractedData(res.data);
         setExtractModalOpen(true);
