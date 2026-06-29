@@ -101,6 +101,7 @@ function SimuladorPageContent() {
   
   const [extractModalOpen, setExtractModalOpen] = useState(false);
   const [extractLoading, setExtractLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [extractedData, setExtractedData] = useState(null);
   const [selectedExtractLoanIndex, setSelectedExtractLoanIndex] = useState(null);
 
@@ -261,7 +262,12 @@ function SimuladorPageContent() {
   };
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+    let file = null;
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      file = e.dataTransfer.files[0];
+    } else if (e.target.files && e.target.files.length > 0) {
+      file = e.target.files[0];
+    }
     if (!file) return;
     if (file.type !== "application/pdf") {
       alert("Por favor, selecione um arquivo PDF.");
@@ -304,7 +310,28 @@ function SimuladorPageContent() {
     } finally {
       setExtractLoading(false);
     }
-    e.target.value = null; // reset input
+    if (e.target && e.target.value) {
+      e.target.value = null; // reset input
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    handleFileUpload(e);
   };
 
   const handleUseLoan = () => {
@@ -684,7 +711,12 @@ function SimuladorPageContent() {
             {/* INSS PDF Extractor Dropzone */}
             <div className="bg-blue-600 p-1 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
-              <div className="bg-white dark:bg-slate-900 rounded-[2.25rem] p-6 relative z-10 flex flex-col items-center justify-center text-center border-4 border-dashed border-blue-100 dark:border-blue-900/50 hover:border-blue-400 transition-colors">
+              <div 
+                className={`bg-white dark:bg-slate-900 rounded-[2.25rem] p-6 relative z-10 flex flex-col items-center justify-center text-center border-4 border-dashed transition-all ${isDragging ? 'border-emerald-500 bg-emerald-50/50 scale-[1.02]' : 'border-blue-100 dark:border-blue-900/50 hover:border-blue-400'}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
                   <Icons.FileText size={28} />
                 </div>
