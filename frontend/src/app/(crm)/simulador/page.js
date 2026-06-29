@@ -354,7 +354,12 @@ function SimuladorPageContent() {
 
     // Tenta encontrar o banco correspondente para o dropdown (inssBanks)
     let matchedBank = "";
-    const bClean = norm(selectedLoan.banco);
+    
+    let rawBankName = selectedLoan.banco;
+    if (rawBankName.includes('-')) {
+      rawBankName = rawBankName.substring(rawBankName.indexOf('-') + 1);
+    }
+    const bClean = norm(rawBankName);
     
     let bankNameToSearch = bClean;
     const heuristics = ["C6", "PAN", "DAYCOVAL", "ITA", "BRADESCO", "MERCANTIL", "SAFRA", "BMG", "OLE", "OLÉ"];
@@ -370,8 +375,9 @@ function SimuladorPageContent() {
 
     const foundInssBank = inssBanks.find(b => {
       if (extractedCode && b.value === extractedCode) return true;
-      const bn = norm(b.label);
-      return bn.includes(bankNameToSearch);
+      const bankLabelNameOnly = b.label.includes('-') ? b.label.substring(b.label.indexOf('-') + 1) : b.label;
+      const bn = norm(bankLabelNameOnly);
+      return bn.includes(bankNameToSearch) || bankNameToSearch.includes(bn);
     });
 
     if (foundInssBank) {
