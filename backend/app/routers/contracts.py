@@ -6,7 +6,7 @@ from typing import List
 from app.database import get_db
 from app.models.sqlalchemy_models import Contract, User
 from app.schemas.contract_schema import ContractCreate, ContractUpdate, ContractResponse
-from app.routers.deps import get_current_user
+from .deps import get_current_user
 
 router = APIRouter(prefix="/contracts", tags=["contracts"])
 
@@ -17,6 +17,9 @@ async def create_contract(
     current_user: User = Depends(get_current_user)
 ):
     new_contract = Contract(**contract_in.dict())
+    new_contract.user_id = current_user.id
+    if not new_contract.broker_id:
+        new_contract.broker_id = current_user.broker_id
     db.add(new_contract)
     await db.commit()
     await db.refresh(new_contract)

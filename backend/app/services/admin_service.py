@@ -613,15 +613,22 @@ class AdminService:
         period_ago = datetime.utcnow() - timedelta(days=days)
         sim_query = sim_query.where(Simulation.created_at >= period_ago).order_by(Simulation.created_at.desc())
         
-        # Load relationships
+        # Load base simulations for general loops (without results to save memory)
+        print("Executando sim_query.options...")
         result = await db.execute(
             sim_query.options(
                 selectinload(Simulation.user)
             )
         )
         simulations = result.scalars().all()
+        # Load recent simulations specifically with results for the recent list
+        print("Executando recent_query...")
+        recent_query = sim_query.options(selectinload(Simulation.user), selectinload(Simulation.results)).limit(50)
+        recent_res = await db.execute(recent_query)
+        recent_simulations_db = recent_res.scalars().all()
 
         # Total System Counts
+        print("Executando total counts...")
         total_banks_res = await db.execute(select(func.count(Bank.id)))
         total_banks = total_banks_res.scalar() or 0
         
@@ -632,6 +639,7 @@ class AdminService:
         total_simulations = total_simulations_res.scalar() or 0
 
         # Get bank metadata mapping
+        print("Executando banks query...")
         banks_result = await db.execute(select(Bank))
         all_banks = banks_result.scalars().all()
         banks_map = {b.id: b.name for b in all_banks}
@@ -721,6 +729,7 @@ class AdminService:
         ).select_from(subq).group_by(subq.c.bank_id)
         
         try:
+            print("Executando bank_stats_q...")
             b_stats = await db.execute(bank_stats_q)
             for bid, count, vol in b_stats:
                 if bid not in bank_counts:
@@ -743,6 +752,7 @@ class AdminService:
         ).select_from(subq).where(subq.c.table_name != None).group_by(subq.c.table_name)
         
         try:
+            print("Executando table_stats_q...")
             t_stats = await db.execute(table_stats_q)
             for tname, count, bid in t_stats:
                 table_counts[tname] = {"count": count, "bank_id": bid}
@@ -910,7 +920,7 @@ class AdminService:
                             "is_approved": r.is_approved
                         } for r in s.results
                     ]
-                } for s in simulations
+                } for s in recent_simulations_db
             ]
         }
         AdminService._dashboard_cache[cache_key] = (response_data, now)
