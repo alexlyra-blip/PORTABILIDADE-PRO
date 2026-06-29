@@ -21,11 +21,13 @@ else:
     elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
         
-    # Remove sslmode=disable pois asyncpg não aceita esse argumento dessa forma via SQLAlchemy
-    if "?sslmode=disable" in DATABASE_URL:
-        DATABASE_URL = DATABASE_URL.replace("?sslmode=disable", "")
-    elif "&sslmode=disable" in DATABASE_URL:
-        DATABASE_URL = DATABASE_URL.replace("&sslmode=disable", "")
+    # Remove qualquer sslmode (disable, require, prefer) pois asyncpg não aceita via SQLAlchemy
+    import re
+    DATABASE_URL = re.sub(r'[\?&]sslmode=[^&]+', '', DATABASE_URL)
+    
+    # Se depois da remoção a URL terminar com '?', remove o '?'
+    if DATABASE_URL.endswith('?'):
+        DATABASE_URL = DATABASE_URL[:-1]
     
     print(f"🚀 Conectando ao Banco de Dados: {DATABASE_URL.split('@')[-1]}")
 
