@@ -20,7 +20,6 @@ else:
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
     elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-        
     # Remove qualquer sslmode (disable, require, prefer) pois asyncpg não aceita via SQLAlchemy
     import re
     DATABASE_URL = re.sub(r'[\?&]sslmode=[^&]+', '', DATABASE_URL)
@@ -28,6 +27,12 @@ else:
     # Se depois da remoção a URL terminar com '?', remove o '?'
     if DATABASE_URL.endswith('?'):
         DATABASE_URL = DATABASE_URL[:-1]
+        
+    # SUPABASE POOLER FIX: asyncpg + PgBouncer (Transaction Mode) requer prepared_statement_cache_size=0
+    if "pooler.supabase.com" in DATABASE_URL or ("supabase" in DATABASE_URL and "6543" in DATABASE_URL):
+        if "prepared_statement_cache_size=0" not in DATABASE_URL:
+            separator = "&" if "?" in DATABASE_URL else "?"
+            DATABASE_URL += f"{separator}prepared_statement_cache_size=0"
     
     print(f"🚀 Conectando ao Banco de Dados: {DATABASE_URL.split('@')[-1]}")
 
