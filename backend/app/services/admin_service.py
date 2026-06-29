@@ -530,16 +530,16 @@ class AdminService:
         query = select(Simulation).options(selectinload(Simulation.results), selectinload(Simulation.user))
         
         if current_user.role == "admin":
-            result = await db.execute(query.order_by(Simulation.created_at.desc()))
+            result = await db.execute(query.order_by(Simulation.created_at.desc()).limit(500))
         elif current_user.role == "promotora":
             result = await db.execute(
                 query.join(User).where((User.id == current_user.id) | (User.broker_id == current_user.id))
-                .order_by(Simulation.created_at.desc())
+                .order_by(Simulation.created_at.desc()).limit(500)
             )
         else:
             result = await db.execute(
                 query.where(Simulation.user_id == current_user.id)
-                .order_by(Simulation.created_at.desc())
+                .order_by(Simulation.created_at.desc()).limit(500)
             )
             
         return result.scalars().all()
@@ -592,6 +592,10 @@ class AdminService:
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
         import time
+        import logging
+        logger = logging.getLogger("admin_service")
+        start_time_total = time.time()
+        
         cache_key = f"{current_user.id}_{days}"
         now = time.time()
         
@@ -599,6 +603,8 @@ class AdminService:
             cached_data, timestamp = AdminService._dashboard_cache[cache_key]
             if now - timestamp < AdminService._dashboard_cache_ttl:
                 return cached_data
+
+        logger.warning(f"🚀 [DASHBOARD] Iniciando get_dashboard_stats para {current_user.name} (Role: {current_user.role})")
 
         # Base query for simulations
         if current_user.role == "admin":
@@ -611,16 +617,20 @@ class AdminService:
             sim_query = select(Simulation).where(Simulation.user_id == current_user.id)
 
         period_ago = datetime.utcnow() - timedelta(days=days)
-        sim_query = sim_query.where(Simulation.created_at >= period_ago).order_by(Simulation.created_at.desc())
+        sim_query = sim_query.where(Simulation.created_at >= period_ago).order_by(Simulation.created_at.desc()).limit(150)
+        
+        logger.warning(f"🚀 [DASHBOARD] Executando query principal de simulations no banco...")
+        t_query = time.time()
         
         # Load relationships
         result = await db.execute(
             sim_query.options(
-                selectinload(Simulation.user), 
+                selectinload(Simulation.user),
                 selectinload(Simulation.results)
             )
         )
         simulations = result.scalars().all()
+        logger.warning(f"🚀 [DASHBOARD] Query retornou {len(simulations)} registros em {time.time() - t_query:.3f} segundos")
 
         # Total System Counts
         total_banks_res = await db.execute(select(func.count(Bank.id)))
@@ -631,12 +641,16 @@ class AdminService:
         
         total_simulations_res = await db.execute(select(func.count(Simulation.id)))
         total_simulations = total_simulations_res.scalar() or 0
+        
+        logger.warning(f"🚀 [DASHBOARD] Counts globais concluídos")
 
         # Get bank metadata mapping
         banks_result = await db.execute(select(Bank))
         all_banks = banks_result.scalars().all()
         banks_map = {b.id: b.name for b in all_banks}
         banks_logo_map = {b.id: b.logo_url for b in all_banks}
+        
+        t_loop = time.time()
 
         # Aggregate stats
         bank_counts = {} # bank_id -> dict
@@ -662,9 +676,7 @@ class AdminService:
             pass # Silently handle missing table
 
         for sim in simulations:
-            sim_max_amount = 0.0
-
-            # Origin Bank Stats (Mais Portado)
+            # Origin Bank Stats
             orig = str(sim.current_bank or "").strip().upper()
             if orig and len(orig) > 2:
                 origin_counts[orig] = origin_counts.get(orig, 0) + 1
@@ -700,9 +712,29 @@ class AdminService:
                 except Exception as e:
                     pass
 
-            # Result Stats (Contamos até resultados não aprovados para volume total processado)
-            for res in sim.results:
-                bid = res.bank_id
+        # Fast SQL Aggregations for Results
+        logger.warning(f"🚀 [DASHBOARD] Iniciando agregações SQL para Results...")
+        
+        def get_base_query(*cols):
+            q = select(*cols).select_from(SimulationResult).join(Simulation)
+            if current_user.role == "promotora":
+                q = q.join(User, Simulation.user_id == User.id).where(
+                    (User.id == current_user.id) | (User.broker_id == current_user.id)
+                )
+            elif current_user.role != "admin":
+                q = q.where(Simulation.user_id == current_user.id)
+            return q.where(Simulation.created_at >= thirty_days_ago)
+        
+        # Bank stats
+        bank_stats_q = get_base_query(
+            SimulationResult.bank_id,
+            func.count(SimulationResult.id),
+            func.sum(SimulationResult.release_amount)
+        ).group_by(SimulationResult.bank_id)
+        
+        try:
+            b_stats = await db.execute(bank_stats_q)
+            for bid, count, vol in b_stats:
                 if bid not in bank_counts:
                     bank_counts[bid] = {
                         "name": banks_map.get(bid, f"Banco {bid}"),
@@ -710,42 +742,33 @@ class AdminService:
                         "count": 0,
                         "total_volume": 0.0
                     }
-                bank_counts[bid]["count"] += 1
-                
-                try:
-                    contract_val = float(sim.debt_balance or 0) + float(res.release_amount or 0)
-                    bank_counts[bid]["total_volume"] += contract_val
-                except ValueError:
-                    pass
-                
-                if res.table_name:
-                    if res.table_name not in table_counts:
-                        table_counts[res.table_name] = {"count": 0, "bank_id": bid}
-                    table_counts[res.table_name]["count"] += 1
-                
-                if res.offered_rate is not None and res.offered_rate > 0:
-                    try:
-                        rates.append(float(res.offered_rate))
-                    except ValueError:
-                        pass
-                        
-                if res.release_amount is not None:
-                    try:
-                        sim_max_amount = max(sim_max_amount, float(res.release_amount))
-                    except ValueError:
-                        pass
-                        
-            if sim_max_amount > 0 and sim.created_at:
-                try:
-                    created_dt = sim.created_at
-                    if isinstance(created_dt, str):
-                        created_dt = datetime.fromisoformat(created_dt.split('.')[0] if '.' in created_dt else created_dt)
-                    if created_dt > thirty_days_ago:
-                        date_str = created_dt.strftime("%d/%m")
-                        if date_str not in historical_values: historical_values[date_str] = {}
-                        historical_values[date_str][agreement] = historical_values[date_str].get(agreement, 0.0) + sim_max_amount
-                except Exception as e:
-                    pass
+                bank_counts[bid]["count"] += count
+                if vol: bank_counts[bid]["total_volume"] += float(vol)
+        except Exception as e:
+            logger.error(f"Erro em bank_stats: {e}")
+            
+        # Table stats
+        table_stats_q = get_base_query(
+            SimulationResult.table_name,
+            func.count(SimulationResult.id),
+            func.max(SimulationResult.bank_id)
+        ).where(SimulationResult.table_name != None).group_by(SimulationResult.table_name)
+        
+        try:
+            t_stats = await db.execute(table_stats_q)
+            for tname, count, bid in t_stats:
+                table_counts[tname] = {"count": count, "bank_id": bid}
+        except Exception as e:
+            logger.error(f"Erro em table_stats: {e}")
+            
+        # Avg rate
+        rate_stats_q = get_base_query(func.avg(SimulationResult.offered_rate)).where(SimulationResult.offered_rate > 0)
+        try:
+            r_stats = await db.execute(rate_stats_q)
+            avg_val = r_stats.scalar()
+            if avg_val: rates.append(float(avg_val))
+        except Exception as e:
+            logger.error(f"Erro em rate_stats: {e}")
 
         # Top Values
         top_10_banks = sorted(bank_counts.values(), key=lambda x: x.get("total_volume", 0.0), reverse=True)[:10]
@@ -867,6 +890,9 @@ class AdminService:
                 } for s in simulations
             ]
         }
+
+        logger.warning(f"🚀 [DASHBOARD] Processamento concluído em {time.time() - start_time_total:.3f} segundos totais (Loop Python levou {time.time() - t_loop:.3f} segs)")
+
         AdminService._dashboard_cache[cache_key] = (response_data, now)
         return response_data
     @staticmethod
