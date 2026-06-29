@@ -289,10 +289,45 @@ function SimuladorPageContent() {
     if (selectedExtractLoanIndex === null || !extractedData) return;
     const selectedLoan = extractedData.emprestimos_ativos[selectedExtractLoanIndex];
     
+    // Tenta encontrar a espécie correspondente
+    let matchedSpecies = "";
+    if (extractedData.especie) {
+      const spClean = norm(extractedData.especie);
+      const found = inssSpecies.find(s => norm(s.label).includes(spClean) || spClean.includes(norm(s.label).replace(/^\d+\s*-\s*/, '')));
+      if (found) matchedSpecies = found.value;
+      else if (spClean.includes("PENSAO") && spClean.includes("MORTE")) matchedSpecies = "21";
+      else if (spClean.includes("INVALIDEZ")) matchedSpecies = "32";
+      else if (spClean.includes("IDADE")) matchedSpecies = "41";
+      else if (spClean.includes("TEMPO")) matchedSpecies = "42";
+      else if (spClean.includes("BPC") || spClean.includes("LOAS")) matchedSpecies = "87";
+    }
+
+    // Tenta encontrar o banco correspondente
+    let matchedBank = selectedLoan.banco;
+    const bClean = norm(selectedLoan.banco);
+    const foundBank = dbBanks.find(b => {
+      const bn = norm(b.name);
+      return bn === bClean || bn.includes(bClean) || bClean.includes(bn);
+    });
+
+    if (foundBank) {
+      matchedBank = foundBank.name;
+    } else {
+      // Fallbacks comuns
+      const heuristics = ["C6", "PAN", "DAYCOVAL", "ITA", "BRADESCO", "MERCANTIL", "SAFRA", "BMG"];
+      for (const h of heuristics) {
+        if (bClean.includes(h)) {
+          const matched = dbBanks.find(b => norm(b.name).includes(h));
+          if (matched) { matchedBank = matched.name; break; }
+        }
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       nome_cliente: extractedData.cliente || prev.nome_cliente,
-      agreement: "INSS"
+      agreement: "INSS",
+      benefit_species: matchedSpecies || prev.benefit_species
     }));
 
     // Formata os valores de volta para o padrão de máscara do front (R$ 0,00)
@@ -301,7 +336,7 @@ function SimuladorPageContent() {
     const newContracts = [...contracts];
     newContracts[0] = {
       ...newContracts[0],
-      banco: selectedLoan.banco,
+      banco: matchedBank,
       parcela: formatCurrency(selectedLoan.parcela),
       saldoDevedor: formatCurrency(selectedLoan.saldo_devedor),
       prazoTotal: selectedLoan.prazo_total.toString(),
@@ -619,12 +654,20 @@ function SimuladorPageContent() {
                 <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">Extrato INSS</h4>
                 <p className="text-[10px] text-slate-500 font-bold uppercase mb-4">Envie o PDF para preencher automático</p>
                 
-                <label className="relative cursor-pointer group/btn">
-                  <input type="file" accept="application/pdf" className="hidden" onChange={handleFileUpload} disabled={extractLoading} />
-                  <div className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${extractLoading ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/30'}`}>
-                    {extractLoading ? 'Processando PDF...' : 'Selecionar PDF'}
-                  </div>
-                </label>
+                <div className="flex items-center justify-center gap-3 w-full mt-2">
+                  <label className="relative cursor-pointer group/btn flex-1 max-w-[200px]">
+                    <input type="file" accept="application/pdf" className="hidden" onChange={handleFileUpload} disabled={extractLoading} />
+                    <div className={`w-full px-4 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-center ${extractLoading ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/30'}`}>
+                      {extractLoading ? 'Lendo PDF...' : (extractedData ? 'Novo PDF' : 'Selecionar PDF')}
+                    </div>
+                  </label>
+                  
+                  {extractedData && (
+                    <button type="button" onClick={() => setExtractModalOpen(true)} className="flex-1 max-w-[200px] px-4 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2">
+                      <Icons.Eye size={14} /> Ver Dados
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
