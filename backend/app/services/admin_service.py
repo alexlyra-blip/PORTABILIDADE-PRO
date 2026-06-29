@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 class AdminService:
     @staticmethod
     async def get_all_banks(db: AsyncSession):
-        result = await db.execute(select(Bank).options(selectinload(Bank.rules)).order_by(Bank.priority.asc(), Bank.name.asc()))
+        result = await db.execute(select(Bank).order_by(Bank.priority.asc(), Bank.name.asc()))
         return result.scalars().all()
 
     @staticmethod
@@ -616,8 +616,7 @@ class AdminService:
         # Load relationships
         result = await db.execute(
             sim_query.options(
-                selectinload(Simulation.user), 
-                selectinload(Simulation.results)
+                selectinload(Simulation.user)
             )
         )
         simulations = result.scalars().all()
@@ -700,9 +699,30 @@ class AdminService:
                 except Exception as e:
                     pass
 
-            # Result Stats (Contamos até resultados não aprovados para volume total processado)
-            for res in sim.results:
-                bid = res.bank_id
+        # SQL Aggregations for Results
+        res_query = select(SimulationResult).join(Simulation)
+        if current_user.role == "admin":
+            pass
+        elif current_user.role == "promotora":
+            res_query = res_query.join(User, Simulation.user_id == User.id).where(
+                (User.id == current_user.id) | (User.broker_id == current_user.id)
+            )
+        else:
+            res_query = res_query.where(Simulation.user_id == current_user.id)
+            
+        res_query = res_query.where(Simulation.created_at >= thirty_days_ago)
+        subq = res_query.subquery()
+        
+        # Bank stats
+        bank_stats_q = select(
+            subq.c.bank_id,
+            func.count(subq.c.id),
+            func.sum(subq.c.release_amount)
+        ).select_from(subq).group_by(subq.c.bank_id)
+        
+        try:
+            b_stats = await db.execute(bank_stats_q)
+            for bid, count, vol in b_stats:
                 if bid not in bank_counts:
                     bank_counts[bid] = {
                         "name": banks_map.get(bid, f"Banco {bid}"),
@@ -710,42 +730,68 @@ class AdminService:
                         "count": 0,
                         "total_volume": 0.0
                     }
-                bank_counts[bid]["count"] += 1
-                
-                try:
-                    contract_val = float(sim.debt_balance or 0) + float(res.release_amount or 0)
-                    bank_counts[bid]["total_volume"] += contract_val
-                except ValueError:
-                    pass
-                
-                if res.table_name:
-                    if res.table_name not in table_counts:
-                        table_counts[res.table_name] = {"count": 0, "bank_id": bid}
-                    table_counts[res.table_name]["count"] += 1
-                
-                if res.offered_rate is not None and res.offered_rate > 0:
+                bank_counts[bid]["count"] += count
+                if vol: bank_counts[bid]["total_volume"] += float(vol)
+        except Exception as e:
+            pass
+            
+        # Table stats
+        table_stats_q = select(
+            subq.c.table_name,
+            func.count(subq.c.id),
+            func.max(subq.c.bank_id)
+        ).select_from(subq).where(subq.c.table_name != None).group_by(subq.c.table_name)
+        
+        try:
+            t_stats = await db.execute(table_stats_q)
+            for tname, count, bid in t_stats:
+                table_counts[tname] = {"count": count, "bank_id": bid}
+        except Exception as e:
+            pass
+            
+        # Avg rate
+        rate_stats_q = select(func.avg(subq.c.offered_rate)).select_from(subq).where(subq.c.offered_rate > 0)
+        try:
+            r_stats = await db.execute(rate_stats_q)
+            avg_val = r_stats.scalar()
+            if avg_val: rates.append(float(avg_val))
+        except Exception as e:
+            pass
+        # Historical Values Stats
+        hist_val_q = select(
+            func.date(Simulation.created_at).label('dt'),
+            Simulation.agreement,
+            func.max(SimulationResult.release_amount).label('max_amount')
+        ).join(SimulationResult).where(
+            Simulation.created_at >= thirty_days_ago
+        )
+        if current_user.role == "promotora":
+            hist_val_q = hist_val_q.join(User, Simulation.user_id == User.id).where(
+                (User.id == current_user.id) | (User.broker_id == current_user.id)
+            )
+        elif current_user.role != "admin":
+            hist_val_q = hist_val_q.where(Simulation.user_id == current_user.id)
+            
+        hist_val_q = hist_val_q.group_by(func.date(Simulation.created_at), Simulation.agreement, Simulation.id)
+        
+        try:
+            hv_stats = await db.execute(hist_val_q)
+            for dt_val, agreement, max_amount in hv_stats:
+                if dt_val and max_amount:
                     try:
-                        rates.append(float(res.offered_rate))
-                    except ValueError:
-                        pass
+                        # Depending on postgres driver dt_val can be date or datetime
+                        if hasattr(dt_val, "strftime"):
+                            date_str = dt_val.strftime("%d/%m")
+                        else:
+                            date_str = str(dt_val)[8:10] + "/" + str(dt_val)[5:7]
                         
-                if res.release_amount is not None:
-                    try:
-                        sim_max_amount = max(sim_max_amount, float(res.release_amount))
-                    except ValueError:
-                        pass
-                        
-            if sim_max_amount > 0 and sim.created_at:
-                try:
-                    created_dt = sim.created_at
-                    if isinstance(created_dt, str):
-                        created_dt = datetime.fromisoformat(created_dt.split('.')[0] if '.' in created_dt else created_dt)
-                    if created_dt > thirty_days_ago:
-                        date_str = created_dt.strftime("%d/%m")
+                        ag = agreement or "OUTROS"
                         if date_str not in historical_values: historical_values[date_str] = {}
-                        historical_values[date_str][agreement] = historical_values[date_str].get(agreement, 0.0) + sim_max_amount
-                except Exception as e:
-                    pass
+                        historical_values[date_str][ag] = historical_values[date_str].get(ag, 0.0) + float(max_amount)
+                    except Exception:
+                        pass
+        except Exception as e:
+            pass
 
         # Top Values
         top_10_banks = sorted(bank_counts.values(), key=lambda x: x.get("total_volume", 0.0), reverse=True)[:10]
