@@ -228,15 +228,15 @@ function OfertasPageContent() {
       const payload = {
         client_name: cliente.nome || inputData?.nome_cliente || "Cliente",
         banco: offer.banco,
-        taxa_juros: offer.taxa_juros,
-        valor_liberado: offer.valor_liberado,
-        parcela_nova: offer.valor_parcela || 0,
+        taxa_juros: typeof offer.taxa_juros === 'string' ? parseFloat(offer.taxa_juros.replace(/[^\d,]/g, '').replace(',', '.')) : (offer.taxa_juros || 0),
+        valor_liberado: typeof offer.valor_liberado === 'string' ? parseFloat(offer.valor_liberado.replace(/[^\d,]/g, '').replace(',', '.')) : (offer.valor_liberado || 0),
+        parcela_nova: typeof offer.valor_parcela === 'string' ? parseFloat(offer.valor_parcela.replace(/[^\d,]/g, '').replace(',', '.')) : (offer.valor_parcela || 0),
         prazo: offer.prazo || 84,
-        original_banco: cliente.banco_originador || inputData?.banco || "Banco Original",
-        original_parcela: cliente.valor_parcela || parseFloat(inputData?.parcela) || 0,
-        original_taxa: cliente.taxa_calculada || 0,
-        original_prazo_restante: cliente.prazo_restante || 0,
-        original_saldo: cliente.saldo_devedor || 0,
+        original_banco: activeContractData?.banco || inputData?.banco || "Banco Original",
+        original_parcela: activeContractData?.original_parcela ? (typeof activeContractData.original_parcela === 'string' ? parseFloat(activeContractData.original_parcela.replace(/[^\d,]/g, '').replace(',', '.')) : activeContractData.original_parcela) : (parseFloat(String(activeContractData?.parcela || "0").replace(/[^\d,]/g, '').replace(',', '.')) || parseFloat(String(inputData?.parcela || "0").replace(/[^\d,]/g, '').replace(',', '.')) || offer.valor_parcela || 0),
+        original_taxa: activeContractData?.taxa ? (typeof activeContractData.taxa === 'string' ? parseFloat(activeContractData.taxa.replace(/[^\d,]/g, '').replace(',', '.')) : activeContractData.taxa) : 0,
+        original_prazo_restante: activeContractData?.prazoTotal ? (Math.max(0, parseInt(activeContractData.prazoTotal) - parseInt(activeContractData.parcelasPagas || "0"))) : 56,
+        original_saldo: activeContractData?.saldoDevedor ? (typeof activeContractData.saldoDevedor === 'string' ? parseFloat(activeContractData.saldoDevedor.replace(/[^\d,]/g, '').replace(',', '.')) : activeContractData.saldoDevedor) : 5000.00,
         user_name: user.name || "Consultor",
         user_avatar: user.logo_url || null
       };
