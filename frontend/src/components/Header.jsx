@@ -207,7 +207,7 @@ export default function Header() {
               <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">{stats.label}:</span>
               <div className="flex items-center gap-1 font-black text-sm">
                 <span className="text-emerald-600 dark:text-emerald-400">
-                  {`R$ ${stats.progresso.toLocaleString('pt-BR', {minimumFractionDigits: 0})}`}
+                  {`R$ ${stats.progresso.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
                 </span>
                 <span className="text-slate-400">/</span>
                 <input 

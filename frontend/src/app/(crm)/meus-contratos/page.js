@@ -49,16 +49,35 @@ export default function MeusContratosPage() {
       });
    }, []);
 
+   const addBusinessDays = (startDateStr, days) => {
+      let date = new Date(startDateStr + "T12:00:00");
+      let count = 0;
+      while (count < days) {
+         date.setDate(date.getDate() + 1);
+         if (date.getDay() !== 0 && date.getDay() !== 6) {
+            count++;
+         }
+      }
+      return date.toISOString().split('T')[0];
+   };
+
    const updateStatus = async (id, newStatus) => {
       const current = contracts.find(c => c.id === id);
       if (!current) return;
-      
-      let updatePayload = {
+
+      const updatePayload = { 
          status: newStatus,
          status_updated_at: Date.now().toString()
       };
+      const today = new Date();
 
       if (newStatus === 'AG. RETORNO CIP' && current.status !== 'AG. RETORNO CIP') {
+         if (current.data_aceite) {
+            updatePayload.data_cip = addBusinessDays(current.data_aceite, 5);
+         } else {
+            updatePayload.data_cip = today.toISOString().split('T')[0];
+         }
+      } else if (newStatus === 'SALDO QUITADO') {
          const today = new Date();
          let daysAdded = 0;
          while (daysAdded < 5) {
@@ -130,12 +149,18 @@ export default function MeusContratosPage() {
 
    const saveEdit = async (id) => {
       try {
+         const contract = contracts.find(c => c.id === id);
          const updatePayload = {
             cliente: editData.cliente,
             cpf: editData.cpf,
             numero_proposta: editData.numero_proposta,
             data_aceite: editData.data_aceite
          };
+
+         if (contract?.status === 'AG. RETORNO CIP' && editData.data_aceite) {
+            updatePayload.data_cip = addBusinessDays(editData.data_aceite, 5);
+         }
+
          await api.patch(`/contracts/${id}`, updatePayload);
          setContracts(prev => prev.map(c => c.id === id ? { ...c, ...updatePayload } : c));
          window.dispatchEvent(new Event('contracts-updated'));
