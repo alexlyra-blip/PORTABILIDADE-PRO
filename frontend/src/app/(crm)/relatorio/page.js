@@ -331,8 +331,8 @@ export default function RelatorioPage() {
 
             <div className="bg-emerald-500 p-6 rounded-[2rem] shadow-2xl shadow-emerald-500/30 flex flex-col justify-center xl:scale-105 transition-all">
                <div className="flex items-center justify-between mb-2">
-                 <p className="text-[9px] font-black text-white uppercase tracking-tight">Saldos Retornados No Dia ({formatCurrency(totals.cipHojeValor)})</p>
-                 <span className="text-xl">⏱</span>
+                 <p className="text-[9px] font-black text-white uppercase tracking-tight">Aguardando Retorno CIP ({formatCurrency(totals.cipHojeValor)})</p>
+                 <span className="text-xl">⏳</span>
                </div>
                <p className="text-3xl lg:text-4xl font-black text-white">{totals.cipHojeQtd}</p>
             </div>
