@@ -69,7 +69,6 @@ def run_db_fix():
                 cursor.execute(query)
             except Exception as e:
                 print(f"⚠️ Erro ao executar: {query} -> {e}")
-                conn.commit() # Clear transaction state if needed
 
         cursor.close()
         conn.close()
