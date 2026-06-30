@@ -13,11 +13,11 @@ export default function MeusContratosPage() {
    const [subLogos, setSubLogos] = useState([]);
    const [currentUser, setCurrentUser] = useState(null);
    const [editingId, setEditingId] = useState(null);
-   const [editData, setEditData] = useState({ cliente: "", cpf: "", numero_proposta: "" });
+   const [editData, setEditData] = useState({ cliente: "", cpf: "", numero_proposta: "", data_aceite: "" });
 
    const [manualModalOpen, setManualModalOpen] = useState(false);
    const [manualData, setManualData] = useState({
-      cliente: "", cpf: "", banco: "", convenio: "INSS", parcela: "", tabela: "MANUAL", taxa: "", valor_contrato: "", valor_troco: "", instituicao_origem: "", saldo_devedor: ""
+      cliente: "", cpf: "", banco: "", convenio: "INSS", parcela: "", tabela: "MANUAL", taxa: "", valor_contrato: "", valor_troco: "", instituicao_origem: "", saldo_devedor: "", produto: "PORTABILIDADE"
    });
 
    const fetchContracts = async () => {
@@ -118,13 +118,14 @@ export default function MeusContratosPage() {
       setEditData({
          cliente: contract.cliente || "",
          cpf: contract.cpf || "",
-         numero_proposta: contract.numero_proposta || ""
+         numero_proposta: contract.numero_proposta || "",
+         data_aceite: contract.data_aceite || ""
       });
    };
 
    const cancelEditing = () => {
       setEditingId(null);
-      setEditData({ cliente: "", cpf: "", numero_proposta: "" });
+      setEditData({ cliente: "", cpf: "", numero_proposta: "", data_aceite: "" });
    };
 
    const saveEdit = async (id) => {
@@ -132,7 +133,8 @@ export default function MeusContratosPage() {
          const updatePayload = {
             cliente: editData.cliente,
             cpf: editData.cpf,
-            numero_proposta: editData.numero_proposta
+            numero_proposta: editData.numero_proposta,
+            data_aceite: editData.data_aceite
          };
          await api.patch(`/contracts/${id}`, updatePayload);
          setContracts(prev => prev.map(c => c.id === id ? { ...c, ...updatePayload } : c));
@@ -168,6 +170,7 @@ export default function MeusContratosPage() {
             saldo_devedor: parseFloat(manualData.saldo_devedor.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
             prazo_restante: 0,
             orig_parcela: 0,
+            produto: manualData.produto || "PORTABILIDADE",
             status: "PENDENTE"
          };
          await api.post('/contracts', newContract);
@@ -175,7 +178,7 @@ export default function MeusContratosPage() {
          window.dispatchEvent(new Event('contracts-updated'));
          setManualModalOpen(false);
          setManualData({
-            cliente: "", cpf: "", banco: "", convenio: "INSS", parcela: "", tabela: "MANUAL", taxa: "", valor_contrato: "", valor_troco: "", instituicao_origem: "", saldo_devedor: ""
+            cliente: "", cpf: "", banco: "", convenio: "INSS", parcela: "", tabela: "MANUAL", taxa: "", valor_contrato: "", valor_troco: "", instituicao_origem: "", saldo_devedor: "", produto: "PORTABILIDADE"
          });
       } catch (err) {
          console.error("Erro ao adicionar manualmente", err);
@@ -513,6 +516,15 @@ export default function MeusContratosPage() {
                                                 />
                                              </div>
                                           </div>
+                                          <div className="space-y-1 mt-2">
+                                             <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Data da Proposta</label>
+                                             <input
+                                                type="date"
+                                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-500/30 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                                value={editData.data_aceite}
+                                                onChange={(e) => setEditData({ ...editData, data_aceite: e.target.value })}
+                                             />
+                                          </div>
                                           <div className="flex gap-2 pt-2">
                                              <button
                                                 onClick={() => saveEdit(contract.id)}
@@ -762,9 +774,24 @@ export default function MeusContratosPage() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Produto</label>
+                              <select value={manualData.produto} onChange={e => setManualData({...manualData, produto: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold">
+                                 <option value="PORTABILIDADE">PORTABILIDADE</option>
+                                 <option value="MARGEM">MARGEM</option>
+                                 <option value="REFINANCIAMENTO">REFINANCIAMENTO</option>
+                                 <option value="CARTÃO CONSIGNADO">CARTÃO CONSIGNADO</option>
+                                 <option value="SAQUE COMPLEMENTAR">SAQUE COMPLEMENTAR</option>
+                                 <option value="FGTS">FGTS</option>
+                                 <option value="CREDITO PESSOAL">CRÉDITO PESSOAL</option>
+                                 <option value="CLT PRIVADO">CLT PRIVADO</option>
+                              </select>
+                           </div>
+                           <div className="space-y-1">
                               <label className="text-[10px] font-black text-slate-500 uppercase">Novo Banco (Ex: 626 - C6)</label>
                               <input type="text" required value={manualData.banco} onChange={e => setManualData({...manualData, banco: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="Banco de Destino" />
                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div className="space-y-1">
                               <label className="text-[10px] font-black text-slate-500 uppercase">Convênio</label>
                               <select value={manualData.convenio} onChange={e => setManualData({...manualData, convenio: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold">

@@ -8,6 +8,7 @@ export default function Header() {
   const [user, setUser] = useState({ name: 'Usuário', role: 'corretor', avatar_url: '' });
   const [showSettings, setShowSettings] = useState(false);
   const [apiData, setApiData] = useState(null);
+  const [contracts, setContracts] = useState([]);
   const router = useRouter();
   const fileInputRef = useRef(null);
   const settingsRef = useRef(null);
@@ -33,6 +34,10 @@ export default function Header() {
 
       // Buscar dados para a meta
       api.get('/admin/dashboard-stats?days=1').then(res => setApiData(res)).catch(() => {});
+      api.get('/contracts').then(res => {
+         let parsed = Array.isArray(res) ? res : res.data;
+         if (parsed && Array.isArray(parsed)) setContracts(parsed);
+      }).catch(() => {});
 
       // Buscar comunicado ativo para o sino
       api.get('/admin/announcements/active').then(res => {
@@ -109,13 +114,6 @@ export default function Header() {
   const getMetaStats = () => {
     if (typeof window === 'undefined') {
       return { progresso: 0, target: 110000, label: 'Meta Mensal' };
-    }
-    const savedContracts = localStorage.getItem("accepted_contracts");
-    let contracts = [];
-    if (savedContracts) {
-      try {
-        contracts = JSON.parse(savedContracts) || [];
-      } catch (e) {}
     }
 
     const tipo = metaConfig.tipo || 'mensal';

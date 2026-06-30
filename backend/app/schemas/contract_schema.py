@@ -24,6 +24,7 @@ class ContractBase(BaseModel):
     status: Optional[str] = "PENDENTE"
     data_cip: Optional[str] = None
     numero_proposta: Optional[str] = None
+    produto: Optional[str] = "PORTABILIDADE"
     status_updated_at: Optional[str] = None
     refin_status: Optional[str] = None
     port_status: Optional[str] = None
@@ -38,6 +39,9 @@ class ContractUpdate(BaseModel):
     cpf: Optional[str] = None
     numero_proposta: Optional[str] = None
     status: Optional[str] = None
+    data_aceite: Optional[str] = None
+    data_hora: Optional[str] = None
+    produto: Optional[str] = None
     data_cip: Optional[str] = None
     status_updated_at: Optional[str] = None
     refin_status: Optional[str] = None

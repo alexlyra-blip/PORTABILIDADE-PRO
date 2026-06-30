@@ -264,6 +264,7 @@ class Contract(Base):
     status = Column(String(50), default="PENDENTE")
     data_cip = Column(String(50), nullable=True)
     numero_proposta = Column(String(100), nullable=True)
+    produto = Column(String(100), nullable=True, default="PORTABILIDADE")
     
     # Extra fields used by frontend
     status_updated_at = Column(String(50), nullable=True)

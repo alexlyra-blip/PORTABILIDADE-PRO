@@ -58,6 +58,7 @@ def run_db_fix():
             cursor.execute('ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);')
             cursor.execute('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_max_age" INTEGER;')
             cursor.execute('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_grace_age" INTEGER;')
+            cursor.execute('ALTER TABLE "contracts" ADD COLUMN IF NOT EXISTS "produto" VARCHAR(100);')
             cursor.execute('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_access" TIMESTAMP WITH TIME ZONE;')
             cursor.execute('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "current_token" TEXT;')
             cursor.execute('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sidebar_color_secondary" VARCHAR(50);')
