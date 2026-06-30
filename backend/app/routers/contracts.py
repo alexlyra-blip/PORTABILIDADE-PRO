@@ -10,7 +10,7 @@ from .deps import get_current_user
 
 router = APIRouter(prefix="/contracts", tags=["contracts"])
 
-@router.post("/", response_model=ContractResponse)
+@router.post("", response_model=ContractResponse)
 async def create_contract(
     contract_in: ContractCreate,
     db: AsyncSession = Depends(get_db),
@@ -25,7 +25,7 @@ async def create_contract(
     await db.refresh(new_contract)
     return new_contract
 
-@router.get("/", response_model=List[ContractResponse])
+@router.get("", response_model=List[ContractResponse])
 async def get_contracts(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

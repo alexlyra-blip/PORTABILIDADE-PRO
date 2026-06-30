@@ -19,12 +19,12 @@ def parse_currency(value_str):
 BANK_NAMES_MAP = {
     "041": "041 - BANRISUL", "626": "626 - BANCO C6 CONSIGNADO", "033": "033 - BANCO SANTANDER",
     "908": "908 - PARATI CFI", "001": "001 - BANCO DO BRASIL", "104": "104 - CAIXA",
-    "237": "237 - BANCO BRADESCO", "341": "341 - ITAÚ CONSIGNADO S.A.", "077": "077 - BANCO INTER",
+    "237": "237 - BANCO BRADESCO", "341": "341 - ITAU CONSIGNADO S.A.", "077": "077 - BANCO INTER",
     "025": "025 - BANCO ALFA", "422": "422 - BANCO SAFRA", "707": "707 - BANCO DAYCOVAL",
     "655": "655 - BANCO VOTORANTIM", "623": "623 - BANCO PAN", "069": "069 - BANCO CREFISA",
     "212": "212 - BANCO ORIGINAL", "047": "047 - BANESE", "935": "935 - FACTA",
     "012": "012 - BANCO INBURSA", "318": "318 - BANCO BMG", "121": "121 - AGIBANK",
-    "169": "169 - BANCO OLÉ", "254": "254 - PARANÁ BANCO", "966": "966 - SABEMI",
+    "169": "169 - BANCO OLE", "254": "254 - PARANA BANCO", "966": "966 - SABEMI",
     "389": "389 - BANCO MERCANTIL", "335": "335 - DIGIO", "753": "753 - NBC BANK",
     "290": "290 - PAGBANK", "752": "752 - BNP PARIBAS", "611": "611 - PAULISTA",
     "380": "380 - PICPAY", "329": "329 - QI SOCIEDADE", "359": "359 - ZEMA",
@@ -33,13 +33,13 @@ BANK_NAMES_MAP = {
 
 def clean_bank_name(banco_str):
     if not banco_str: return "BANCO DESCONHECIDO"
-    # Tenta casar pelo código numérico
+    # Tenta casar pelo codigo numerico
     match = re.search(r'^(\d{3})', banco_str)
     if match and match.group(1) in BANK_NAMES_MAP:
         return BANK_NAMES_MAP[match.group(1)]
     
     cleaned = " ".join(banco_str.split())
-    # Fallback caso não tenha código mas tenha espaços errados (ex: SANTA NDER)
+    # Fallback caso nao tenha codigo mas tenha espacos errados (ex: SANTA NDER)
     upper_no_space = cleaned.upper().replace(" ", "")
     if 'C6CONSIGNADO' in upper_no_space: return '626 - BANCO C6 CONSIGNADO'
     if 'SANTANDER' in upper_no_space: return '033 - BANCO SANTANDER'

@@ -15,9 +15,14 @@ export default function MeusContratosPage() {
    const [editingId, setEditingId] = useState(null);
    const [editData, setEditData] = useState({ cliente: "", cpf: "", numero_proposta: "" });
 
+   const [manualModalOpen, setManualModalOpen] = useState(false);
+   const [manualData, setManualData] = useState({
+      cliente: "", cpf: "", banco: "", convenio: "INSS", parcela: "", tabela: "MANUAL", taxa: "", valor_contrato: "", valor_troco: "", instituicao_origem: "", saldo_devedor: ""
+   });
+
    const fetchContracts = async () => {
       try {
-         const res = await api.get("/contracts/");
+         const res = await api.get("/contracts");
          let parsed = Array.isArray(res) ? res : res.data;
          parsed.forEach(c => {
             if (!c.status) c.status = 'PENDENTE';
@@ -139,6 +144,45 @@ export default function MeusContratosPage() {
       }
    };
 
+   const handleAddManual = async (e) => {
+      e.preventDefault();
+      try {
+         const newContract = {
+            id: Date.now().toString(),
+            user_id: currentUser?.id,
+            user_name: currentUser?.name || "Consultor",
+            user_role: currentUser?.role,
+            broker_id: currentUser?.broker_id,
+            data_aceite: new Date().toISOString().split('T')[0],
+            data_hora: new Date().toISOString(),
+            cliente: manualData.cliente || "Cliente",
+            cpf: manualData.cpf || "Não Informado",
+            banco: manualData.banco || "Desconhecido",
+            convenio: manualData.convenio || "INSS",
+            parcela: parseFloat(manualData.parcela.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
+            tabela: manualData.tabela || "MANUAL",
+            taxa: parseFloat(manualData.taxa.replace(',', '.')) || 0,
+            valor_contrato: parseFloat(manualData.valor_contrato.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
+            valor_troco: parseFloat(manualData.valor_troco.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
+            instituicao_origem: manualData.instituicao_origem || "N/A",
+            saldo_devedor: parseFloat(manualData.saldo_devedor.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
+            prazo_restante: 0,
+            orig_parcela: 0,
+            status: "PENDENTE"
+         };
+         await api.post('/contracts', newContract);
+         setContracts(prev => [newContract, ...prev]);
+         window.dispatchEvent(new Event('contracts-updated'));
+         setManualModalOpen(false);
+         setManualData({
+            cliente: "", cpf: "", banco: "", convenio: "INSS", parcela: "", tabela: "MANUAL", taxa: "", valor_contrato: "", valor_troco: "", instituicao_origem: "", saldo_devedor: ""
+         });
+      } catch (err) {
+         console.error("Erro ao adicionar manualmente", err);
+         alert("Erro ao adicionar contrato manualmente");
+      }
+   };
+
    const formatCurrencyLocal = (value) => {
       return `R$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
    };
@@ -247,6 +291,9 @@ export default function MeusContratosPage() {
             <Link href="/relatorio" className="px-8 py-5 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/80 text-blue-600 border border-blue-100 dark:border-blue-900/30 rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2">
                <Icons.BarChart size={14} className="text-blue-600" /> Dashboard
             </Link>
+            <button onClick={() => setManualModalOpen(true)} className="px-8 py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-emerald-500/20 transition-all hover:scale-105 flex items-center gap-2 border border-emerald-500">
+               <Icons.Plus size={14} className="text-white" /> Adicionar Manual
+            </button>
             <Link href="/simulador" className="px-8 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-blue-500/20 transition-all hover:scale-105 flex items-center gap-2">
                <Icons.Plus size={14} className="text-white" /> Nova Simulação
             </Link>
@@ -689,6 +736,93 @@ export default function MeusContratosPage() {
             )}
          </div>
 
+         {manualModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+               <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-white/10 flex flex-col max-h-[90vh]">
+                  <div className="p-6 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                     <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                        <Icons.Plus size={16} className="text-emerald-500" />
+                        Adicionar Contrato Manual
+                     </h3>
+                     <button onClick={() => setManualModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                        <Icons.X size={20} />
+                     </button>
+                  </div>
+                  <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                     <form id="manual-contract-form" onSubmit={handleAddManual} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Cliente</label>
+                              <input type="text" required value={manualData.cliente} onChange={e => setManualData({...manualData, cliente: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="Nome Compledo do Cliente" />
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">CPF</label>
+                              <input type="text" value={manualData.cpf} onChange={e => setManualData({...manualData, cpf: formatCPF(e.target.value)})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="000.000.000-00" />
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Novo Banco (Ex: 626 - C6)</label>
+                              <input type="text" required value={manualData.banco} onChange={e => setManualData({...manualData, banco: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="Banco de Destino" />
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Convênio</label>
+                              <select value={manualData.convenio} onChange={e => setManualData({...manualData, convenio: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold">
+                                 <option value="INSS">INSS</option>
+                                 <option value="SIAPE">SIAPE</option>
+                                 <option value="GOVERNOS">GOVERNOS</option>
+                                 <option value="FORÇAS ARMADAS">FORÇAS ARMADAS</option>
+                                 <option value="PREFEITURAS">PREFEITURAS</option>
+                              </select>
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Valor Parcela</label>
+                              <input type="text" value={manualData.parcela} onChange={e => setManualData({...manualData, parcela: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="R$ 0,00" />
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Taxa (%)</label>
+                              <input type="text" value={manualData.taxa} onChange={e => setManualData({...manualData, taxa: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="Ex: 1,66" />
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Tabela (Opcional)</label>
+                              <input type="text" value={manualData.tabela} onChange={e => setManualData({...manualData, tabela: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="MANUAL" />
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Valor Bruto</label>
+                              <input type="text" value={manualData.valor_contrato} onChange={e => setManualData({...manualData, valor_contrato: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="R$ 0,00" />
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Valor Troco</label>
+                              <input type="text" value={manualData.valor_troco} onChange={e => setManualData({...manualData, valor_troco: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="R$ 0,00" />
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Saldo Devedor</label>
+                              <input type="text" value={manualData.saldo_devedor} onChange={e => setManualData({...manualData, saldo_devedor: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="R$ 0,00" />
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase">Banco Origem</label>
+                              <input type="text" value={manualData.instituicao_origem} onChange={e => setManualData({...manualData, instituicao_origem: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="Ex: 033 - SANTANDER" />
+                           </div>
+                        </div>
+                     </form>
+                  </div>
+                  <div className="p-4 border-t border-slate-100 dark:border-white/5 flex justify-end gap-2 bg-slate-50 dark:bg-slate-800/50">
+                     <button type="button" onClick={() => setManualModalOpen(false)} className="px-6 py-3 rounded-xl font-black text-[10px] uppercase text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        Cancelar
+                     </button>
+                     <button type="submit" form="manual-contract-form" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-emerald-500/20 transition-all hover:scale-105">
+                        Salvar Contrato
+                     </button>
+                  </div>
+               </div>
+            </div>
+         )}
       </div>
    );
 }
