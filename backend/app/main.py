@@ -45,32 +45,36 @@ def run_db_fix():
         conn = psycopg2.connect(db_url, connect_timeout=5)
         conn.autocommit = True
         cursor = conn.cursor()
-        print("🔨 Executando ALTER COLUMNs...")
-        cursor.execute('ALTER TABLE "users" ALTER COLUMN "avatar_url" TYPE TEXT;')
-        cursor.execute('ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT;')
-        cursor.execute('ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT;')
-        cursor.execute('ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT;')
-        cursor.execute('ALTER TABLE "promotora_rules" ALTER COLUMN "rule_value" TYPE TEXT;')
-        try:
-            cursor.execute('ALTER TABLE "announcements" ADD COLUMN IF NOT EXISTS "image_url" TEXT;')
-            cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;')
-            cursor.execute('ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;')
-            cursor.execute('ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);')
-            cursor.execute('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_max_age" INTEGER;')
-            cursor.execute('ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_grace_age" INTEGER;')
-            cursor.execute('ALTER TABLE "contracts" ADD COLUMN IF NOT EXISTS "produto" VARCHAR(100);')
-            cursor.execute('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_access" TIMESTAMP WITH TIME ZONE;')
-            cursor.execute('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "current_token" TEXT;')
-            cursor.execute('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sidebar_color_secondary" VARCHAR(50);')
-            cursor.execute('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "highlight_color" VARCHAR(7);')
-            print("✅ Colunas term, installment, max_ticket, disability_max_age, disability_grace_age e current_token verificadas/criadas no PostgreSQL de produção.")
-        except Exception as e:
-            print(f"⚠️ Erro ao adicionar colunas em production (Postgres): {e}")
-        print("✅ Colunas convertidas para TEXT.")
+        print("🔨 Executando DB FIX...")
+        queries = [
+            'ALTER TABLE "users" ALTER COLUMN "avatar_url" TYPE TEXT;',
+            'ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT;',
+            'ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT;',
+            'ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT;',
+            'ALTER TABLE "promotora_rules" ALTER COLUMN "rule_value" TYPE TEXT;',
+            'ALTER TABLE "announcements" ADD COLUMN IF NOT EXISTS "image_url" TEXT;',
+            'ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;',
+            'ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;',
+            'ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);',
+            'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_max_age" INTEGER;',
+            'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_grace_age" INTEGER;',
+            'ALTER TABLE "contracts" ADD COLUMN IF NOT EXISTS "produto" VARCHAR(100);',
+            'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_access" TIMESTAMP WITH TIME ZONE;',
+            'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "current_token" TEXT;',
+            'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sidebar_color_secondary" VARCHAR(50);',
+            'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "highlight_color" VARCHAR(7);'
+        ]
+        for query in queries:
+            try:
+                cursor.execute(query)
+            except Exception as e:
+                print(f"⚠️ Erro ao executar: {query} -> {e}")
+                conn.commit() # Clear transaction state if needed
+
         cursor.close()
         conn.close()
     except Exception as e:
-        print(f"❌ DB FIX ERROR: {e}")
+        print(f"❌ DB FIX ERROR FATAL: {e}")
 
 print("🚀 INICIANDO BACKEND PORTABILIDADE-API...")
 try:
