@@ -772,7 +772,6 @@ export default function MeusContratosPage() {
                             </div>
                            </>
                            ) : (
-                              {/* PRODUTO ÚNICO */}
                               <div className="space-y-3 bg-slate-50/50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-white/5 h-full flex flex-col justify-center">
                                  <div className="flex justify-between items-center mb-4">
                                     <span className="text-sm font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
