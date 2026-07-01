@@ -5,8 +5,8 @@ WORKDIR /app
 COPY ./backend/requirements.txt .
 # We assume there will be a requirements.txt with fastapi, uvicorn, etc.
 RUN pip install --no-cache-dir -r requirements.txt || true
-# fallback if requirements.txt doesn't exist yet but we'll create it
-RUN pip install fastapi uvicorn pydantic SQLAlchemy psycopg2-binary asyncpg redis
+# fallback se algo falhar no requirements.txt
+RUN pip install fastapi uvicorn pydantic SQLAlchemy psycopg2-binary asyncpg redis python-multipart pdfplumber
 
 COPY ./engine /engine
 COPY ./backend /app
