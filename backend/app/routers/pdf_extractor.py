@@ -88,7 +88,7 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
         with pdfplumber.open(pdf_stream) as pdf:
             # Página 1: Dados Pessoais
             if len(pdf.pages) > 0:
-                p1_text = pdf.pages[0].extract_text()
+                p1_text = pdf.pages[0].extract_text() or ""
                 lines = p1_text.split('\n')
                 for i, line in enumerate(lines):
                     if "HISTÓRICO DE" in line.upper() or "EMPRÉSTIMO CONSIGNADO" in line.upper():
@@ -170,15 +170,15 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                 # Identificar colunas baseadas no padrão INSS (0-based)
                                 # [0:Contrato, 1:Banco, 2:Situação, 3:Origem, 4:Data Inclusão, 5:Início, 6:Fim, 7:Qtd, 8:Parcela, ..., 14:Taxa Mensal]
                                 contrato = clean_row[0].replace(' ', '').strip()
-                                banco_raw = clean_row[1]
-                                inicio_desconto = clean_row[5]
+                                banco_raw = clean_row[1] if len(clean_row) > 1 else ""
+                                inicio_desconto = clean_row[5] if len(clean_row) > 5 else ""
                                 
                                 # Limpeza do prazo (ex: "84")
-                                prazo_str = clean_row[7]
+                                prazo_str = clean_row[7] if len(clean_row) > 7 else ""
                                 prazo_total = int(re.sub(r'\D', '', prazo_str)) if prazo_str else 0
                                 
-                                parcela = parse_currency(clean_row[8])
-                                taxa_mensal = parse_currency(clean_row[14])
+                                parcela = parse_currency(clean_row[8]) if len(clean_row) > 8 else 0.0
+                                taxa_mensal = parse_currency(clean_row[14]) if len(clean_row) > 14 else 0.0
                                 
                                 # Extração do Valor Financiado (coluna 10) para caso a taxa seja 0
                                 valor_financiado = 0.0
