@@ -157,8 +157,23 @@ export default function RelatorioPage() {
 
       // Filtro de Período (Para a Barra de Meta e todos os Gráficos)
       let isInPeriod = false;
-      const targetDateStr = item.data_aceite || (item.created_at ? item.created_at.substring(0, 10) : todayStr);
-      const itemDate = targetDateStr ? new Date(targetDateStr + "T12:00:00") : null;
+      let dateObj = new Date();
+      if (item.data_aceite && item.data_aceite !== "null" && item.data_aceite !== "undefined") {
+         dateObj = new Date(item.data_aceite + "T12:00:00");
+      } else if (item.data_hora && item.data_hora !== "null" && item.data_hora !== "undefined") {
+         if (item.data_hora.includes('/')) {
+             const [day, month, rest] = item.data_hora.split('/');
+             const year = rest.substring(0, 4);
+             dateObj = new Date(`${year}-${month}-${day}T12:00:00`);
+         } else {
+             dateObj = new Date(item.data_hora);
+         }
+      }
+      if (isNaN(dateObj.getTime())) dateObj = new Date();
+      
+      const targetDateStr = dateObj.toISOString().split('T')[0];
+      const itemDate = dateObj;
+      
       if (targetDateStr) {
          if (currentMeta.tipo === 'mensal') {
             const itemMonth = targetDateStr.substring(0, 7);
