@@ -66,7 +66,8 @@ def calcular_taxa(valor: float, parcela: float, parcelas: int) -> float:
 
 @router.post("/inss")
 async def extract_inss_pdf(file: UploadFile = File(...)):
-    if file.content_type != 'application/pdf':
+    content_type = getattr(file, "content_type", "")
+    if content_type != 'application/pdf' and not file.filename.lower().endswith('.pdf'):
         raise HTTPException(400, "O arquivo deve ser um PDF")
 
     try:
@@ -88,7 +89,11 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
         with pdfplumber.open(pdf_stream) as pdf:
             # Página 1: Dados Pessoais
             if len(pdf.pages) > 0:
-                p1_text = pdf.pages[0].extract_text() or ""
+                try:
+                    p1_text = pdf.pages[0].extract_text() or ""
+                except Exception:
+                    p1_text = ""
+
                 lines = p1_text.split('\n')
                 for i, line in enumerate(lines):
                     if "HISTÓRICO DE" in line.upper() or "EMPRÉSTIMO CONSIGNADO" in line.upper():
@@ -122,7 +127,11 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                             extracted_data["bloqueado_emprestimo"] = True
                             
             if extracted_data.get("bloqueado_emprestimo") is None and len(pdf.pages) > 0:
-                p1_tables = pdf.pages[0].extract_tables()
+                try:
+                    p1_tables = pdf.pages[0].extract_tables()
+                except Exception:
+                    p1_tables = []
+
                 if p1_tables:
                     for table in p1_tables:
                         for row in table:
@@ -140,7 +149,11 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
             
             # Páginas restantes: Margem e Empréstimos
             for page in pdf.pages:
-                text = page.extract_text() or ""
+                try:
+                    text = page.extract_text() or ""
+                except Exception:
+                    text = ""
+
                 
                 # Procura margem no texto
                 match_max = re.search(r'MÁXIMO DE COMPROMETIMENTO PERMITIDO\s+R\$\s*([\d\.,]+)', text)
@@ -150,7 +163,11 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                 if match_comp: extracted_data["margem_comprometida"] = parse_currency(match_comp.group(1))
                 
                 # Extrai tabelas
-                tables = page.extract_tables()
+                try:
+                    tables = page.extract_tables()
+                except Exception:
+                    tables = []
+
                 for table in tables:
                     if not table or len(table) < 2: continue
                     # Verifica se é a tabela de Empréstimos

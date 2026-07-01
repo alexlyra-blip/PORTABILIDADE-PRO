@@ -307,7 +307,8 @@ function SimuladorPageContent() {
       }
     } catch (err) {
       console.error(err);
-      alert("Erro ao ler o PDF. Tente novamente.");
+      const msg = err.message || "Erro ao ler o PDF. Tente novamente.";
+      alert(msg);
     } finally {
       setExtractLoading(false);
     }
