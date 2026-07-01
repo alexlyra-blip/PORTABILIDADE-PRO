@@ -395,8 +395,8 @@ function SimuladorPageContent() {
     const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val).replace(/\s/g, " ");
 
     const newContracts = [...contracts];
-    newContracts[0] = {
-      ...newContracts[0],
+    newContracts[activeContractIndex] = {
+      ...newContracts[activeContractIndex],
       banco: matchedBank,
       parcela: formatCurrency(selectedLoan.parcela),
       saldoDevedor: formatCurrency(selectedLoan.saldo_devedor),
@@ -1435,8 +1435,8 @@ function SimuladorPageContent() {
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Banco</p>
                               <div className="flex items-start gap-1.5">
-                                <div className="mt-0.5 text-amber-500 flex items-center justify-center">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                <div className="mt-0.5 text-blue-500 flex items-center justify-center">
+                                  <Icons.Landmark size={14} />
                                 </div>
                                 <p className="text-xs font-black text-slate-800 uppercase leading-tight mt-0.5">{loan.banco}</p>
                               </div>

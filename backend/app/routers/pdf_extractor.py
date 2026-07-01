@@ -125,7 +125,7 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
 
                                 # Identificar colunas baseadas no padrão INSS (0-based)
                                 # [0:Contrato, 1:Banco, 2:Situação, 3:Origem, 4:Data Inclusão, 5:Início, 6:Fim, 7:Qtd, 8:Parcela, ..., 14:Taxa Mensal]
-                                contrato = clean_row[0]
+                                contrato = clean_row[0].replace(' ', '').strip()
                                 banco_raw = clean_row[1]
                                 inicio_desconto = clean_row[5]
                                 
