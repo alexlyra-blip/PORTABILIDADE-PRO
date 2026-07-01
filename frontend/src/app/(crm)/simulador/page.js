@@ -391,12 +391,26 @@ function SimuladorPageContent() {
       benefit_species: matchedSpecies || prev.benefit_species
     }));
 
-    // Formata os valores de volta para o padrão de máscara do front (R$ 0,00)
     const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val).replace(/\s/g, " ");
 
     const newContracts = [...contracts];
-    newContracts[activeContractIndex] = {
-      ...newContracts[activeContractIndex],
+    let targetIndex = activeContractIndex;
+    
+    // Auto-advance to an empty contract tab if the current one is already populated
+    if (newContracts[targetIndex].banco || newContracts[targetIndex].parcela) {
+      const emptyIdx = newContracts.findIndex(c => !c.banco && !c.parcela);
+      if (emptyIdx !== -1) {
+        targetIndex = emptyIdx;
+      } else if (newContracts.length < 5) {
+        targetIndex = newContracts.length;
+        newContracts.push({
+          id: Date.now(), banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: "", taxaAtual: "", taxaAjustada: ""
+        });
+      }
+    }
+
+    newContracts[targetIndex] = {
+      ...newContracts[targetIndex],
       banco: matchedBank,
       parcela: formatCurrency(selectedLoan.parcela),
       saldoDevedor: formatCurrency(selectedLoan.saldo_devedor),
@@ -417,6 +431,7 @@ function SimuladorPageContent() {
     }
 
     setContracts(newContracts);
+    setActiveContractIndex(targetIndex);
     setExtractModalOpen(false);
   };
 
@@ -1380,9 +1395,22 @@ function SimuladorPageContent() {
                 </div>
                 <div>
                   <h3 className="font-black text-slate-800 text-xl uppercase tracking-tight">{extractedData.cliente || "Cliente Não Identificado"}</h3>
-                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-md inline-block mt-1">
-                    {extractedData.beneficio} • {extractedData.especie}
-                  </p>
+                  <div className="flex flex-col gap-1 mt-1.5">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      Nº DO BENEFÍCIO: <span className="text-blue-600 font-black bg-blue-50 px-2 py-0.5 rounded-md ml-1">{extractedData.beneficio}</span>
+                    </p>
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md inline-block w-fit mt-0.5">
+                      {extractedData.especie}
+                    </p>
+                    {extractedData.bloqueado_emprestimo !== undefined && extractedData.bloqueado_emprestimo !== null && (
+                      <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md w-fit mt-0.5 ${extractedData.bloqueado_emprestimo ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                        {extractedData.bloqueado_emprestimo ? <Icons.Lock size={12} /> : <Icons.Unlock size={12} />}
+                        <span className="text-[9px] font-black uppercase tracking-widest">
+                          {extractedData.bloqueado_emprestimo ? 'BLOQUEADO PARA EMPRÉSTIMO' : 'LIBERADO PARA EMPRÉSTIMO'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <button onClick={() => setExtractModalOpen(false)} className="w-10 h-10 bg-slate-100 hover:bg-red-100 hover:text-red-500 text-slate-400 rounded-xl flex items-center justify-center transition-colors text-xl font-black">×</button>
@@ -1428,9 +1456,9 @@ function SimuladorPageContent() {
                           <input type="radio" name="selected_loan" className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-300 focus:ring-blue-500" checked={selectedExtractLoanIndex === idx} onChange={() => setSelectedExtractLoanIndex(idx)} />
                           
                           <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-4 items-center">
-                            <div>
+                            <div className="min-w-0 pr-2">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Contrato</p>
-                              <p className="text-xs font-black text-slate-800 uppercase tracking-wide">{loan.contrato}</p>
+                              <p className="text-xs font-black text-slate-800 uppercase tracking-wide break-all">{loan.contrato}</p>
                             </div>
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Banco</p>

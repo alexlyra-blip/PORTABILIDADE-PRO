@@ -65,6 +65,7 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
             "margem_comprometida": 0.0,
             "margem_disponivel": 0.0,
             "data_extrato": "",
+            "bloqueado_emprestimo": None,
             "emprestimos_ativos": []
         }
 
@@ -93,6 +94,12 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                         match_date = re.search(r'(\d{2}/\d{2}/\d{4})', line)
                         if match_date:
                             extracted_data["data_extrato"] = match_date.group(1)
+                    
+                    if "BLOQUEADO PARA EMPR" in line.upper() or "BLOQUEADO PARA EMPRESTIMO" in line.upper():
+                        if "SIM" in line.upper():
+                            extracted_data["bloqueado_emprestimo"] = True
+                        elif "NÃO" in line.upper() or "NAO" in line.upper():
+                            extracted_data["bloqueado_emprestimo"] = False
             
             # Páginas restantes: Margem e Empréstimos
             for page in pdf.pages:
