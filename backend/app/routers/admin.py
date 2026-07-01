@@ -77,7 +77,7 @@ async def delete_announcement(announcement_id: int, db: AsyncSession = Depends(g
 
 
 # Banks
-@router.get("/banks", response_model=List[BankResponse])
+@router.get("/banks", response_model=List[BankWithRulesResponse])
 async def list_banks(db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     # Vendedores and Promotoras might need to see banks for simulator
     return await AdminService.get_all_banks(db)

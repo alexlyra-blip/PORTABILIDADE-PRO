@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 class AdminService:
     @staticmethod
     async def get_all_banks(db: AsyncSession):
-        result = await db.execute(select(Bank).order_by(Bank.priority.asc(), Bank.name.asc()))
+        result = await db.execute(select(Bank).options(selectinload(Bank.rules)).order_by(Bank.priority.asc(), Bank.name.asc()))
         return result.scalars().all()
 
     @staticmethod

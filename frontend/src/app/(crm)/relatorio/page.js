@@ -145,9 +145,14 @@ export default function RelatorioPage() {
       totalTroco += vTroco;
 
       // CIP Hoje
-      if (item.status === 'AG. RETORNO CIP' || item.data_cip === todayStr) {
-         expectedCipTodayCount++;
-         expectedCipTodayValue += vContrato;
+      if (item.status === 'AG. RETORNO CIP' && item.data_cip) {
+         const target = new Date(item.data_cip + "T23:59:59");
+         const diff = target.getTime() - new Date().getTime();
+         const daysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+         if (daysLeft === 0) {
+            expectedCipTodayCount++;
+            expectedCipTodayValue += vContrato;
+         }
       }
 
       // Filtro de Período (Para a Barra de Meta e todos os Gráficos)

@@ -17,7 +17,7 @@ export default function MeusContratosPage() {
 
    const [manualModalOpen, setManualModalOpen] = useState(false);
    const [manualData, setManualData] = useState({
-      cliente: "", cpf: "", banco: "", convenio: "INSS", parcela: "", tabela: "MANUAL", taxa: "", valor_contrato: "", valor_troco: "", instituicao_origem: "", saldo_devedor: "", produto: "PORTABILIDADE"
+      cliente: "", cpf: "", banco: "", convenio: "INSS", parcela: "", tabela: "MANUAL", taxa: "", valor_contrato: "", valor_troco: "", instituicao_origem: "", saldo_devedor: "", produto: "PORTABILIDADE", prazo: ""
    });
 
    const fetchContracts = async () => {
@@ -193,7 +193,7 @@ export default function MeusContratosPage() {
             valor_troco: parseFloat(manualData.valor_troco.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
             instituicao_origem: manualData.instituicao_origem || "N/A",
             saldo_devedor: parseFloat(manualData.saldo_devedor.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
-            prazo_restante: 0,
+            prazo_restante: manualData.produto === 'PORTABILIDADE' ? 0 : parseInt(manualData.prazo) || 0,
             orig_parcela: 0,
             produto: manualData.produto || "PORTABILIDADE",
             status: "PENDENTE"
@@ -423,27 +423,30 @@ export default function MeusContratosPage() {
                               }`}></div>
 
                            <div className="relative z-10 space-y-4">
-                              {/* Row 1: 3 buttons */}
+                              {/* Row 1: buttons */}
                               <div className="flex items-center gap-1.5 w-full flex-nowrap">
-                                 {['PENDENTE', 'AG. RETORNO CIP', 'SALDO QUITADO'].map(st => (
-                                    <button
-                                       key={st}
-                                       onClick={() => updateStatus(contract.id, st)}
-                                       className={`px-1 py-2 text-[7.5px] font-black uppercase rounded-xl border transition-all text-center flex-1 truncate whitespace-nowrap ${(contract.status || 'PENDENTE') === st
-                                             ? st === 'PENDENTE' ? 'bg-orange-500 text-white border-orange-500 shadow-md'
-                                                : st === 'AG. RETORNO CIP' ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                                                   : 'bg-purple-600 text-white border-purple-600 shadow-md'
-                                             : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300 shadow-sm'
-                                          }`}
-                                       title={st}
-                                    >
-                                       {st}
-                                    </button>
-                                 ))}
+                                 {(() => {
+                                    const topStatuses = (contract.produto && contract.produto !== 'PORTABILIDADE') ? ['PENDENTE'] : ['PENDENTE', 'AG. RETORNO CIP', 'SALDO QUITADO'];
+                                    return topStatuses.map(st => (
+                                       <button
+                                          key={st}
+                                          onClick={() => updateStatus(contract.id, st)}
+                                          className={`px-1 py-2 text-[7.5px] font-black uppercase rounded-xl border transition-all text-center flex-1 truncate whitespace-nowrap ${(contract.status || 'PENDENTE') === st
+                                                ? st === 'PENDENTE' ? 'bg-orange-500 text-white border-orange-500 shadow-md'
+                                                   : st === 'AG. RETORNO CIP' ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                                      : 'bg-purple-600 text-white border-purple-600 shadow-md'
+                                                : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300 shadow-sm'
+                                             }`}
+                                          title={st}
+                                       >
+                                          {st}
+                                       </button>
+                                    ));
+                                 })()}
                               </div>
 
-                              {/* Row 2: Remaining 2 buttons */}
-                              <div className="flex items-center gap-1.5 w-[66.6%] flex-nowrap">
+                              {/* Row 2: Remaining buttons */}
+                              <div className={`flex items-center gap-1.5 flex-nowrap ${(contract.produto && contract.produto !== 'PORTABILIDADE') ? 'w-full' : 'w-[66.6%]'}`}>
                                  {['PAGO', 'REPROVADO'].map(st => (
                                     <button
                                        key={st}
@@ -602,8 +605,10 @@ export default function MeusContratosPage() {
                                  </button>
                               </div>
                            )}
-                           {/* PORTABILIDADE (Linha de cima) */}
-                           <div className="space-y-3 bg-slate-50/50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-white/5">
+                           {(!contract.produto || contract.produto === 'PORTABILIDADE') ? (
+                              <>
+                                 {/* PORTABILIDADE (Linha de cima) */}
+                                 <div className="space-y-3 bg-slate-50/50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-white/5">
                               <div className="flex justify-between items-center">
                                  <span className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
                                     <span>🔄</span> Portabilidade
@@ -763,8 +768,49 @@ export default function MeusContratosPage() {
                                     <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest truncate">Troco</p>
                                     <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">{formatCurrencyLocal(contract.valor_troco)}</p>
                                  </div>
+                               </div>
+                            </div>
+                           </>
+                           ) : (
+                              {/* PRODUTO ÚNICO */}
+                              <div className="space-y-3 bg-slate-50/50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-white/5 h-full flex flex-col justify-center">
+                                 <div className="flex justify-between items-center mb-4">
+                                    <span className="text-sm font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                                       <span>📄</span> {contract.produto}
+                                    </span>
+                                    {contract.status === 'REPROVADO' && (
+                                       <span className="px-3 py-1 bg-red-600 text-white text-[9px] font-black rounded-lg uppercase shadow-sm">
+                                          REPROVADO
+                                       </span>
+                                    )}
+                                    {contract.status === 'PAGO' && (
+                                       <span className="px-3 py-1 bg-emerald-600 text-white text-[9px] font-black rounded-lg uppercase shadow-sm">
+                                          PAGO
+                                       </span>
+                                    )}
+                                 </div>
+                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
+                                    <div className="space-y-1">
+                                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">Inst. Origem</p>
+                                       <div className="flex items-center gap-2">
+                                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase">{getFullOriginBankName(contract.instituicao_origem)}</p>
+                                       </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">Valor Parcela</p>
+                                       <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{formatCurrencyLocal(contract.parcela)}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">Prazo</p>
+                                       <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{contract.prazo_restante ? `${contract.prazo_restante}X` : 'N/A'}</p>
+                                    </div>
+                                    <div className="space-y-1 bg-blue-600/5 dark:bg-blue-500/10 px-3 py-2 rounded-xl border border-blue-100/20">
+                                       <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest truncate">Valor Contrato</p>
+                                       <p className="text-sm font-black text-blue-700 dark:text-blue-400">{formatCurrencyLocal(contract.valor_contrato)}</p>
+                                    </div>
+                                 </div>
                               </div>
-                           </div>
+                           )}
                         </div>
 
                      </div>
@@ -811,10 +857,12 @@ export default function MeusContratosPage() {
                                  <option value="CLT PRIVADO">CLT PRIVADO</option>
                               </select>
                            </div>
-                           <div className="space-y-1">
-                              <label className="text-[10px] font-black text-slate-500 uppercase">Novo Banco (Ex: 626 - C6)</label>
-                              <input type="text" required value={manualData.banco} onChange={e => setManualData({...manualData, banco: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="Banco de Destino" />
-                           </div>
+                           {manualData.produto === 'PORTABILIDADE' && (
+                              <div className="space-y-1">
+                                 <label className="text-[10px] font-black text-slate-500 uppercase">Novo Banco (Ex: 626 - C6)</label>
+                                 <input type="text" required value={manualData.banco} onChange={e => setManualData({...manualData, banco: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="Banco de Destino" />
+                              </div>
+                           )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div className="space-y-1">
@@ -847,14 +895,24 @@ export default function MeusContratosPage() {
                               <label className="text-[10px] font-black text-slate-500 uppercase">Valor Bruto</label>
                               <input type="text" value={manualData.valor_contrato} onChange={e => setManualData({...manualData, valor_contrato: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="R$ 0,00" />
                            </div>
-                           <div className="space-y-1">
-                              <label className="text-[10px] font-black text-slate-500 uppercase">Valor Troco</label>
-                              <input type="text" value={manualData.valor_troco} onChange={e => setManualData({...manualData, valor_troco: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="R$ 0,00" />
-                           </div>
-                           <div className="space-y-1">
-                              <label className="text-[10px] font-black text-slate-500 uppercase">Saldo Devedor</label>
-                              <input type="text" value={manualData.saldo_devedor} onChange={e => setManualData({...manualData, saldo_devedor: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="R$ 0,00" />
-                           </div>
+                           {manualData.produto === 'PORTABILIDADE' && (
+                              <>
+                                 <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase">Valor Troco</label>
+                                    <input type="text" value={manualData.valor_troco} onChange={e => setManualData({...manualData, valor_troco: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="R$ 0,00" />
+                                 </div>
+                                 <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase">Saldo Devedor</label>
+                                    <input type="text" value={manualData.saldo_devedor} onChange={e => setManualData({...manualData, saldo_devedor: e.target.value})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="R$ 0,00" />
+                                 </div>
+                              </>
+                           )}
+                           {manualData.produto !== 'PORTABILIDADE' && (
+                              <div className="space-y-1">
+                                 <label className="text-[10px] font-black text-slate-500 uppercase">Prazo</label>
+                                 <input type="text" value={manualData.prazo} onChange={e => setManualData({...manualData, prazo: e.target.value.replace(/\D/g, '')})} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold" placeholder="Ex: 84" />
+                              </div>
+                           )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                            <div className="space-y-1">
