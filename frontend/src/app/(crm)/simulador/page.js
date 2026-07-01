@@ -335,6 +335,26 @@ function SimuladorPageContent() {
     handleFileUpload(e);
   };
 
+  const getMatchedSpecies = (spStr) => {
+    if (!spStr) return "";
+    const spClean = norm(spStr);
+    let val = "";
+    if (spClean === "APOSENTADORIA POR IDADE" || spClean === "41") val = "41";
+    else if (spClean === "APOSENTADORIA POR TEMPO DE CONTRIBUICAO" || spClean === "42") val = "42";
+    else if (spClean.includes("PENSAO") && spClean.includes("MORTE")) val = "21";
+    else if (spClean.includes("INVALIDEZ")) val = "32";
+    else if (spClean.includes("RURAL") && spClean.includes("IDADE")) val = "07";
+    else if (spClean.includes("IDADE")) val = "41";
+    else if (spClean.includes("TEMPO")) val = "42";
+    else if (spClean.includes("BPC") || spClean.includes("LOAS")) val = "87";
+    else {
+      const found = inssSpecies.find(s => norm(s.label).includes(spClean) || spClean.includes(norm(s.label).replace(/^\d+\s*-?\s*/, '').trim()));
+      if (found) val = found.value;
+    }
+    const matchedLabel = inssSpecies.find(s => s.value === val)?.label;
+    return matchedLabel || spStr;
+  };
+
   const handleUseLoan = () => {
     if (selectedExtractLoanIndex === null || !extractedData) return;
     const selectedLoan = extractedData.emprestimos_ativos[selectedExtractLoanIndex];
@@ -342,14 +362,9 @@ function SimuladorPageContent() {
     // Tenta encontrar a espécie correspondente
     let matchedSpecies = "";
     if (extractedData.especie) {
-      const spClean = norm(extractedData.especie);
-      const found = inssSpecies.find(s => norm(s.label).includes(spClean) || spClean.includes(norm(s.label).replace(/^\d+\s*-\s*/, '')));
+      const matchedLabel = getMatchedSpecies(extractedData.especie);
+      const found = inssSpecies.find(s => s.label === matchedLabel);
       if (found) matchedSpecies = found.value;
-      else if (spClean.includes("PENSAO") && spClean.includes("MORTE")) matchedSpecies = "21";
-      else if (spClean.includes("INVALIDEZ")) matchedSpecies = "32";
-      else if (spClean.includes("IDADE")) matchedSpecies = "41";
-      else if (spClean.includes("TEMPO")) matchedSpecies = "42";
-      else if (spClean.includes("BPC") || spClean.includes("LOAS")) matchedSpecies = "87";
     }
 
     // Tenta encontrar o banco correspondente para o dropdown (inssBanks)
@@ -1400,7 +1415,7 @@ function SimuladorPageContent() {
                       Nº DO BENEFÍCIO: <span className="text-blue-600 font-black bg-blue-50 px-2 py-0.5 rounded-md ml-1">{extractedData.beneficio}</span>
                     </p>
                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md inline-block w-fit mt-0.5">
-                      {extractedData.especie}
+                      {getMatchedSpecies(extractedData.especie)}
                     </p>
                     {extractedData.bloqueado_emprestimo !== undefined && extractedData.bloqueado_emprestimo !== null && (
                       <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md w-fit mt-0.5 ${extractedData.bloqueado_emprestimo ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>

@@ -100,6 +100,23 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                             extracted_data["bloqueado_emprestimo"] = True
                         elif "NÃO" in line.upper() or "NAO" in line.upper():
                             extracted_data["bloqueado_emprestimo"] = False
+                            
+            if extracted_data.get("bloqueado_emprestimo") is None and len(pdf.pages) > 0:
+                p1_tables = pdf.pages[0].extract_tables()
+                if p1_tables:
+                    for table in p1_tables:
+                        for row in table:
+                            if not row: continue
+                            clean_row = [str(c).upper().replace('\n', ' ') for c in row if c]
+                            for idx_cell, cell in enumerate(clean_row):
+                                if "BLOQUEADO PARA EMPR" in cell or "BLOQUEADO PARA EMPRESTIMO" in cell:
+                                    if idx_cell + 1 < len(clean_row):
+                                        if "SIM" in clean_row[idx_cell+1]: extracted_data["bloqueado_emprestimo"] = True
+                                        elif "NÃO" in clean_row[idx_cell+1] or "NAO" in clean_row[idx_cell+1]: extracted_data["bloqueado_emprestimo"] = False
+                                elif "ELEGÍVEL PARA EMPR" in cell or "ELEGIVEL PARA EMPR" in cell:
+                                    if idx_cell + 1 < len(clean_row):
+                                        if "SIM" in clean_row[idx_cell+1]: extracted_data["bloqueado_emprestimo"] = False
+                                        elif "NÃO" in clean_row[idx_cell+1] or "NAO" in clean_row[idx_cell+1]: extracted_data["bloqueado_emprestimo"] = True
             
             # Páginas restantes: Margem e Empréstimos
             for page in pdf.pages:

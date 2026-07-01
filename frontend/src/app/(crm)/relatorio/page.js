@@ -96,11 +96,11 @@ export default function RelatorioPage() {
   const updateMeta = (updates) => {
     const newMeta = { ...meta, ...updates };
     
-    // Só recalcula o valor alvo se a mudança for no tipo ou no valor diário
-    if (updates.tipo || updates.valor_diario) {
-       let calculatedAlvo = Number(newMeta.valor_diario);
-       if (newMeta.tipo === 'semanal') calculatedAlvo = Number(newMeta.valor_diario) * 5;
-       if (newMeta.tipo === 'mensal') calculatedAlvo = Number(newMeta.valor_diario) * 22;
+    // Quando muda o tipo, ajusta um valor padrão se estiver zerado, mas não sobrescreve se o usuário digitou
+    if (updates.tipo && !newMeta.valor_alvo) {
+       let calculatedAlvo = Number(newMeta.valor_diario || 1000);
+       if (updates.tipo === 'semanal') calculatedAlvo = calculatedAlvo * 5;
+       if (updates.tipo === 'mensal') calculatedAlvo = calculatedAlvo * 22;
        newMeta.valor_alvo = calculatedAlvo;
     }
     
@@ -367,8 +367,8 @@ export default function RelatorioPage() {
                           type="number" 
                           className="bg-transparent w-32 text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase outline-none border-b border-blue-500/20 focus:border-blue-500"
                           placeholder="Valor Alvo"
-                          value={meta.valor_alvo}
-                          readOnly
+                          value={meta.valor_alvo || ''}
+                          onChange={(e) => updateMeta({ valor_alvo: Number(e.target.value) })}
                        />
                     </div>
                  </div>
