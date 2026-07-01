@@ -598,9 +598,10 @@ class AdminService:
         cache_key = f"{current_user.id}_{days}"
         now = time.time()
         
-        # Ignorando cache temporariamente para debugar
-        # if cache_key in AdminService._dashboard_cache:
-        #    ...
+        if cache_key in AdminService._dashboard_cache:
+            cached_data, timestamp = AdminService._dashboard_cache[cache_key]
+            if now - timestamp < AdminService._dashboard_cache_ttl:
+                return cached_data
 
         period_ago = datetime.utcnow() - timedelta(days=days)
 
@@ -631,7 +632,7 @@ class AdminService:
         agreement_counts_q = select(
             func.coalesce(Simulation.agreement, 'OUTROS'),
             func.count(Simulation.id)
-        ).where(*sim_conds).group_by(func.coalesce(Simulation.agreement, 'OUTROS'))
+        ).where(*sim_conds).group_by(Simulation.agreement)
 
         # 5. Top Users Count
         user_counts_q = select(
@@ -649,7 +650,7 @@ class AdminService:
             cast(Simulation.created_at, Date).label("dt"),
             func.coalesce(Simulation.agreement, 'OUTROS').label("ag"),
             func.count(Simulation.id).label("cnt")
-        ).where(*sim_conds).group_by(cast(Simulation.created_at, Date), func.coalesce(Simulation.agreement, 'OUTROS'))
+        ).where(*sim_conds).group_by(cast(Simulation.created_at, Date), Simulation.agreement)
         
         # 7. Subqueries for Results
         res_query = select(SimulationResult).join(Simulation)
@@ -682,7 +683,7 @@ class AdminService:
             func.coalesce(Simulation.agreement, 'OUTROS'),
             func.sum(SimulationResult.release_amount)
         ).join(SimulationResult, Simulation.id == SimulationResult.simulation_id).where(*sim_conds).group_by(
-            cast(Simulation.created_at, Date), func.coalesce(Simulation.agreement, 'OUTROS')
+            cast(Simulation.created_at, Date), Simulation.agreement
         )
 
         recent_query = select(Simulation).where(*sim_conds).options(
@@ -877,7 +878,7 @@ class AdminService:
             ] if recent_simulations_db else [],
             "debug_errors": debug_errors
         }
-        # AdminService._dashboard_cache[cache_key] = (response_data, now)
+        AdminService._dashboard_cache[cache_key] = (response_data, now)
         return response_data
     @staticmethod
     async def get_active_announcement(db: AsyncSession):
