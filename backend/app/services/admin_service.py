@@ -593,7 +593,7 @@ class AdminService:
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
         import time
         import asyncio
-        from sqlalchemy import text
+        from sqlalchemy import text, cast, Date
         from app.models.sqlalchemy_models import SubAgreementLogo
         
         cache_key = f"{current_user.id}_{days}"
@@ -646,14 +646,14 @@ class AdminService:
             func.count(Simulation.id).label("cnt")
         ).outerjoin(User, Simulation.user_id == User.id).where(*sim_conds).group_by(
             Simulation.user_id, User.name, User.logo_url, User.avatar_url, User.role
-        ).order_by(text("cnt DESC")).limit(10)
+        ).order_by(func.count(Simulation.id).desc()).limit(10)
 
         # 6. Historical Count
         historical_q = select(
-            func.date(Simulation.created_at).label("dt"),
+            cast(Simulation.created_at, Date).label("dt"),
             func.coalesce(Simulation.agreement, 'OUTROS').label("ag"),
             func.count(Simulation.id).label("cnt")
-        ).where(*sim_conds).group_by(text("dt"), text("ag"))
+        ).where(*sim_conds).group_by(cast(Simulation.created_at, Date), func.coalesce(Simulation.agreement, 'OUTROS'))
         
         # 7. Subqueries for Results
         res_query = select(SimulationResult).join(Simulation)
@@ -682,11 +682,11 @@ class AdminService:
         rate_stats_q = select(func.avg(subq.c.offered_rate)).select_from(subq).where(subq.c.offered_rate > 0)
         
         hist_val_q = select(
-            func.date(Simulation.created_at).label('dt'),
+            cast(Simulation.created_at, Date).label('dt'),
             func.coalesce(Simulation.agreement, 'OUTROS'),
             func.sum(SimulationResult.release_amount)
         ).join(SimulationResult, Simulation.id == SimulationResult.simulation_id).where(*sim_conds).group_by(
-            text("dt"), func.coalesce(Simulation.agreement, 'OUTROS')
+            cast(Simulation.created_at, Date), func.coalesce(Simulation.agreement, 'OUTROS')
         )
 
         recent_query = select(Simulation).where(*sim_conds).options(
