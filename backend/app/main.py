@@ -67,7 +67,11 @@ def run_db_fix():
             'CREATE INDEX IF NOT EXISTS "ix_contracts_data_hora" ON "contracts" ("data_hora");',
             'CREATE INDEX IF NOT EXISTS "ix_contracts_status" ON "contracts" ("status");',
             'CREATE INDEX IF NOT EXISTS "ix_contracts_user_id" ON "contracts" ("user_id");',
-            'CREATE INDEX IF NOT EXISTS "ix_contracts_broker_id" ON "contracts" ("broker_id");'
+            'CREATE INDEX IF NOT EXISTS "ix_contracts_broker_id" ON "contracts" ("broker_id");',
+            'CREATE INDEX IF NOT EXISTS "ix_simulations_created_at" ON "simulations" ("created_at");',
+            'CREATE INDEX IF NOT EXISTS "ix_simulations_user_id" ON "simulations" ("user_id");',
+            'CREATE INDEX IF NOT EXISTS "ix_simulation_results_sim_id" ON "simulation_results" ("simulation_id");',
+            'CREATE INDEX IF NOT EXISTS "ix_simulation_results_bank_id" ON "simulation_results" ("bank_id");'
         ]
         for query in queries:
             try:

@@ -24,6 +24,7 @@ services:
     build: 
       context: .
       dockerfile: ./docker/Dockerfile.backend
+    restart: always
     ports:
       - "8000:8000"
     environment:
@@ -40,6 +41,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.frontend
+    restart: always
     ports:
       - "3000:3000"
     depends_on:

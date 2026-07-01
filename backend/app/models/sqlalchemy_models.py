@@ -188,7 +188,7 @@ class Simulation(Base):
     __tablename__ = "simulations"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     client_name = Column(String(100))
     client_cpf = Column(String(14))
     client_age = Column(Integer)
@@ -210,7 +210,7 @@ class Simulation(Base):
     refin_adjustment = Column(Float, default=0.0)
     final_refin_rate = Column(Float, nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     user = relationship("User", back_populates="simulations")
     results = relationship("SimulationResult", back_populates="simulation", cascade="all, delete-orphan")
@@ -219,8 +219,8 @@ class SimulationResult(Base):
     __tablename__ = "simulation_results"
 
     id = Column(Integer, primary_key=True, index=True)
-    simulation_id = Column(Integer, ForeignKey("simulations.id"))
-    bank_id = Column(Integer, ForeignKey("banks.id"))
+    simulation_id = Column(Integer, ForeignKey("simulations.id"), index=True)
+    bank_id = Column(Integer, ForeignKey("banks.id"), index=True)
     table_name = Column(String(100), nullable=True)
     offered_rate = Column(Float)
     release_amount = Column(Numeric(15, 2))

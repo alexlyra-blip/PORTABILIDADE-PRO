@@ -48,7 +48,9 @@ export default function DashboardPage() {
     
     // Auto-refresh inteligente a cada 10 segundos
     const interval = setInterval(() => {
-      loadDashboardStats(false);
+      if (document.visibilityState === "visible") {
+        loadDashboardStats(false);
+      }
     }, 10000);
     
     return () => clearInterval(interval);

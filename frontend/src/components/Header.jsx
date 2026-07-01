@@ -32,24 +32,28 @@ export default function Header() {
          setMetaConfig(JSON.parse(savedMeta));
       }
 
-      // Buscar dados para a meta
-      api.get('/admin/dashboard-stats?days=1').then(res => setApiData(res)).catch(() => {});
-      api.get('/contracts').then(res => {
-         let parsed = Array.isArray(res) ? res : res.data;
-         if (parsed && Array.isArray(parsed)) setContracts(parsed);
-      }).catch(() => {});
-
-      // Buscar comunicado ativo para o sino
-      api.get('/admin/announcements/active').then(res => {
-        if (res && res.active) {
-          setAnnouncement(res);
-          const readKey = `announcement_read_${res.id}`;
-          setUnread(!localStorage.getItem(readKey));
-        } else {
-          setAnnouncement(null);
-          setUnread(false);
+      Promise.allSettled([
+        api.get('/admin/dashboard-stats?days=1'),
+        api.get('/contracts'),
+        api.get('/admin/announcements/active')
+      ]).then(([statsRes, contractsRes, annRes]) => {
+        if (statsRes.status === 'fulfilled') setApiData(statsRes.value);
+        if (contractsRes.status === 'fulfilled') {
+          let parsed = Array.isArray(contractsRes.value) ? contractsRes.value : contractsRes.value?.data;
+          if (parsed && Array.isArray(parsed)) setContracts(parsed);
         }
-      }).catch(() => {});
+        if (annRes.status === 'fulfilled') {
+          const res = annRes.value;
+          if (res && res.active) {
+            setAnnouncement(res);
+            const readKey = `announcement_read_${res.id}`;
+            setUnread(!localStorage.getItem(readKey));
+          } else {
+            setAnnouncement(null);
+            setUnread(false);
+          }
+        }
+      });
     };
     
     loadUser();

@@ -592,6 +592,10 @@ class AdminService:
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
         import time
+        import asyncio
+        from sqlalchemy import text
+        from app.models.sqlalchemy_models import SubAgreementLogo
+        
         cache_key = f"{current_user.id}_{days}"
         now = time.time()
         
@@ -600,228 +604,176 @@ class AdminService:
             if now - timestamp < AdminService._dashboard_cache_ttl:
                 return cached_data
 
-        # Base query for simulations
-        if current_user.role == "admin":
-            sim_query = select(Simulation)
-        elif current_user.role == "promotora":
-            sim_query = select(Simulation).join(User, Simulation.user_id == User.id).where(
-                (User.id == current_user.id) | (User.broker_id == current_user.id)
-            )
-        else: # vendedor / corretor
-            sim_query = select(Simulation).where(Simulation.user_id == current_user.id)
-
         period_ago = datetime.utcnow() - timedelta(days=days)
-        sim_query = sim_query.where(Simulation.created_at >= period_ago).order_by(Simulation.created_at.desc())
+
+        # Base conditions
+        sim_conds = [Simulation.created_at >= period_ago]
+        if current_user.role == "promotora":
+            sim_conds.append(Simulation.user_id.in_(
+                select(User.id).where((User.id == current_user.id) | (User.broker_id == current_user.id))
+            ))
+        elif current_user.role != "admin":
+            sim_conds.append(Simulation.user_id == current_user.id)
+
+        # 1. Total System Counts
+        total_banks_q = select(func.count(Bank.id))
+        total_tables_q = select(func.count(BankTable.id))
+        total_simulations_q = select(func.count(Simulation.id))
         
-        # Load base simulations for general loops (without results to save memory)
-        print("Executando sim_query.options...")
-        result = await db.execute(
-            sim_query.options(
-                selectinload(Simulation.user)
-            )
-        )
-        simulations = result.scalars().all()
-        # Load recent simulations specifically with results for the recent list
-        print("Executando recent_query...")
-        recent_query = sim_query.options(selectinload(Simulation.user), selectinload(Simulation.results)).limit(50)
-        recent_res = await db.execute(recent_query)
-        recent_simulations_db = recent_res.scalars().all()
+        # 2. Simulations in period count
+        simulations_period_q = select(func.count(Simulation.id)).where(*sim_conds)
 
-        # Total System Counts
-        print("Executando total counts...")
-        total_banks_res = await db.execute(select(func.count(Bank.id)))
-        total_banks = total_banks_res.scalar() or 0
+        # 3. Origin Banks Count (Mais Portado)
+        origin_counts_q = select(
+            func.upper(func.trim(Simulation.current_bank)), 
+            func.count(Simulation.id)
+        ).where(*sim_conds, Simulation.current_bank != None, func.length(Simulation.current_bank) > 2).group_by(
+            func.upper(func.trim(Simulation.current_bank))
+        ).order_by(func.count(Simulation.id).desc()).limit(10)
+
+        # 4. Agreements Count
+        agreement_counts_q = select(
+            func.coalesce(Simulation.agreement, 'OUTROS'),
+            func.count(Simulation.id)
+        ).where(*sim_conds).group_by(func.coalesce(Simulation.agreement, 'OUTROS'))
+
+        # 5. Top Users Count
+        user_counts_q = select(
+            Simulation.user_id,
+            User.name,
+            func.coalesce(User.logo_url, User.avatar_url),
+            User.role,
+            func.count(Simulation.id).label("cnt")
+        ).outerjoin(User, Simulation.user_id == User.id).where(*sim_conds).group_by(
+            Simulation.user_id, User.name, User.logo_url, User.avatar_url, User.role
+        ).order_by(text("cnt DESC")).limit(10)
+
+        # 6. Historical Count
+        historical_q = select(
+            func.date(Simulation.created_at).label("dt"),
+            func.coalesce(Simulation.agreement, 'OUTROS').label("ag"),
+            func.count(Simulation.id).label("cnt")
+        ).where(*sim_conds).group_by(text("dt"), text("ag"))
         
-        total_tables_res = await db.execute(select(func.count(BankTable.id)))
-        total_tables = total_tables_res.scalar() or 0
-        
-        total_simulations_res = await db.execute(select(func.count(Simulation.id)))
-        total_simulations = total_simulations_res.scalar() or 0
-
-        # Get bank metadata mapping
-        print("Executando banks query...")
-        banks_result = await db.execute(select(Bank))
-        all_banks = banks_result.scalars().all()
-        banks_map = {b.id: b.name for b in all_banks}
-        banks_logo_map = {b.id: b.logo_url for b in all_banks}
-
-        # Aggregate stats
-        bank_counts = {} # bank_id -> dict
-        table_counts = {}
-        user_counts = {} # user_id -> dict
-        rates = []
-        agreement_counts = {}
-        
-        # Historical data
-        thirty_days_ago = period_ago
-        historical = {} # date -> {agreement -> count, "total": count}
-        historical_values = {} # date -> {agreement -> sum_amount}
-        origin_counts = {} # current_bank_name -> count
-
-        # Get sub-logos for origin bank matching
-        sub_logos_map = {}
-        try:
-            from app.models.sqlalchemy_models import SubAgreementLogo
-            sub_logos_res = await db.execute(select(SubAgreementLogo))
-            sub_logos = sub_logos_res.scalars().all()
-            sub_logos_map = {l.name.upper(): l.logo_url for l in sub_logos}
-        except Exception as e:
-            pass # Silently handle missing table
-
-        for sim in simulations:
-            sim_max_amount = 0.0
-
-            # Origin Bank Stats (Mais Portado)
-            orig = str(sim.current_bank or "").strip().upper()
-            if orig and len(orig) > 2:
-                origin_counts[orig] = origin_counts.get(orig, 0) + 1
-
-            # Agreement Stats
-            agreement = sim.agreement or "OUTROS"
-            agreement_counts[agreement] = agreement_counts.get(agreement, 0) + 1
-            
-            # User Stats
-            uid = sim.user_id if sim.user else "removido"
-            if uid not in user_counts:
-                user_counts[uid] = {
-                    "name": sim.user.name if sim.user else "Usuário Removido",
-                    "avatar": (sim.user.logo_url or sim.user.avatar_url) if sim.user else None,
-                    "count": 0,
-                    "role": sim.user.role if sim.user else "N/A"
-                }
-            user_counts[uid]["count"] += 1
-            
-            # Historical 
-            if sim.created_at:
-                try:
-                    created_dt = sim.created_at
-                    if isinstance(created_dt, str):
-                        created_dt = datetime.fromisoformat(created_dt.split('.')[0] if '.' in created_dt else created_dt)
-                        
-                    if created_dt > thirty_days_ago:
-                        date_str = created_dt.strftime("%d/%m")
-                        if date_str not in historical: 
-                            historical[date_str] = {"total": 0}
-                        historical[date_str][agreement] = historical[date_str].get(agreement, 0) + 1
-                        historical[date_str]["total"] += 1
-                except Exception as e:
-                    pass
-
-        # SQL Aggregations for Results
+        # 7. Subqueries for Results
         res_query = select(SimulationResult).join(Simulation)
-        if current_user.role == "admin":
-            pass
-        elif current_user.role == "promotora":
+        if current_user.role == "promotora":
             res_query = res_query.join(User, Simulation.user_id == User.id).where(
                 (User.id == current_user.id) | (User.broker_id == current_user.id)
             )
-        else:
+        elif current_user.role != "admin":
             res_query = res_query.where(Simulation.user_id == current_user.id)
             
-        res_query = res_query.where(Simulation.created_at >= thirty_days_ago)
+        res_query = res_query.where(Simulation.created_at >= period_ago)
         subq = res_query.subquery()
-        
-        # Bank stats
+
         bank_stats_q = select(
             subq.c.bank_id,
             func.count(subq.c.id),
             func.sum(subq.c.release_amount)
-        ).select_from(subq).group_by(subq.c.bank_id)
-        
-        try:
-            print("Executando bank_stats_q...")
-            b_stats = await db.execute(bank_stats_q)
-            for bid, count, vol in b_stats:
-                if bid not in bank_counts:
-                    bank_counts[bid] = {
-                        "name": banks_map.get(bid, f"Banco {bid}"),
-                        "logo": banks_logo_map.get(bid),
-                        "count": 0,
-                        "total_volume": 0.0
-                    }
-                bank_counts[bid]["count"] += count
-                if vol: bank_counts[bid]["total_volume"] += float(vol)
-        except Exception as e:
-            pass
-            
-        # Table stats
+        ).select_from(subq).group_by(subq.c.bank_id).order_by(func.sum(subq.c.release_amount).desc()).limit(10)
+
         table_stats_q = select(
             subq.c.table_name,
             func.count(subq.c.id),
             func.max(subq.c.bank_id)
-        ).select_from(subq).where(subq.c.table_name != None).group_by(subq.c.table_name)
-        
-        try:
-            print("Executando table_stats_q...")
-            t_stats = await db.execute(table_stats_q)
-            for tname, count, bid in t_stats:
-                table_counts[tname] = {"count": count, "bank_id": bid}
-        except Exception as e:
-            pass
-            
-        # Avg rate
+        ).select_from(subq).where(subq.c.table_name != None).group_by(subq.c.table_name).order_by(func.count(subq.c.id).desc()).limit(1)
+
         rate_stats_q = select(func.avg(subq.c.offered_rate)).select_from(subq).where(subq.c.offered_rate > 0)
-        try:
-            r_stats = await db.execute(rate_stats_q)
-            avg_val = r_stats.scalar()
-            if avg_val: rates.append(float(avg_val))
-        except Exception as e:
-            pass
-        # Historical Values Stats
+        
         hist_val_q = select(
             func.date(Simulation.created_at).label('dt'),
-            Simulation.agreement,
-            func.max(SimulationResult.release_amount).label('max_amount')
-        ).join(SimulationResult).where(
-            Simulation.created_at >= thirty_days_ago
+            func.coalesce(Simulation.agreement, 'OUTROS'),
+            func.sum(SimulationResult.release_amount)
+        ).join(SimulationResult, Simulation.id == SimulationResult.simulation_id).where(*sim_conds).group_by(
+            text("dt"), func.coalesce(Simulation.agreement, 'OUTROS')
         )
-        if current_user.role == "promotora":
-            hist_val_q = hist_val_q.join(User, Simulation.user_id == User.id).where(
-                (User.id == current_user.id) | (User.broker_id == current_user.id)
-            )
-        elif current_user.role != "admin":
-            hist_val_q = hist_val_q.where(Simulation.user_id == current_user.id)
-            
-        hist_val_q = hist_val_q.group_by(func.date(Simulation.created_at), Simulation.agreement, Simulation.id)
+
+        recent_query = select(Simulation).where(*sim_conds).options(
+            selectinload(Simulation.user), 
+            selectinload(Simulation.results)
+        ).order_by(Simulation.created_at.desc()).limit(50)
+
+        banks_q = select(Bank)
+        sub_logos_q = select(SubAgreementLogo)
+
+        # EXECUTE ALL CONCURRENTLY!
+        (
+            total_banks_res, total_tables_res, total_simulations_res, sim_period_res,
+            origin_counts_res, agreement_counts_res, user_counts_res, historical_res,
+            bank_stats_res, table_stats_res, rate_stats_res, hist_val_res,
+            recent_res, banks_res, sub_logos_res
+        ) = await asyncio.gather(
+            db.execute(total_banks_q), db.execute(total_tables_q), db.execute(total_simulations_q), db.execute(simulations_period_q),
+            db.execute(origin_counts_q), db.execute(agreement_counts_q), db.execute(user_counts_q), db.execute(historical_q),
+            db.execute(bank_stats_q), db.execute(table_stats_q), db.execute(rate_stats_q), db.execute(hist_val_q),
+            db.execute(recent_query), db.execute(banks_q), db.execute(sub_logos_q),
+            return_exceptions=True
+        )
+
+        def _safe_res(res, is_scalar=False, is_all=False):
+            if isinstance(res, Exception):
+                print(f"Query Error: {res}")
+                return [] if is_all else (0 if is_scalar else None)
+            if is_scalar:
+                return res.scalar() or 0
+            if is_all:
+                return res.all()
+            return res.scalars().all()
+
+        total_banks = _safe_res(total_banks_res, is_scalar=True)
+        total_tables = _safe_res(total_tables_res, is_scalar=True)
+        total_simulations = _safe_res(total_simulations_res, is_scalar=True)
+        sim_period_count = _safe_res(sim_period_res, is_scalar=True)
         
-        try:
-            hv_stats = await db.execute(hist_val_q)
-            for dt_val, agreement, max_amount in hv_stats:
-                if dt_val and max_amount:
-                    try:
-                        # Depending on postgres driver dt_val can be date or datetime
-                        if hasattr(dt_val, "strftime"):
-                            date_str = dt_val.strftime("%d/%m")
-                        else:
-                            date_str = str(dt_val)[8:10] + "/" + str(dt_val)[5:7]
-                        
-                        ag = agreement or "OUTROS"
-                        if date_str not in historical_values: historical_values[date_str] = {}
-                        historical_values[date_str][ag] = historical_values[date_str].get(ag, 0.0) + float(max_amount)
-                    except Exception:
-                        pass
-        except Exception as e:
-            pass
+        origin_counts = _safe_res(origin_counts_res, is_all=True)
+        agreement_counts = _safe_res(agreement_counts_res, is_all=True)
+        user_counts = _safe_res(user_counts_res, is_all=True)
+        historical_raw = _safe_res(historical_res, is_all=True)
+        bank_stats = _safe_res(bank_stats_res, is_all=True)
+        table_stats = _safe_res(table_stats_res, is_all=True)
+        avg_rate = _safe_res(rate_stats_res, is_scalar=True)
+        hist_val = _safe_res(hist_val_res, is_all=True)
+        recent_simulations_db = _safe_res(recent_res)
+        all_banks = _safe_res(banks_res)
+        sub_logos = _safe_res(sub_logos_res)
 
-        # Top Values
-        top_10_banks = sorted(bank_counts.values(), key=lambda x: x.get("total_volume", 0.0), reverse=True)[:10]
-        top_10_users = sorted(user_counts.values(), key=lambda x: x["count"], reverse=True)[:10]
-        
-        top_table_name = max(table_counts, key=lambda k: table_counts[k]["count"]) if table_counts else "N/A"
-        top_table_bank_id = table_counts[top_table_name]["bank_id"] if top_table_name != "N/A" else None
-        top_table_logo = banks_logo_map.get(top_table_bank_id) if top_table_bank_id else None
+        banks_map = {b.id: b.name for b in all_banks} if all_banks else {}
+        banks_logo_map = {b.id: b.logo_url for b in all_banks} if all_banks else {}
+        sub_logos_map = {l.name.upper(): l.logo_url for l in sub_logos} if sub_logos else {}
 
-        if top_table_name != "N/A" and top_table_bank_id:
-            bank_name = banks_map.get(top_table_bank_id, "")
-            if "-" in bank_name:
-                bank_name = bank_name.split("-")[-1].strip()
-            if bank_name:
-                top_table_name = f"{top_table_name} ({bank_name.upper()})"
+        top_10_banks = []
+        for bid, count, vol in bank_stats:
+            top_10_banks.append({
+                "name": banks_map.get(bid, f"Banco {bid}"),
+                "logo": banks_logo_map.get(bid),
+                "count": count,
+                "total_volume": float(vol) if vol else 0.0
+            })
 
-        top_origin_bank = max(origin_counts, key=origin_counts.get) if origin_counts else "N/A"
+        top_10_users = []
+        for uid, uname, uavatar, urole, count in user_counts:
+            top_10_users.append({
+                "name": uname or "Usuário Removido",
+                "avatar": uavatar,
+                "count": count,
+                "role": urole or "N/A"
+            })
+
+        top_table_name = "N/A"
+        top_table_logo = None
+        if table_stats and len(table_stats) > 0:
+            tname, count, bid = table_stats[0]
+            top_table_bank_id = bid
+            top_table_logo = banks_logo_map.get(bid)
+            bank_name = banks_map.get(bid, "")
+            if "-" in bank_name: bank_name = bank_name.split("-")[-1].strip()
+            top_table_name = f"{tname} ({bank_name.upper()})" if bank_name else tname
+
+        top_origin_bank = origin_counts[0][0] if origin_counts else "N/A"
         top_origin_logo = None
         top_origin_name = top_origin_bank
-        
+
         if top_origin_bank != "N/A":
             import re
             match = re.match(r'^(\d{3})\s*-\s*(.*)', str(top_origin_bank))
@@ -842,12 +794,9 @@ class AdminService:
                 search_name = code_to_name[search_code]
 
             search_code_clean = search_code.lstrip('0') if search_code.isdigit() else ""
-            
             for l_name, l_url in sub_logos_map.items():
                 l_name_up = l_name.upper()
-                if (search_code and search_code in l_name_up) or \
-                   (search_code_clean and search_code_clean in l_name_up) or \
-                   (search_name and search_name in l_name_up):
+                if (search_code and search_code in l_name_up) or                    (search_code_clean and search_code_clean in l_name_up) or                    (search_name and search_name in l_name_up):
                     top_origin_logo = l_url
                     top_origin_name = l_name
                     break
@@ -855,15 +804,25 @@ class AdminService:
             if not top_origin_logo:
                 for b_id, b_name in banks_map.items():
                     b_name_up = b_name.upper()
-                    if (search_code and search_code in b_name_up) or \
-                       (search_name and search_name in b_name_up):
+                    if (search_code and search_code in b_name_up) or                        (search_name and search_name in b_name_up):
                         top_origin_logo = banks_logo_map.get(b_id)
                         top_origin_name = b_name
                         break
 
-        avg_rate = sum(rates) / len(rates) if rates else 0
+        historical = {}
+        for dt, ag, cnt in historical_raw:
+            d_str = dt.strftime("%d/%m") if hasattr(dt, "strftime") else str(dt)[8:10] + "/" + str(dt)[5:7]
+            if d_str not in historical: historical[d_str] = {"total": 0}
+            historical[d_str][ag] = historical[d_str].get(ag, 0) + cnt
+            historical[d_str]["total"] += cnt
+            
+        historical_values = {}
+        for dt, ag, val in hist_val:
+            d_str = dt.strftime("%d/%m") if hasattr(dt, "strftime") else str(dt)[8:10] + "/" + str(dt)[5:7]
+            if d_str not in historical_values: historical_values[d_str] = {}
+            historical_values[d_str][ag] = float(val) if val else 0.0
 
-        agreements_list = list(agreement_counts.keys())
+        agreements_list = [row[0] for row in agreement_counts] if agreement_counts else []
         historical_chart = []
         for d in sorted(historical.keys()):
             entry = {"date": d, "simulations": historical[d].get("total", 0)}
@@ -877,7 +836,7 @@ class AdminService:
                 "banks": total_banks,
                 "tables": total_tables,
                 "simulations": total_simulations,
-                "simulations_period": len(simulations)
+                "simulations_period": sim_period_count
             },
             "stats": {
                 "top_bank": top_10_banks[0]["name"] if top_10_banks else "N/A",
@@ -894,8 +853,8 @@ class AdminService:
                 "avg_rate": f"{avg_rate:.2f}%"
             },
             "agreements": [
-                {"name": name, "value": count} for name, count in agreement_counts.items()
-            ],
+                {"name": name, "value": count} for name, count in agreement_counts
+            ] if agreement_counts else [],
             "historical": historical_chart[-7:], 
             "recent_simulations": [
                 {
@@ -921,7 +880,7 @@ class AdminService:
                         } for r in s.results
                     ]
                 } for s in recent_simulations_db
-            ]
+            ] if recent_simulations_db else []
         }
         AdminService._dashboard_cache[cache_key] = (response_data, now)
         return response_data
