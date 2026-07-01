@@ -157,10 +157,11 @@ export default function RelatorioPage() {
 
       // Filtro de Período (Para a Barra de Meta e todos os Gráficos)
       let isInPeriod = false;
-      const itemDate = item.data_aceite ? new Date(item.data_aceite + "T12:00:00") : null;
-      if (item.data_aceite) {
+      const targetDateStr = item.data_aceite || (item.created_at ? item.created_at.substring(0, 10) : todayStr);
+      const itemDate = targetDateStr ? new Date(targetDateStr + "T12:00:00") : null;
+      if (targetDateStr) {
          if (currentMeta.tipo === 'mensal') {
-            const itemMonth = item.data_aceite.substring(0, 7);
+            const itemMonth = targetDateStr.substring(0, 7);
             const todayMonth = todayStr.substring(0, 7);
             if (itemMonth === todayMonth) isInPeriod = true;
          } else if (currentMeta.tipo === 'semanal' && itemDate) {
@@ -168,7 +169,7 @@ export default function RelatorioPage() {
             // Permite 1 dia de folga no futuro para compensar UTC
             if (diff >= -86400000 && diff < 7 * 24 * 60 * 60 * 1000) isInPeriod = true;
          } else if (currentMeta.tipo === 'diaria') {
-            if (item.data_aceite === todayStr) isInPeriod = true;
+            if (targetDateStr === todayStr) isInPeriod = true;
          }
       }
 
@@ -176,7 +177,7 @@ export default function RelatorioPage() {
          pagoProgress += vContrato;
 
          // 1. Financeiro Diário (Para o BarChart)
-         const date = item.data_aceite || "N/A";
+         const date = targetDateStr;
          if (!dailyMap[date]) {
             dailyMap[date] = { date, digitado: 0, pago: 0, reprovado: 0 };
          }

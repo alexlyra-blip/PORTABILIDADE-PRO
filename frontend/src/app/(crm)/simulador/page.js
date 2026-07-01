@@ -764,16 +764,41 @@ function SimuladorPageContent() {
                   <label className="relative cursor-pointer group/btn flex-1 max-w-[200px]">
                     <input type="file" accept="application/pdf" className="hidden" onChange={handleFileUpload} disabled={extractLoading} />
                     <div className={`w-full px-4 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-center ${extractLoading ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/30'}`}>
-                      {extractLoading ? 'Lendo PDF...' : (extractedData ? 'Novo PDF' : 'Selecionar PDF')}
+                      {extractLoading ? 'Processando...' : (extractedData ? 'Novo PDF' : 'Selecionar PDF')}
                     </div>
                   </label>
                   
-                  {extractedData && (
+                  {extractedData && !extractLoading && (
                     <button type="button" onClick={() => setExtractModalOpen(true)} className="flex-1 max-w-[200px] px-4 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2">
                       <Icons.Eye size={14} /> Ver Dados
                     </button>
                   )}
                 </div>
+
+                {extractLoading && (
+                  <div className="w-full mt-5 max-w-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="flex justify-between items-center px-1 mb-2">
+                      <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest animate-pulse flex items-center gap-1.5">
+                        <Icons.CheckCircle size={10} className="animate-spin-slow" /> Inteligência Artificial trabalhando...
+                      </span>
+                    </div>
+                    <div className="w-full bg-emerald-50 dark:bg-emerald-900/20 rounded-full h-1.5 overflow-hidden relative shadow-inner">
+                      <div className="absolute top-0 left-0 h-full bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.8)] loading-bar-slide">
+                        <div className="absolute inset-0 bg-white/40 w-full h-full animate-pulse"></div>
+                      </div>
+                    </div>
+                    <style>{`
+                      .loading-bar-slide {
+                        animation: slideRight 1.8s ease-in-out infinite;
+                      }
+                      @keyframes slideRight {
+                        0% { transform: translateX(-100%); width: 20%; }
+                        50% { width: 40%; }
+                        100% { transform: translateX(500%); width: 20%; }
+                      }
+                    `}</style>
+                  </div>
+                )}
               </div>
             </div>
 

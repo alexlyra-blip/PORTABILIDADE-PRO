@@ -48,6 +48,22 @@ def clean_bank_name(banco_str):
     
     return cleaned
 
+def calcular_taxa(valor: float, parcela: float, parcelas: int) -> float:
+    if parcelas <= 0 or parcela <= 0 or valor <= 0: return 0.0
+    min_rate = 0.0
+    max_rate = 1.0
+    for _ in range(100):
+        taxa = (min_rate + max_rate) / 2.0
+        try:
+            pv = parcela * ((1.0 - math.pow(1.0 + taxa, -parcelas)) / taxa)
+            if pv > valor:
+                min_rate = taxa
+            else:
+                max_rate = taxa
+        except:
+            break
+    return ((min_rate + max_rate) / 2.0) * 100.0
+
 @router.post("/inss")
 async def extract_inss_pdf(file: UploadFile = File(...)):
     if file.content_type != 'application/pdf':
@@ -159,6 +175,15 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                 
                                 parcela = parse_currency(clean_row[8])
                                 taxa_mensal = parse_currency(clean_row[14])
+                                
+                                # Extração do Valor Financiado (coluna 10) para caso a taxa seja 0
+                                valor_financiado = 0.0
+                                if len(clean_row) > 10:
+                                    valor_financiado = parse_currency(clean_row[10])
+
+                                # Cálculo da taxa de juros se estiver zerada ou não informada
+                                if taxa_mensal == 0 and valor_financiado > 0 and prazo_total > 0 and parcela > 0:
+                                    taxa_mensal = calcular_taxa(valor_financiado, parcela, prazo_total)
 
                                 # Cálculo do saldo devedor
                                 meses_pagos = 0
