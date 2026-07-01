@@ -592,7 +592,6 @@ class AdminService:
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
         import time
-        import asyncio
         from sqlalchemy import text, cast, Date
         from app.models.sqlalchemy_models import SubAgreementLogo
         
@@ -619,11 +618,9 @@ class AdminService:
         total_banks_q = select(func.count(Bank.id))
         total_tables_q = select(func.count(BankTable.id))
         total_simulations_q = select(func.count(Simulation.id))
-        
-        # 2. Simulations in period count
         simulations_period_q = select(func.count(Simulation.id)).where(*sim_conds)
 
-        # 3. Origin Banks Count (Mais Portado)
+        # 3. Origin Banks Count
         origin_counts_q = select(
             func.upper(func.trim(Simulation.current_bank)), 
             func.count(Simulation.id)
@@ -697,46 +694,35 @@ class AdminService:
         banks_q = select(Bank)
         sub_logos_q = select(SubAgreementLogo)
 
-        # EXECUTE ALL CONCURRENTLY!
-        (
-            total_banks_res, total_tables_res, total_simulations_res, sim_period_res,
-            origin_counts_res, agreement_counts_res, user_counts_res, historical_res,
-            bank_stats_res, table_stats_res, rate_stats_res, hist_val_res,
-            recent_res, banks_res, sub_logos_res
-        ) = await asyncio.gather(
-            db.execute(total_banks_q), db.execute(total_tables_q), db.execute(total_simulations_q), db.execute(simulations_period_q),
-            db.execute(origin_counts_q), db.execute(agreement_counts_q), db.execute(user_counts_q), db.execute(historical_q),
-            db.execute(bank_stats_q), db.execute(table_stats_q), db.execute(rate_stats_q), db.execute(hist_val_q),
-            db.execute(recent_query), db.execute(banks_q), db.execute(sub_logos_q),
-            return_exceptions=True
-        )
-
-        def _safe_res(res, is_scalar=False, is_all=False):
-            if isinstance(res, Exception):
-                print(f"Query Error: {res}")
+        async def safe_execute(query, is_scalar=False, is_all=False):
+            try:
+                res = await db.execute(query)
+                if is_scalar:
+                    return res.scalar() or 0
+                if is_all:
+                    return res.all()
+                return res.scalars().all()
+            except Exception as e:
+                print(f"Query Error: {e}")
                 return [] if is_all else (0 if is_scalar else None)
-            if is_scalar:
-                return res.scalar() or 0
-            if is_all:
-                return res.all()
-            return res.scalars().all()
 
-        total_banks = _safe_res(total_banks_res, is_scalar=True)
-        total_tables = _safe_res(total_tables_res, is_scalar=True)
-        total_simulations = _safe_res(total_simulations_res, is_scalar=True)
-        sim_period_count = _safe_res(sim_period_res, is_scalar=True)
+        # Executando sequencialmente para evitar erro de concorrência do SQLAlchemy AsyncSession
+        total_banks = await safe_execute(total_banks_q, is_scalar=True)
+        total_tables = await safe_execute(total_tables_q, is_scalar=True)
+        total_simulations = await safe_execute(total_simulations_q, is_scalar=True)
+        sim_period_count = await safe_execute(simulations_period_q, is_scalar=True)
         
-        origin_counts = _safe_res(origin_counts_res, is_all=True)
-        agreement_counts = _safe_res(agreement_counts_res, is_all=True)
-        user_counts = _safe_res(user_counts_res, is_all=True)
-        historical_raw = _safe_res(historical_res, is_all=True)
-        bank_stats = _safe_res(bank_stats_res, is_all=True)
-        table_stats = _safe_res(table_stats_res, is_all=True)
-        avg_rate = _safe_res(rate_stats_res, is_scalar=True)
-        hist_val = _safe_res(hist_val_res, is_all=True)
-        recent_simulations_db = _safe_res(recent_res)
-        all_banks = _safe_res(banks_res)
-        sub_logos = _safe_res(sub_logos_res)
+        origin_counts = await safe_execute(origin_counts_q, is_all=True)
+        agreement_counts = await safe_execute(agreement_counts_q, is_all=True)
+        user_counts = await safe_execute(user_counts_q, is_all=True)
+        historical_raw = await safe_execute(historical_q, is_all=True)
+        bank_stats = await safe_execute(bank_stats_q, is_all=True)
+        table_stats = await safe_execute(table_stats_q, is_all=True)
+        avg_rate = await safe_execute(rate_stats_q, is_scalar=True)
+        hist_val = await safe_execute(hist_val_q, is_all=True)
+        recent_simulations_db = await safe_execute(recent_query)
+        all_banks = await safe_execute(banks_q)
+        sub_logos = await safe_execute(sub_logos_q)
 
         banks_map = {b.id: b.name for b in all_banks} if all_banks else {}
         banks_logo_map = {b.id: b.logo_url for b in all_banks} if all_banks else {}
