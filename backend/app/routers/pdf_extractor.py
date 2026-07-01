@@ -171,6 +171,11 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                 # [0:Contrato, 1:Banco, 2:Situação, 3:Origem, 4:Data Inclusão, 5:Início, 6:Fim, 7:Qtd, 8:Parcela, ..., 14:Taxa Mensal]
                                 contrato = clean_row[0].replace(' ', '').strip()
                                 banco_raw = clean_row[1] if len(clean_row) > 1 else ""
+                                
+                                # Filtrar RMC e RCC
+                                if "RMC" in banco_raw.upper() or "RCC" in banco_raw.upper() or "CARTÃO" in banco_raw.upper() or "CARTAO" in banco_raw.upper():
+                                    continue
+                                
                                 inicio_desconto = clean_row[5] if len(clean_row) > 5 else ""
                                 
                                 # Limpeza do prazo (ex: "84")
@@ -180,10 +185,12 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                 parcela = parse_currency(clean_row[8]) if len(clean_row) > 8 else 0.0
                                 taxa_mensal = parse_currency(clean_row[14]) if len(clean_row) > 14 else 0.0
                                 
-                                # Extração do Valor Financiado (coluna 10) para caso a taxa seja 0
+                                # Extração do Valor Financiado (coluna 10) ou Liberado (coluna 9)
                                 valor_financiado = 0.0
                                 if len(clean_row) > 10:
                                     valor_financiado = parse_currency(clean_row[10])
+                                if valor_financiado == 0 and len(clean_row) > 9:
+                                    valor_financiado = parse_currency(clean_row[9])
 
                                 # Cálculo da taxa de juros se estiver zerada ou não informada
                                 if taxa_mensal == 0 and valor_financiado > 0 and prazo_total > 0 and parcela > 0:
