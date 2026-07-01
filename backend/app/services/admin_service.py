@@ -598,10 +598,9 @@ class AdminService:
         cache_key = f"{current_user.id}_{days}"
         now = time.time()
         
-        if cache_key in AdminService._dashboard_cache:
-            cached_data, timestamp = AdminService._dashboard_cache[cache_key]
-            if now - timestamp < AdminService._dashboard_cache_ttl:
-                return cached_data
+        # Ignorando cache temporariamente para debugar
+        # if cache_key in AdminService._dashboard_cache:
+        #    ...
 
         period_ago = datetime.utcnow() - timedelta(days=days)
 
@@ -694,7 +693,9 @@ class AdminService:
         banks_q = select(Bank)
         sub_logos_q = select(SubAgreementLogo)
 
-        async def safe_execute(query, is_scalar=False, is_all=False):
+        debug_errors = []
+
+        async def safe_execute(query, name, is_scalar=False, is_all=False):
             try:
                 res = await db.execute(query)
                 if is_scalar:
@@ -703,26 +704,33 @@ class AdminService:
                     return res.all()
                 return res.scalars().all()
             except Exception as e:
-                print(f"Query Error: {e}")
+                import traceback
+                err = f"{name}: {str(e)}"
+                print(f"Query Error: {err}")
+                debug_errors.append(err)
+                # Tentar fazer rollback da transação abortada para que as próximas queries funcionem
+                try:
+                    await db.rollback()
+                except:
+                    pass
                 return [] if is_all else (0 if is_scalar else None)
 
-        # Executando sequencialmente para evitar erro de concorrência do SQLAlchemy AsyncSession
-        total_banks = await safe_execute(total_banks_q, is_scalar=True)
-        total_tables = await safe_execute(total_tables_q, is_scalar=True)
-        total_simulations = await safe_execute(total_simulations_q, is_scalar=True)
-        sim_period_count = await safe_execute(simulations_period_q, is_scalar=True)
+        total_banks = await safe_execute(total_banks_q, "total_banks", is_scalar=True)
+        total_tables = await safe_execute(total_tables_q, "total_tables", is_scalar=True)
+        total_simulations = await safe_execute(total_simulations_q, "total_simulations", is_scalar=True)
+        sim_period_count = await safe_execute(simulations_period_q, "simulations_period", is_scalar=True)
         
-        origin_counts = await safe_execute(origin_counts_q, is_all=True)
-        agreement_counts = await safe_execute(agreement_counts_q, is_all=True)
-        user_counts = await safe_execute(user_counts_q, is_all=True)
-        historical_raw = await safe_execute(historical_q, is_all=True)
-        bank_stats = await safe_execute(bank_stats_q, is_all=True)
-        table_stats = await safe_execute(table_stats_q, is_all=True)
-        avg_rate = await safe_execute(rate_stats_q, is_scalar=True)
-        hist_val = await safe_execute(hist_val_q, is_all=True)
-        recent_simulations_db = await safe_execute(recent_query)
-        all_banks = await safe_execute(banks_q)
-        sub_logos = await safe_execute(sub_logos_q)
+        origin_counts = await safe_execute(origin_counts_q, "origin_counts", is_all=True)
+        agreement_counts = await safe_execute(agreement_counts_q, "agreement_counts", is_all=True)
+        user_counts = await safe_execute(user_counts_q, "user_counts", is_all=True)
+        historical_raw = await safe_execute(historical_q, "historical", is_all=True)
+        bank_stats = await safe_execute(bank_stats_q, "bank_stats", is_all=True)
+        table_stats = await safe_execute(table_stats_q, "table_stats", is_all=True)
+        avg_rate = await safe_execute(rate_stats_q, "rate_stats", is_scalar=True)
+        hist_val = await safe_execute(hist_val_q, "hist_val", is_all=True)
+        recent_simulations_db = await safe_execute(recent_query, "recent_query")
+        all_banks = await safe_execute(banks_q, "banks_q")
+        sub_logos = await safe_execute(sub_logos_q, "sub_logos_q")
 
         banks_map = {b.id: b.name for b in all_banks} if all_banks else {}
         banks_logo_map = {b.id: b.logo_url for b in all_banks} if all_banks else {}
@@ -866,9 +874,10 @@ class AdminService:
                         } for r in s.results
                     ]
                 } for s in recent_simulations_db
-            ] if recent_simulations_db else []
+            ] if recent_simulations_db else [],
+            "debug_errors": debug_errors
         }
-        AdminService._dashboard_cache[cache_key] = (response_data, now)
+        # AdminService._dashboard_cache[cache_key] = (response_data, now)
         return response_data
     @staticmethod
     async def get_active_announcement(db: AsyncSession):
