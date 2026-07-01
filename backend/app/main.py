@@ -62,7 +62,12 @@ def run_db_fix():
             'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_access" TIMESTAMP WITH TIME ZONE;',
             'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "current_token" TEXT;',
             'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sidebar_color_secondary" VARCHAR(50);',
-            'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "highlight_color" VARCHAR(7);'
+            'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "highlight_color" VARCHAR(7);',
+            'CREATE INDEX IF NOT EXISTS "ix_contracts_data_aceite" ON "contracts" ("data_aceite");',
+            'CREATE INDEX IF NOT EXISTS "ix_contracts_data_hora" ON "contracts" ("data_hora");',
+            'CREATE INDEX IF NOT EXISTS "ix_contracts_status" ON "contracts" ("status");',
+            'CREATE INDEX IF NOT EXISTS "ix_contracts_user_id" ON "contracts" ("user_id");',
+            'CREATE INDEX IF NOT EXISTS "ix_contracts_broker_id" ON "contracts" ("broker_id");'
         ]
         for query in queries:
             try:

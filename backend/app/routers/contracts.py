@@ -25,8 +25,35 @@ async def create_contract(
     await db.refresh(new_contract)
     return new_contract
 
-@router.get("", response_model=List[ContractResponse])
+@router.get("")
 async def get_contracts(
+    skip: int = 0,
+    limit: int = 1000,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = select(Contract).order_by(Contract.id.desc())
+    if current_user.role == "admin":
+        pass
+    elif current_user.role == "promotora":
+        query = query.where((Contract.user_id == current_user.id) | (Contract.broker_id == current_user.id))
+    else:
+        query = query.where(Contract.user_id == current_user.id)
+    
+    # Total count query
+    from sqlalchemy import func
+    count_query = select(func.count()).select_from(query.subquery())
+    total = await db.scalar(count_query)
+    
+    # Paginated results
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    contracts = result.scalars().all()
+    
+    return {"data": contracts, "total": total}
+
+@router.get("/stats")
+async def get_contracts_stats(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -37,9 +64,14 @@ async def get_contracts(
         query = query.where((Contract.user_id == current_user.id) | (Contract.broker_id == current_user.id))
     else:
         query = query.where(Contract.user_id == current_user.id)
-    
+        
     result = await db.execute(query)
     contracts = result.scalars().all()
+    
+    # Temporarily we will return the contracts and let the frontend do the dashboard processing.
+    # To fully optimize, we can calculate stats right here using SQL.
+    # But since the frontend expects the full list for now to calculate `processChartData`, 
+    # we can just return all for stats. This separates the Dashboard from the Table.
     return contracts
 
 @router.patch("/{contract_id}", response_model=ContractResponse)

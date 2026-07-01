@@ -55,7 +55,7 @@ export default function RelatorioPage() {
 
     const fetchServerData = async () => {
       try {
-        const res = await api.get('/contracts/');
+        const res = await api.get('/contracts/stats');
         const serverData = Array.isArray(res) ? res : res.data;
         
         setContracts(serverData);
