@@ -22,31 +22,7 @@ from typing import List
 
 router = APIRouter()
 
-# Auto-migration at startup
-@router.on_event("startup")
-async def ensure_columns_exist():
-    from sqlalchemy import text
-    from app.models.sqlalchemy_models import Bank
-    from sqlalchemy import select, delete
-    async for db in get_db():
-        try:
-            # Apenas garantimos que a coluna de validação exista no PostgreSQL
-            from sqlalchemy import text
-            is_sqlite = db.bind.dialect.name == "sqlite"
-            
-            if not is_sqlite:
-                await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disable_weighted_rate_validation BOOLEAN DEFAULT FALSE"))
-                await db.execute(text("ALTER TABLE bank_tables ADD COLUMN IF NOT EXISTS abater_margem_hp12c BOOLEAN DEFAULT FALSE"))
-                await db.execute(text("ALTER TABLE bank_tables ADD COLUMN IF NOT EXISTS max_ticket DECIMAL(15, 2)"))
-                await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disability_max_age INTEGER"))
-                await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS disability_grace_age INTEGER"))
-                await db.execute(text("ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE"))
-            
-            await db.commit()
-            print("🚀 Database migration check completed.")
-        except Exception as e:
-            print(f"ℹ️ Migration info: {e}")
-        break
+# Auto-migration at startup removed to prevent database lock freezes
 
 # Announcements
 @router.post("/announcements")
