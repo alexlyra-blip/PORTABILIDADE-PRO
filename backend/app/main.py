@@ -84,11 +84,11 @@ def run_db_fix():
     except Exception as e:
         print(f"❌ DB FIX ERROR FATAL: {e}")
 
-print("🚀 INICIANDO BACKEND PORTABILIDADE-API...")
 try:
-    run_db_fix()
+    print("🚀 INICIANDO BACKEND PORTABILIDADE-API...")
+    # run_db_fix() removed because it blocks indefinitely on ALTER TABLE locks
 except Exception as e:
-    print(f"🔥 Erro fatal no run_db_fix: {e}")
+    print(f"🔥 Erro fatal na inicializacao: {e}")
 
 @app.middleware("http")
 async def catch_exceptions_middleware(request, call_next):
