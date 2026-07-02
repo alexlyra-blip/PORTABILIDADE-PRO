@@ -30,7 +30,14 @@ else:
     
     print(f"🚀 Conectando ao Banco de Dados: {DATABASE_URL.split('@')[-1]}")
 
-engine = create_async_engine(DATABASE_URL, echo=False)
+engine = create_async_engine(
+    DATABASE_URL, 
+    echo=False,
+    pool_pre_ping=True,
+    pool_recycle=300,
+    pool_size=10,
+    max_overflow=20
+)
 AsyncSessionLocal = sessionmaker(
     bind=engine,
     class_=AsyncSession,
