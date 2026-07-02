@@ -383,8 +383,15 @@ export default function RelatorioPage() {
                           type="number" 
                           className="bg-transparent w-32 text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase outline-none border-b border-blue-500/20 focus:border-blue-500"
                           placeholder="Valor Alvo"
-                          value={meta.valor_alvo || ''}
-                          onChange={(e) => updateMeta({ valor_alvo: Number(e.target.value) })}
+                          value={meta.tipo === 'diaria' ? (meta.valor_diario || '') : (meta.valor_alvo || '')}
+                          onChange={(e) => {
+                              const val = Number(e.target.value);
+                              if (meta.tipo === 'diaria') {
+                                  updateMeta({ valor_diario: val });
+                              } else {
+                                  updateMeta({ valor_alvo: val });
+                              }
+                          }}
                        />
                     </div>
                  </div>
@@ -397,14 +404,14 @@ export default function RelatorioPage() {
                       <span className="text-sm font-bold text-slate-400 ml-2">atingidos</span>
                    </div>
                     <div className="text-right">
-                       <span className="text-sm font-black text-slate-800 dark:text-white">{((meta.progresso / (meta.valor_alvo || 1)) * 100).toFixed(1)}%</span>
-                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">de {formatCurrency(meta.valor_alvo)}</p>
+                       <span className="text-sm font-black text-slate-800 dark:text-white">{((meta.progresso / (meta.tipo === 'diaria' ? (meta.valor_diario || 5000) : (meta.valor_alvo || 110000))) * 100).toFixed(1)}%</span>
+                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">de {formatCurrency(meta.tipo === 'diaria' ? (meta.valor_diario || 5000) : (meta.valor_alvo || 110000))}</p>
                     </div>
                 </div>
                 <div className="w-full h-6 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner border border-slate-200 dark:border-slate-700 relative">
                    <div 
                       className="h-full bg-blue-600 rounded-full transition-all duration-1000 ease-in-out relative shadow-[0_0_15px_rgba(37,99,235,0.4)]"
-                      style={{ width: `${Math.min((meta.progresso / (meta.valor_alvo || 1)) * 100, 100)}%` }}
+                      style={{ width: `${Math.min((meta.progresso / (meta.tipo === 'diaria' ? (meta.valor_diario || 5000) : (meta.valor_alvo || 110000))) * 100, 100)}%` }}
                    >
                      {/* Gloss effect */}
                      <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20"></div>
