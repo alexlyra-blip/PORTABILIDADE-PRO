@@ -103,92 +103,21 @@ async def catch_exceptions_middleware(request, call_next):
 
 @app.on_event("startup")
 async def startup_event():
-    # 1. CRIA AS TABELAS AUTOMATICAMENTE SE NÃO EXISTIREM
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        print("✅ Estrutura do banco de dados verificada/criada.")
-        
-    # Tenta adicionar as colunas novas caso seja um banco antigo (Supabase/Postgres)
-    # REMOVIDO: Executar ALTER TABLE no startup trava o banco se houver transações pendentes (Lock Queue).
-    # As colunas já foram adicionadas manualmente.
+    print("🚀 API Iniciada sem verificacoes de banco para evitar lentidao no boot.")
     
-    print("✅ Verificação de banco ignorada para evitar locks.")
-
-    # Migração SQLite Local para nova coluna abater_margem_hp12c
+    # Migracao SQLite Local para nova coluna (mantido pois eh local e nao trava)
     try:
         import sqlite3
+        import os
         for db_file in ['./local_db.sqlite', './backend/local_db.sqlite']:
             if os.path.exists(db_file):
                 conn_sq = sqlite3.connect(db_file)
                 try: conn_sq.execute("ALTER TABLE bank_tables ADD COLUMN abater_margem_hp12c BOOLEAN DEFAULT 0")
                 except: pass
-                try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN active BOOLEAN DEFAULT 1")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE users ADD COLUMN last_access DATETIME")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE users ADD COLUMN current_token TEXT")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disable_weighted_rate_validation BOOLEAN DEFAULT 0")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disability_max_age INTEGER")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE bank_rules ADD COLUMN disability_grace_age INTEGER")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE users ADD COLUMN sidebar_color_secondary VARCHAR(50)")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE users ADD COLUMN highlight_color VARCHAR(7)")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE bank_tables ADD COLUMN max_ticket DECIMAL(15, 2)")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE simulation_results ADD COLUMN term INTEGER")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE simulation_results ADD COLUMN installment FLOAT")
-                except: pass
-                try: conn_sq.execute("ALTER TABLE announcements ADD COLUMN image_url TEXT")
-                except: pass
                 conn_sq.commit()
                 conn_sq.close()
-                print(f"✅ Colunas SQLite local verificadas/criadas para o banco {db_file}.")
     except Exception as e:
-        print(f"SQLite migration log: {e}")
-
-    # 2. DIAGNÓSTICO DE DADOS
-    async with AsyncSessionLocal() as session:
-        res_banks = await session.execute(select(Bank))
-        banks_count = len(res_banks.scalars().all())
-        res_users = await session.execute(select(User))
-        users_count = len(res_users.scalars().all())
-        print(f"📊 Diagnóstico: Encontrados {banks_count} bancos e {users_count} usuários no banco de dados.")
-
-    from app.services.auth_service import get_password_hash
-
-    async with AsyncSessionLocal() as session:
-        # Check for alexlyra@gmail.com
-        res = await session.execute(select(User).where(User.email == "alexlyra@gmail.com"))
-        if not res.scalar():
-            admin = User(
-                name="Alexandre Lyra",
-                email="alexlyra@gmail.com",
-                password_hash=get_password_hash("admin123"),
-                role="admin"
-            )
-            session.add(admin)
-            print("LOG: Alexandre admin user created at startup.")
-        
-        # Check for admin@teste.com
-        res = await session.execute(select(User).where(User.email == "admin@teste.com"))
-        if not res.scalar():
-            admin2 = User(
-                name="Admin Teste",
-                email="admin@teste.com",
-                password_hash=get_password_hash("admin123"),
-                role="admin"
-            )
-            session.add(admin2)
-            print("LOG: Default admin user created at startup.")
-        
-        await session.commit()
-        print("✅ Usuários iniciais persistidos com sucesso.")
+        pass
 
 app.add_middleware(
     CORSMiddleware,
