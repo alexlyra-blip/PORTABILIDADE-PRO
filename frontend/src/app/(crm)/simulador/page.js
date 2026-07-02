@@ -433,8 +433,8 @@ function SimuladorPageContent() {
       prazoTotal: selectedLoan.prazo_total.toString(),
       prazoRestante: selectedLoan.prazo_restante.toString(),
       parcelasPagas: (selectedLoan.prazo_total - selectedLoan.prazo_restante).toString(),
-      taxaAtual: selectedLoan.taxa_mensal.toString().replace(".", ","),
-      taxaAjustada: selectedLoan.taxa_mensal.toString().replace(".", ",")
+      taxaAtual: Number(selectedLoan.taxa_mensal).toFixed(2).replace(".", ","),
+      taxaAjustada: Number(selectedLoan.taxa_mensal).toFixed(2).replace(".", ",")
     };
     
     // Verifica se tem margem negativa e preenche os campos automaticamente
@@ -1460,7 +1460,7 @@ function SimuladorPageContent() {
             <div className="p-8 overflow-y-auto flex-1 flex flex-col gap-8 custom-scrollbar">
               <div className="space-y-6">
                 <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl relative overflow-hidden">
-                  <div className={`absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 opacity-10 ${extractedData.margem_disponivel > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                  <div className={`absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 opacity-10 ${extractedData.margem_disponivel >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Resumo da Margem</h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 items-center">
@@ -1472,10 +1472,10 @@ function SimuladorPageContent() {
                       <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Utilizado</span>
                       <span className="text-xl font-black text-slate-800">R$ {extractedData.margem_comprometida.toFixed(2).replace('.', ',')}</span>
                     </div>
-                    <div className={`p-4 rounded-2xl ${extractedData.margem_disponivel > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'} border flex flex-col justify-center`}>
-                      <span className={`block text-[9px] font-black uppercase tracking-widest mb-1 ${extractedData.margem_disponivel > 0 ? 'text-emerald-600' : 'text-red-600'}`}>Margem Disponível</span>
-                      <span className={`block text-2xl font-black ${extractedData.margem_disponivel > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                        {extractedData.margem_disponivel > 0 ? '' : '- '}
+                    <div className={`p-4 rounded-2xl ${extractedData.margem_disponivel >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'} border flex flex-col justify-center`}>
+                      <span className={`block text-[9px] font-black uppercase tracking-widest mb-1 ${extractedData.margem_disponivel >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>Margem Disponível</span>
+                      <span className={`block text-2xl font-black ${extractedData.margem_disponivel >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {extractedData.margem_disponivel >= 0 ? '' : '- '}
                         R$ {Math.abs(extractedData.margem_disponivel).toFixed(2).replace('.', ',')}
                       </span>
                     </div>
