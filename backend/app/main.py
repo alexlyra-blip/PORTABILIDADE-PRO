@@ -189,24 +189,6 @@ async def startup_event():
         
         await session.commit()
         print("✅ Usuários iniciais persistidos com sucesso.")
-            
-        # Update columns to Text to support Base64
-        from sqlalchemy import text
-        reformas = [
-            'ALTER TABLE "users" ALTER COLUMN "avatar_url" TYPE TEXT',
-            'ALTER TABLE "users" ALTER COLUMN "logo_url" TYPE TEXT',
-            'ALTER TABLE "banks" ALTER COLUMN "logo_url" TYPE TEXT',
-            'ALTER TABLE "sub_agreement_logos" ALTER COLUMN "logo_url" TYPE TEXT',
-            'ALTER TABLE "promotora_rules" ALTER COLUMN "rule_value" TYPE TEXT'
-        ]
-        for sql in reformas:
-            try: 
-                await session.execute(text(sql))
-                await session.commit()
-                print(f"SQL SUCCESS: {sql}")
-            except Exception as e: 
-                await session.rollback()
-                print(f"SQL INFO: {sql} -> {e}")
 
 app.add_middleware(
     CORSMiddleware,
