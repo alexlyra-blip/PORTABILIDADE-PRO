@@ -209,8 +209,10 @@ async def consultar_promosys_cpf(request: CpfRequest, db: AsyncSession = Depends
     except Exception as e:
         clean_cpf = ''.join(filter(str.isdigit, request.cpf))
         masked_cpf = f"{clean_cpf[:3]}******{clean_cpf[-2:]}" if len(clean_cpf) >= 5 else "***"
-        print(f"[ERROR] Erro inesperado ao consultar Promosys para CPF {masked_cpf}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno ao realizar consulta na Promosys.")
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[ERROR] Erro inesperado ao consultar Promosys para CPF {masked_cpf}: {str(e)}\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 @internal_router.post("/promosys/cpf", response_model=ConsultaCpfMultiResponse)
 async def consultar_promosys_cpf_internal(

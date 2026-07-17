@@ -140,7 +140,8 @@ export default function ConsultaCPFPage() {
       }
     } catch (err) {
       console.error(err);
-      alert("Erro ao consultar CPF.");
+      const msg = err.response?.data?.detail || err.message || "Erro desconhecido";
+      alert(`Erro ao consultar CPF: ${msg}`);
     } finally {
       setLoading(false);
     }
