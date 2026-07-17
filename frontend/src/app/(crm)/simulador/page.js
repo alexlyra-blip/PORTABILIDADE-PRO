@@ -176,9 +176,35 @@ function SimuladorPageContent() {
   const [cpfData, setCpfData] = useState(null);
   const [selectedCpfLoanIndices, setSelectedCpfLoanIndices] = useState([]);
   const [activeBenefitIndex, setActiveBenefitIndex] = useState(0);
-  const activeBenefit = (cpfData && cpfData.beneficios && cpfData.beneficios.length > 0)
-    ? cpfData.beneficios[activeBenefitIndex]
-    : cpfData;
+
+  // Normaliza os diferentes formatos que podem ser retornados pela API.
+  const beneficiosCpf = (() => {
+    if (Array.isArray(cpfData?.beneficios)) {
+      return cpfData.beneficios;
+    }
+
+    if (Array.isArray(cpfData?.data?.beneficios)) {
+      return cpfData.data.beneficios;
+    }
+
+    if (cpfData?.beneficio_principal) {
+      const beneficiosAdicionais = Array.isArray(cpfData?.beneficios_adicionais)
+        ? cpfData.beneficios_adicionais
+        : [];
+
+      return [
+        cpfData.beneficio_principal,
+        ...beneficiosAdicionais
+      ];
+    }
+
+    return cpfData ? [cpfData] : [];
+  })();
+
+  const activeBenefit =
+    beneficiosCpf[activeBenefitIndex] ||
+    beneficiosCpf[0] ||
+    cpfData;
   const [lastQueriedCpf, setLastQueriedCpf] = useState("");
   
   const [isLoadingCpf, setIsLoadingCpf] = useState(false);
@@ -1912,17 +1938,57 @@ function SimuladorPageContent() {
 
       {/* CPF MODAL */}
       {cpfModalOpen && cpfData && activeBenefit && typeof window !== 'undefined' && (() => {
-        const salario = Number(activeBenefit.margens?.salario || activeBenefit.cliente?.salario || 0);
-        const especie = String(activeBenefit.cliente?.especie || "");
-        const isLOAS = especie.includes("87") || especie.includes("88") || activeBenefit.cliente?.especie === "87" || activeBenefit.cliente?.especie === "88";
+        const margensAtivas =
+          activeBenefit?.margens ||
+          activeBenefit?.resumo?.margens ||
+          {};
+
+        const salario = Number(
+          margensAtivas.salario ??
+          activeBenefit?.cliente?.salario ??
+          activeBenefit?.salario ??
+          0
+        );
+
+        const especie = String(
+          activeBenefit?.cliente?.especie ||
+          activeBenefit?.especie ||
+          ""
+        );
+
+        const codigoEspecie = especie.match(/\d+/)?.[0] || "";
+        const isLOAS = ["87", "88"].includes(codigoEspecie);
         const percent = isLOAS ? 0.35 : 0.40;
-        
-        // Obter dados diretamente do backend para evitar qualquer erro de arredondamento
-        const margemConsignavel = Number(activeBenefit.margens?.margem_emprestimo || (salario * percent));
-        const totalComprometido = Number(activeBenefit.margens?.total_comprometido || 0);
-        const margemLivreReal = activeBenefit.margens && activeBenefit.margens.margem_livre !== undefined ? Number(activeBenefit.margens.margem_livre) : (margemConsignavel - totalComprometido);
-        const showMargem = margemLivreReal < 0 ? 0.00 : margemLivreReal;
-        const valorLiberadoMargem = Number(activeBenefit.margens?.valor_liberado_margem || (showMargem / 0.02270));
+
+        const margemConsignavel = Number(
+          margensAtivas.margem_emprestimo ??
+          margensAtivas.margem_consignavel ??
+          (salario * percent)
+        );
+
+        const totalComprometido = Number(
+          margensAtivas.total_comprometido ??
+          margensAtivas.total_comprometimento ??
+          0
+        );
+
+        const margemLivreInformada =
+          margensAtivas.margem_livre ??
+          activeBenefit?.margem_livre;
+
+        const margemLivreReal =
+          margemLivreInformada !== undefined &&
+          margemLivreInformada !== null
+            ? Number(margemLivreInformada)
+            : margemConsignavel - totalComprometido;
+
+        const showMargem = Math.max(margemLivreReal, 0);
+
+        const valorLiberadoMargem = Number(
+          margensAtivas.valor_liberado_margem ??
+          activeBenefit?.valor_liberado_margem ??
+          (showMargem > 0 ? showMargem / 0.02270 : 0)
+        );
 
         const isMagnetico = () => {
           if (!activeBenefit || !activeBenefit.banco_pagador) return true;
@@ -1987,28 +2053,59 @@ function SimuladorPageContent() {
                 <button onClick={() => setCpfModalOpen(false)} className="w-10 h-10 bg-slate-100 hover:bg-red-100 hover:text-red-500 text-slate-400 rounded-xl flex items-center justify-center transition-colors text-xl font-black">×</button>
               </div>
 
-              {/* Abas */}
-              {cpfData.beneficios && cpfData.beneficios.length > 1 && (
-                <div className="px-8 py-4 bg-slate-100 flex flex-wrap items-center gap-2 border-b border-slate-200 z-10">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">Benefícios ({cpfData.total_beneficios}):</span>
-                  {cpfData.beneficios.map((b, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setActiveBenefitIndex(idx);
-                        setSelectedCpfLoanIndices([]);
-                      }}
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                        activeBenefitIndex === idx 
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
-                          : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'
-                      }`}
-                    >
-                      <Icons.UserCheck size={12} />
-                      NB {b.numero}
-                    </button>
-                  ))}
+              {/* Abas dos benefícios */}
+              {beneficiosCpf.length > 1 && (
+                <div className="px-8 py-4 bg-slate-100 border-b border-slate-200 z-10">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                      Benefícios encontrados ({beneficiosCpf.length}):
+                    </span>
+
+                    {beneficiosCpf.map((beneficioItem, idx) => {
+                      const numeroBeneficio =
+                        beneficioItem?.numero ||
+                        beneficioItem?.numero_beneficio ||
+                        beneficioItem?.cliente?.beneficio ||
+                        beneficioItem?.beneficio?.numero ||
+                        `Benefício ${idx + 1}`;
+
+                      const especieBeneficio =
+                        beneficioItem?.cliente?.especie ||
+                        beneficioItem?.beneficio?.especie ||
+                        beneficioItem?.especie ||
+                        "";
+
+                      return (
+                        <button
+                          key={`${numeroBeneficio}-${idx}`}
+                          type="button"
+                          onClick={() => {
+                            setActiveBenefitIndex(idx);
+                            setSelectedCpfLoanIndices([]);
+                          }}
+                          className={`min-w-[160px] px-4 py-3 rounded-2xl text-left transition-all border ${
+                            activeBenefitIndex === idx
+                              ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20"
+                              : "bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:bg-blue-50"
+                          }`}
+                        >
+                          <span className="block text-[9px] font-black uppercase tracking-widest opacity-75">
+                            Benefício {idx + 1}
+                          </span>
+
+                          <span className="block text-xs font-black uppercase mt-0.5">
+                            NB {numeroBeneficio}
+                          </span>
+
+                          {especieBeneficio && (
+                            <span className="block text-[8px] font-bold uppercase mt-1 truncate opacity-80">
+                              {especieBeneficio}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -2098,32 +2195,82 @@ function SimuladorPageContent() {
                 </div>
 
                 {/* Margens */}
-                <div className="bg-white p-6 rounded-[2rem] border border-slate-150 shadow-xl relative overflow-hidden">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Resumo da Margem {isLOAS && "(LOAS 35%)"}</h4>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase mb-1">Salário Base</span>
-                      <span className="text-base font-black text-slate-800">{formatBRL(salario)}</span>
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase mb-1">Consignável ({percent * 100}%)</span>
-                      <span className="text-base font-black text-slate-800">{formatBRL(margemConsignavel)}</span>
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase mb-1">Comprometido</span>
-                      <span className="text-base font-black text-slate-800">{formatBRL(totalComprometido)}</span>
-                    </div>
-                    <div className={`p-4 rounded-2xl border flex flex-col justify-center ${margemLivreReal < 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                      <span className={`block text-[9px] font-black uppercase mb-1 ${margemLivreReal < 0 ? 'text-red-600' : 'text-emerald-600'}`}>Margem Livre</span>
-                      <span className={`block text-lg font-black ${margemLivreReal < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                        {margemLivreReal < 0 ? "R$ 0,00" : formatBRL(showMargem)}
+                <div className="w-full bg-white p-6 rounded-[2rem] border border-slate-200 shadow-lg">
+                  <div className="flex items-center justify-between gap-3 mb-5">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Resumo da Margem
+                    </h4>
+
+                    <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[9px] font-black uppercase">
+                      {isLOAS ? "LOAS 35%" : "Margem 40%"}
+                    </span>
+                  </div>
+
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <div className="min-h-[92px] bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col justify-center">
+                      <span className="text-[9px] font-black text-slate-400 uppercase mb-1">
+                        Salário Base
+                      </span>
+                      <span className="text-base font-black text-slate-800">
+                        {formatBRL(salario)}
                       </span>
                     </div>
-                    <div className={`p-4 rounded-2xl border flex flex-col justify-center ${margemLivreReal < 0 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-gradient-to-tr from-emerald-500/10 to-teal-500/5 border-emerald-200'}`}>
-                      <span className="text-[9px] font-bold text-slate-500 uppercase mb-1">Liberado Aprox.</span>
-                      <span className={`text-xl font-black ${margemLivreReal < 0 ? 'text-slate-400' : 'text-emerald-700'}`}>
-                        {formatBRL(valorLiberadoMargem)}
+
+                    <div className="min-h-[92px] bg-blue-50 p-4 rounded-2xl border border-blue-100 flex flex-col justify-center">
+                      <span className="text-[9px] font-black text-blue-500 uppercase mb-1">
+                        Consignável ({percent * 100}%)
+                      </span>
+                      <span className="text-base font-black text-blue-700">
+                        {formatBRL(margemConsignavel)}
+                      </span>
+                    </div>
+
+                    <div className="min-h-[92px] bg-amber-50 p-4 rounded-2xl border border-amber-100 flex flex-col justify-center">
+                      <span className="text-[9px] font-black text-amber-600 uppercase mb-1">
+                        Total Comprometido
+                      </span>
+                      <span className="text-base font-black text-amber-700">
+                        {formatBRL(totalComprometido)}
+                      </span>
+                    </div>
+
+                    <div className={`min-h-[92px] p-4 rounded-2xl border flex flex-col justify-center ${
+                      margemLivreReal < 0
+                        ? "bg-red-50 border-red-200"
+                        : "bg-emerald-50 border-emerald-200"
+                    }`}>
+                      <span className={`text-[9px] font-black uppercase mb-1 ${
+                        margemLivreReal < 0
+                          ? "text-red-600"
+                          : "text-emerald-600"
+                      }`}>
+                        Margem Livre
+                      </span>
+
+                      <span className={`text-lg font-black ${
+                        margemLivreReal < 0
+                          ? "text-red-700"
+                          : "text-emerald-700"
+                      }`}>
+                        {formatBRL(margemLivreReal)}
+                      </span>
+                    </div>
+
+                    <div className={`min-h-[92px] p-4 rounded-2xl border flex flex-col justify-center ${
+                      margemLivreReal <= 0
+                        ? "bg-slate-50 border-slate-200"
+                        : "bg-emerald-50 border-emerald-200"
+                    }`}>
+                      <span className="text-[9px] font-black text-slate-500 uppercase mb-1">
+                        Liberado Aproximado
+                      </span>
+
+                      <span className={`text-lg font-black ${
+                        margemLivreReal <= 0
+                          ? "text-slate-400"
+                          : "text-emerald-700"
+                      }`}>
+                        {formatBRL(margemLivreReal > 0 ? valorLiberadoMargem : 0)}
                       </span>
                     </div>
                   </div>
@@ -2145,6 +2292,10 @@ function SimuladorPageContent() {
                         });
                         const isSelected = selectedCpfLoanIndices.includes(idx);
                         const Tag = loanIsUsed ? 'div' : 'label';
+                        const loanLogoUrl = getSubLogo(
+                          loan.codigo,
+                          loan.banco
+                        );
                         
                         return (
                           <Tag key={idx} className={`block relative bg-white p-5 rounded-[2rem] border-2 transition-all ${loanIsUsed ? 'opacity-50 cursor-not-allowed border-slate-100 bg-slate-50' : 'cursor-pointer hover:shadow-xl'} ${isSelected ? 'border-blue-500 shadow-blue-500/20' : 'border-slate-150'}`}>
@@ -2161,6 +2312,26 @@ function SimuladorPageContent() {
                                 }} 
                               />
                               
+                              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex-shrink-0 overflow-hidden flex items-center justify-center">
+                                {loanLogoUrl ? (
+                                  <img
+                                    src={getStaticUrl(loanLogoUrl)}
+                                    alt={loan.banco || "Banco"}
+                                    className="w-full h-full object-contain p-1"
+                                    onError={(event) => {
+                                      event.currentTarget.style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-[9px] font-black text-slate-400 uppercase">
+                                    {String(loan.banco || "B")
+                                      .replace(/[^A-Za-zÀ-ÿ]/g, "")
+                                      .slice(0, 2)
+                                      .toUpperCase() || "B"}
+                                  </span>
+                                )}
+                              </div>
+
                               <div className="flex-1 grid grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 items-center">
                                 <div className="min-w-0 pr-2">
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Banco / Contrato</p>
