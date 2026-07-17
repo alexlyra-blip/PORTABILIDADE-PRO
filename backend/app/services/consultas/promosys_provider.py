@@ -5,7 +5,6 @@ from typing import Dict, Any
 import datetime
 
 from app.services.consultas.base_provider import ConsultaBeneficioProvider
-from app.services.margem_service import calcular_valor_liberado_margem
 
 
 def money(value) -> float:
@@ -219,7 +218,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
                 "especie": safe_str(raw.get("ESP")),
                 "salario": money(salario),
                 "margem_livre": margem_livre,
-                "valor_liberado_margem": await calcular_valor_liberado_margem(margem_livre),
+                "valor_liberado_margem": money(margem_livre / 0.02270) if margem_livre > 0 else 0.0,
                 "banco_pagador": safe_str(dados_bancarios.get("NOME_BANCO_PAGTO") or dados_bancarios.get("NOME_BANCO")),
                 "endereco": endereco_completo,
                 "data_nascimento": ""
@@ -230,7 +229,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
                 "margem_emprestimo": margem_emprestimo,
                 "total_comprometido": money(total_comprometido),
                 "margem_livre": margem_livre,
-                "valor_liberado_margem": await calcular_valor_liberado_margem(margem_livre),
+                "valor_liberado_margem": money(margem_livre / 0.02270) if margem_livre > 0 else 0.0,
                 "margem_cartao": margem_cartao,
                 "possui_cartao": possui_cartao,
                 "cartao_utilizado": money(cartao_utilizado),

@@ -1,28 +1,36 @@
 import asyncio
-import os
-import sys
-
-# Load env manually
-if os.path.exists(".env"):
-    with open(".env") as f:
-        for line in f:
-            if line.strip() and not line.startswith("#") and "=" in line:
-                k, v = line.strip().split("=", 1)
-                os.environ[k] = v
-
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-
 from app.services.consultas.promosys_provider import PromosysProvider
-from app.services.consultas.consulta_service import ConsultaService
+import httpx
 
-async def main():
+async def test():
+    provider = PromosysProvider()
     try:
-        provider = PromosysProvider()
-        service = ConsultaService(provider)
-        result = await service.consultar_cpf("11111111111")
-        print("SUCCESS:", result)
+        # First test the API raw response
+        token = await provider._get_token()
+        print(f"Token: {token[:20]}...")
+        
+        cpf_test = "60072718382"
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{provider.base_url}/consultaCpfOffline.php",
+                data={"token": token, "cpf": cpf_test},
+                timeout=10.0
+            )
+            print("Status:", resp.status_code)
+            try:
+                data = resp.json()
+                print("Code:", data.get("Code"))
+                print("Msg:", data.get("Msg"))
+                if "Consulta" in data:
+                    print("Consulta length:", len(data["Consulta"]))
+                else:
+                    print("Full JSON:", data)
+            except Exception as je:
+                print("JSON Error:", je)
+                print("Text:", resp.text)
+                
     except Exception as e:
-        print("ERROR:", e)
+        print(f"ERROR: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(test())
