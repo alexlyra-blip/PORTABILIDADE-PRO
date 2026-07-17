@@ -2084,31 +2084,27 @@ function SimuladorPageContent() {
                 <div className="bg-white p-6 rounded-[2rem] border border-slate-150 shadow-xl relative overflow-hidden">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Resumo da Margem {isLOAS && "(LOAS 35%)"}</h4>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                    <div className="flex flex-col justify-center bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Salário Base</span>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase mb-1">Salário Base</span>
                       <span className="text-base font-black text-slate-800">{formatBRL(salario)}</span>
                     </div>
-                    <div className="flex flex-col justify-center bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Consignável ({percent*100}%)</span>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase mb-1">Consignável ({percent * 100}%)</span>
                       <span className="text-base font-black text-slate-800">{formatBRL(margemConsignavel)}</span>
                     </div>
-                    <div className="flex flex-col justify-center bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Comprometido</span>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase mb-1">Comprometido</span>
                       <span className="text-base font-black text-slate-800">{formatBRL(totalComprometido)}</span>
                     </div>
-                    <div className={`p-3.5 rounded-xl border flex flex-col justify-center ${
-                      margemLivreReal < 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'
-                    }`}>
-                      <span className={`block text-[9px] font-black uppercase mb-0.5 ${margemLivreReal < 0 ? 'text-red-600' : 'text-emerald-600'}`}>Margem Livre</span>
+                    <div className={`p-4 rounded-2xl border flex flex-col justify-center ${margemLivreReal < 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                      <span className={`block text-[9px] font-black uppercase mb-1 ${margemLivreReal < 0 ? 'text-red-600' : 'text-emerald-600'}`}>Margem Livre</span>
                       <span className={`block text-lg font-black ${margemLivreReal < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
                         {margemLivreReal < 0 ? "R$ 0,00" : formatBRL(showMargem)}
                       </span>
                     </div>
-                    <div className={`p-3.5 rounded-xl border flex flex-col justify-center ${
-                      margemLivreReal < 0 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-gradient-to-tr from-emerald-500/10 to-teal-500/5 border-emerald-200'
-                    }`}>
-                      <span className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Liberado Aprox.</span>
+                    <div className={`p-4 rounded-2xl border flex flex-col justify-center ${margemLivreReal < 0 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-gradient-to-tr from-emerald-500/10 to-teal-500/5 border-emerald-200'}`}>
+                      <span className="text-[9px] font-bold text-slate-500 uppercase mb-1">Liberado Aprox.</span>
                       <span className={`text-xl font-black ${margemLivreReal < 0 ? 'text-slate-400' : 'text-emerald-700'}`}>
                         {formatBRL(valorLiberadoMargem)}
                       </span>

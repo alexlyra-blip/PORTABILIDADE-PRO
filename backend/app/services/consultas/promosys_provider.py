@@ -207,6 +207,16 @@ class PromosysProvider(ConsultaBeneficioProvider):
         
         endereco_completo = ", ".join(endereco_partes) if endereco_partes else ""
 
+        nascto = raw.get("NASCTO")
+        data_nasc = ""
+        if nascto is not None:
+            try:
+                val = int(nascto)
+                dt = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=val)
+                data_nasc = dt.strftime("%Y-%m-%d")
+            except Exception:
+                pass
+
         return {
             "origem": "PROMOSYS",
 
@@ -221,7 +231,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
                 "valor_liberado_margem": money(margem_livre / 0.02270) if margem_livre > 0 else 0.0,
                 "banco_pagador": safe_str(dados_bancarios.get("NOME_BANCO_PAGTO") or dados_bancarios.get("NOME_BANCO")),
                 "endereco": endereco_completo,
-                "data_nascimento": ""
+                "data_nascimento": data_nasc
             },
 
             "margens": {
