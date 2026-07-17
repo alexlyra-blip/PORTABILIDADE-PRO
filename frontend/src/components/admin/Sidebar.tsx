@@ -1,0 +1,192 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+
+import { Icons } from "@/components/Icons";
+
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<any>({ 
+    name: 'Usuário', 
+    role: 'corretor', 
+    brand_color: '', 
+    sidebar_color: '', 
+    sidebar_color_secondary: '', 
+    logo_url: '', 
+    avatar_url: '' 
+  });
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    const loadUser = () => {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+    };
+    loadUser();
+    window.addEventListener('user-updated', loadUser);
+    return () => window.removeEventListener('user-updated', loadUser);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    router.push("/login");
+  };
+
+  const getStaticUrl = (path: string | null) => {
+    if (!path || path === "null" || path === "undefined") return null;
+    if (path.startsWith('http')) return path;
+    if (path.startsWith('data:image')) return path;
+    if (path.startsWith('/uploads')) return path;
+    return `/uploads${path.startsWith('/') ? '' : '/'}${path}`;
+  };
+
+  const menuItems = [
+    { name: "Painel Geral", href: "/admin", icon: <Icons.LayoutDashboard />, roles: ['admin'] },
+    { name: "Bancos", href: "/admin/banks", icon: <Icons.Landmark />, roles: ['admin'] },
+    { name: "Regras", href: "/admin/rules", icon: <Icons.Scale />, roles: ['admin'] },
+    { name: "Tabelas", href: "/admin/tables", icon: <Icons.ClipboardList />, roles: ['admin'] },
+    { name: "Coeficientes", href: "/admin/coefficients", icon: <Icons.Percent />, roles: ['admin'] },
+    { name: "Coef. Diários", href: "/admin/margin-coefficients", icon: <Icons.Calendar />, roles: ['admin'] },
+    { name: "Logos Secundários", href: "/admin/logos", icon: <Icons.Image />, roles: ['admin'] },
+    { name: "Usuários", href: "/admin/users", icon: <Icons.Users />, roles: ['admin', 'promotora'] },
+    { name: "Regra Bancos", href: "/admin/promotora-rules", icon: <Icons.Settings />, roles: ['admin', 'promotora'] },
+    { name: "Whatsapp", href: "/admin/whatsapp", icon: <Icons.MessageCircle />, roles: ['admin', 'promotora'] },
+  ].filter(item => item.roles.includes(user.role));
+
+  const profileImageUrl = getStaticUrl(user.logo_url || user.avatar_url);
+
+
+
+  return (
+    <aside 
+      className="fixed left-0 top-0 flex h-screen w-64 flex-col text-white shadow-xl z-50 transition-all border-r border-white/5"
+      style={{ 
+         backgroundColor: user.sidebar_color || '#0f172a'
+      }}
+    >
+      {/* Header: Centered Avatar + Branding Row */}
+      <div className="p-8 pb-6 border-b border-white/5 flex flex-col items-center">
+        <motion.div 
+          className="mb-5 relative"
+          animate={{ y: [0, -5, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-slate-800 relative z-10 transition-transform hover:scale-105">
+            {(profileImageUrl && !imgError) ? (
+              <img 
+                src={profileImageUrl} 
+                className="w-full h-full object-cover" 
+                alt="Admin Profile" 
+                onError={() => setImgError(true)}
+                fetchPriority="high"
+                loading="eager"
+                decoding="async"
+              />
+            ) : (
+              <div 
+                className="w-full h-full flex items-center justify-center font-black text-6xl text-white shadow-inner"
+                style={{ backgroundColor: user.brand_color || '#3b82f6' }}
+              >
+                {user.name?.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div 
+             className="absolute inset-0 rounded-xl blur-3xl opacity-30 animate-pulse scale-150 pointer-events-none"
+             style={{ backgroundColor: user.brand_color || '#3b82f6' }}
+          ></div>
+        </motion.div>
+
+        {/* Username Banner */}
+        <div className="mb-4 text-center flex flex-col items-center w-full">
+            <p className="text-[11px] font-black uppercase tracking-wider opacity-80 mb-0.5 text-center" style={{ color: user.highlight_color || user.brand_color || '#60a5fa' }}>Acesso AdminMaster</p>
+            <h2 className="text-base font-black text-white break-words whitespace-normal leading-tight drop-shadow-md text-center mx-auto max-w-[200px]">{user.name}</h2>
+        </div>
+
+        <div className="flex items-center gap-1.5 mt-2 group cursor-pointer text-center relative z-20">
+           <div 
+             className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-base text-white shadow-lg border border-white/30 pointer-events-none"
+             style={{ backgroundColor: user.brand_color || '#3b82f6' }}
+           >
+             P
+           </div>
+           <span className="text-xl font-black tracking-tighter drop-shadow-lg text-white">
+             Portabilidade<span className="pointer-events-none uppercase" style={{ color: user.highlight_color || user.brand_color || '#3b82f6' }}>PRO</span>
+           </span>
+        </div>
+        <p className="text-[10px] text-white/30 uppercase tracking-[0.3em] font-black mt-2 italic text-center">Painel Administrativo</p>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto scrollbar-hide relative z-20">
+        <Link
+          href="/simulador"
+          className="flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-300 group mb-6 relative overflow-hidden shadow-2xl border-2 cursor-pointer border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
+          style={{ 
+              backgroundColor: user.sidebar_color_secondary || user.brand_color || '#3b82f6',
+              backgroundImage: `linear-gradient(45deg, ${user.sidebar_color_secondary || user.brand_color || '#3b82f6'} 0%, #172554 100%)`,
+              boxShadow: `0 15px 20px -5px color-mix(in srgb, ${user.sidebar_color_secondary || user.brand_color || '#3b82f6'} 30%, transparent)`
+          }}
+        >
+          <div className="absolute inset-0 bg-white/10 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+          <span className="transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none"><Icons.Rocket size={32} /></span>
+          <span className="font-black text-base uppercase tracking-[0.2em] pointer-events-none">Acessar Simulador</span>
+          <div className="ml-auto opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all text-base pointer-events-none"><Icons.Sparkles size={20} /></div>
+        </Link>
+
+        {menuItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${
+                isActive 
+                  ? "text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)] scale-[1.02]" 
+                  : "text-white/50 hover:text-white hover:bg-white/5 hover:translate-x-1"
+              }`}
+              style={ isActive ? { 
+                backgroundColor: user.sidebar_color_secondary || user.brand_color || '#2563eb',
+                backgroundImage: `linear-gradient(135deg, ${user.sidebar_color_secondary || user.brand_color || '#2563eb'} 0%, color-mix(in srgb, ${user.sidebar_color_secondary || user.brand_color || '#2563eb'} 70%, black) 100%)`
+              } : {} }
+            >
+              {isActive && (
+                <motion.div 
+                  layoutId="activeTabAdmin"
+                  className="absolute inset-0 bg-white/10"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className={`transition-transform group-hover:scale-110 pointer-events-none relative z-10 ${isActive ? "drop-shadow-md text-white scale-110" : "opacity-70 group-hover:opacity-100"}`}>{item.icon}</span>
+              <span className="font-black text-[11px] uppercase tracking-wider pointer-events-none relative z-10">
+                {item.name}
+              </span>
+              {isActive && <motion.div layoutId="activeIndicatorAdmin" className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_10px_#fff] relative z-10" />}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Footer Actions */}
+      <div className="p-4 border-t border-white/5 bg-black/30 relative z-20">
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center justify-center gap-2 w-full py-3 bg-red-600/10 hover:bg-red-600 text-white/60 hover:text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all border border-red-500/20 cursor-pointer"
+        >
+          <span className="pointer-events-none"><Icons.LogOut size={16} /></span>
+          <span className="pointer-events-none">Encerrar Sessão</span>
+        </button>
+      </div>
+    </aside>
+  );
+}

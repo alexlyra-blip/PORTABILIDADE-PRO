@@ -1,0 +1,37 @@
+# Virtual Environments
+.venv
+venv
+**/venv
+**/.venv
+backend/.venv
+backend/venv
+
+# Node Modules
+node_modules
+**/node_modules
+frontend/node_modules
+
+# Caches and Temp files
+.git
+.github
+.pytest_cache
+**/.pytest_cache
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+*.log
+*.sqlite
+*.sqlite.bak
+*.db
+backend/*.sqlite
+backend/*.sqlite.bak
+backend/*.db
+backend_log.txt
+tmp
+dist
+backup_old_frontend
+
+# Next.js Build Output
+frontend/.next
+frontend/out

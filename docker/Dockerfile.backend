@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY ./backend/requirements.txt .
+# We assume there will be a requirements.txt with fastapi, uvicorn, etc.
+RUN pip install --no-cache-dir -r requirements.txt || true
+# fallback se algo falhar no requirements.txt
+RUN pip install fastapi uvicorn pydantic SQLAlchemy psycopg2-binary asyncpg redis python-multipart pdfplumber
+
+COPY ./engine /engine
+COPY ./backend /app
+
+ENV PYTHONPATH=/app:/engine
+
+RUN mkdir -p uploads/logos uploads/avatars && chmod -R 777 uploads
+EXPOSE 8000
+
+# Remove DB checks/migrations from startup to optimize boot time/CPU
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
