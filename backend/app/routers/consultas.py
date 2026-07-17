@@ -60,6 +60,43 @@ async def _execute_promosys_cpf_query(cpf: str, db: AsyncSession, convenio: str 
         if (now_utc - created_at) <= timedelta(days=30):
             try:
                 dados_json = json.loads(cache_entry.dados_json)
+
+                if not isinstance(dados_json, dict):
+                    raise ValueError(
+                        "Cache de CPF não contém um objeto válido."
+                    )
+
+                beneficios_cache = dados_json.get(
+                    "beneficios",
+                    [],
+                )
+
+                try:
+                    total_cache = int(
+                        dados_json.get(
+                            "total_beneficios",
+                            len(beneficios_cache),
+                        )
+                        or 0
+                    )
+                except (TypeError, ValueError):
+                    total_cache = 0
+
+                cache_multi_valido = (
+                    isinstance(beneficios_cache, list)
+                    and len(beneficios_cache) > 0
+                    and total_cache == len(beneficios_cache)
+                    and bool(
+                        dados_json.get("beneficio_principal")
+                    )
+                )
+
+                if not cache_multi_valido:
+                    raise ValueError(
+                        "Cache multi-benefício incompleto; "
+                        "uma nova consulta será realizada."
+                    )
+
                 # Verifica se o cache está no formato multi-benefícios novo
                 if isinstance(dados_json, dict) and "beneficios" in dados_json and "beneficio_principal" in dados_json:
                     print(f"[CACHE] Usando cache para o CPF {masked_cpf}")
@@ -125,29 +162,65 @@ async def _execute_promosys_cpf_query(cpf: str, db: AsyncSession, convenio: str 
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Erro de comunicação com a Promosys: {str(e)}")
         
-    beneficios_list = beneficios_info.get("beneficios", [])
+    beneficios_list = beneficios_info.get(
+        "beneficios",
+        [],
+    )
+
     if not beneficios_list:
-        raise HTTPException(status_code=404, detail="Nenhum benefício encontrado para este CPF.")
-        
-    # 3. Consulta cada benefício
+        raise HTTPException(
+            status_code=404,
+            detail="Nenhum benefício encontrado para este CPF.",
+        )
+
+    numeros_beneficios = []
+    numeros_vistos = set()
+
+    for item in beneficios_list:
+        numero = "".join(
+            filter(str.isdigit, str(item))
+        )
+
+        if not numero:
+            continue
+
+        if numero in numeros_vistos:
+            continue
+
+        numeros_vistos.add(numero)
+        numeros_beneficios.append(numero)
+
+    if not numeros_beneficios:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "A Promosys retornou benefícios, mas os números "
+                "dos NBs não puderam ser identificados."
+            ),
+        )
+
+    # Consulta cada benefício sequencialmente.
+    # Isso evita que chamadas simultâneas façam a Promosys
+    # retornar somente um dos benefícios.
     detailed_beneficios = []
-    
-    async def fetch_and_normalize(nb: str):
+    results = []
+
+    for nb in numeros_beneficios:
         try:
             res = await provider.consultar_por_beneficio(nb)
-            if "telefones" in res and isinstance(res["telefones"], list):
-                res["telefones"] = [t for t in res["telefones"] if t]
-            return nb, res
-        except Exception as e:
-            print(f"[WARNING] Erro ao consultar benefício {nb}: {str(e)}")
-            return nb, None
-            
-    # Executa em paralelo
-    tasks = [fetch_and_normalize(nb) for nb in beneficios_list]
-    results = await asyncio.gather(*tasks)
-    
-    for nb, res in results:
-        if res:
+
+            if (
+                "telefones" in res
+                and isinstance(res["telefones"], list)
+            ):
+                res["telefones"] = [
+                    telefone
+                    for telefone in res["telefones"]
+                    if telefone
+                ]
+
+            results.append((nb, res))
+
             detalhe = BeneficioDetalhado(
                 numero=nb,
                 cliente=res["cliente"],
@@ -156,14 +229,35 @@ async def _execute_promosys_cpf_query(cpf: str, db: AsyncSession, convenio: str 
                 banco_pagador=res["banco_pagador"],
                 emprestimos=res["emprestimos"],
                 cartoes=res["cartoes"],
-                telefones=res["telefones"],
-                resumo=res["resumo"]
+                telefones=res.get("telefones", []),
+                resumo=res["resumo"],
             )
+
             detailed_beneficios.append(detalhe)
-            
+
+        except Exception as erro_beneficio:
+            nb_mascarado = (
+                f"***{nb[-4:]}"
+                if len(nb) >= 4
+                else "***"
+            )
+
+            print(
+                "[WARNING] Erro ao consultar benefício "
+                f"{nb_mascarado}: {erro_beneficio}"
+            )
+
+            results.append((nb, None))
+
     if not detailed_beneficios:
-        raise HTTPException(status_code=404, detail="Não foi possível recuperar dados detalhados para os benefícios.")
-        
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Não foi possível recuperar dados detalhados "
+                "para os benefícios."
+            ),
+        )
+
     # 4. Define beneficio principal (primeiro benefício)
     first_res = next((res for nb, res in results if res is not None), None)
     if not first_res:

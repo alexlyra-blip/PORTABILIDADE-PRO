@@ -316,15 +316,93 @@ class PromosysProvider(ConsultaBeneficioProvider):
         if data.get("Code") != "000":
             raise ValueError(f"Erro ao consultar benefícios na Promosys: {data.get('Msg') or data}")
             
-        beneficios = data.get("Beneficios", [])
-        if not beneficios:
-            raise ValueError("Nenhum benefício encontrado para este CPF.")
-            
+        beneficios_raw = data.get("Beneficios", [])
+
+        if not beneficios_raw:
+            raise ValueError(
+                "Nenhum benefício encontrado para este CPF."
+            )
+
+        def extrair_numero_beneficio(item):
+            if item is None:
+                return ""
+
+            if isinstance(item, (str, int, float)):
+                return "".join(
+                    filter(str.isdigit, str(item))
+                )
+
+            if not isinstance(item, dict):
+                return ""
+
+            chaves_numero = (
+                "beneficio",
+                "Beneficio",
+                "BENEFICIO",
+                "numero_beneficio",
+                "numeroBeneficio",
+                "NumeroBeneficio",
+                "numero",
+                "Numero",
+                "NB",
+                "nb",
+            )
+
+            for chave in chaves_numero:
+                valor = item.get(chave)
+
+                if valor is not None:
+                    numero = "".join(
+                        filter(str.isdigit, str(valor))
+                    )
+
+                    if numero:
+                        return numero
+
+            for chave_aninhada in (
+                "cliente",
+                "beneficio_dados",
+                "dados",
+                "data",
+            ):
+                valor_aninhado = item.get(chave_aninhada)
+
+                if isinstance(valor_aninhado, dict):
+                    numero = extrair_numero_beneficio(
+                        valor_aninhado
+                    )
+
+                    if numero:
+                        return numero
+
+            return ""
+
+        numeros_beneficios = []
+        numeros_vistos = set()
+
+        for item in beneficios_raw:
+            numero = extrair_numero_beneficio(item)
+
+            if not numero:
+                continue
+
+            if numero in numeros_vistos:
+                continue
+
+            numeros_vistos.add(numero)
+            numeros_beneficios.append(numero)
+
+        if not numeros_beneficios:
+            raise ValueError(
+                "A Promosys informou benefícios, mas não foi "
+                "possível identificar os números dos NBs."
+            )
+
         return {
             "success": True,
             "cpf": clean_cpf,
-            "total_beneficios": len(beneficios),
-            "beneficios": beneficios
+            "total_beneficios": len(numeros_beneficios),
+            "beneficios": numeros_beneficios
         }
 
     async def consultar_por_beneficio(self, beneficio: str) -> Dict[str, Any]:

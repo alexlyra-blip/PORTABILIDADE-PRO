@@ -644,10 +644,10 @@ export default function ConsultaCPFPage() {
                       <Icons.Landmark size={14} className="text-slate-500" /> DADOS BANCÁRIOS DE RECEBIMENTO
                     </p>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2.5fr)_minmax(70px,0.6fr)_minmax(110px,1fr)] gap-4">
                       <div>
                         <span className="text-[9px] font-bold text-slate-400 uppercase">Banco</span>
-                        <p className="text-xs font-black text-slate-800 uppercase truncate">
+                        <p className="text-xs font-black text-slate-800 uppercase leading-tight break-words">
                           {formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)}
                         </p>
                       </div>

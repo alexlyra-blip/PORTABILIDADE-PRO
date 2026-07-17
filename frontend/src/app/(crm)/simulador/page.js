@@ -97,23 +97,23 @@ function SimuladorPageContent() {
     const logoObj = (subLogos || []).find(l => {
       const nL = norm(l.name);
       const nS = norm(subAgreement);
-      
+
       // Exact match
       if (nL === nS) return true;
-      
+
       // Suffix match (e.g. for SIAPE "01- ATIVO" and "SIAPE - ATIVO")
       if ((nS.endsWith("ATIVO") && nL.endsWith("ATIVO")) ||
           (nS.endsWith("APOSENTADO") && nL.endsWith("APOSENTADO")) ||
           (nS.endsWith("PENSIONISTA") && nL.endsWith("PENSIONISTA"))) {
         return true;
       }
-      
+
       // Prefix/abbreviation match for states under GOVERNOS (e.g., l.name is "SP", subAgreement is "SP - SÃO PAULO")
       if (agreement === "GOVERNOS") {
         const stateCode = subAgreement.split(" - ")[0].trim();
         if (nL === norm(stateCode)) return true;
       }
-      
+
       return false;
     });
     return logoObj?.logo_url ? getStaticUrl(logoObj.logo_url) : null;
@@ -164,13 +164,13 @@ function SimuladorPageContent() {
   const [activeContractIndex, setActiveContractIndex] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState({});
   const [subDropdownOpen, setSubDropdownOpen] = useState(false);
-  
+
   const [extractModalOpen, setExtractModalOpen] = useState(false);
   const [extractLoading, setExtractLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [extractedData, setExtractedData] = useState(null);
   const [selectedExtractLoanIndices, setSelectedExtractLoanIndices] = useState([]);
-  
+
   // Novos estados para o Modal CPF
   const [cpfModalOpen, setCpfModalOpen] = useState(false);
   const [cpfData, setCpfData] = useState(null);
@@ -334,7 +334,7 @@ function SimuladorPageContent() {
     }
   }, [activeBenefitIndex, beneficiosCpf.length]);
   const [lastQueriedCpf, setLastQueriedCpf] = useState("");
-  
+
   const [isLoadingCpf, setIsLoadingCpf] = useState(false);
   const [consultaConvenio, setConsultaConvenio] = useState("INSS");
 
@@ -412,10 +412,10 @@ function SimuladorPageContent() {
           const banks = await api.get("/admin/banks");
           const safeBanks = Array.isArray(banks) ? banks : [];
           setDbBanks(safeBanks);
-          
+
           const originBanksToExclude = ["BCV", "ALFA", "CIFRA", "PINE", "SEGURO", "BARIGUI", "BRB", "PARANÁ", "PARATI", "PAULISTA", "PICPAY", "QI SOCIEDADE", "SABEMI", "ZEMA"];
-          const active = safeBanks.filter(b => 
-            b.active && 
+          const active = safeBanks.filter(b =>
+            b.active &&
             !originBanksToExclude.some(o => (b.name || "").toUpperCase().includes(o))
           );
           setBanksForAnim(active.length > 0 ? active : []);
@@ -452,7 +452,7 @@ function SimuladorPageContent() {
 
   const calculateTaxa = (pmt, pv, n) => {
     if (!pmt || !pv || !n || n <= 0) return "";
-    let i = 0.01; 
+    let i = 0.01;
     try {
       for (let j = 0; j < 50; j++) {
         let pow = Math.pow(1 + i, n);
@@ -479,7 +479,7 @@ function SimuladorPageContent() {
     }
     setIsLoadingCpf(true);
     try {
-        const dados = await api.post('/consultas/promosys/cpf', { 
+        const dados = await api.post('/consultas/promosys/cpf', {
           cpf: formData.cpf.replace(/\D/g, ''),
           convenio: consultaConvenio
         });
@@ -488,7 +488,7 @@ function SimuladorPageContent() {
        if (!dados || (!dados.cliente && !dados.beneficio_principal && (!dados.beneficios || dados.beneficios.length === 0))) {
            throw new Error("Dados inválidos da API");
        }
-       
+
        setCpfData(dados);
        setSelectedCpfLoanIndices([]);
        setActiveBenefitIndex(0);
@@ -517,7 +517,7 @@ function SimuladorPageContent() {
     if (name === "parcela" || name === "saldoDevedor") val = maskCurrency(value);
     if (name === "prazoTotal" || name === "parcelasPagas") val = value.replace(/\D/g, "").slice(0, 3);
     if (name === "taxaAjustada") val = value.replace(/[^0-9,.]/g, "").replace(",", ".");
-    
+
     setContracts(contracts.map(c => {
       if (c.id !== id) return c;
       let newC = { ...c, [name]: val };
@@ -577,7 +577,7 @@ function SimuladorPageContent() {
           const today = new Date();
           const diffTime = today.getTime() - extratoDate.getTime();
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-          
+
           if (diffDays > 30) {
             alert(`Extrato inválido! A data do extrato (${res.data.data_extrato}) é superior a 30 dias. O prazo máximo aceito é de 30 dias.`);
             setExtractLoading(false);
@@ -649,7 +649,7 @@ function SimuladorPageContent() {
 
   const handleUseLoan = () => {
     if (selectedExtractLoanIndices.length === 0 || !extractedData) return;
-    
+
     // Tenta encontrar a espécie correspondente
     let matchedSpecies = "";
     if (extractedData.especie) {
@@ -690,12 +690,12 @@ function SimuladorPageContent() {
       if (newContracts.length >= 5 && newContracts.every(c => c.banco || c.parcela)) {
         break; // Max tabs reached
       }
-      
+
       let matchedBank = "";
       let rawBankName = selectedLoan.banco;
       if (rawBankName.includes('-')) rawBankName = rawBankName.substring(rawBankName.indexOf('-') + 1);
       const bClean = norm(rawBankName);
-      
+
       let bankNameToSearch = bClean;
       const heuristics = ["C6", "PAN", "DAYCOVAL", "ITA", "BRADESCO", "MERCANTIL", "SAFRA", "BMG", "OLE", "OLÉ"];
       for (const h of heuristics) {
@@ -815,7 +815,7 @@ function SimuladorPageContent() {
       if (newContracts.length >= 5 && newContracts.every(c => c.banco || c.parcela)) {
         break;
       }
-      
+
       let targetIndex = newContracts.findIndex(c => !c.banco && !c.parcela);
       if (targetIndex === -1 && newContracts.length < 5) {
         targetIndex = newContracts.length;
@@ -958,7 +958,7 @@ function SimuladorPageContent() {
           taxa_atual: parseFloat((c.taxaAjustada || c.taxaAtual || 0).toString().replace(',', '.')),
           total_term: parseInt(c.prazoTotal),
           remaining_term: parseInt(c.prazoRestante),
-          data_concessao: formData.data_concessao || null, 
+          data_concessao: formData.data_concessao || null,
           is_60_plus: formData.is_60_plus || (["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species) && parseInt(formData.idade || 0) < 60),
           is_invalidez_60_plus: parseInt(formData.idade || 0) >= 60,
           analfabeto: formData.analfabeto === "sim",
@@ -967,12 +967,12 @@ function SimuladorPageContent() {
         };
         return api.post('/simular', payload).then(res => ({ contrato_id: c.id, ...res }));
       });
-      
+
       const [results] = await Promise.all([
         Promise.all(promises),
         new Promise(resolve => setTimeout(resolve, 4000))
       ]);
-      
+
       const combinedOfertas = [];
       const combinedRejeitados = [];
       results.forEach(res => {
@@ -998,18 +998,18 @@ function SimuladorPageContent() {
          }
          return { ...c, banco_nome: found ? found.label : c.banco, parcela: finalParcela, original_parcela: c.parcela };
       });
-      sessionStorage.setItem("simulation_input", JSON.stringify({ 
-        ...formData, 
+      sessionStorage.setItem("simulation_input", JSON.stringify({
+        ...formData,
         possui_dois_cartoes: possuiDoisCartoes === "sim",
         valor_margem_negativa: possuiDoisCartoes === "sim" ? parseCurrency(valorMargemNegativa) : 0.0,
-        contracts: mappedContracts 
+        contracts: mappedContracts
       }));
       sessionStorage.setItem("simulation_results", JSON.stringify(finalData));
-      
+
       // Sincronizar taxa calculada para o Admin Preview
       const rateToSync = contracts[0].taxaAjustada || contracts[0].taxaAtual || 0;
       localStorage.setItem("last_simulation_rate", rateToSync.toString());
-      
+
       setShowSuccess(true);
       setTimeout(() => {
         setIsExiting(true);
@@ -1100,7 +1100,7 @@ function SimuladorPageContent() {
       {/* Loading Overlay */}
       {loading && (
         <div className={`fixed inset-0 z-[1000] flex flex-col items-center justify-center transition-all duration-700 ${isExiting ? "opacity-0 scale-110 blur-2xl" : "bg-black/80 backdrop-blur-md opacity-100"}`}>
-           
+
            {/* Foguete no Topo */}
            <div className="relative z-40 flex flex-col items-center mb-8">
               <div className="w-16 h-16 bg-blue-600 rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.6)] flex items-center justify-center animate-bounce">
@@ -1133,7 +1133,7 @@ function SimuladorPageContent() {
            <div className="relative z-40 flex flex-col items-center mt-12">
               <AnimatePresence mode="wait">
                 {!showSuccess ? (
-                  <motion.h2 
+                  <motion.h2
                     key="analyzing"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1143,7 +1143,7 @@ function SimuladorPageContent() {
                     Analisando<br/><span className="text-blue-400">Oportunidades</span>
                   </motion.h2>
                 ) : (
-                  <motion.div 
+                  <motion.div
                     key="success"
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -1180,14 +1180,14 @@ function SimuladorPageContent() {
         </div>
 
         <form onSubmit={handleSimular} className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-          
+
           {/* Lado Esquerdo: Dados do Cliente */}
           <div className="xl:col-span-4 space-y-8">
-            
+
             {/* INSS PDF Extractor Dropzone */}
             <div className="bg-blue-600 p-1 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
-              <div 
+              <div
                 className={`bg-white dark:bg-slate-900 rounded-[2.25rem] p-6 relative z-10 flex flex-col items-center justify-center text-center border-4 border-dashed transition-all ${isDragging ? 'border-emerald-500 bg-emerald-50/50 scale-[1.02]' : 'border-blue-100 dark:border-blue-900/50 hover:border-blue-400'}`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -1198,7 +1198,7 @@ function SimuladorPageContent() {
                 </div>
                 <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">Extrato INSS</h4>
                 <p className="text-[10px] text-slate-500 font-bold uppercase mb-4">Envie o PDF para preencher automático</p>
-                
+
                 <div className="flex items-center justify-center gap-3 w-full mt-2">
                   <label className="relative cursor-pointer group/btn flex-1 max-w-[200px]">
                     <input type="file" accept="application/pdf" className="hidden" onChange={handleFileUpload} disabled={extractLoading} />
@@ -1206,7 +1206,7 @@ function SimuladorPageContent() {
                       {extractLoading ? 'Processando...' : (extractedData ? 'Novo PDF' : 'Selecionar PDF')}
                     </div>
                   </label>
-                  
+
                   {extractedData && !extractLoading && (
                     <button type="button" onClick={() => setExtractModalOpen(true)} className="flex-1 max-w-[200px] px-4 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2">
                       <Icons.Eye size={14} /> Ver Dados
@@ -1243,7 +1243,7 @@ function SimuladorPageContent() {
 
             <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/5 rounded-full -mr-20 -mt-20 group-hover:scale-125 transition-transform duration-1000"></div>
-              
+
               <div className="flex items-center gap-3 mb-8 relative z-10">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 border border-blue-500/20">
                   <Icons.User />
@@ -1306,10 +1306,10 @@ function SimuladorPageContent() {
                           onClick={handleCpfButtonClick}
                           disabled={isLoadingCpf || !formData.cpf}
                           className={`h-14 px-4 font-black text-[11px] uppercase tracking-wider rounded-2xl transition-all flex items-center justify-center min-w-[110px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 ${
-                            isLoadingCpf 
-                              ? 'bg-slate-300 text-slate-500' 
+                            isLoadingCpf
+                              ? 'bg-slate-300 text-slate-500'
                               : (formData.cpf.replace(/\D/g, '') === lastQueriedCpf && lastQueriedCpf !== "")
-                                ? 'bg-gradient-to-r from-emerald-600 to-emerald-800 hover:from-emerald-700 hover:to-emerald-900 text-white shadow-emerald-500/30 hover:shadow-emerald-500/40' 
+                                ? 'bg-gradient-to-r from-emerald-600 to-emerald-800 hover:from-emerald-700 hover:to-emerald-900 text-white shadow-emerald-500/30 hover:shadow-emerald-500/40'
                                 : 'bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white shadow-blue-500/30 hover:shadow-blue-500/40'
                           }`}
                         >
@@ -1356,7 +1356,7 @@ function SimuladorPageContent() {
                        </div>
                     </div>
                   </div>
-                  
+
                   {/* Regra Condicional: Invalidez ou 60+ */}
                   {(isInvalidezSpecies || is60Plus) && (
                     <div className={`flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 transition-colors ${isInvalidezSpecies && !is60Plus ? 'opacity-80 pointer-events-none' : 'hover:border-blue-200 cursor-pointer group/opt'}`} onClick={() => { if (!(isInvalidezSpecies && !is60Plus)) setFormData(p => ({...p, is_60_plus: !p.is_60_plus})) }}>
@@ -1499,11 +1499,11 @@ function SimuladorPageContent() {
                       {dropdownOpen.agreement && (
                         <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[400px] overflow-hidden flex flex-col">
                            <div className="mb-3 sticky top-0 bg-white z-10">
-                              <input 
-                                type="text" 
-                                placeholder="BUSCAR CONVÊNIO..." 
-                                value={agreementSearch} 
-                                onChange={(e) => setAgreementSearch(e.target.value)} 
+                              <input
+                                type="text"
+                                placeholder="BUSCAR CONVÊNIO..."
+                                value={agreementSearch}
+                                onChange={(e) => setAgreementSearch(e.target.value)}
                                 className="w-full h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase outline-none focus:border-blue-500"
                                 onClick={(e) => e.stopPropagation()}
                                 autoFocus
@@ -1552,11 +1552,11 @@ function SimuladorPageContent() {
                               {dropdownOpen.species && (
                                 <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[110] max-h-[350px] overflow-hidden flex flex-col">
                                    <div className="mb-3 sticky top-0 bg-white z-10">
-                                      <input 
-                                        type="text" 
-                                        placeholder="BUSCAR ESPÉCIE..." 
-                                        value={speciesSearch} 
-                                        onChange={(e) => setSpeciesSearch(e.target.value)} 
+                                      <input
+                                        type="text"
+                                        placeholder="BUSCAR ESPÉCIE..."
+                                        value={speciesSearch}
+                                        onChange={(e) => setSpeciesSearch(e.target.value)}
                                         className="w-full h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase outline-none focus:border-blue-500"
                                         onClick={(e) => e.stopPropagation()}
                                         autoFocus
@@ -1566,10 +1566,10 @@ function SimuladorPageContent() {
                                       {inssSpecies
                                         .filter(s => !speciesSearch || (s.label || "").toUpperCase().includes(speciesSearch.toUpperCase()))
                                         .map(s => (
-                                          <button 
-                                            key={s.value} 
-                                            type="button" 
-                                            onClick={() => { setFormData(p => ({ ...p, benefit_species: s.value })); setDropdownOpen(p => ({ ...p, species: false })); setSpeciesSearch(""); }} 
+                                          <button
+                                            key={s.value}
+                                            type="button"
+                                            onClick={() => { setFormData(p => ({ ...p, benefit_species: s.value })); setDropdownOpen(p => ({ ...p, species: false })); setSpeciesSearch(""); }}
                                             className={`w-full text-left px-4 py-3 rounded-xl text-[10px] font-bold uppercase transition-all ${formData.benefit_species === s.value ? 'bg-blue-600 text-white' : 'hover:bg-blue-50 text-slate-700'}`}
                                           >
                                             {s.label}
@@ -1615,11 +1615,11 @@ function SimuladorPageContent() {
                           {subDropdownOpen && (
                             <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:10}} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] max-h-[400px] overflow-hidden flex flex-col">
                                <div className="mb-3 sticky top-0 bg-white z-10">
-                                  <input 
-                                    type="text" 
-                                    placeholder="BUSCAR..." 
-                                    value={subAgreementSearch} 
-                                    onChange={(e) => setSubAgreementSearch(e.target.value)} 
+                                  <input
+                                    type="text"
+                                    placeholder="BUSCAR..."
+                                    value={subAgreementSearch}
+                                    onChange={(e) => setSubAgreementSearch(e.target.value)}
                                     className="w-full h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase outline-none focus:border-blue-500"
                                     onClick={(e) => e.stopPropagation()}
                                     autoFocus
@@ -1633,7 +1633,7 @@ function SimuladorPageContent() {
                                     });
 
                                     const subLogosFiltered = (subLogos || []).filter(l => norm(l.parent) === norm(formData.agreement));
-                                    
+
                                     if (formData.agreement === "INSS") {
                                        return filterList(["INSS - APOSENTADO", "INSS - PENSIONISTA", "INSS - BPC / LOAS"]).map(name => {
                                            const logoUrl = getSubAgreementLogoUrl(name, "INSS");
@@ -1743,9 +1743,9 @@ function SimuladorPageContent() {
 
                <div className="flex flex-wrap gap-2 mb-8 bg-slate-50 p-2 rounded-2xl border border-slate-100">
                   {contracts.map((c, idx) => (
-                    <button 
-                      key={c.id} 
-                      type="button" 
+                    <button
+                      key={c.id}
+                      type="button"
                       onClick={() => setActiveContractIndex(idx)}
                       className={`flex items-center gap-3 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeContractIndex === idx ? 'bg-white text-blue-600 shadow-xl border border-slate-100' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'}`}
                     >
@@ -1761,7 +1761,7 @@ function SimuladorPageContent() {
 
                <AnimatePresence mode="wait">
                   {contracts[activeContractIndex] && (
-                    <motion.div 
+                    <motion.div
                       key={contracts[activeContractIndex].id}
                       initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}
                       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -1780,9 +1780,9 @@ function SimuladorPageContent() {
                                   const bankLabel = selectedBank.label || "";
                                   const bankName = bankLabel.includes('-') ? bankLabel.substring(bankLabel.indexOf('-') + 1).trim() : bankLabel;
                                   const dbBank = (dbBanks || []).find(db => db.name && norm(bankLabel).includes(norm(db.name)));
-                                  const subLogoObj = (subLogos || []).find(l => { 
-                                    const nL = norm(l.name); 
-                                    return nL && (nL === norm(bankName) || norm(bankLabel).includes(nL)); 
+                                  const subLogoObj = (subLogos || []).find(l => {
+                                    const nL = norm(l.name);
+                                    return nL && (nL === norm(bankName) || norm(bankLabel).includes(nL));
                                   });
                                   const logoUrl = subLogoObj?.logo_url || dbBank?.logo_url;
                                   return (
@@ -1790,10 +1790,10 @@ function SimuladorPageContent() {
                                       <div className="w-6 h-6 rounded-md bg-white border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
                                         {logoUrl ? (
                                           <>
-                                            <img 
-                                              src={getStaticUrl(logoUrl)} 
-                                              onError={(e) => { e.target.style.display = 'none'; const f = e.target.parentNode.querySelector('.img-fallback'); if (f) f.style.display = 'flex'; }} 
-                                              className="w-full h-full object-cover" 
+                                            <img
+                                              src={getStaticUrl(logoUrl)}
+                                              onError={(e) => { e.target.style.display = 'none'; const f = e.target.parentNode.querySelector('.img-fallback'); if (f) f.style.display = 'flex'; }}
+                                              className="w-full h-full object-cover"
                                             />
                                             <div className="img-fallback hidden w-full h-full items-center justify-center font-bold text-[8px] text-slate-400 bg-slate-100 uppercase">
                                               {bankName.substring(0, 2)}
@@ -1815,11 +1815,11 @@ function SimuladorPageContent() {
                           {dropdownOpen[contracts[activeContractIndex].id] && (
                             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-4 z-[100] max-h-[400px] overflow-hidden flex flex-col">
                                <div className="mb-3 sticky top-0 bg-white z-10">
-                                  <input 
-                                    type="text" 
-                                    placeholder="BUSCAR BANCO..." 
-                                    value={bankSearch} 
-                                    onChange={(e) => setBankSearch(e.target.value)} 
+                                  <input
+                                    type="text"
+                                    placeholder="BUSCAR BANCO..."
+                                    value={bankSearch}
+                                    onChange={(e) => setBankSearch(e.target.value)}
                                     className="w-full h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase outline-none focus:border-blue-500"
                                     onClick={(e) => e.stopPropagation()}
                                     autoFocus
@@ -1841,10 +1841,10 @@ function SimuladorPageContent() {
                                           <div className="w-6 h-6 rounded-md bg-white border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
                                             {logoUrl ? (
                                               <>
-                                                <img 
-                                                  src={getStaticUrl(logoUrl)} 
-                                                  onError={(e) => { e.target.style.display = 'none'; const f = e.target.parentNode.querySelector('.img-fallback'); if (f) f.style.display = 'flex'; }} 
-                                                  className="w-full h-full object-cover" 
+                                                <img
+                                                  src={getStaticUrl(logoUrl)}
+                                                  onError={(e) => { e.target.style.display = 'none'; const f = e.target.parentNode.querySelector('.img-fallback'); if (f) f.style.display = 'flex'; }}
+                                                  className="w-full h-full object-cover"
                                                 />
                                                 <div className="img-fallback hidden w-full h-full items-center justify-center font-bold text-[8px] text-slate-400 bg-slate-100 uppercase">
                                                   {bankName.substring(0, 2)}
@@ -1922,7 +1922,7 @@ function SimuladorPageContent() {
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 999999 }}>
           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setExtractModalOpen(false)}></div>
           <div className="relative bg-slate-50 rounded-[3rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-scale-up" style={{ zIndex: 999999 }}>
-            
+
             <div className="px-8 py-6 bg-white border-b border-slate-100 flex justify-between items-center z-10 shadow-sm">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
@@ -1956,7 +1956,7 @@ function SimuladorPageContent() {
                 <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl relative overflow-hidden">
                   <div className={`absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 opacity-10 ${extractedData.margem_disponivel >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Resumo da Margem</h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 items-center">
                     <div className="flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6">
                       <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Margem Consignável</span>
@@ -1997,22 +1997,22 @@ function SimuladorPageContent() {
                         });
                         const isSelected = selectedExtractLoanIndices.includes(idx);
                         const Tag = loanIsUsed ? 'div' : 'label';
-                        
+
                         return (
                         <Tag key={idx} className={`block relative bg-white p-5 rounded-[2rem] border-2 transition-all ${loanIsUsed ? 'opacity-50 cursor-not-allowed border-slate-100 bg-slate-50' : 'cursor-pointer hover:shadow-xl'} ${isSelected ? 'border-blue-500 shadow-blue-500/20' : 'border-slate-100'}`}>
                           <div className="flex items-center gap-4">
-                            <input 
-                              type="checkbox" 
-                              className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 disabled:opacity-50" 
-                              checked={isSelected} 
+                            <input
+                              type="checkbox"
+                              className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                              checked={isSelected}
                               disabled={loanIsUsed}
                               onChange={() => {
-                                setSelectedExtractLoanIndices(prev => 
+                                setSelectedExtractLoanIndices(prev =>
                                   prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
                                 );
-                              }} 
+                              }}
                             />
-                            
+
                             <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
                               <div className="min-w-0 pr-2">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Banco / Contrato</p>
@@ -2032,7 +2032,7 @@ function SimuladorPageContent() {
                                 <p className="text-xs font-black text-blue-600">{formatBRL(loan.saldo_devedor)}</p>
                               </div>
                             </div>
-                            
+
                             {loanIsUsed && (
                               <div className="absolute right-4 top-4 bg-slate-100 text-slate-500 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">
                                 Já Importado
@@ -2048,11 +2048,11 @@ function SimuladorPageContent() {
 
             <div className="p-8 bg-slate-50 border-t border-slate-200 flex justify-center gap-4 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
               <button onClick={() => setExtractModalOpen(false)} className="px-8 py-4 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-widest text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">Cancelar</button>
-              <button 
+              <button
                 onClick={() => {
                   handleUseLoan();
                   setExtractModalOpen(false);
-                }} 
+                }}
                 disabled={selectedExtractLoanIndices.length === 0}
                 className="px-8 py-4 rounded-2xl bg-blue-400 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-xs transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -2159,7 +2159,7 @@ function SimuladorPageContent() {
           <div className="fixed inset-0 flex items-center justify-center p-4 animate-in fade-in duration-350" style={{ zIndex: 999999 }}>
             <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setCpfModalOpen(false)}></div>
             <div className="relative bg-slate-50 rounded-[3rem] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col z-20" style={{ zIndex: 999999 }}>
-              
+
               {/* Header */}
               <div className="px-8 py-6 bg-white border-b border-slate-150 flex justify-between items-center z-10 shadow-sm">
                 <div className="flex items-center gap-4">
@@ -2249,14 +2249,14 @@ function SimuladorPageContent() {
 
               {/* Corpo */}
               <div className="p-8 overflow-y-auto flex-1 flex flex-col gap-8 custom-scrollbar">
-                
+
                 {/* Dados Benefício & Bancários */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Benefício */}
                   <div className="bg-white p-6 rounded-[2rem] border border-slate-150 shadow-sm relative">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Detalhamento do Benefício</h4>
-                      
+
                       {activeBenefit.beneficio?.bloqueio_emprestimo && (
                         <div>
                           {activeBenefit.beneficio.bloqueio_emprestimo.toLowerCase().includes("sim") || activeBenefit.beneficio.bloqueado === true ? (
@@ -2273,7 +2273,7 @@ function SimuladorPageContent() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4 text-xs font-bold text-slate-800">
                       <div>
                         <span className="block text-[9px] text-slate-400 uppercase">Espécie</span>
@@ -2434,22 +2434,22 @@ function SimuladorPageContent() {
                           loan.codigo,
                           loan.banco
                         );
-                        
+
                         return (
                           <Tag key={idx} className={`block relative bg-white p-5 rounded-[2rem] border-2 transition-all ${loanIsUsed ? 'opacity-50 cursor-not-allowed border-slate-100 bg-slate-50' : 'cursor-pointer hover:shadow-xl'} ${isSelected ? 'border-blue-500 shadow-blue-500/20' : 'border-slate-150'}`}>
                             <div className="flex items-center gap-4">
-                              <input 
-                                type="checkbox" 
-                                className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-350 rounded focus:ring-blue-500 disabled:opacity-50" 
-                                checked={isSelected} 
+                              <input
+                                type="checkbox"
+                                className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-350 rounded focus:ring-blue-500 disabled:opacity-50"
+                                checked={isSelected}
                                 disabled={loanIsUsed}
                                 onChange={() => {
-                                  setSelectedCpfLoanIndices(prev => 
+                                  setSelectedCpfLoanIndices(prev =>
                                     prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
                                   );
-                                }} 
+                                }}
                               />
-                              
+
                               <div className="relative w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex-shrink-0 overflow-hidden flex items-center justify-center">
                                 {loanLogoUrl ? (
                                   <img
@@ -2489,7 +2489,7 @@ function SimuladorPageContent() {
                                   <p className="text-xs font-black text-blue-600">{formatBRL(loan.quitacao)}</p>
                                 </div>
                               </div>
-                              
+
                               {loanIsUsed && (
                                 <div className="absolute right-4 top-4 bg-slate-100 text-slate-500 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-slate-200">
                                   Já Importado
@@ -2517,12 +2517,12 @@ function SimuladorPageContent() {
                         return (
                           <div key={idx} className="bg-white p-5 rounded-[2rem] border border-slate-150 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
                             <div className="flex items-center gap-3.5 min-w-0 pr-4 w-full md:w-80">
-                              <div className="w-9 h-9 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
+                              <div className="relative w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex-shrink-0 overflow-hidden flex items-center justify-center">
                                 {logoUrl ? (
-                                  <img 
-                                    src={getStaticUrl(logoUrl)} 
-                                    alt={cartao.banco} 
-                                    className="w-full h-full object-cover absolute inset-0" 
+                                  <img
+                                    src={getStaticUrl(logoUrl)}
+                                    alt={cartao.banco}
+                                    className="w-full h-full object-cover scale-110"
                                   />
                                 ) : (
                                   <span className="text-[10px] font-black text-slate-400">
@@ -2536,7 +2536,7 @@ function SimuladorPageContent() {
                                 <p className="text-[9.5px] font-bold text-pink-500 truncate">{cartao.tipo || "Cartão Consignado"}</p>
                               </div>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 flex-1 w-full text-left">
                               <div>
                                 <span className="block text-[9px] text-slate-400 uppercase">Parcela Reservada</span>
@@ -2567,11 +2567,11 @@ function SimuladorPageContent() {
               {/* Footer */}
               <div className="p-8 bg-slate-50 border-t border-slate-200 flex justify-center gap-4 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
                 <button onClick={() => setCpfModalOpen(false)} className="px-8 py-4 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-widest text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">Cancelar</button>
-                <button 
+                <button
                   onClick={() => {
                     handleUseCpfLoans();
                     setCpfModalOpen(false);
-                  }} 
+                  }}
                   disabled={selectedCpfLoanIndices.length === 0}
                   className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
