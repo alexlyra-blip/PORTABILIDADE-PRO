@@ -179,32 +179,160 @@ function SimuladorPageContent() {
 
   // Normaliza os diferentes formatos que podem ser retornados pela API.
   const beneficiosCpf = (() => {
-    if (Array.isArray(cpfData?.beneficios)) {
-      return cpfData.beneficios;
+    const encontrados = [];
+
+    const obterNumeroBeneficio = (item) => {
+      if (!item || typeof item !== "object") return "";
+
+      const numero =
+        item.numero ??
+        item.numero_beneficio ??
+        item.nb ??
+        item.cliente?.beneficio ??
+        item.cliente?.numero_beneficio ??
+        item.cliente?.nb ??
+        item.beneficio?.numero ??
+        item.beneficio?.numero_beneficio ??
+        item.beneficio?.nb ??
+        "";
+
+      return String(numero || "").replace(/\D/g, "");
+    };
+
+    const pareceBeneficioCompleto = (item) => {
+      if (
+        !item ||
+        typeof item !== "object" ||
+        Array.isArray(item)
+      ) {
+        return false;
+      }
+
+      const numero = obterNumeroBeneficio(item);
+
+      const possuiEstruturaBeneficio =
+        Boolean(item.cliente) ||
+        Boolean(item.margens) ||
+        Boolean(item.banco_pagador) ||
+        Boolean(item.beneficio) ||
+        Array.isArray(item.emprestimos) ||
+        Array.isArray(item.contratos) ||
+        Array.isArray(item.cartoes);
+
+      return Boolean(numero && possuiEstruturaBeneficio);
+    };
+
+    const visitar = (valor, profundidade = 0) => {
+      if (
+        valor === null ||
+        valor === undefined ||
+        profundidade > 10
+      ) {
+        return;
+      }
+
+      if (Array.isArray(valor)) {
+        valor.forEach((item) => visitar(item, profundidade + 1));
+        return;
+      }
+
+      if (typeof valor !== "object") {
+        return;
+      }
+
+      if (pareceBeneficioCompleto(valor)) {
+        encontrados.push(valor);
+        return;
+      }
+
+      Object.values(valor).forEach((item) => {
+        visitar(item, profundidade + 1);
+      });
+    };
+
+    visitar(cpfData);
+
+    const beneficiosUnicos = [];
+    const numerosEncontrados = new Set();
+    const objetosSemNumero = new Set();
+
+    encontrados.forEach((beneficioItem) => {
+      const numero = obterNumeroBeneficio(beneficioItem);
+
+      if (numero) {
+        if (!numerosEncontrados.has(numero)) {
+          numerosEncontrados.add(numero);
+          beneficiosUnicos.push(beneficioItem);
+        }
+
+        return;
+      }
+
+      const chaveAlternativa = JSON.stringify({
+        indice:
+          beneficioItem.indice_beneficio ??
+          beneficioItem.indice ??
+          null,
+        especie:
+          beneficioItem.cliente?.especie ??
+          beneficioItem.especie ??
+          null,
+      });
+
+      if (!objetosSemNumero.has(chaveAlternativa)) {
+        objetosSemNumero.add(chaveAlternativa);
+        beneficiosUnicos.push(beneficioItem);
+      }
+    });
+
+    // Fallback para estruturas conhecidas.
+    if (beneficiosUnicos.length === 0) {
+      if (Array.isArray(cpfData?.beneficios)) {
+        return cpfData.beneficios;
+      }
+
+      if (Array.isArray(cpfData?.data?.beneficios)) {
+        return cpfData.data.beneficios;
+      }
+
+      if (cpfData?.beneficio_principal) {
+        return [
+          cpfData.beneficio_principal,
+          ...(Array.isArray(cpfData?.beneficios_adicionais)
+            ? cpfData.beneficios_adicionais
+            : []),
+        ];
+      }
+
+      return cpfData ? [cpfData] : [];
     }
 
-    if (Array.isArray(cpfData?.data?.beneficios)) {
-      return cpfData.data.beneficios;
-    }
-
-    if (cpfData?.beneficio_principal) {
-      const beneficiosAdicionais = Array.isArray(cpfData?.beneficios_adicionais)
-        ? cpfData.beneficios_adicionais
-        : [];
-
-      return [
-        cpfData.beneficio_principal,
-        ...beneficiosAdicionais
-      ];
-    }
-
-    return cpfData ? [cpfData] : [];
+    return beneficiosUnicos;
   })();
+
+  const totalBeneficiosInformado =
+    Number(
+      cpfData?.total_beneficios ??
+      cpfData?.data?.total_beneficios ??
+      cpfData?.totalBeneficios ??
+      cpfData?.quantidade_beneficios ??
+      beneficiosCpf.length
+    ) || beneficiosCpf.length;
 
   const activeBenefit =
     beneficiosCpf[activeBenefitIndex] ||
     beneficiosCpf[0] ||
     cpfData;
+
+  useEffect(() => {
+    if (
+      beneficiosCpf.length > 0 &&
+      activeBenefitIndex >= beneficiosCpf.length
+    ) {
+      setActiveBenefitIndex(0);
+      setSelectedCpfLoanIndices([]);
+    }
+  }, [activeBenefitIndex, beneficiosCpf.length]);
   const [lastQueriedCpf, setLastQueriedCpf] = useState("");
   
   const [isLoadingCpf, setIsLoadingCpf] = useState(false);
@@ -2109,6 +2237,16 @@ function SimuladorPageContent() {
                 </div>
               )}
 
+              {totalBeneficiosInformado > 1 && beneficiosCpf.length <= 1 && (
+                <div className="px-8 py-3 bg-amber-50 border-b border-amber-200 z-10">
+                  <p className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
+                    A consulta informou {totalBeneficiosInformado} benefícios,
+                    mas somente {beneficiosCpf.length} benefício completo foi
+                    retornado pela API.
+                  </p>
+                </div>
+              )}
+
               {/* Corpo */}
               <div className="p-8 overflow-y-auto flex-1 flex flex-col gap-8 custom-scrollbar">
                 
@@ -2312,12 +2450,12 @@ function SimuladorPageContent() {
                                 }} 
                               />
                               
-                              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex-shrink-0 overflow-hidden flex items-center justify-center">
+                              <div className="relative w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex-shrink-0 overflow-hidden flex items-center justify-center">
                                 {loanLogoUrl ? (
                                   <img
                                     src={getStaticUrl(loanLogoUrl)}
                                     alt={loan.banco || "Banco"}
-                                    className="w-full h-full object-contain p-1"
+                                    className="w-full h-full object-cover scale-110"
                                     onError={(event) => {
                                       event.currentTarget.style.display = "none";
                                     }}
