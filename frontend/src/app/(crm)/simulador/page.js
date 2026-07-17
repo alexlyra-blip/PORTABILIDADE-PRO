@@ -119,6 +119,23 @@ function SimuladorPageContent() {
     return logoObj?.logo_url ? getStaticUrl(logoObj.logo_url) : null;
   };
 
+  const getSubLogo = (code, name) => {
+    const normName = (name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+    const cleanCode = (code || "").replace(/\D/g, "");
+    if (cleanCode) {
+      const matchByCode = subLogos.find(l => {
+        const logoName = l.name.toUpperCase();
+        return logoName.startsWith(cleanCode) || logoName.includes(` ${cleanCode} `) || logoName.includes(`-${cleanCode}`) || logoName.includes(`${cleanCode}-`);
+      });
+      if (matchByCode) return matchByCode.logo_url;
+    }
+    const matchByName = subLogos.find(l => {
+      const logoNameNorm = l.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+      return logoNameNorm.includes(normName) || normName.includes(logoNameNorm);
+    });
+    return matchByName ? matchByName.logo_url : null;
+  };
+
   // Mock de logos caso o DB esteja vazio
   const defaultLogos = [
     "https://logouol.com/itau/itau-logo.png",
