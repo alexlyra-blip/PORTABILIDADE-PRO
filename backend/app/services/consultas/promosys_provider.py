@@ -276,7 +276,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
             }
         }
 
-    async def consultar_beneficios(self, cpf: str) -> Dict[str, Any]:
+    async def consultar_beneficios(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
         try:
             return await self._do_consultar_beneficios(cpf, force_refresh=False)
         except ValueError as e:
