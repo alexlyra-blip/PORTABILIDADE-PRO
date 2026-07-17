@@ -179,133 +179,77 @@ function SimuladorPageContent() {
 
   // Normaliza os diferentes formatos que podem ser retornados pela API.
   const beneficiosCpf = (() => {
-    const encontrados = [];
+    if (!cpfData) {
+      return [];
+    }
+
+    /*
+     * A resposta multi-benefício possui também dados do primeiro
+     * benefício na raiz. Por isso, precisamos priorizar explicitamente
+     * o array "beneficios" antes de considerar o objeto raiz.
+     */
+    const listasPossiveis = [
+      cpfData?.beneficios,
+      cpfData?.data?.beneficios,
+      cpfData?.resultado?.beneficios,
+      cpfData?.response?.beneficios,
+    ];
+
+    let listaEncontrada = listasPossiveis.find(
+      (lista) => Array.isArray(lista) && lista.length > 0
+    );
+
+    if (!listaEncontrada && cpfData?.beneficio_principal) {
+      listaEncontrada = [
+        cpfData.beneficio_principal,
+        ...(Array.isArray(cpfData?.beneficios_adicionais)
+          ? cpfData.beneficios_adicionais
+          : []),
+      ];
+    }
+
+    if (!Array.isArray(listaEncontrada) || listaEncontrada.length === 0) {
+      listaEncontrada = [cpfData];
+    }
 
     const obterNumeroBeneficio = (item) => {
-      if (!item || typeof item !== "object") return "";
-
       const numero =
-        item.numero ??
-        item.numero_beneficio ??
-        item.nb ??
-        item.cliente?.beneficio ??
-        item.cliente?.numero_beneficio ??
-        item.cliente?.nb ??
-        item.beneficio?.numero ??
-        item.beneficio?.numero_beneficio ??
-        item.beneficio?.nb ??
+        item?.numero ??
+        item?.numero_beneficio ??
+        item?.nb ??
+        item?.cliente?.beneficio ??
+        item?.cliente?.numero_beneficio ??
+        item?.cliente?.nb ??
+        item?.beneficio?.numero ??
+        item?.beneficio?.numero_beneficio ??
+        item?.beneficio?.nb ??
         "";
 
       return String(numero || "").replace(/\D/g, "");
     };
 
-    const pareceBeneficioCompleto = (item) => {
-      if (
-        !item ||
-        typeof item !== "object" ||
-        Array.isArray(item)
-      ) {
-        return false;
-      }
-
-      const numero = obterNumeroBeneficio(item);
-
-      const possuiEstruturaBeneficio =
-        Boolean(item.cliente) ||
-        Boolean(item.margens) ||
-        Boolean(item.banco_pagador) ||
-        Boolean(item.beneficio) ||
-        Array.isArray(item.emprestimos) ||
-        Array.isArray(item.contratos) ||
-        Array.isArray(item.cartoes);
-
-      return Boolean(numero && possuiEstruturaBeneficio);
-    };
-
-    const visitar = (valor, profundidade = 0) => {
-      if (
-        valor === null ||
-        valor === undefined ||
-        profundidade > 10
-      ) {
-        return;
-      }
-
-      if (Array.isArray(valor)) {
-        valor.forEach((item) => visitar(item, profundidade + 1));
-        return;
-      }
-
-      if (typeof valor !== "object") {
-        return;
-      }
-
-      if (pareceBeneficioCompleto(valor)) {
-        encontrados.push(valor);
-        return;
-      }
-
-      Object.values(valor).forEach((item) => {
-        visitar(item, profundidade + 1);
-      });
-    };
-
-    visitar(cpfData);
-
+    /*
+     * Remove apenas duplicidades reais de NB.
+     * Benefícios diferentes permanecem disponíveis nas abas.
+     */
     const beneficiosUnicos = [];
-    const numerosEncontrados = new Set();
-    const objetosSemNumero = new Set();
+    const numerosVistos = new Set();
 
-    encontrados.forEach((beneficioItem) => {
-      const numero = obterNumeroBeneficio(beneficioItem);
-
-      if (numero) {
-        if (!numerosEncontrados.has(numero)) {
-          numerosEncontrados.add(numero);
-          beneficiosUnicos.push(beneficioItem);
-        }
-
+    listaEncontrada.forEach((beneficioItem, idx) => {
+      if (!beneficioItem || typeof beneficioItem !== "object") {
         return;
       }
 
-      const chaveAlternativa = JSON.stringify({
-        indice:
-          beneficioItem.indice_beneficio ??
-          beneficioItem.indice ??
-          null,
-        especie:
-          beneficioItem.cliente?.especie ??
-          beneficioItem.especie ??
-          null,
-      });
+      const numero = obterNumeroBeneficio(beneficioItem);
+      const chave = numero || `beneficio-sem-numero-${idx}`;
 
-      if (!objetosSemNumero.has(chaveAlternativa)) {
-        objetosSemNumero.add(chaveAlternativa);
-        beneficiosUnicos.push(beneficioItem);
+      if (numerosVistos.has(chave)) {
+        return;
       }
+
+      numerosVistos.add(chave);
+      beneficiosUnicos.push(beneficioItem);
     });
-
-    // Fallback para estruturas conhecidas.
-    if (beneficiosUnicos.length === 0) {
-      if (Array.isArray(cpfData?.beneficios)) {
-        return cpfData.beneficios;
-      }
-
-      if (Array.isArray(cpfData?.data?.beneficios)) {
-        return cpfData.data.beneficios;
-      }
-
-      if (cpfData?.beneficio_principal) {
-        return [
-          cpfData.beneficio_principal,
-          ...(Array.isArray(cpfData?.beneficios_adicionais)
-            ? cpfData.beneficios_adicionais
-            : []),
-        ];
-      }
-
-      return cpfData ? [cpfData] : [];
-    }
 
     return beneficiosUnicos;
   })();
