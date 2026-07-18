@@ -245,7 +245,7 @@ export default function ConsultaCPFPage() {
       // Tenta abrir numa nova aba, bypassando o bloqueio caso falhe
       const pdfWindow = window.open("", "_blank");
       if (pdfWindow) {
-        pdfWindow.document.write("Gerando PDF... Por favor, aguarde.");
+        pdfWindow.document.write("<html style='background:#333;'><body style='display:flex;justify-content:center;align-items:center;height:100vh;color:white;font-family:sans-serif;'>Gerando PDF... Por favor, aguarde.</body></html>");
       }
 
       html2pdf().from(element).set(opt).toPdf().get('pdf').then((pdf) => {
@@ -253,7 +253,16 @@ export default function ConsultaCPFPage() {
         const blobURL = URL.createObjectURL(blob);
         
         if (pdfWindow) {
-          pdfWindow.location.href = blobURL;
+          pdfWindow.document.open();
+          pdfWindow.document.write(`
+            <html>
+              <head><title>${opt.filename}</title></head>
+              <body style="margin:0; padding:0; overflow:hidden; background-color: #333;">
+                <iframe src="${blobURL}" width="100%" height="100%" style="border:none; width: 100vw; height: 100vh;"></iframe>
+              </body>
+            </html>
+          `);
+          pdfWindow.document.close();
         } else {
           // Fallback se o navegador bloqueou o popup: força o download direto
           const a = document.createElement('a');
@@ -262,6 +271,11 @@ export default function ConsultaCPFPage() {
           a.download = opt.filename;
           a.click();
         }
+      }).catch(err => {
+        console.error("Erro interno do html2pdf:", err);
+        if (pdfWindow) pdfWindow.close();
+        alert("Falha na geração. Iniciando impressão padrão.");
+        window.print();
       });
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
