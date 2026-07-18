@@ -692,16 +692,20 @@ function SimuladorPageContent() {
       const extractedCodeMatch = selectedLoan.banco.match(/^(\d{3})/);
       const extractedCode = extractedCodeMatch ? extractedCodeMatch[1] : null;
 
-      let foundInssBank = inssBanks.find(b => extractedCode && b.value === extractedCode);
-      if (!foundInssBank) {
-        foundInssBank = inssBanks.find(b => {
-          const bankLabelNameOnly = b.label.includes('-') ? b.label.substring(b.label.indexOf('-') + 1) : b.label;
-          const bn = norm(bankLabelNameOnly);
-          return bn.includes(bankNameToSearch) || bankNameToSearch.includes(bn);
-        });
+      const bankNameUpper = String(selectedLoan.banco || "").toUpperCase();
+      if (extractedCode === "329" || bankNameUpper.includes("FINANTO") || bankNameUpper.includes("HAPPI") || bankNameUpper.includes("ICRED")) {
+        matchedBank = "329";
+      } else {
+        let foundInssBank = inssBanks.find(b => extractedCode && b.value === extractedCode);
+        if (!foundInssBank) {
+          foundInssBank = inssBanks.find(b => {
+            const bankLabelNameOnly = b.label.includes('-') ? b.label.substring(b.label.indexOf('-') + 1) : b.label;
+            const bn = norm(bankLabelNameOnly);
+            return bn.includes(bankNameToSearch) || bankNameToSearch.includes(bn);
+          });
+        }
+        if (foundInssBank) matchedBank = foundInssBank.value;
       }
-
-      if (foundInssBank) matchedBank = foundInssBank.value;
 
       // Find target index
       let targetIndex = newContracts.findIndex(c => !c.banco && !c.parcela);
@@ -811,10 +815,14 @@ function SimuladorPageContent() {
       if (targetIndex !== -1) {
         let matchedBank = "";
         const paddedCode = (emp.codigo || "").padStart(3, "0");
-        const foundInssBank = inssBanks.find(b => b.value === paddedCode);
-        if (foundInssBank) {
-          matchedBank = foundInssBank.value;
+        const bankNameUpper = String(emp.banco || "").toUpperCase();
+        if (paddedCode === "329" || bankNameUpper.includes("FINANTO") || bankNameUpper.includes("HAPPI") || bankNameUpper.includes("ICRED")) {
+          matchedBank = "329";
         } else {
+          const foundInssBank = inssBanks.find(b => b.value === paddedCode);
+          if (foundInssBank) {
+            matchedBank = foundInssBank.value;
+          } else {
           const bClean = norm(emp.banco || "");
           const heuristics = ["C6", "PAN", "DAYCOVAL", "ITA", "BRADESCO", "MERCANTIL", "SAFRA", "BMG", "OLE", "OLÉ", "SANTANDER", "FACTA", "AGIBANK"];
           let bankNameToSearch = bClean;

@@ -19,6 +19,7 @@ export default function Header() {
   const [unread, setUnread] = useState(false);
   const [showAnnPopover, setShowAnnPopover] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isEditingMeta, setIsEditingMeta] = useState(false);
 
   useEffect(() => {
     const loadUser = () => {
@@ -240,12 +241,27 @@ export default function Header() {
                   {`R$ ${stats.progresso.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
                 </span>
                 <span className="text-slate-400">/</span>
-                <input 
-                  type="number" 
-                  value={stats.target}
-                  onChange={(e) => updateMetaValue(e.target.value)}
-                  className="bg-transparent w-20 text-blue-600 outline-none border-b border-transparent hover:border-blue-300 focus:border-blue-500 transition-all text-center font-black"
-                />
+                {isEditingMeta ? (
+                  <input 
+                    type="number" 
+                    value={stats.target}
+                    autoFocus
+                    onBlur={() => setIsEditingMeta(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') setIsEditingMeta(false);
+                    }}
+                    onChange={(e) => updateMetaValue(e.target.value)}
+                    className="bg-transparent w-20 text-blue-600 outline-none border-b border-blue-500 transition-all text-center font-black"
+                  />
+                ) : (
+                  <span 
+                    onClick={() => setIsEditingMeta(true)}
+                    className="text-blue-600 cursor-pointer hover:underline font-black"
+                    title="Clique para editar a meta"
+                  >
+                    {`R$ ${stats.target.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+                  </span>
+                )}
               </div>
             </div>
           );
