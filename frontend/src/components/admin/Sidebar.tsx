@@ -80,13 +80,13 @@ export default function Sidebar() {
 
   return (
     <aside 
-      className="fixed bottom-0 lg:top-0 left-0 flex flex-row lg:flex-col w-full lg:w-64 h-16 lg:h-screen text-white shadow-[0_-10px_40px_rgba(0,0,0,0.3)] lg:shadow-xl z-50 transition-all lg:border-r border-t lg:border-t-0 border-white/10"
+      className="fixed bottom-0 md:top-0 left-0 flex flex-row md:flex-col w-full md:w-64 h-16 md:h-screen text-white shadow-[0_-10px_40px_rgba(0,0,0,0.3)] md:shadow-xl z-50 transition-all md:border-r border-t md:border-t-0 border-white/10"
       style={{ 
          backgroundColor: user.sidebar_color || '#0f172a'
       }}
     >
       {/* Header: Centered Avatar + Branding Row */}
-      <div className="hidden lg:flex p-8 pb-6 border-b border-white/5 flex-col items-center">
+      <div className="hidden md:flex p-8 pb-6 border-b border-white/5 flex-col items-center">
         <motion.div 
           className="mb-5 relative"
           animate={{ y: [0, -5, 0] }}
@@ -139,7 +139,7 @@ export default function Sidebar() {
       </div>
 
       {/* Mobile Navigation (Bottom Bar) */}
-      <nav className="flex lg:hidden flex-row w-full h-full justify-around items-center px-2 relative z-20">
+      <nav className="flex md:hidden flex-row w-full h-full justify-around items-center px-2 relative z-20">
         <Link
           href="/simulador"
           className="flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-all duration-300 relative text-white/50 hover:text-white"
@@ -221,7 +221,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Desktop Navigation */}
-      <nav className="hidden lg:flex flex-1 px-4 py-6 space-y-1.5 overflow-y-auto scrollbar-hide relative z-20 flex-col">
+      <nav className="hidden md:flex flex-1 px-4 py-6 space-y-1.5 overflow-y-auto scrollbar-hide relative z-20 flex-col">
         <Link
           href="/simulador"
           className="flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-300 group mb-6 relative overflow-hidden shadow-2xl border-2 cursor-pointer border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
@@ -272,7 +272,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer Actions (Desktop) */}
-      <div className="hidden lg:block p-4 border-t border-white/5 bg-black/30 relative z-20">
+      <div className="hidden md:block p-4 border-t border-white/5 bg-black/30 relative z-20">
 
         <button
           onClick={handleLogout}

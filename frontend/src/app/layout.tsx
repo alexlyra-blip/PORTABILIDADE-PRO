@@ -2,6 +2,14 @@ import type { Metadata } from "next";
 import "./globals.css";
 import DynamicFavicon from "@/components/DynamicFavicon";
 import ThemeDecoration from "@/components/ThemeDecoration";
+import { Viewport } from "next";
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: "Portabilidade PRO | CRM",
