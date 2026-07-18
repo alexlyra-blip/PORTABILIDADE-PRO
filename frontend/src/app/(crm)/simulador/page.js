@@ -15,7 +15,7 @@ const formatBankName = (codigo, banco) => {
   let codeStr = codigo ? String(codigo).replace(/['"]/g, '').trim() : '';
   codeStr = codeStr.replace(/\D/g, '');
   if (codeStr) {
-    codeStr = codeStr.substring(0, 3);
+    codeStr = codeStr.padStart(3, '0').substring(0, 3);
     const bancoStr = String(banco).replace(/['"]/g, '').trim();
     return `${codeStr} - ${bancoStr}`;
   }

@@ -9,7 +9,7 @@ const formatBankName = (codigo, banco) => {
   let codeStr = codigo ? String(codigo).replace(/['"]/g, '').trim() : '';
   codeStr = codeStr.replace(/\D/g, '');
   if (codeStr) {
-    codeStr = codeStr.substring(0, 3);
+    codeStr = codeStr.padStart(3, '0').substring(0, 3);
     const bancoStr = String(banco).replace(/['"]/g, '').trim();
     return `${codeStr} - ${bancoStr}`;
   }
@@ -220,8 +220,35 @@ export default function ConsultaCPFPage() {
     }
   };
 
-  const handleImprimir = () => {
-    window.print();
+  const handleImprimir = async () => {
+    const element = document.getElementById("extrato-print-container");
+    if (!element) return;
+
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename: `extrato-${activeBenefit.cliente?.nome || 'cliente'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          logging: false,
+          windowWidth: 1200
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().from(element).set(opt).toPdf().get('pdf').then((pdf) => {
+        const blob = pdf.output('blob');
+        const blobURL = URL.createObjectURL(blob);
+        window.open(blobURL, '_blank');
+      });
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert("Erro ao gerar PDF. Iniciando a visualização de impressão padrão.");
+      window.print();
+    }
   };
 
   const activeBenefit = (dados && dados.beneficios && dados.beneficios.length > 0)
@@ -435,7 +462,7 @@ export default function ConsultaCPFPage() {
           {dados && (
             <button onClick={handleImprimir} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-xl transition-all font-black uppercase text-xs tracking-wider">
               <Icons.FileText size={18} />
-              <span>Gerar PDF / Imprimir</span>
+              <span>Gerar PDF</span>
             </button>
           )}
         </div>
