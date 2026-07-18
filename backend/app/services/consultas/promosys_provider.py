@@ -39,6 +39,7 @@ def safe_str(value) -> str:
 class PromosysProvider(ConsultaBeneficioProvider):
     _cached_token = None
     _token_expires_at = None
+    _siape_clt_cache = {}
 
     def __init__(self):
         self.usuario = os.getenv("PROMOSYS_USUARIO", "ALXS")
@@ -291,6 +292,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
         }
 
     async def consultar_beneficios(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
+        self.convenio_temp = convenio
         try:
             return await self._do_consultar_beneficios(cpf, force_refresh=False)
         except ValueError as e:
@@ -302,6 +304,31 @@ class PromosysProvider(ConsultaBeneficioProvider):
         token = await self._get_token(force_refresh=force_refresh)
         clean_cpf = ''.join(filter(str.isdigit, cpf))
         
+        # Implementação para SIAPE e CLT
+        if getattr(self, "convenio_temp", "") == "SIAPE" or getattr(self, "convenio_temp", "") == "CLT":
+            endpoint = "/consultaOfflineSiape.php" if getattr(self, "convenio_temp", "") == "SIAPE" else "/consultaOfflineClt.php"
+            key = "cpf" if endpoint == "/consultaOfflineSiape.php" else "cpf" # ambos usam minúsculo como testado
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}{endpoint}",
+                    data={"token": token, key: clean_cpf},
+                    timeout=60.0
+                )
+            data = response.json()
+            if data.get("Code") == "401" or data.get("Code") == "202":
+                raise ValueError(f"Token expirado ou inválido: {data}")
+            if data.get("Code") != "000":
+                raise ValueError(f"Erro ao consultar {getattr(self, 'convenio_temp', '')} na Promosys: {data.get('Msg') or data}")
+                
+            consultas = data.get("Consulta", [])
+            if not consultas:
+                raise ValueError(f"Nenhum dado encontrado para este CPF no convênio {getattr(self, 'convenio_temp', '')}.")
+                
+            PromosysProvider._siape_clt_cache[clean_cpf] = consultas[0]
+            pseudo_nb = f"{getattr(self, 'convenio_temp', '')}-{clean_cpf}"
+            return {"beneficios": [pseudo_nb]}
+            
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/beneficios.php",
@@ -418,6 +445,14 @@ class PromosysProvider(ConsultaBeneficioProvider):
             raise e
 
     async def _do_consultar_por_beneficio(self, beneficio: str, force_refresh: bool) -> Dict[str, Any]:
+        if beneficio.startswith("SIAPE-") or beneficio.startswith("CLT-"):
+            # Recuperar cache para os pseudos NBs de SIAPE e CLT
+            cpf = beneficio.split("-", 1)[1]
+            if cpf not in PromosysProvider._siape_clt_cache:
+                raise ValueError(f"Cache não encontrado para {beneficio}.")
+            raw = PromosysProvider._siape_clt_cache[cpf]
+            return await self._normalize_response(raw, cpf)
+            
         token = await self._get_token(force_refresh=force_refresh)
         
         async with httpx.AsyncClient() as client:

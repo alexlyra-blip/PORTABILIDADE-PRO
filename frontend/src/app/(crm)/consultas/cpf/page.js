@@ -225,7 +225,10 @@ export default function ConsultaCPFPage() {
     if (!element) return;
 
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
+      // Garantir compatibilidade de módulos
+      const html2pdfModule = await import("html2pdf.js");
+      const html2pdf = html2pdfModule.default || html2pdfModule;
+      
       const opt = {
         margin: [8, 8, 8, 8],
         filename: `extrato-${activeBenefit.cliente?.nome || 'cliente'}.pdf`,
@@ -239,10 +242,26 @@ export default function ConsultaCPFPage() {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
+      // Tenta abrir numa nova aba, bypassando o bloqueio caso falhe
+      const pdfWindow = window.open("", "_blank");
+      if (pdfWindow) {
+        pdfWindow.document.write("Gerando PDF... Por favor, aguarde.");
+      }
+
       html2pdf().from(element).set(opt).toPdf().get('pdf').then((pdf) => {
         const blob = pdf.output('blob');
         const blobURL = URL.createObjectURL(blob);
-        window.open(blobURL, '_blank');
+        
+        if (pdfWindow) {
+          pdfWindow.location.href = blobURL;
+        } else {
+          // Fallback se o navegador bloqueou o popup: força o download direto
+          const a = document.createElement('a');
+          a.href = blobURL;
+          a.target = '_blank';
+          a.download = opt.filename;
+          a.click();
+        }
       });
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
