@@ -838,6 +838,7 @@ function SimuladorPageContent() {
             return bn.includes(bankNameToSearch) || bankNameToSearch.includes(bn);
           });
           if (foundByName) matchedBank = foundByName.value;
+          }
         }
 
         newContracts[targetIndex] = {
