@@ -13,6 +13,8 @@ class ConsultaCliente(BaseModel):
     banco_pagador: str = ""
     endereco: Optional[str] = ""
     data_nascimento: Optional[str] = ""
+    filiacao: Optional[str] = ""
+    coeficiente_utilizado: Optional[float] = 0.02270
 
 class ConsultaMargem(BaseModel):
     salario: float = 0.0
@@ -20,6 +22,7 @@ class ConsultaMargem(BaseModel):
     total_comprometido: float = 0.0
     margem_livre: float = 0.0
     valor_liberado_margem: float = 0.0
+    coeficiente_utilizado: Optional[float] = 0.02270
     margem_cartao: float = 0.0
     possui_cartao: bool = False
     cartao_utilizado: float = 0.0

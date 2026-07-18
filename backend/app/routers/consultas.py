@@ -23,7 +23,7 @@ from app.schemas.consultas import (
 from app.services.consultas.promosys_provider import PromosysProvider
 from app.services.consultas.multicorban_provider import MultiCorbanProvider
 from app.utils.config_helper import get_active_provider
-from app.services.margem_service import calcular_valor_liberado_margem
+from app.services.margem_service import calcular_valor_liberado_margem, obter_coeficiente_fator
 
 logger = logging.getLogger("consultas_router")
 
@@ -86,29 +86,36 @@ async def _execute_cpf_query_flow(cpf: str, db: AsyncSession, convenio: str = "I
                 
                 # Para recalcular margens, abrimos uma sessão rápida e a fechamos em seguida
                 async with AsyncSessionLocal() as temp_db:
+                    coef_fator = await obter_coeficiente_fator(temp_db)
                     for b in dados_json.get("beneficios", []):
                         if "margens" in b and b["margens"]:
                             margem_livre = b["margens"].get("margem_livre", 0.0)
                             b["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                            b["margens"]["coeficiente_utilizado"] = coef_fator
                         if "cliente" in b and b["cliente"]:
                             margem_livre = b["cliente"].get("margem_livre", 0.0) or b.get("margens", {}).get("margem_livre", 0.0)
                             b["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                            b["cliente"]["coeficiente_utilizado"] = coef_fator
                     
                     bp = dados_json.get("beneficio_principal")
                     if bp:
                         if "margens" in bp and bp["margens"]:
                             margem_livre = bp["margens"].get("margem_livre", 0.0)
                             bp["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                            bp["margens"]["coeficiente_utilizado"] = coef_fator
                         if "cliente" in bp and bp["cliente"]:
                             margem_livre = bp["cliente"].get("margem_livre", 0.0) or bp.get("margens", {}).get("margem_livre", 0.0)
                             bp["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                            bp["cliente"]["coeficiente_utilizado"] = coef_fator
                             
                     if "margens" in dados_json and dados_json["margens"]:
                         margem_livre = dados_json["margens"].get("margem_livre", 0.0)
                         dados_json["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                        dados_json["margens"]["coeficiente_utilizado"] = coef_fator
                     if "cliente" in dados_json and dados_json["cliente"]:
                         margem_livre = dados_json["cliente"].get("margem_livre", 0.0) or dados_json.get("margens", {}).get("margem_livre", 0.0)
                         dados_json["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                        dados_json["cliente"]["coeficiente_utilizado"] = coef_fator
                 
                 # Filtra telefones nulos
                 for b in dados_json.get("beneficios", []):
@@ -161,30 +168,42 @@ async def _execute_cpf_query_flow(cpf: str, db: AsyncSession, convenio: str = "I
     detailed_beneficios = []
     results = []
     
-    for nb in numeros_beneficios:
-        try:
-            res = await provider.consultar_por_beneficio(nb)
-            if "telefones" in res and isinstance(res["telefones"], list):
-                res["telefones"] = [t for t in res["telefones"] if t]
+    async with AsyncSessionLocal() as temp_db:
+        coef_fator = await obter_coeficiente_fator(temp_db)
+        for nb in numeros_beneficios:
+            try:
+                res = await provider.consultar_por_beneficio(nb)
+                if "telefones" in res and isinstance(res["telefones"], list):
+                    res["telefones"] = [t for t in res["telefones"] if t]
                 
-            results.append((nb, res))
-            
-            detalhe = BeneficioDetalhado(
-                numero=nb,
-                cliente=res["cliente"],
-                margens=res["margens"],
-                beneficio=res["beneficio"],
-                banco_pagador=res["banco_pagador"],
-                emprestimos=res["emprestimos"],
-                cartoes=res["cartoes"],
-                telefones=res.get("telefones", []),
-                resumo=res["resumo"]
-            )
-            detailed_beneficios.append(detalhe)
-        except Exception as erro_beneficio:
-            nb_mascarado = f"***{nb[-4:]}" if len(nb) >= 4 else "***"
-            print(f"[WARNING] Erro ao consultar benefício {nb_mascarado} no provedor {provider_type}: {erro_beneficio}")
-            results.append((nb, None))
+                # Recalcular margens com base no banco e registrar coeficiente
+                if "margens" in res and res["margens"]:
+                    margem_livre = res["margens"].get("margem_livre", 0.0)
+                    res["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                    res["margens"]["coeficiente_utilizado"] = coef_fator
+                if "cliente" in res and res["cliente"]:
+                    margem_livre = res["cliente"].get("margem_livre", 0.0) or res.get("margens", {}).get("margem_livre", 0.0)
+                    res["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                    res["cliente"]["coeficiente_utilizado"] = coef_fator
+                    
+                results.append((nb, res))
+                
+                detalhe = BeneficioDetalhado(
+                    numero=nb,
+                    cliente=res["cliente"],
+                    margens=res["margens"],
+                    beneficio=res["beneficio"],
+                    banco_pagador=res["banco_pagador"],
+                    emprestimos=res["emprestimos"],
+                    cartoes=res["cartoes"],
+                    telefones=res.get("telefones", []),
+                    resumo=res["resumo"]
+                )
+                detailed_beneficios.append(detalhe)
+            except Exception as erro_beneficio:
+                nb_mascarado = f"***{nb[-4:]}" if len(nb) >= 4 else "***"
+                print(f"[WARNING] Erro ao consultar benefício {nb_mascarado} no provedor {provider_type}: {erro_beneficio}")
+                results.append((nb, None))
             
     if not detailed_beneficios:
         raise HTTPException(status_code=404, detail="Não foi possível recuperar dados detalhados para os benefícios.")

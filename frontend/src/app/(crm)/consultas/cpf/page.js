@@ -49,6 +49,46 @@ const UnlockPremiumIcon = ({ className = "w-5 h-5 text-emerald-500", ...props })
   </svg>
 );
 
+const UserIcon = ({ className = "w-4 h-4 text-blue-500", ...props }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const CpfIcon = ({ className = "w-4 h-4 text-emerald-500", ...props }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M7 8h10" />
+    <path d="M7 12h10" />
+    <path d="M7 16h6" />
+  </svg>
+);
+
+const CalendarIcon = ({ className = "w-4 h-4 text-purple-500", ...props }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
+
+const PhoneIcon = ({ className = "w-4 h-4 text-teal-500", ...props }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+);
+
+const FiliaçãoIcon = ({ className = "w-4 h-4 text-indigo-500", ...props }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
 const PremiumBadge = () => (
   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-sm uppercase">
     PREMIUM
@@ -253,7 +293,8 @@ export default function ConsultaCPFPage() {
     const totalComprometido = Number(activeBenefit.margens?.total_comprometido || 0);
     const margemLivreReal = activeBenefit.margens && activeBenefit.margens.margem_livre !== undefined ? Number(activeBenefit.margens.margem_livre) : (margemConsignavel - totalComprometido);
     const showMargem = margemLivreReal < 0 ? 0.00 : margemLivreReal;
-    const valorLiberadoMargem = Number(activeBenefit.margens?.valor_liberado_margem || (showMargem / 0.02270));
+    const coeficienteUtilizado = Number(activeBenefit.cliente?.coeficiente_utilizado || activeBenefit.margens?.coeficiente_utilizado || 0.02270);
+    const valorLiberadoMargem = Number(activeBenefit.margens?.valor_liberado_margem || (showMargem / coeficienteUtilizado));
 
     return {
       salario,
@@ -263,7 +304,8 @@ export default function ConsultaCPFPage() {
       totalComprometido,
       margemLivreReal,
       showMargem,
-      valorLiberadoMargem
+      valorLiberadoMargem,
+      coeficienteUtilizado
     };
   };
 
@@ -543,7 +585,7 @@ export default function ConsultaCPFPage() {
                 <div className="space-y-5 print:space-y-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                      <CrownIcon className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <UserIcon className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome Completo</p>
                         <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.nome}</p>
@@ -551,7 +593,7 @@ export default function ConsultaCPFPage() {
                     </div>
                     
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                      <CrownIcon className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <CpfIcon className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CPF</p>
                         <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.cpf ? maskCPF(activeBenefit.cliente.cpf) : ""}</p>
@@ -559,9 +601,18 @@ export default function ConsultaCPFPage() {
                     </div>
                   </div>
 
+                  {/* Campo Filiação adicionado logo abaixo do nome e do cpf */}
+                  <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
+                    <FiliaçãoIcon className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
+                    <div className="w-full">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Filiação</p>
+                      <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.filiacao || "Não Informada"}</p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                      <CrownIcon className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <CalendarIcon className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data de Nascimento</p>
                         <p className="text-sm font-black text-slate-800 uppercase print:text-xs">
@@ -572,7 +623,7 @@ export default function ConsultaCPFPage() {
                     </div>
 
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                      <CrownIcon className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <PhoneIcon className="w-4 h-4 text-teal-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Telefone / Contato</p>
                         <div className="flex flex-wrap gap-2 mt-1">
@@ -639,19 +690,21 @@ export default function ConsultaCPFPage() {
                 </div>
 
                 <div className="space-y-4 print:space-y-2">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
-                    <div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
+                    <div className="md:col-span-1">
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Número (NB)</p>
                       <p className="text-sm font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
                         {activeBenefit.cliente?.beneficio || activeBenefit.numero}
                       </p>
                     </div>
                     
-                    <div>
+                    <div className="md:col-span-3">
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Espécie</p>
                       <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">{activeBenefit.cliente?.especie || "Não Informada"}</p>
                     </div>
+                  </div>
 
+                  <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
                     <div>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Situação</p>
                       <p className={`text-[10px] font-black uppercase inline-block px-2.5 py-1 rounded-xl mt-0.5 ${
@@ -788,7 +841,7 @@ export default function ConsultaCPFPage() {
                     {formatBRL(marginInfo.valorLiberadoMargem)}
                   </p>
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                    Coeficiente 0,02270
+                    Coeficiente {marginInfo.coeficienteUtilizado.toFixed(5).replace('.', ',')}
                   </span>
                 </div>
               </div>

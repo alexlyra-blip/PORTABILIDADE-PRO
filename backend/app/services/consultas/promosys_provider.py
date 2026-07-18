@@ -232,7 +232,9 @@ class PromosysProvider(ConsultaBeneficioProvider):
                 "valor_liberado_margem": money(margem_livre / 0.02270) if margem_livre > 0 else 0.0,
                 "banco_pagador": safe_str(dados_bancarios.get("NOME_BANCO_PAGTO") or dados_bancarios.get("NOME_BANCO")),
                 "endereco": endereco_completo,
-                "data_nascimento": data_nasc
+                "data_nascimento": data_nasc,
+                "filiacao": safe_str(raw.get("NOME_MAE") or raw.get("MAE") or raw.get("NOME_DA_MAE") or ""),
+                "coeficiente_utilizado": 0.02270
             },
 
             "margens": {
@@ -241,6 +243,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
                 "total_comprometido": money(total_comprometido),
                 "margem_livre": margem_livre,
                 "valor_liberado_margem": money(margem_livre / 0.02270) if margem_livre > 0 else 0.0,
+                "coeficiente_utilizado": 0.02270,
                 "margem_cartao": margem_cartao,
                 "possui_cartao": possui_cartao,
                 "cartao_utilizado": money(cartao_utilizado),
