@@ -330,7 +330,7 @@ export default function ConsultaCPFPage() {
           header, footer, aside, nav, .sidebar, .header, .navbar, .print-hidden, .print\\:hidden {
             display: none !important;
           }
-          main, .main-content, .content-wrapper, .crm-layout, body {
+          main, .main-content, .content-wrapper, .crm-layout, body, div[class*="max-w-"] {
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
@@ -339,19 +339,21 @@ export default function ConsultaCPFPage() {
             color: black !important;
           }
           @page {
-            margin: 0.5cm !important;
+            margin: 0.4cm !important;
           }
           #extrato-print-container {
             width: 100% !important;
             display: flex !important;
             flex-direction: column !important;
-            gap: 6px !important;
+            gap: 8px !important;
           }
-          .grid.grid-cols-1.md\:grid-cols-2 {
+          .print\:grid-cols-2 {
             display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            gap: 12px !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             width: 100% !important;
+          }
+          .print\:gap-4 {
+            gap: 16px !important;
           }
           .grid.grid-cols-1.md\:grid-cols-2 > div {
             width: auto !important;
@@ -567,7 +569,7 @@ export default function ConsultaCPFPage() {
             )}
 
             {/* Grid 1: Dados Pessoais (Cabeçalho Premium) e Dados do Benefício */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-4">
               
               {/* Dados do Cliente - Cabeçalho Premium com Ícone Premium Crown */}
               <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">

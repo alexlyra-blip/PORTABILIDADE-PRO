@@ -262,7 +262,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "banco_pagador": safe_str(dados_bancarios.get("Banco")),
                 "endereco": endereco_completo,
                 "data_nascimento": safe_str(beneficiario.get("DataNascimento")),
-                "filiacao": safe_str(beneficiario.get("NomeMae") or beneficiario.get("Nome_Mae") or beneficiario.get("Mae") or beneficiario.get("Filiacao") or ""),
+                "filiacao": safe_str(beneficiario.get("NomeMae") or beneficiario.get("Nome_Mae") or beneficiario.get("Mae") or beneficiario.get("NomeDaMae") or beneficiario.get("Nome_Da_Mae") or beneficiario.get("Filiacao") or ""),
                 "coeficiente_utilizado": 0.02270
             },
             "margens": {

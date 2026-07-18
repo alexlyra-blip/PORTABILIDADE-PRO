@@ -233,7 +233,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
                 "banco_pagador": safe_str(dados_bancarios.get("NOME_BANCO_PAGTO") or dados_bancarios.get("NOME_BANCO")),
                 "endereco": endereco_completo,
                 "data_nascimento": data_nasc,
-                "filiacao": safe_str(raw.get("NOME_MAE") or raw.get("MAE") or raw.get("NOME_DA_MAE") or ""),
+                "filiacao": safe_str(raw.get("NOME_MAE") or raw.get("MAE") or raw.get("NOMEMAE") or raw.get("NOME_DA_MAE") or raw.get("NOMEDAMAE") or raw.get("MAE_NOME") or raw.get("FILIACAO") or ""),
                 "coeficiente_utilizado": 0.02270
             },
 
