@@ -1,55 +1,162 @@
-from sqlalchemy.engine import make_url # Optional, if needed later
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base
 import os
-
-DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("DATABASE_URI")
-
-if not DATABASE_URL or "simulador_banco-simulador" in DATABASE_URL:
-    print("AVISO: Usando banco de dados Supabase fixo por padrao (Variavel nao encontrada ou apontando para o banco local incorreto).")
-    DATABASE_URL = "postgresql+asyncpg://postgres.dnuftfvuzggwyidghfgk:alexandrelyra2013@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
-
-# Garante que URLs (Supabase ou Postgres interno) usem o driver asyncpg
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-
-# Remove qualquer sslmode (disable, require, prefer) pois asyncpg não aceita via SQLAlchemy
 import re
-DATABASE_URL = re.sub(r'[\?&]sslmode=[^&]+', '', DATABASE_URL)
 
-# Se depois da remoção a URL terminar com '?', remove o '?'
-if DATABASE_URL.endswith('?'):
-    DATABASE_URL = DATABASE_URL[:-1]
-    
-# SUPABASE POOLER FIX: asyncpg + PgBouncer (Transaction Mode) requer prepared_statement_cache_size=0
-if "pooler.supabase.com" in DATABASE_URL or ("supabase" in DATABASE_URL and ("6543" in DATABASE_URL or "5432" in DATABASE_URL)):
-    if "prepared_statement_cache_size=0" not in DATABASE_URL:
-        separator = "&" if "?" in DATABASE_URL else "?"
-        DATABASE_URL += f"{separator}prepared_statement_cache_size=0"
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.pool import NullPool
 
-print(f"[DATABASE] Conectando ao Banco de Dados: {DATABASE_URL.split('@')[-1]}")
+
+# ============================================================
+# CONFIGURAÇÃO DA URL DO BANCO
+# ============================================================
+
+DATABASE_URL = (
+    os.getenv("DATABASE_URL")
+    or os.getenv("DATABASE_URI")
+)
+
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL não está configurada. "
+        "Cadastre a variável no backend do EasyPanel."
+    )
+
+# Impede que o backend utilize acidentalmente o banco local antigo.
+if "simulador_banco-simulador" in DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL está apontando para o banco local antigo."
+    )
+
+# Garante o uso do driver assíncrono asyncpg.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgres://",
+        "postgresql+asyncpg://",
+        1,
+    )
+elif (
+    DATABASE_URL.startswith("postgresql://")
+    and "+asyncpg" not in DATABASE_URL
+):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgresql://",
+        "postgresql+asyncpg://",
+        1,
+    )
+
+# O parâmetro sslmode não é aceito diretamente pelo asyncpg.
+DATABASE_URL = re.sub(
+    r"([?&])sslmode=[^&]*&?",
+    lambda match: "?" if match.group(1) == "?" else "",
+    DATABASE_URL,
+)
+
+DATABASE_URL = DATABASE_URL.rstrip("?&")
+
+parsed_url = make_url(DATABASE_URL)
+
+host = parsed_url.host or ""
+port = parsed_url.port
+
+is_supabase_pooler = (
+    "pooler.supabase.com" in host
+)
+
+is_transaction_mode = (
+    is_supabase_pooler
+    and port == 6543
+)
+
+
+# ============================================================
+# TRANSACTION MODE — PORTA 6543
+# ============================================================
+
+if is_transaction_mode:
+    query = dict(parsed_url.query)
+
+    query["prepared_statement_cache_size"] = "0"
+
+    parsed_url = parsed_url.set(
+        query=query
+    )
+
+    DATABASE_URL = parsed_url.render_as_string(
+        hide_password=False
+    )
+
+
+# ============================================================
+# ENGINE SQLALCHEMY
+# ============================================================
+
+engine_options = {
+    "echo": False,
+    "connect_args": {
+        # Desativa o cache nativo de statements do asyncpg.
+        "statement_cache_size": 0,
+    },
+}
+
+if is_transaction_mode:
+    # O Supavisor já faz o gerenciamento das conexões.
+    # O backend não deve manter outro pool permanente.
+    engine_options["poolclass"] = NullPool
+
+    print(
+        "[DATABASE] Supabase Transaction Mode detectado "
+        "(porta 6543 / NullPool)."
+    )
+else:
+    # Configuração temporária e conservadora para Session Mode.
+    # Máximo possível: pool_size + max_overflow = 7 conexões.
+    engine_options.update(
+        {
+            "pool_size": 5,
+            "max_overflow": 2,
+            "pool_timeout": 30,
+            "pool_recycle": 300,
+            "pool_pre_ping": True,
+        }
+    )
+
+    print(
+        "[DATABASE] Session Mode detectado. "
+        "Pool local limitado a 5 + 2 conexões."
+    )
 
 engine = create_async_engine(
-    DATABASE_URL, 
-    echo=False,
-    pool_size=20,
-    max_overflow=10,
-    pool_recycle=300,
-    connect_args={
-        "prepared_statement_cache_size": 0,
-        "statement_cache_size": 0
-    }
+    DATABASE_URL,
+    **engine_options,
 )
-AsyncSessionLocal = sessionmaker(
+
+
+# ============================================================
+# SESSÕES
+# ============================================================
+
+AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,
+    autoflush=False,
+    autocommit=False,
 )
 
 Base = declarative_base()
 
+
 async def get_db():
     async with AsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
