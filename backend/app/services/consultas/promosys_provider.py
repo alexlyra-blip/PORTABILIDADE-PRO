@@ -169,7 +169,8 @@ class PromosysProvider(ConsultaBeneficioProvider):
                     "prazo_restante": prazo_restante,
                     "taxa": safe_float(ct.get("TaxaJuros")),
                     "taxa_ponderada": safe_float(ct.get("TaxaJurosPonderada")),
-                    "situacao": safe_str(ct.get("Situacao"))
+                    "situacao": safe_str(ct.get("Situacao")),
+                    "valor_contrato": money(ct.get("Vl_Emprestimo"))
                 })
             else:
                 cartoes.append({

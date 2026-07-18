@@ -272,14 +272,14 @@ export default function ConsultaCPFPage() {
             flex-direction: column !important;
             gap: 6px !important;
           }
-          .grid.grid-cols-1.md\\:grid-cols-2 {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 6px !important;
+          .grid.grid-cols-1.md\:grid-cols-2 {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 12px !important;
             width: 100% !important;
           }
-          .grid.grid-cols-1.md\\:grid-cols-2 > div {
-            width: 100% !important;
+          .grid.grid-cols-1.md\:grid-cols-2 > div {
+            width: auto !important;
             max-width: 100% !important;
             margin-bottom: 0 !important;
           }
@@ -762,7 +762,7 @@ export default function ConsultaCPFPage() {
                     return (
                       <div key={idx} className="p-5 rounded-2xl border border-slate-150 bg-slate-50/60 hover:bg-slate-50 hover:shadow-md transition-all flex flex-col md:flex-row gap-4 justify-between items-start md:items-center print-no-break">
                         <div className="flex items-center gap-3.5 min-w-0 pr-4 w-full md:w-80 print:w-96">
-                          <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
+                          <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
                             {logoUrl ? (
                               <img 
                                 src={getStaticUrl(logoUrl)} 
@@ -787,6 +787,11 @@ export default function ConsultaCPFPage() {
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor Parcela</p>
                             <p className="text-sm font-black text-slate-800">{formatBRL(emp.parcela)}</p>
                           </div>
+
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor Contrato</p>
+                            <p className="text-sm font-black text-slate-800">{formatBRL(emp.valor_contrato)}</p>
+                          </div>
                           
                           <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo Devedor</p>
@@ -794,13 +799,10 @@ export default function ConsultaCPFPage() {
                           </div>
                           
                           <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Prazo Total</p>
-                            <p className="text-sm font-black text-slate-800">{emp.prazo} <span className="text-slate-400 text-xs">meses</span></p>
-                          </div>
-                          
-                          <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Prazo Restante</p>
-                            <p className="text-sm font-black text-slate-800">{emp.prazo_restante} <span className="text-slate-400 text-xs">meses</span></p>
+                            <p className="text-sm text-slate-800 font-bold">
+                              <span className="text-slate-900 font-black">{emp.prazo_restante}</span> <span className="text-slate-400 font-medium">de {emp.prazo}</span>
+                            </p>
                           </div>
                           
                           <div>
@@ -835,7 +837,7 @@ export default function ConsultaCPFPage() {
                     return (
                       <div key={idx} className="p-5 rounded-2xl border border-slate-150 bg-slate-50/60 hover:bg-slate-50 hover:shadow-md transition-all flex flex-col md:flex-row gap-4 justify-between items-start md:items-center print-no-break">
                         <div className="flex items-center gap-3.5 min-w-0 pr-4 w-full md:w-80 print:w-96">
-                          <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
+                          <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
                             {logoUrl ? (
                               <img 
                                 src={getStaticUrl(logoUrl)} 

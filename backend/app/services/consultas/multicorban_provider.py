@@ -217,7 +217,8 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "parcelas_pagas": pagas,
                 "prazo_restante": restantes,
                 "taxa": safe_float(emp.get("Taxa")),
-                "situacao": "ATIVO"
+                "situacao": "ATIVO",
+                "valor_contrato": safe_float(emp.get("ValorOriginal") or emp.get("ValorEmprestimo") or emp.get("Quitacao") or 0.0)
             })
 
         cartoes = []

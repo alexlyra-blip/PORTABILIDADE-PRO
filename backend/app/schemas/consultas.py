@@ -56,6 +56,7 @@ class ConsultaEmprestimo(BaseModel):
     prazo_restante: int = 0
     taxa: float = 0.0
     situacao: str = ""
+    valor_contrato: float = 0.0
 
 class ConsultaCartao(BaseModel):
     banco: str = ""
