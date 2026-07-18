@@ -1,13 +1,14 @@
 import asyncio
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 import json
 from datetime import datetime, timedelta, timezone
+import logging
 
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.routers.deps import get_current_user, verify_n8n_internal_key
 from app.models.sqlalchemy_models import ConsultaCpfCache
 from app.schemas.consultas import (
@@ -24,203 +25,150 @@ from app.services.consultas.multicorban_provider import MultiCorbanProvider
 from app.utils.config_helper import get_active_provider
 from app.services.margem_service import calcular_valor_liberado_margem
 
+logger = logging.getLogger("consultas_router")
+
 router = APIRouter(prefix="/consultas")
 internal_router = APIRouter(prefix="/internal/consultas")
 
-def get_provider():
-    active = get_active_provider()
-    if active == "multicorban":
-        return MultiCorbanProvider()
-    return PromosysProvider()
+# Cache curto para o saldo da MultiCorban (30 a 60 segundos)
+multicorban_saldo_cache = {
+    "data": None,
+    "expires_at": datetime.min
+}
 
 class CpfRequest(BaseModel):
     cpf: str
     convenio: Optional[str] = "INSS"
 
-async def _execute_promosys_cpf_query(cpf: str, db: AsyncSession, convenio: str = "INSS"):
+class MultiCorbanCpfRequest(BaseModel):
+    cpf: str
+
+class MultiCorbanGeralRequest(BaseModel):
+    cpf_cnpj: str
+
+class MultiCorbanOfflineRequest(BaseModel):
+    beneficio: str
+
+def get_provider_by_type(provider_type: str):
+    if provider_type == "multicorban":
+        return MultiCorbanProvider()
+    return PromosysProvider()
+
+async def _execute_cpf_query_flow(cpf: str, db: AsyncSession, convenio: str = "INSS", provider_type: str = "promosys"):
     clean_cpf = ''.join(filter(str.isdigit, cpf))
     if not clean_cpf:
         raise HTTPException(status_code=400, detail="CPF é obrigatório.")
     
-    # Máscara do CPF para exibição segura nos logs
     masked_cpf = f"{clean_cpf[:3]}******{clean_cpf[-2:]}" if len(clean_cpf) >= 5 else "***"
     
-    # 1. Verifica o cache no banco de dados
+    # 1. Verifica o cache no banco de dados usando a sessão existente
     stmt = select(ConsultaCpfCache).where(ConsultaCpfCache.cpf == clean_cpf)
     result = await db.execute(stmt)
     cache_entry = result.scalar_one_or_none()
     
+    cache_json = None
     if cache_entry:
-        now_utc = datetime.now(timezone.utc)
-        created_at = cache_entry.updated_at or cache_entry.created_at
-        
-        if created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=timezone.utc)
+        cache_json = cache_entry.dados_json
+        cache_updated_at = cache_entry.updated_at or cache_entry.created_at
+        if cache_updated_at.tzinfo is None:
+            cache_updated_at = cache_updated_at.replace(tzinfo=timezone.utc)
             
-        if (now_utc - created_at) <= timedelta(days=30):
+    # Liberamos a sessão do DB imediatamente para evitar segurar a conexão
+    # durante a chamada externa de API
+    await db.close()
+    
+    # 2. Se temos cache válido (<= 30 dias), retornamos ele após recalcular margens
+    if cache_json:
+        now_utc = datetime.now(timezone.utc)
+        if (now_utc - cache_updated_at) <= timedelta(days=30):
             try:
-                dados_json = json.loads(cache_entry.dados_json)
-
-                if not isinstance(dados_json, dict):
-                    raise ValueError(
-                        "Cache de CPF não contém um objeto válido."
-                    )
-
-                beneficios_cache = dados_json.get(
-                    "beneficios",
-                    [],
-                )
-
-                try:
-                    total_cache = int(
-                        dados_json.get(
-                            "total_beneficios",
-                            len(beneficios_cache),
-                        )
-                        or 0
-                    )
-                except (TypeError, ValueError):
-                    total_cache = 0
-
-                cache_multi_valido = (
-                    isinstance(beneficios_cache, list)
-                    and len(beneficios_cache) > 0
-                    and total_cache == len(beneficios_cache)
-                    and bool(
-                        dados_json.get("beneficio_principal")
-                    )
-                )
-
-                if not cache_multi_valido:
-                    raise ValueError(
-                        "Cache multi-benefício incompleto; "
-                        "uma nova consulta será realizada."
-                    )
-
-                # Verifica se o cache está no formato multi-benefícios novo
-                if isinstance(dados_json, dict) and "beneficios" in dados_json and "beneficio_principal" in dados_json:
-                    print(f"[CACHE] Usando cache para o CPF {masked_cpf}")
-                    
-                    # Filtra telefones nulos
+                dados_json = json.loads(cache_json)
+                
+                # Para recalcular margens, abrimos uma sessão rápida e a fechamos em seguida
+                async with AsyncSessionLocal() as temp_db:
                     for b in dados_json.get("beneficios", []):
-                        if "telefones" in b and isinstance(b["telefones"], list):
-                            b["telefones"] = [t for t in b["telefones"] if t]
+                        if "margens" in b and b["margens"]:
+                            margem_livre = b["margens"].get("margem_livre", 0.0)
+                            b["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                        if "cliente" in b and b["cliente"]:
+                            margem_livre = b["cliente"].get("margem_livre", 0.0) or b.get("margens", {}).get("margem_livre", 0.0)
+                            b["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
                     
-                # Recalculate margins with today's daily coefficient
+                    bp = dados_json.get("beneficio_principal")
+                    if bp:
+                        if "margens" in bp and bp["margens"]:
+                            margem_livre = bp["margens"].get("margem_livre", 0.0)
+                            bp["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                        if "cliente" in bp and bp["cliente"]:
+                            margem_livre = bp["cliente"].get("margem_livre", 0.0) or bp.get("margens", {}).get("margem_livre", 0.0)
+                            bp["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                            
+                    if "margens" in dados_json and dados_json["margens"]:
+                        margem_livre = dados_json["margens"].get("margem_livre", 0.0)
+                        dados_json["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                    if "cliente" in dados_json and dados_json["cliente"]:
+                        margem_livre = dados_json["cliente"].get("margem_livre", 0.0) or dados_json.get("margens", {}).get("margem_livre", 0.0)
+                        dados_json["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                
+                # Filtra telefones nulos
                 for b in dados_json.get("beneficios", []):
-                    if "margens" in b and b["margens"]:
-                        margem_livre = b["margens"].get("margem_livre", 0.0)
-                        liberado_aprox = await calcular_valor_liberado_margem(margem_livre, db)
-                        b["margens"]["valor_liberado_margem"] = liberado_aprox
-                    if "cliente" in b and b["cliente"]:
-                        margem_livre = b["cliente"].get("margem_livre", 0.0) or b.get("margens", {}).get("margem_livre", 0.0)
-                        liberado_aprox = await calcular_valor_liberado_margem(margem_livre, db)
-                        b["cliente"]["valor_liberado_margem"] = liberado_aprox
-
-                bp = dados_json.get("beneficio_principal")
-                if bp:
-                    if "margens" in bp and bp["margens"]:
-                        margem_livre = bp["margens"].get("margem_livre", 0.0)
-                        liberado_aprox = await calcular_valor_liberado_margem(margem_livre, db)
-                        bp["margens"]["valor_liberado_margem"] = liberado_aprox
-                    if "cliente" in bp and bp["cliente"]:
-                        margem_livre = bp["cliente"].get("margem_livre", 0.0) or bp.get("margens", {}).get("margem_livre", 0.0)
-                        liberado_aprox = await calcular_valor_liberado_margem(margem_livre, db)
-                        bp["cliente"]["valor_liberado_margem"] = liberado_aprox
-                        
-                # Root-level keys (since ConsultaCpfMultiResponse inherits from first_res)
-                if "margens" in dados_json and dados_json["margens"]:
-                    margem_livre = dados_json["margens"].get("margem_livre", 0.0)
-                    liberado_aprox = await calcular_valor_liberado_margem(margem_livre, db)
-                    dados_json["margens"]["valor_liberado_margem"] = liberado_aprox
-                if "cliente" in dados_json and dados_json["cliente"]:
-                    margem_livre = dados_json["cliente"].get("margem_livre", 0.0) or dados_json.get("margens", {}).get("margem_livre", 0.0)
-                    liberado_aprox = await calcular_valor_liberado_margem(margem_livre, db)
-                    dados_json["cliente"]["valor_liberado_margem"] = liberado_aprox
-
+                    if "telefones" in b and isinstance(b["telefones"], list):
+                        b["telefones"] = [t for t in b["telefones"] if t]
                 if bp and "telefones" in bp and isinstance(bp["telefones"], list):
                     bp["telefones"] = [t for t in bp["telefones"] if t]
                     
+                print(f"[CACHE] Usando cache para o CPF {masked_cpf}")
                 return ConsultaCpfMultiResponse(**dados_json)
             except Exception as cache_err:
-                print(f"[WARNING] Erro ao ler cache ou cache no formato antigo para CPF {masked_cpf}: {cache_err}")
-        else:
-            print(f"[INFO] Cache expirado para o CPF {masked_cpf}. Buscando na Promosys...")
+                print(f"[WARNING] Erro ao carregar cache para o CPF {masked_cpf}: {cache_err}")
+                
+    # 3. Consulta externa via Provedor Ativo
+    provider = get_provider_by_type(provider_type)
     
-    provider = get_provider()
-    
-    # 2. Busca lista de benefícios
     try:
         beneficios_info = await provider.consultar_beneficios(clean_cpf, convenio=convenio)
     except ValueError as e:
         err_msg = str(e)
         if "token" in err_msg.lower() or "autentica" in err_msg.lower() or "credencia" in err_msg.lower():
-            raise HTTPException(status_code=401, detail="Falha de autenticação na Promosys.")
+            raise HTTPException(status_code=401, detail=f"Falha de autenticação no provedor {provider_type}.")
         if "nenhum benefício encontrado" in err_msg.lower() or "não encontrado" in err_msg.lower():
             raise HTTPException(status_code=404, detail="Nenhum benefício encontrado para este CPF.")
-        raise HTTPException(status_code=502, detail=f"Erro na Promosys ao listar benefícios: {err_msg}")
+        raise HTTPException(status_code=502, detail=f"Erro no provedor {provider_type} ao listar benefícios: {err_msg}")
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Erro de comunicação com a Promosys: {str(e)}")
+        raise HTTPException(status_code=502, detail=f"Erro de comunicação com o provedor {provider_type}: {str(e)}")
         
-    beneficios_list = beneficios_info.get(
-        "beneficios",
-        [],
-    )
-
+    beneficios_list = beneficios_info.get("beneficios", [])
     if not beneficios_list:
-        raise HTTPException(
-            status_code=404,
-            detail="Nenhum benefício encontrado para este CPF.",
-        )
-
+        raise HTTPException(status_code=404, detail="Nenhum benefício encontrado para este CPF.")
+        
     numeros_beneficios = []
     numeros_vistos = set()
-
     for item in beneficios_list:
-        numero = "".join(
-            filter(str.isdigit, str(item))
-        )
-
+        numero = "".join(filter(str.isdigit, str(item)))
         if not numero:
             continue
-
         if numero in numeros_vistos:
             continue
-
         numeros_vistos.add(numero)
         numeros_beneficios.append(numero)
-
+        
     if not numeros_beneficios:
         raise HTTPException(
             status_code=502,
-            detail=(
-                "A Promosys retornou benefícios, mas os números "
-                "dos NBs não puderam ser identificados."
-            ),
+            detail=f"O provedor {provider_type} retornou benefícios, mas os números dos NBs não puderam ser identificados."
         )
-
-    # Consulta cada benefício sequencialmente.
-    # Isso evita que chamadas simultâneas façam a Promosys
-    # retornar somente um dos benefícios.
+        
     detailed_beneficios = []
     results = []
-
+    
     for nb in numeros_beneficios:
         try:
             res = await provider.consultar_por_beneficio(nb)
-
-            if (
-                "telefones" in res
-                and isinstance(res["telefones"], list)
-            ):
-                res["telefones"] = [
-                    telefone
-                    for telefone in res["telefones"]
-                    if telefone
-                ]
-
+            if "telefones" in res and isinstance(res["telefones"], list):
+                res["telefones"] = [t for t in res["telefones"] if t]
+                
             results.append((nb, res))
-
+            
             detalhe = BeneficioDetalhado(
                 numero=nb,
                 cliente=res["cliente"],
@@ -230,35 +178,17 @@ async def _execute_promosys_cpf_query(cpf: str, db: AsyncSession, convenio: str 
                 emprestimos=res["emprestimos"],
                 cartoes=res["cartoes"],
                 telefones=res.get("telefones", []),
-                resumo=res["resumo"],
+                resumo=res["resumo"]
             )
-
             detailed_beneficios.append(detalhe)
-
         except Exception as erro_beneficio:
-            nb_mascarado = (
-                f"***{nb[-4:]}"
-                if len(nb) >= 4
-                else "***"
-            )
-
-            print(
-                "[WARNING] Erro ao consultar benefício "
-                f"{nb_mascarado}: {erro_beneficio}"
-            )
-
+            nb_mascarado = f"***{nb[-4:]}" if len(nb) >= 4 else "***"
+            print(f"[WARNING] Erro ao consultar benefício {nb_mascarado} no provedor {provider_type}: {erro_beneficio}")
             results.append((nb, None))
-
+            
     if not detailed_beneficios:
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                "Não foi possível recuperar dados detalhados "
-                "para os benefícios."
-            ),
-        )
-
-    # 4. Define beneficio principal (primeiro benefício)
+        raise HTTPException(status_code=404, detail="Não foi possível recuperar dados detalhados para os benefícios.")
+        
     first_res = next((res for nb, res in results if res is not None), None)
     if not first_res:
         raise HTTPException(status_code=404, detail="Não foi possível recuperar dados detalhados para os benefícios.")
@@ -274,39 +204,66 @@ async def _execute_promosys_cpf_query(cpf: str, db: AsyncSession, convenio: str 
         **first_res
     )
     
-    # 5. Salva no cache
+    # 4. Salva no cache abrindo uma nova conexão rápida
     resultado_dict = multi_response.model_dump()
     dados_str = json.dumps(resultado_dict)
     
-    if cache_entry:
-        cache_entry.dados_json = dados_str
-        cache_entry.updated_at = func.now()
-    else:
-        nova_consulta = ConsultaCpfCache(cpf=clean_cpf, dados_json=dados_str)
-        db.add(nova_consulta)
+    try:
+        async with AsyncSessionLocal() as write_db:
+            stmt = select(ConsultaCpfCache).where(ConsultaCpfCache.cpf == clean_cpf)
+            res_cache = await write_db.execute(stmt)
+            existing_cache = res_cache.scalar_one_or_none()
+            
+            if existing_cache:
+                existing_cache.dados_json = dados_str
+                existing_cache.updated_at = func.now()
+            else:
+                nova_consulta = ConsultaCpfCache(cpf=clean_cpf, dados_json=dados_str)
+                write_db.add(nova_consulta)
+            await write_db.commit()
+    except Exception as cache_write_err:
+        print(f"[WARNING] Falha ao gravar cache no banco: {cache_write_err}")
         
-    await db.commit()
     return multi_response
 
-@router.post("/promosys/cpf", response_model=ConsultaCpfMultiResponse)
-async def consultar_promosys_cpf(request: CpfRequest, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+# ROTA UNIFICADA CPF
+@router.post("/cpf", response_model=ConsultaCpfMultiResponse)
+async def consultar_cpf_unificado(
+    request: CpfRequest, 
+    db: AsyncSession = Depends(get_db), 
+    current_user = Depends(get_current_user)
+):
+    if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
+    
+    provider_type = get_active_provider()
+    
+    if provider_type == "multicorban":
+        conv_upper = str(request.convenio or "INSS").upper()
+        if conv_upper not in ["INSS", "SIAPE", "GOVERNO", "CLT", "CLT PRIVADO"]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Convênio '{request.convenio}' não é suportado pelo provedor MultiCorban."
+            )
+            
     try:
-        if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
-            raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
-
-        return await _execute_promosys_cpf_query(request.cpf, db, request.convenio)
-        
+        return await _execute_cpf_query_flow(request.cpf, db, request.convenio, provider_type)
     except HTTPException:
         raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        clean_cpf = ''.join(filter(str.isdigit, request.cpf))
-        masked_cpf = f"{clean_cpf[:3]}******{clean_cpf[-2:]}" if len(clean_cpf) >= 5 else "***"
         import traceback
         tb = traceback.format_exc()
-        print(f"[ERROR] Erro inesperado ao consultar Promosys para CPF {masked_cpf}: {str(e)}\n{tb}")
-        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+        logger.error(f"Erro na rota unificada CPF: {str(e)}\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Erro interno de processamento.")
+
+# MANTER ROTAS PROMOSYS PARA COMPATIBILIDADE (Clara/n8n)
+@router.post("/promosys/cpf", response_model=ConsultaCpfMultiResponse)
+async def consultar_promosys_cpf(request: CpfRequest, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+    if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
+    return await _execute_cpf_query_flow(request.cpf, db, request.convenio, "promosys")
 
 @internal_router.post("/promosys/cpf", response_model=ConsultaCpfMultiResponse)
 async def consultar_promosys_cpf_internal(
@@ -314,87 +271,102 @@ async def consultar_promosys_cpf_internal(
     db: AsyncSession = Depends(get_db), 
     api_key: str = Depends(verify_n8n_internal_key)
 ):
-    try:
-        return await _execute_promosys_cpf_query(request.cpf, db, request.convenio)
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        clean_cpf = ''.join(filter(str.isdigit, request.cpf))
-        masked_cpf = f"{clean_cpf[:3]}******{clean_cpf[-2:]}" if len(clean_cpf) >= 5 else "***"
-        print(f"[ERROR] Erro inesperado ao consultar Promosys para CPF {masked_cpf} (interno): {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno ao realizar consulta na Promosys.")
-
+    return await _execute_cpf_query_flow(request.cpf, db, request.convenio, "promosys")
 
 @router.post("/promosys/beneficios", response_model=BeneficiosResponse)
 async def consultar_promosys_beneficios(request: BeneficiosRequest):
     try:
         clean_cpf = ''.join(filter(str.isdigit, request.cpf))
-        if not clean_cpf:
-            raise HTTPException(status_code=400, detail="CPF é obrigatório.")
-            
-        provider = get_provider()
-        try:
-            res = await provider.consultar_beneficios(clean_cpf)
-            return res
-        except ValueError as e:
-            err_msg = str(e)
-            if "token" in err_msg.lower() or "autentica" in err_msg.lower():
-                raise HTTPException(status_code=401, detail="Falha de autenticação na Promosys.")
-            if "nenhum benefício encontrado" in err_msg.lower() or "não encontrado" in err_msg.lower():
-                raise HTTPException(status_code=404, detail="Nenhum benefício encontrado para este CPF.")
-            raise HTTPException(status_code=502, detail=f"Erro na Promosys ao listar benefícios: {err_msg}")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[ERROR] Erro inesperado em /promosys/beneficios: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno ao consultar benefícios.")
-
+        provider = PromosysProvider()
+        res = await provider.consultar_beneficios(clean_cpf)
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/promosys/beneficio", response_model=ConsultaResponse)
 async def consultar_promosys_beneficio(request: BeneficioRequest):
     try:
-        if not request.beneficio or not request.beneficio.strip():
-            raise HTTPException(status_code=400, detail="Número do benefício é obrigatório.")
-            
-        provider = get_provider()
-        try:
-            res = await provider.consultar_por_beneficio(request.beneficio.strip())
-            if "telefones" in res and isinstance(res["telefones"], list):
-                res["telefones"] = [t for t in res["telefones"] if t]
-            return ConsultaResponse(**res)
-        except ValueError as e:
-            err_msg = str(e)
-            if "token" in err_msg.lower() or "autentica" in err_msg.lower():
-                raise HTTPException(status_code=401, detail="Falha de autenticação na Promosys.")
-            if "nenhum dado retornado" in err_msg.lower() or "não encontrado" in err_msg.lower():
-                raise HTTPException(status_code=404, detail=f"Benefício {request.beneficio} não encontrado.")
-            raise HTTPException(status_code=502, detail=f"Erro na Promosys ao consultar benefício: {err_msg}")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[ERROR] Erro inesperado em /promosys/beneficio para NB {request.beneficio}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno ao consultar benefício.")
-
+        provider = PromosysProvider()
+        res = await provider.consultar_por_beneficio(request.beneficio.strip())
+        return ConsultaResponse(**res)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 @router.post("/promosys/creditos", response_model=CreditosResponse)
 async def consultar_promosys_creditos():
     try:
-        provider = get_provider()
-        try:
-            res = await provider.consultar_creditos()
-            return res
-        except ValueError as e:
-            err_msg = str(e)
-            if "token" in err_msg.lower() or "autentica" in err_msg.lower():
-                raise HTTPException(status_code=401, detail="Falha de autenticação na Promosys.")
-            raise HTTPException(status_code=502, detail=f"Erro na Promosys ao consultar créditos: {err_msg}")
-            
-    except HTTPException:
-        raise
+        provider = PromosysProvider()
+        res = await provider.consultar_creditos()
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+# ROTAS ESPECÍFICAS MULTICORBAN
+@router.post("/multicorban/cpf", response_model=ConsultaResponse)
+async def consultar_multicorban_cpf(request: MultiCorbanCpfRequest, current_user = Depends(get_current_user)):
+    if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
+    provider = MultiCorbanProvider()
+    try:
+        return await provider.consultar_por_cpf(request.cpf, convenio="INSS")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/multicorban/siape", response_model=ConsultaResponse)
+async def consultar_multicorban_siape(request: MultiCorbanCpfRequest, current_user = Depends(get_current_user)):
+    if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
+    provider = MultiCorbanProvider()
+    try:
+        return await provider.consultar_por_cpf(request.cpf, convenio="SIAPE")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/multicorban/geral", response_model=ConsultaResponse)
+async def consultar_multicorban_geral(request: MultiCorbanGeralRequest, current_user = Depends(get_current_user)):
+    if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
+    provider = MultiCorbanProvider()
+    try:
+        return await provider.consultar_por_cpf(request.cpf_cnpj, convenio="GOVERNO")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/multicorban/offline", response_model=ConsultaResponse)
+async def consultar_multicorban_offline(request: MultiCorbanOfflineRequest, current_user = Depends(get_current_user)):
+    if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
+    provider = MultiCorbanProvider()
+    try:
+        return await provider.consultar_por_beneficio(request.beneficio)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/multicorban/saldo")
+async def get_multicorban_saldo(current_user = Depends(get_current_user)):
+    global multicorban_saldo_cache
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+        
+    now = datetime.now()
+    if multicorban_saldo_cache["data"] and now < multicorban_saldo_cache["expires_at"]:
+        return multicorban_saldo_cache["data"]
+        
+    provider = MultiCorbanProvider()
+    try:
+        res = await provider.consultar_creditos()
+        normalized = {
+            "success": True,
+            "provider": "multicorban",
+            "creditos_online": res.get("creditos"),
+            "creditos_offline": res.get("creditos_offline"),
+            "geracao_leads": res.get("creditos_geracao_leads"),
+            "saldo_total": res.get("saldo_total"),
+            "raw": res.get("raw", {})
+        }
+        
+        multicorban_saldo_cache["data"] = normalized
+        multicorban_saldo_cache["expires_at"] = now + timedelta(seconds=45) # 45 segundos de cache
+        return normalized
     except Exception as e:
-        print(f"[ERROR] Erro inesperado ao consultar créditos: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno ao consultar créditos.")
+        raise HTTPException(status_code=502, detail=f"Erro ao consultar saldo MultiCorban: {str(e)}")

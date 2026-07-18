@@ -1,9 +1,12 @@
 import os
-import httpx
+import logging
 from typing import Dict, Any, List
 from datetime import datetime
 
 from app.services.consultas.base_provider import ConsultaBeneficioProvider
+from app.services.multicorban_service import MultiCorbanService
+
+logger = logging.getLogger("multicorban_provider")
 
 def safe_float(value) -> float:
     try:
@@ -28,56 +31,57 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
     _cache = {}
 
     def __init__(self):
-        self.token = os.getenv("MULTICORBAN_API_TOKEN", "1a2286296a40abf27929209193a85155")
-        self.base_url = "https://api.bancodatahub.com"
-
-    async def _fetch_all(self, cpf: str, convenio: str = "INSS") -> List[dict]:
-        clean_cpf = ''.join(filter(str.isdigit, cpf))
-        cache_key = f"{clean_cpf}_{convenio}"
-        if cache_key in self._cache:
-            return self._cache[cache_key]
-            
-        endpoint = "/siape" if convenio == "SIAPE" else "/cpf"
-        async with httpx.AsyncClient() as client:
-            headers = {
-                "Authorization": self.token,
-                "Content-Type": "application/json"
-            }
-            payload = {"cpf": clean_cpf}
-            response = await client.post(
-                f"{self.base_url}{endpoint}",
-                headers=headers,
-                json=payload,
-                timeout=30.0
-            )
-            
-            if response.status_code != 200:
-                raise ValueError(f"Erro na API MultiCorban: {response.status_code} - {response.text}")
-                
-            data = response.json()
-            if not isinstance(data, list):
-                raise ValueError(f"Resposta inválida da MultiCorban (esperado lista): {data}")
-                
-            self._cache[cache_key] = data
-            return data
+        self.service = MultiCorbanService()
 
     async def consultar_por_cpf(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
-        data = await self._fetch_all(cpf, convenio)
+        clean_cpf = ''.join(filter(str.isdigit, cpf))
+        
+        if convenio == "SIAPE":
+            data = await self.service.consultar_siape(clean_cpf)
+        elif convenio in ["GOVERNO", "CLT", "CLT PRIVADO"]:
+            data = await self.service.consultar_geral(clean_cpf)
+        else:
+            data = await self.service.consultar_cpf(clean_cpf)
+            
         if not data:
             raise ValueError("Nenhum benefício encontrado para este CPF.")
+            
+        if isinstance(data, dict):
+            data = [data]
+            
+        self._cache[clean_cpf] = data
         return await self._normalize_response(data[0])
 
     async def consultar_beneficios(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
-        data = await self._fetch_all(cpf, convenio)
-        beneficios = [str(item.get("Beneficiario", {}).get("Beneficio", "")) for item in data if item.get("Beneficiario")]
-        beneficios = [nb for nb in beneficios if nb]
+        clean_cpf = ''.join(filter(str.isdigit, cpf))
         
+        if convenio == "SIAPE":
+            data = await self.service.consultar_siape(clean_cpf)
+        elif convenio in ["GOVERNO", "CLT", "CLT PRIVADO"]:
+            data = await self.service.consultar_geral(clean_cpf)
+        else:
+            data = await self.service.consultar_cpf(clean_cpf)
+            
+        if not data:
+            raise ValueError("Nenhum benefício encontrado para este CPF.")
+            
+        if isinstance(data, dict):
+            data = [data]
+            
+        self._cache[clean_cpf] = data
+        
+        beneficios = []
+        for item in data:
+            nb = str(item.get("Beneficiario", {}).get("Beneficio", "") or item.get("Beneficio", ""))
+            if nb:
+                beneficios.append(nb)
+                
         if not beneficios:
             raise ValueError("Nenhum benefício encontrado para este CPF.")
             
         return {
             "success": True,
-            "cpf": cpf,
+            "cpf": clean_cpf,
             "total_beneficios": len(beneficios),
             "beneficios": beneficios
         }
@@ -86,7 +90,8 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         target_item = None
         for cpf, items in list(self._cache.items()):
             for item in items:
-                if str(item.get("Beneficiario", {}).get("Beneficio", "")) == beneficio:
+                nb = str(item.get("Beneficiario", {}).get("Beneficio", "") or item.get("Beneficio", ""))
+                if nb == beneficio:
                     target_item = item
                     break
             if target_item:
@@ -94,55 +99,35 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 
         if not target_item:
             # Query offline directly if not in cache
-            async with httpx.AsyncClient() as client:
-                headers = {
-                    "Authorization": self.token,
-                    "Content-Type": "application/json"
-                }
-                payload = {"beneficio": int(beneficio)}
-                response = await client.post(
-                    f"{self.base_url}/offline",
-                    headers=headers,
-                    json=payload,
-                    timeout=30.0
-                )
-                if response.status_code == 200:
-                    res_data = response.json()
-                    if isinstance(res_data, list) and len(res_data) > 0:
-                        target_item = res_data[0]
-                    elif isinstance(res_data, dict):
-                        target_item = res_data
-                if not target_item:
-                    raise ValueError(f"Benefício {beneficio} não encontrado.")
+            data = await self.service.consultar_offline(beneficio)
+            if isinstance(data, list) and len(data) > 0:
+                target_item = data[0]
+            elif isinstance(data, dict):
+                target_item = data
+                
+        if not target_item:
+            raise ValueError(f"Benefício {beneficio} não encontrado.")
             
         return await self._normalize_response(target_item)
 
     async def consultar_creditos(self) -> Dict[str, Any]:
         try:
-            async with httpx.AsyncClient() as client:
-                headers = {"Authorization": self.token}
-                response = await client.post(
-                    f"{self.base_url}/saldoApi",
-                    headers=headers,
-                    timeout=10.0
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    return {
-                        "success": True,
-                        "creditos": int(data.get("online") or 0),
-                        "creditos_offline": int(data.get("offline") or 0),
-                        "creditos_geracao_leads": int(data.get("onlineflash") or 0)
-                    }
+            data = await self.service.consultar_saldo()
+            # Mapeia para o formato legado para compatibilidade se necessário
+            return {
+                "success": True,
+                "creditos": int(data.get("online") or data.get("saldo") or 0),
+                "creditos_offline": int(data.get("offline") or 0),
+                "creditos_geracao_leads": int(data.get("onlineflash") or data.get("leads") or 0)
+            }
         except Exception as e:
-            print(f"Erro ao consultar saldo MultiCorban: {e}")
+            logger.error(f"Erro ao consultar saldo legando MultiCorban: {e}")
             
-        # Fallback to prevent UI crash if Multicorban doesn't support balance check or fails
         return {
             "success": True,
-            "creditos": 9999,
-            "creditos_offline": 9999,
-            "creditos_geracao_leads": 9999
+            "creditos": 0,
+            "creditos_offline": 0,
+            "creditos_geracao_leads": 0
         }
 
     async def _normalize_response(self, raw: dict) -> Dict[str, Any]:

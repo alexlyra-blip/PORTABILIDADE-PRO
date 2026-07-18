@@ -423,7 +423,7 @@ function SimuladorPageContent() {
     }
     setIsLoadingCpf(true);
     try {
-        const dados = await api.post('/consultas/promosys/cpf', {
+        const dados = await api.post('/consultas/cpf', {
           cpf: formData.cpf.replace(/\D/g, ''),
           convenio: consultaConvenio
         });

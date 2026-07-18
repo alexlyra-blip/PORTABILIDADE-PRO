@@ -65,6 +65,7 @@ export default function ConsultaCPFPage() {
   const [creditos, setCreditos] = useState(null);
   const [activeProvider, setActiveProvider] = useState("promosys");
   const [loadingProvider, setLoadingProvider] = useState(false);
+  const [convenio, setConvenio] = useState("INSS");
 
   const maskCPF = (val) => val.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})/, "$1-$2").replace(/(-\d{2})\d+?$/, "$1");
 
@@ -73,7 +74,6 @@ export default function ConsultaCPFPage() {
     api.get("/admin/sub-logos")
       .then(res => setSubLogos(res || []))
       .catch(err => console.error("Erro ao carregar logos secundários:", err));
-
     // Validar se o usuário atual é Administrador e carregar limite de créditos/config
     try {
       const userStr = localStorage.getItem("user");
@@ -84,17 +84,13 @@ export default function ConsultaCPFPage() {
           
           // Carregar config do provider
           api.get("/admin/cpf-config")
-            .then(res => {
+            .then(async (res) => {
               if (res && res.active_provider) {
                 setActiveProvider(res.active_provider);
+                await fetchBalance(res.active_provider);
               }
             })
             .catch(err => console.error("Erro ao carregar configuração de provedor:", err));
-
-          // Carregar créditos
-          api.post("/consultas/promosys/creditos")
-            .then(res => setCreditos(res))
-            .catch(err => console.error("Erro ao carregar créditos:", err));
         } else if (!user.can_consult_cpf) {
           window.location.href = "/simulador";
         }
@@ -106,14 +102,47 @@ export default function ConsultaCPFPage() {
     }
   }, []);
 
+  const fetchBalance = async (provider) => {
+    setLoadingProvider(true);
+    try {
+      if (provider === "multicorban") {
+        const res = await api.get("/consultas/multicorban/saldo");
+        setCreditos({
+          creditos: res.creditos_online,
+          creditos_offline: res.creditos_offline,
+          creditos_geracao_leads: res.geracao_leads,
+          isMultiCorban: true
+        });
+      } else {
+        const res = await api.post("/consultas/promosys/creditos");
+        setCreditos({
+          ...res,
+          isMultiCorban: false
+        });
+      }
+    } catch (err) {
+      console.error("Erro ao carregar créditos:", err);
+      if (provider === "multicorban") {
+        setCreditos({
+          creditos: null,
+          creditos_offline: null,
+          creditos_geracao_leads: null,
+          isMultiCorban: true
+        });
+      } else {
+        setCreditos(null);
+      }
+    } finally {
+      setLoadingProvider(false);
+    }
+  };
+
   const handleProviderChange = async (provider) => {
     setLoadingProvider(true);
     try {
       await api.post("/admin/cpf-config", { active_provider: provider });
       setActiveProvider(provider);
-      // Recarregar os créditos após mudar o provedor
-      const creds = await api.post("/consultas/promosys/creditos");
-      setCreditos(creds);
+      await fetchBalance(provider);
     } catch (err) {
       console.error(err);
       alert("Erro ao alterar o provedor ativo.");
@@ -131,10 +160,14 @@ export default function ConsultaCPFPage() {
     setLoading(true);
     setDados(null);
     try {
-      const res = await api.post('/consultas/promosys/cpf', { cpf: cpf.replace(/\D/g, '') });
+      const res = await api.post('/consultas/cpf', { 
+        cpf: cpf.replace(/\D/g, ''),
+        convenio: activeProvider === "multicorban" ? convenio : "INSS"
+      });
       if (res && (res.cliente || res.beneficio_principal || (res.beneficios && res.beneficios.length > 0))) {
         setDados(res);
         setActiveBenefitIndex(0);
+        await fetchBalance(activeProvider);
       } else {
         alert("Consulta não retornou dados.");
       }
@@ -401,15 +434,15 @@ export default function ConsultaCPFPage() {
             <div className="flex gap-4 z-10 w-full md:w-auto self-end md:self-auto">
               <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
                 <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Créditos Online</p>
-                <p className="text-lg font-black">{creditos.creditos}</p>
+                <p className="text-lg font-black">{creditos.creditos !== null && creditos.creditos !== undefined ? creditos.creditos : "—"}</p>
               </div>
               <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
                 <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Créditos Offline</p>
-                <p className="text-lg font-black">{creditos.creditos_offline}</p>
+                <p className="text-lg font-black">{creditos.creditos_offline !== null && creditos.creditos_offline !== undefined ? creditos.creditos_offline : "—"}</p>
               </div>
               <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
                 <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Geração Leads</p>
-                <p className="text-lg font-black">{creditos.creditos_geracao_leads}</p>
+                <p className="text-lg font-black">{creditos.creditos_geracao_leads !== null && creditos.creditos_geracao_leads !== undefined ? creditos.creditos_geracao_leads : "—"}</p>
               </div>
             </div>
           </div>
@@ -427,6 +460,21 @@ export default function ConsultaCPFPage() {
               className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-lg"
             />
           </div>
+          {activeProvider === "multicorban" && (
+            <div className="w-full md:w-48 space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Convênio</label>
+              <select
+                value={convenio}
+                onChange={(e) => setConvenio(e.target.value)}
+                className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-sm"
+              >
+                <option value="INSS">INSS</option>
+                <option value="SIAPE">SIAPE</option>
+                <option value="GOVERNO">GOVERNO</option>
+                <option value="CLT PRIVADO">CLT</option>
+              </select>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading || !cpf}
