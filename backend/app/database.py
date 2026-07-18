@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import declarative_base
-from sqlalchemy.pool import NullPool
 
 
 # ============================================================
@@ -97,37 +96,33 @@ if is_transaction_mode:
 
 engine_options = {
     "echo": False,
+
+    # Pool pequeno e controlado para o container permanente do EasyPanel.
+    # Máximo possível: 5 conexões fixas + 2 temporárias = 7.
+    "pool_size": 5,
+    "max_overflow": 2,
+    "pool_timeout": 30,
+
+    # Recicla conexões antigas sem reabrir uma conexão a cada consulta.
+    "pool_recycle": 1800,
+    "pool_pre_ping": True,
+    "pool_use_lifo": True,
+
     "connect_args": {
-        # Desativa o cache nativo de statements do asyncpg.
+        # Necessário para o Transaction Pooler do Supabase.
         "statement_cache_size": 0,
     },
 }
 
 if is_transaction_mode:
-    # O Supavisor já faz o gerenciamento das conexões.
-    # O backend não deve manter outro pool permanente.
-    engine_options["poolclass"] = NullPool
-
     print(
         "[DATABASE] Supabase Transaction Mode detectado "
-        "(porta 6543 / NullPool)."
+        "(porta 6543 / pool local 5 + 2)."
     )
 else:
-    # Configuração temporária e conservadora para Session Mode.
-    # Máximo possível: pool_size + max_overflow = 7 conexões.
-    engine_options.update(
-        {
-            "pool_size": 5,
-            "max_overflow": 2,
-            "pool_timeout": 30,
-            "pool_recycle": 300,
-            "pool_pre_ping": True,
-        }
-    )
-
     print(
-        "[DATABASE] Session Mode detectado. "
-        "Pool local limitado a 5 + 2 conexões."
+        "[DATABASE] Session Mode detectado "
+        "(pool local 5 + 2)."
     )
 
 engine = create_async_engine(
