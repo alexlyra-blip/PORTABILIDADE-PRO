@@ -221,39 +221,208 @@ export default function ConsultaCPFPage() {
   };
 
   const handleImprimir = async () => {
-    const element = document.getElementById("extrato-print-container");
-    if (!element) return;
-
     try {
-      if (!window.html2pdf) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-      const html2pdf = window.html2pdf;
-      
+      // Import html2pdf dynamically from node_modules
+      const html2pdfModule = await import('html2pdf.js');
+      const html2pdf = html2pdfModule.default || html2pdfModule;
+
       const opt = {
-        margin: [8, 8, 8, 8],
+        margin: [10, 10, 10, 10],
         filename: `extrato-${activeBenefit.cliente?.nome || 'cliente'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
           scale: 2, 
           useCORS: true,
-          logging: false,
-          windowWidth: 1200,
-          ignoreElements: (el) => {
-            const tagName = el.tagName ? el.tagName.toLowerCase() : '';
-            return tagName === 'img' || tagName === 'svg';
-          }
+          logging: false
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      html2pdf().from(element).set(opt).toPdf().get('pdf').then(async (pdf) => {
+      const printableElement = document.createElement('div');
+      
+      // Build a clean, styled HTML string for PDF rendering
+      // We avoid complex Tailwind v4 styles, custom colors (oklch), and SVGs to prevent html2canvas crashes.
+      printableElement.innerHTML = `
+        <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 800px; margin: 0 auto; background-color: white; padding: 20px;">
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 20px;">
+            <div>
+              <h1 style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 0; text-transform: uppercase;">Extrato de Consignação</h1>
+              <p style="font-size: 10px; font-weight: 700; color: #2563eb; margin: 3px 0 0 0; text-transform: uppercase; letter-spacing: 1px;">Portabilidade PRO</p>
+            </div>
+            <div style="text-align: right;">
+              <p style="font-size: 8px; font-weight: 700; color: #64748b; margin: 0; text-transform: uppercase;">Data de Emissão</p>
+              <p style="font-size: 11px; font-weight: 700; color: #0f172a; margin: 2px 0 0 0;">${new Date().toLocaleDateString('pt-BR')}</p>
+            </div>
+          </div>
+
+          <!-- Section: Client & Benefit Grid -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <!-- Client Box -->
+            <div style="border: 1px solid #cbd5e1; border-radius: 12px; padding: 15px; background-color: #ffffff;">
+              <h3 style="font-size: 12px; font-weight: 900; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin: 0 0 10px 0; text-transform: uppercase;">Dados do Cliente</h3>
+              <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold; width: 35%;">Nome:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900; text-transform: uppercase;">${activeBenefit.cliente?.nome || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold;">CPF:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900;">${activeBenefit.cliente?.cpf ? maskCPF(activeBenefit.cliente.cpf) : 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Nascimento:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900;">${activeBenefit.cliente?.data_nascimento ? formatDateBR(activeBenefit.cliente.data_nascimento) : 'N/A'}${activeBenefit.cliente?.idade ? ` (${activeBenefit.cliente.idade} anos)` : ''}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Filiação:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900; text-transform: uppercase;">${activeBenefit.cliente?.filiacao || 'Não informada'}</td>
+                </tr>
+                ${activeBenefit.cliente?.endereco ? `
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold; vertical-align: top;">Endereço:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 700; text-transform: uppercase; line-height: 1.2;">${activeBenefit.cliente.endereco}</td>
+                </tr>` : ''}
+              </table>
+            </div>
+
+            <!-- Benefit Box -->
+            <div style="border: 1px solid #cbd5e1; border-radius: 12px; padding: 15px; background-color: #ffffff;">
+              <h3 style="font-size: 12px; font-weight: 900; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin: 0 0 10px 0; text-transform: uppercase;">Dados do Benefício</h3>
+              <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold; width: 35%;">NB:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900;">${activeBenefit.cliente?.beneficio || activeBenefit.numero || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Espécie:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900; text-transform: uppercase;">${activeBenefit.cliente?.especie || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Situação:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900; text-transform: uppercase;">${activeBenefit.beneficio?.situacao || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Concessão:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900;">${activeBenefit.beneficio?.ddb ? formatDateBR(activeBenefit.beneficio.ddb) : 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold;">UF:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900; text-transform: uppercase;">${activeBenefit.beneficio?.uf || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: bold; vertical-align: top;">Pagamento:</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 700; text-transform: uppercase; line-height: 1.2;">
+                    ${formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)} 
+                    ${activeBenefit.banco_pagador?.agencia ? `(Ag: ${activeBenefit.banco_pagador.agencia})` : ''}
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Section: Financial Summary -->
+          <div style="border: 1px solid #cbd5e1; border-radius: 12px; padding: 15px; background-color: #f8fafc; margin-bottom: 25px;">
+            <h3 style="font-size: 12px; font-weight: 900; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin: 0 0 12px 0; text-transform: uppercase;">Resumo Financeiro (Margens)</h3>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; text-align: center;">
+              <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+                <p style="font-size: 8px; font-weight: 700; color: #64748b; margin: 0 0 4px 0; text-transform: uppercase;">Salário Base</p>
+                <p style="font-size: 11px; font-weight: 900; color: #0f172a; margin: 0;">${formatBRL(marginInfo.salario)}</p>
+              </div>
+              <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+                <p style="font-size: 8px; font-weight: 700; color: #64748b; margin: 0 0 4px 0; text-transform: uppercase;">Consignável</p>
+                <p style="font-size: 11px; font-weight: 900; color: #0f172a; margin: 0;">${formatBRL(marginInfo.margemConsignavel)}</p>
+              </div>
+              <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+                <p style="font-size: 8px; font-weight: 700; color: #64748b; margin: 0 0 4px 0; text-transform: uppercase;">Comprometido</p>
+                <p style="font-size: 11px; font-weight: 900; color: #0f172a; margin: 0;">${formatBRL(marginInfo.totalComprometido)}</p>
+              </div>
+              <div style="background-color: ${marginInfo.margemLivreReal < 0 ? '#fef2f2' : '#f0fdf4'}; border: 1px solid ${marginInfo.margemLivreReal < 0 ? '#fee2e2' : '#bbf7d0'}; border-radius: 8px; padding: 8px;">
+                <p style="font-size: 8px; font-weight: 700; color: ${marginInfo.margemLivreReal < 0 ? '#991b1b' : '#166534'}; margin: 0 0 4px 0; text-transform: uppercase;">Margem Livre</p>
+                <p style="font-size: 11px; font-weight: 900; color: ${marginInfo.margemLivreReal < 0 ? '#991b1b' : '#166534'}; margin: 0;">${marginInfo.margemLivreReal < 0 ? 'R$ 0,00' : formatBRL(marginInfo.showMargem)}</p>
+              </div>
+              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px;">
+                <p style="font-size: 8px; font-weight: 700; color: #166534; margin: 0 0 4px 0; text-transform: uppercase;">Liberado Aprox.</p>
+                <p style="font-size: 11px; font-weight: 900; color: #166534; margin: 0;">${formatBRL(marginInfo.valorLiberadoMargem)}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Active Loans -->
+          <div style="margin-bottom: 25px;">
+            <h3 style="font-size: 12px; font-weight: 900; color: #0f172a; border-bottom: 2px solid #ea580c; padding-bottom: 6px; margin: 0 0 10px 0; text-transform: uppercase;">Empréstimos Consignados Ativos (${activeBenefit.emprestimos?.length || 0})</h3>
+            ${activeBenefit.emprestimos && activeBenefit.emprestimos.length > 0 ? `
+              <table style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e2e8f0;">
+                <thead>
+                  <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <th style="padding: 8px 10px; text-align: left; font-weight: 700; color: #475569;">Banco</th>
+                    <th style="padding: 8px 10px; text-align: left; font-weight: 700; color: #475569;">Contrato</th>
+                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Parcela</th>
+                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Valor Contrato</th>
+                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Saldo Devedor</th>
+                    <th style="padding: 8px 10px; text-align: center; font-weight: 700; color: #475569;">Prazo</th>
+                    <th style="padding: 8px 10px; text-align: center; font-weight: 700; color: #475569;">Taxa</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${activeBenefit.emprestimos.map((emp, idx) => `
+                    <tr style="border-bottom: 1px solid #e2e8f0; background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                      <td style="padding: 8px 10px; color: #0f172a; font-weight: 900; text-transform: uppercase;">${formatBankName(emp.codigo, emp.banco)}</td>
+                      <td style="padding: 8px 10px; color: #475569; font-weight: bold;">${emp.contrato || 'N/A'}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 900;">${formatBRL(emp.parcela)}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 700;">${formatBRL(emp.valor_contrato)}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #2563eb; font-weight: 900;">${formatBRL(emp.quitacao)}</td>
+                      <td style="padding: 8px 10px; text-align: center; color: #0f172a; font-weight: 700;">${emp.prazo_restante} de ${emp.prazo}</td>
+                      <td style="padding: 8px 10px; text-align: center; color: #166534; font-weight: 900;">${Number(emp.taxa || 0).toFixed(2)}% a.m.</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : `
+              <div style="padding: 15px; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; font-size: 10px; color: #64748b; font-weight: bold;">
+                Nenhum empréstimo consignado ativo encontrado.
+              </div>
+            `}
+          </div>
+
+          <!-- Section: Active Cards -->
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 12px; font-weight: 900; color: #0f172a; border-bottom: 2px solid #db2777; padding-bottom: 6px; margin: 0 0 10px 0; text-transform: uppercase;">Cartões de Crédito Consignado (RMC / RCC) (${activeBenefit.cartoes?.length || 0})</h3>
+            ${activeBenefit.cartoes && activeBenefit.cartoes.length > 0 ? `
+              <table style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e2e8f0;">
+                <thead>
+                  <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <th style="padding: 8px 10px; text-align: left; font-weight: 700; color: #475569;">Banco</th>
+                    <th style="padding: 8px 10px; text-align: left; font-weight: 700; color: #475569;">Tipo</th>
+                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Parcela Reservada</th>
+                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Limite Saque</th>
+                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Limite Utilizado</th>
+                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Limite Disponível</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${activeBenefit.cartoes.map((cartao, idx) => `
+                    <tr style="border-bottom: 1px solid #e2e8f0; background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                      <td style="padding: 8px 10px; color: #0f172a; font-weight: 900; text-transform: uppercase;">${formatBankName(cartao.codigo, cartao.banco)}</td>
+                      <td style="padding: 8px 10px; color: #db2777; font-weight: 900; text-transform: uppercase;">${cartao.tipo || 'Cartão Consignado'}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 900;">${formatBRL(cartao.parcela_promosys)}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 700;">${formatBRL(cartao.limite_cartao)}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #b91c1c; font-weight: 700;">${formatBRL(cartao.utilizado)}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #166534; font-weight: 900;">${formatBRL(cartao.disponivel)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : `
+              <div style="padding: 15px; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; font-size: 10px; color: #64748b; font-weight: bold;">
+                Nenhum cartão RMC ou RCC ativo encontrado.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+
+      html2pdf().from(printableElement).set(opt).toPdf().get('pdf').then(async (pdf) => {
         const blob = pdf.output('blob');
         const blobURL = URL.createObjectURL(blob);
 
@@ -276,13 +445,11 @@ export default function ConsultaCPFPage() {
         a.click();
       }).catch(err => {
         console.error("Erro interno do html2pdf:", err);
-        alert("Erro ao gerar PDF. Iniciando a visualização de impressão padrão.");
-        window.print();
+        alert("Não foi possível gerar o PDF de forma automatizada por incompatibilidade no seu navegador. Por favor, utilize o botão de salvar/imprimir padrão.");
       });
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      alert("Erro ao gerar PDF. Iniciando a visualização de impressão padrão.");
-      window.print();
+      alert("Não foi possível carregar a biblioteca de PDF. Por favor, tente novamente.");
     }
   };
 

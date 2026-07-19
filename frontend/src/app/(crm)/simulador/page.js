@@ -1175,7 +1175,7 @@ function SimuladorPageContent() {
         <form onSubmit={handleSimular} className="grid grid-cols-1 xl:grid-cols-12 gap-10">
 
           {/* Lado Esquerdo: Dados do Cliente */}
-          <div className="xl:col-span-4 space-y-8">
+          <div className="xl:col-span-5 space-y-8">
 
             {/* INSS PDF Extractor Dropzone */}
             <div className="bg-blue-600 p-1 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
@@ -1453,7 +1453,7 @@ function SimuladorPageContent() {
           </div>
 
           {/* Lado Direito: Dados da Simulação */}
-          <div className="xl:col-span-8 space-y-8">
+          <div className="xl:col-span-7 space-y-8">
             <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100">
                <div className="flex items-center gap-3 mb-8">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">

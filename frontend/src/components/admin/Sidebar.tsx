@@ -232,9 +232,9 @@ export default function Sidebar() {
           }}
         >
           <div className="absolute inset-0 bg-white/10 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-          <span className="transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none"><Icons.Rocket size={32} /></span>
-          <span className="font-black text-base uppercase tracking-[0.2em] pointer-events-none">Acessar Simulador</span>
-          <div className="ml-auto opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all text-base pointer-events-none"><Icons.Sparkles size={20} /></div>
+          <span className="transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none"><Icons.Rocket size={24} /></span>
+          <span className="font-black text-[11px] uppercase tracking-[0.2em] pointer-events-none">Acessar Simulador</span>
+          <div className="ml-auto opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all text-xs pointer-events-none"><Icons.Sparkles size={16} /></div>
         </Link>
 
         {menuItems.map((item) => {
