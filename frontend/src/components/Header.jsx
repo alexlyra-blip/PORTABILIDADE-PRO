@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/utils/api';
+import { getActiveAnnouncement } from '@/utils/globalDataCache';
 
 export default function Header() {
   const [user, setUser] = useState({ name: 'Usuário', role: 'corretor', avatar_url: '' });
@@ -45,7 +46,7 @@ export default function Header() {
 
       Promise.allSettled([
         api.get('/contracts'),
-        api.get('/admin/announcements/active')
+        getActiveAnnouncement()
       ]).then(([contractsRes, annRes]) => {
         if (contractsRes.status === 'fulfilled') {
           let parsed = Array.isArray(contractsRes.value) ? contractsRes.value : contractsRes.value?.data;

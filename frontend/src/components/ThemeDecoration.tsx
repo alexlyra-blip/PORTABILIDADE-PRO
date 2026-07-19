@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/utils/api";
+import { getActiveTheme, invalidateThemeCache } from "@/utils/globalDataCache";
 
 export default function ThemeDecoration() {
   const [theme, setTheme] = useState(() => {
@@ -18,10 +18,13 @@ export default function ThemeDecoration() {
       return;
     }
     try {
-      const res = await api.get("/admin/active-theme");
+      const res = await getActiveTheme();
       if (res && res.theme) {
         setTheme(res.theme);
         localStorage.setItem("active_theme", res.theme);
+      } else {
+        setTheme("default");
+        localStorage.setItem("active_theme", "default");
       }
     } catch (err) {
       console.error("Erro ao buscar tema ativo:", err);
@@ -31,18 +34,23 @@ export default function ThemeDecoration() {
   useEffect(() => {
     fetchTheme();
 
-    const handleUpdate = () => {
+    const handleThemeUpdate = () => {
+      invalidateThemeCache();
       fetchTheme();
     };
 
-    window.addEventListener("storage", handleUpdate);
-    window.addEventListener("theme-updated", handleUpdate);
-    window.addEventListener("user-updated", handleUpdate);
+    const handleUserUpdate = () => {
+      fetchTheme();
+    };
+
+    window.addEventListener("storage", handleThemeUpdate);
+    window.addEventListener("theme-updated", handleThemeUpdate);
+    window.addEventListener("user-updated", handleUserUpdate);
 
     return () => {
-      window.removeEventListener("storage", handleUpdate);
-      window.removeEventListener("theme-updated", handleUpdate);
-      window.removeEventListener("user-updated", handleUpdate);
+      window.removeEventListener("storage", handleThemeUpdate);
+      window.removeEventListener("theme-updated", handleThemeUpdate);
+      window.removeEventListener("user-updated", handleUserUpdate);
     };
   }, []);
 

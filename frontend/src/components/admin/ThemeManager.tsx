@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/utils/api";
+import { getActiveTheme, invalidateThemeCache, primeActiveTheme } from "@/utils/globalDataCache";
 
 export default function ThemeManager() {
   const [activeTheme, setActiveTheme] = useState("default");
@@ -10,7 +11,7 @@ export default function ThemeManager() {
 
   const fetchTheme = async () => {
     try {
-      const res = await api.get("/admin/active-theme");
+      const res = await getActiveTheme();
       if (res && res.theme) {
         setActiveTheme(res.theme);
       }
@@ -30,8 +31,12 @@ export default function ThemeManager() {
       const res = await api.post("/admin/active-theme", { theme });
       if (res && res.theme) {
         setActiveTheme(res.theme);
+
+        // Invalida o cache do tema, atualiza localStorage e popula o cache com o novo valor
+        invalidateThemeCache();
+        primeActiveTheme(res);
         localStorage.setItem("active_theme", res.theme);
-        
+
         // Dispara evento para atualizar imediatamente na página atual e outras abas
         window.dispatchEvent(new Event("storage"));
         window.dispatchEvent(new Event("theme-updated"));

@@ -69,7 +69,7 @@ const AdminLayout = ({ children }) => {
         </div>        {/* Navigation - Premium Buttons */}
         <nav className="flex-1 p-4 space-y-3 overflow-y-auto scrollbar-hide">
           {/* Botões de Destaque (Versão Premium) */}
-          <Link href="/simulador" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+          <Link href="/simulador" prefetch={false} className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
             backgroundImage: `linear-gradient(45deg, #3b82f6 0%, #172554 100%)`,
             boxShadow: `0 8px 12px -4px rgba(59,130,246,0.4)`
           }}>
@@ -77,7 +77,7 @@ const AdminLayout = ({ children }) => {
             <span className="font-black text-[10px] text-slate-800 dark:text-white uppercase tracking-[0.1em]">Simulador</span>
           </Link>
 
-          <Link href="/admin" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+          <Link href="/admin" prefetch={false} className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
             backgroundImage: `linear-gradient(45deg, #2563eb 0%, #1e3a8a 100%)`,
             boxShadow: `0 8px 12px -4px rgba(37,99,235,0.4)`
           }}>
@@ -87,35 +87,35 @@ const AdminLayout = ({ children }) => {
 
           <p className="px-3 text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-2 italic">Configurações</p>
 
-          <Link href="/admin/banks" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+          <Link href="/admin/banks" prefetch={false} className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
             backgroundImage: `linear-gradient(45deg, #10b981 0%, #064e3b 100%)`
           }}>
             <span className="group-hover:scale-125 transition-transform"><Icons.Landmark size={20} /></span>
             <span className="font-bold text-[9px] tracking-tight uppercase text-slate-800 dark:text-white">BANCOS</span>
           </Link>
 
-          <Link href="/admin/rules" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+          <Link href="/admin/rules" prefetch={false} className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
             backgroundImage: `linear-gradient(45deg, #22d3ee 0%, #0c4a6e 100%)`
           }}>
             <span className="group-hover:scale-125 transition-transform"><Icons.Scale size={20} /></span>
             <span className="font-bold text-[9px] tracking-tight uppercase text-slate-800 dark:text-white">REGRAS</span>
           </Link>
 
-          <Link href="/admin/tables" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+          <Link href="/admin/tables" prefetch={false} className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
             backgroundImage: `linear-gradient(45deg, #8b5cf6 0%, #4c1d95 100%)`
           }}>
             <span className="group-hover:scale-125 transition-transform"><Icons.ClipboardList size={20} /></span>
             <span className="font-bold text-[9px] tracking-tight uppercase text-slate-800 dark:text-white">TABELAS</span>
           </Link>
 
-          <Link href="/admin/coefficients" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+          <Link href="/admin/coefficients" prefetch={false} className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
             backgroundImage: `linear-gradient(45deg, #f59e0b 0%, #7c2d12 100%)`
           }}>
             <span className="group-hover:scale-125 transition-transform"><Icons.Percent size={20} /></span>
             <span className="font-bold text-[9px] tracking-tight uppercase text-slate-800 dark:text-white">COEFICIENTES</span>
           </Link>
 
-          <Link href="/admin/users" className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
+          <Link href="/admin/users" prefetch={false} className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mb-2 relative overflow-hidden shadow-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900`} style={{
             backgroundImage: `linear-gradient(45deg, #f43f5e 0%, #7f1d1d 100%)`
           }}>
             <span className="group-hover:scale-125 transition-transform"><Icons.Users size={20} /></span>
@@ -125,7 +125,7 @@ const AdminLayout = ({ children }) => {
 
         {/* Footer: Botão Sair Idêntico à Imagem 1 */}
         <div className="p-4 border-t border-white/5 bg-black/30 relative z-20 text-center">
-          <Link href="/login" className="flex items-center justify-center gap-2 w-full py-2.5 bg-red-600/10 hover:bg-red-600 text-white/60 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20">
+          <Link href="/login" prefetch={false} className="flex items-center justify-center gap-2 w-full py-2.5 bg-red-600/10 hover:bg-red-600 text-white/60 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20">
             <span><Icons.LogOut /></span>
             <span>Encerrar Sessão</span>
           </Link>
