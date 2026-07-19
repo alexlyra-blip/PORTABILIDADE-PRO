@@ -956,6 +956,7 @@ export default function ConsultaCPFPage() {
                                 src={getStaticUrl(logoUrl)} 
                                 alt={emp.banco} 
                                 className="w-full h-full object-cover absolute inset-0" 
+                                data-html2canvas-ignore="true"
                               />
                             ) : (
                               <span className="text-[10px] font-black text-slate-400">
@@ -1031,6 +1032,7 @@ export default function ConsultaCPFPage() {
                                 src={getStaticUrl(logoUrl)} 
                                 alt={cartao.banco} 
                                 className="w-full h-full object-cover absolute inset-0" 
+                                data-html2canvas-ignore="true"
                               />
                             ) : (
                               <span className="text-[10px] font-black text-slate-400">

@@ -80,7 +80,7 @@ export default function Sidebar() {
 
   return (
     <aside 
-      className="fixed bottom-0 md:top-0 left-0 flex flex-row md:flex-col w-full md:w-64 h-16 md:h-screen text-white shadow-[0_-10px_40px_rgba(0,0,0,0.3)] md:shadow-xl z-50 transition-all md:border-r border-t md:border-t-0 border-white/10"
+      className="fixed bottom-0 md:top-0 left-0 flex flex-row md:flex-col w-full md:w-72 h-16 md:h-screen text-white shadow-[0_-10px_40px_rgba(0,0,0,0.3)] md:shadow-xl z-50 transition-all md:border-r border-t md:border-t-0 border-white/10"
       style={{ 
          backgroundColor: user.sidebar_color || '#0f172a'
       }}
