@@ -32,6 +32,7 @@ function OfertasPageContent() {
   const [activeContractId, setActiveContractId] = useState(null);
   const [bankOfferIdx, setBankOfferIdx] = useState({});
   const [user, setUser] = useState(null);
+  const [downloadState, setDownloadState] = useState("idle");
 
   useEffect(() => {
     const storedResults = sessionStorage.getItem("simulation_results");
@@ -222,6 +223,7 @@ function OfertasPageContent() {
   });
 
   const handleAccept = async (offer) => {
+    setDownloadState("loading");
     try {
       const userStr = localStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : {};
@@ -246,6 +248,8 @@ function OfertasPageContent() {
       a.href = url;
       a.download = `proposta_${offer.banco}.pdf`;
       a.click();
+      setDownloadState("success");
+      setTimeout(() => setDownloadState("idle"), 3000);
 
       // Salvar contrato aceito para a tela Meus Contratos e Relatórios via API
       const newContract = {
@@ -282,7 +286,11 @@ function OfertasPageContent() {
         router.push('/meus-contratos');
       }, 500);
 
-    } catch (error) { console.error("PDF Error:", error); alert("Erro ao gerar proposta."); }
+    } catch (error) { 
+      console.error("PDF Error:", error); 
+      alert("Erro ao gerar proposta."); 
+      setDownloadState("idle");
+    }
   };
 
   const formatCurrency = (value) => `R$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -523,8 +531,10 @@ function OfertasPageContent() {
                   }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   key={h.id}
-                  onClick={() => h.data && handleAccept(h.data)}
-                  className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl flex flex-col hover:shadow-2xl cursor-pointer"
+                  onClick={() => h.data && downloadState !== "loading" && handleAccept(h.data)}
+                  className={`bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-xl flex flex-col hover:shadow-2xl cursor-pointer ${
+                    downloadState === "loading" ? "pointer-events-none opacity-60" : ""
+                  }`}
                   whileHover={{ y: -5, scale: 1.01, transition: { type: "spring", stiffness: 400 } }}
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -702,7 +712,20 @@ function OfertasPageContent() {
                         </div>
 
                         <div className="p-6 lg:p-8 lg:w-1/5 xl:w-[18%] shrink-0 flex flex-col justify-center gap-2 border-t md:border-t-0 border-slate-50">
-                          <button onClick={() => handleAccept(offer)} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30 transition-all hover:-translate-y-1">Aceitar</button>
+                          <button 
+                            onClick={() => handleAccept(offer)} 
+                            disabled={downloadState === "loading"}
+                            className={`w-full py-4 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                              downloadState === "loading"
+                                ? "bg-slate-450 border-slate-200 text-slate-500 cursor-not-allowed shadow-slate-200"
+                                : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/30 hover:-translate-y-1"
+                            }`}
+                          >
+                            {downloadState === "loading" ? (
+                              <Icons.Loader2 size={14} className="animate-spin" />
+                            ) : null}
+                            <span>{downloadState === "loading" ? "Gerando..." : "Aceitar"}</span>
+                          </button>
                           <p className="text-[9px] text-slate-400 font-bold uppercase text-center tracking-widest opacity-60">Geração de PDF Automática</p>
                         </div>
                       </div>
@@ -771,6 +794,19 @@ function OfertasPageContent() {
           </div>
           );
         })()}
+      <AnimatePresence>
+        {downloadState === "success" && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[9999] bg-emerald-500 text-white px-6 py-3.5 rounded-2xl shadow-[0_10px_30px_rgba(16,185,129,0.3)] border border-emerald-400 flex items-center gap-3 font-bold text-sm tracking-wide"
+          >
+            <span className="text-lg">✨</span>
+            <span>PDF baixado com sucesso!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       </div>
     </div>
   );

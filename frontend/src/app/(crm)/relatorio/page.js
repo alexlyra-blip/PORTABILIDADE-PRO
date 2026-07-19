@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/utils/api";
 import PageHeader from "@/components/PageHeader";
 import { Icons } from "@/components/Icons";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -38,6 +39,7 @@ export default function RelatorioPage() {
   const [availableConvenios, setAvailableConvenios] = useState([]);
   const [totals, setTotals] = useState({ qtd: 0, valor: 0, troco: 0, cipHojeQtd: 0, cipHojeValor: 0 });
   const [meta, setMeta] = useState({ tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000, progresso: 0 });
+  const [downloadState, setDownloadState] = useState("idle");
 
   useEffect(() => {
     const savedMetaRaw = localStorage.getItem("meta_config");
@@ -282,6 +284,7 @@ export default function RelatorioPage() {
        return;
     }
 
+    setDownloadState("loading");
     try {
       // Garantir compatibilidade com Next.js SSR carregando o script dinamicamente
       if (!window.html2pdf) {
@@ -348,6 +351,8 @@ export default function RelatorioPage() {
               title: opt.filename,
               files: [file]
             });
+            setDownloadState("success");
+            setTimeout(() => setDownloadState("idle"), 3000);
             return;
           } catch (shareError) {
             console.error("Erro ao compartilhar:", shareError);
@@ -358,13 +363,17 @@ export default function RelatorioPage() {
         a.href = blobURL;
         a.download = opt.filename;
         a.click();
+        setDownloadState("success");
+        setTimeout(() => setDownloadState("idle"), 3000);
       }).catch(e => {
-        console.error(e);
-        alert("Erro ao tentar gerar PDF localmente.");
+        console.error("Erro ao gerar PDF:", e);
+        alert("Ocorreu um erro ao gerar o PDF das regras.");
+        setDownloadState("idle");
       });
     } catch (e) {
       console.error("Erro geral na exportação do PDF:", e);
       alert("Ocorreu um erro ao inicializar o PDF.");
+      setDownloadState("idle");
     }
   };
 
@@ -375,8 +384,21 @@ export default function RelatorioPage() {
         highlight="Resultados" 
         subtitle="Análise de Produção Consignado"
       >
-        <button onClick={downloadReport} className="px-6 py-4 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-600/30 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all flex items-center gap-2">
-          <Icons.Download size={14} /> Baixar Relatório CIP
+        <button 
+          onClick={downloadReport} 
+          disabled={downloadState === "loading"}
+          className={`px-6 py-4 border rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm transition-all flex items-center gap-2 cursor-pointer ${
+            downloadState === "loading"
+              ? "bg-slate-350 border-slate-200 text-slate-500 cursor-not-allowed"
+              : "bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-600/30 hover:scale-105"
+          }`}
+        >
+          {downloadState === "loading" ? (
+            <Icons.Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Icons.Download size={14} />
+          )}
+          <span>{downloadState === "loading" ? "Baixando..." : "Baixar Relatório CIP"}</span>
         </button>
         <Link href="/meus-contratos" className="px-8 py-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-sm hover:scale-105 transition-all flex items-center gap-2">
           <Icons.FileText size={14} className="text-slate-700 dark:text-slate-300" /> Contratos
@@ -650,6 +672,19 @@ export default function RelatorioPage() {
           </div>
         </>
       )}
+      <AnimatePresence>
+        {downloadState === "success" && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[9999] bg-emerald-500 text-white px-6 py-3.5 rounded-2xl shadow-[0_10px_30px_rgba(16,185,129,0.3)] border border-emerald-400 flex items-center gap-3 font-bold text-sm tracking-wide"
+          >
+            <span className="text-lg">✨</span>
+            <span>PDF baixado com sucesso!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

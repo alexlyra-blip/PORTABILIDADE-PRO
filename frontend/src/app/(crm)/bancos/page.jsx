@@ -65,6 +65,7 @@ export default function BancosPage() {
   const [logoBase64, setLogoBase64] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [promotoraRules, setPromotoraRules] = useState([]);
+  const [downloadState, setDownloadState] = useState("idle");
   const pdfRef = useRef();
 
   useEffect(() => {
@@ -146,6 +147,7 @@ export default function BancosPage() {
 
   const exportPDF = async () => {
     if (typeof window === "undefined" || !selectedBank) return;
+    setDownloadState("loading");
 
     try {
       // Garantir compatibilidade com Next.js SSR carregando o script dinamicamente
@@ -359,6 +361,8 @@ export default function BancosPage() {
               title: opt.filename,
               files: [file]
             });
+            setDownloadState("success");
+            setTimeout(() => setDownloadState("idle"), 3000);
             return;
           } catch (shareError) {
             console.error("Erro ao compartilhar:", shareError);
@@ -369,13 +373,17 @@ export default function BancosPage() {
         a.href = blobURL;
         a.download = opt.filename;
         a.click();
+        setDownloadState("success");
+        setTimeout(() => setDownloadState("idle"), 3000);
       }).catch(e => {
         console.error("Erro ao gerar PDF:", e);
         alert("Ocorreu um erro ao gerar o PDF das regras.");
+        setDownloadState("idle");
       });
     } catch (e) {
       console.error("Erro geral na exportação do PDF:", e);
       alert("Ocorreu um erro ao inicializar o PDF.");
+      setDownloadState("idle");
     }
   };
 
@@ -526,9 +534,23 @@ export default function BancosPage() {
                     </div>
                   </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={exportPDF} className="w-10 h-10 sm:w-auto sm:px-4 rounded-xl bg-blue-600 text-white flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
-                    <Icons.Download size={18} />
-                    <span className="hidden sm:inline text-[11px] font-black uppercase tracking-widest">Baixar PDF</span>
+                  <button 
+                    onClick={exportPDF} 
+                    disabled={downloadState === "loading"}
+                    className={`w-10 h-10 sm:w-auto sm:px-4 rounded-xl text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
+                      downloadState === "loading"
+                        ? "bg-slate-400 shadow-slate-200 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 shadow-blue-200 hover:-translate-y-0.5"
+                    }`}
+                  >
+                    {downloadState === "loading" ? (
+                      <Icons.Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Icons.Download size={16} />
+                    )}
+                    <span className="hidden sm:inline text-[11px] font-black uppercase tracking-widest">
+                      {downloadState === "loading" ? "Gerando..." : "Baixar PDF"}
+                    </span>
                   </button>
                   <button onClick={() => setSelectedBank(null)} className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors">
                     <Icons.X size={18} />
@@ -758,6 +780,19 @@ export default function BancosPage() {
         document.body
       )}
 
+      <AnimatePresence>
+        {downloadState === "success" && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[9999] bg-emerald-500 text-white px-6 py-3.5 rounded-2xl shadow-[0_10px_30px_rgba(16,185,129,0.3)] border border-emerald-400 flex items-center gap-3 font-bold text-sm tracking-wide"
+          >
+            <span className="text-lg">✨</span>
+            <span>PDF baixado com sucesso!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

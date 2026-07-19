@@ -224,7 +224,7 @@ export default function Sidebar() {
       <nav className="hidden md:flex flex-1 px-4 py-6 space-y-3 overflow-y-auto scrollbar-hide relative z-20 flex-col">
         <Link
           href="/simulador"
-          className="flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-300 group mb-6 relative overflow-hidden shadow-2xl border-2 cursor-pointer border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
+          className="flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group mb-6 relative overflow-hidden shadow-2xl border-2 cursor-pointer border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
           style={{ 
               backgroundColor: user.sidebar_color_secondary || user.brand_color || '#3b82f6',
               backgroundImage: `linear-gradient(45deg, ${user.sidebar_color_secondary || user.brand_color || '#3b82f6'} 0%, #172554 100%)`,
@@ -232,7 +232,7 @@ export default function Sidebar() {
           }}
         >
           <div className="absolute inset-0 bg-white/10 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-          <span className="transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none"><Icons.Rocket size={24} /></span>
+          <span className="transition-transform group-hover:scale-125 drop-shadow-md pointer-events-none"><Icons.Rocket size={20} /></span>
           <span className="font-black text-[11px] uppercase tracking-[0.2em] pointer-events-none">Acessar Simulador</span>
           <div className="ml-auto opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all text-xs pointer-events-none"><Icons.Sparkles size={16} /></div>
         </Link>
@@ -243,7 +243,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${
                 isActive 
                   ? "text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)] scale-[1.02]" 
                   : "text-white/50 hover:text-white hover:bg-white/5 hover:translate-x-1"

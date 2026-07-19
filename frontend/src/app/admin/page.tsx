@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import { AnimatePresence, motion } from "framer-motion";
 import StatsCard from "@/components/admin/StatsCard";
 import AnnouncementManager from "@/components/admin/AnnouncementManager";
 import ThemeManager from "@/components/admin/ThemeManager";
@@ -16,6 +17,7 @@ import { Icons } from "@/components/Icons";
 
 export default function AdminPage() {
   const [role, setRole] = useState("vendedor");
+  const [downloadState, setDownloadState] = useState("idle"); // 'idle' | 'loading' | 'success'
   const [loading, setLoading] = useState(true);
   const [filterDays, setFilterDays] = useState(1);
 
@@ -92,7 +94,7 @@ export default function AdminPage() {
 
   const handleExportPDF = async () => {
     try {
-      setLoading(true);
+      setDownloadState("loading");
       const token = localStorage.getItem('token');
       const url = `${window.location.origin}/api/admin/export-stats-pdf?days=${filterDays}`;
       const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
@@ -103,10 +105,11 @@ export default function AdminPage() {
       a.href = objUrl;
       a.download = `relatorio_gerencial_${filterDays}d.pdf`;
       a.click();
+      setDownloadState("success");
+      setTimeout(() => setDownloadState("idle"), 3000);
     } catch (e) {
       alert("Falha ao exportar PDF.");
-    } finally {
-      setLoading(false);
+      setDownloadState("idle");
     }
   };
 
@@ -159,9 +162,19 @@ export default function AdminPage() {
         
         <button 
           onClick={handleExportPDF} 
-          className="py-3 px-6 bg-indigo-500 hover:bg-indigo-400 text-white rounded-2xl border border-white/20 shadow-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group"
+          disabled={downloadState === "loading"}
+          className={`py-3 px-6 text-white rounded-2xl border border-white/20 shadow-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group cursor-pointer ${
+            downloadState === "loading"
+              ? "bg-slate-400 border-slate-300 cursor-not-allowed"
+              : "bg-indigo-500 hover:bg-indigo-400 hover:-translate-y-0.5"
+          }`}
         >
-          <span className="group-hover:-translate-y-0.5 transition-transform"><Icons.Download size={14} /></span> PDF
+          {downloadState === "loading" ? (
+            <Icons.Loader2 size={14} className="animate-spin" />
+          ) : (
+            <span className="group-hover:-translate-y-0.5 transition-transform"><Icons.Download size={14} /></span>
+          )}
+          <span>{downloadState === "loading" ? "Gerando..." : "PDF"}</span>
         </button>
       </PageHeader>
 
@@ -355,7 +368,19 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
-      
+      <AnimatePresence>
+        {downloadState === "success" && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[9999] bg-emerald-500 text-white px-6 py-3.5 rounded-2xl shadow-[0_10px_30px_rgba(16,185,129,0.3)] border border-emerald-400 flex items-center gap-3 font-bold text-sm tracking-wide"
+          >
+            <span className="text-lg">✨</span>
+            <span>PDF baixado com sucesso!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

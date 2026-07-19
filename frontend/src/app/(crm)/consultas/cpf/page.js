@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
 
@@ -106,6 +107,7 @@ export default function ConsultaCPFPage() {
   const [activeProvider, setActiveProvider] = useState("promosys");
   const [loadingProvider, setLoadingProvider] = useState(false);
   const [convenio, setConvenio] = useState("INSS");
+  const [downloadState, setDownloadState] = useState("idle");
 
   const maskCPF = (val) => val.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})/, "$1-$2").replace(/(-\d{2})\d+?$/, "$1");
 
@@ -221,6 +223,7 @@ export default function ConsultaCPFPage() {
   };
 
   const handleImprimir = async () => {
+    setDownloadState("loading");
     try {
       // Import html2pdf dynamically from node_modules
       const html2pdfModule = await import('html2pdf.js');
@@ -433,6 +436,8 @@ export default function ConsultaCPFPage() {
               title: opt.filename,
               files: [file]
             });
+            setDownloadState("success");
+            setTimeout(() => setDownloadState("idle"), 3000);
             return;
           } catch (shareError) {
             console.error("Erro ao compartilhar:", shareError);
@@ -443,13 +448,17 @@ export default function ConsultaCPFPage() {
         a.href = blobURL;
         a.download = opt.filename;
         a.click();
+        setDownloadState("success");
+        setTimeout(() => setDownloadState("idle"), 3000);
       }).catch(err => {
         console.error("Erro interno do html2pdf:", err);
         alert("Não foi possível gerar o PDF de forma automatizada por incompatibilidade no seu navegador. Por favor, utilize o botão de salvar/imprimir padrão.");
+        setDownloadState("idle");
       });
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
       alert("Não foi possível carregar a biblioteca de PDF. Por favor, tente novamente.");
+      setDownloadState("idle");
     }
   };
 
@@ -662,9 +671,21 @@ export default function ConsultaCPFPage() {
           </div>
           
           {dados && (
-            <button onClick={handleImprimir} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-xl transition-all font-black uppercase text-xs tracking-wider">
-              <Icons.FileText size={18} />
-              <span>Gerar PDF</span>
+            <button 
+              onClick={handleImprimir} 
+              disabled={downloadState === "loading"}
+              className={`flex items-center gap-2 text-white px-6 py-3 rounded-2xl shadow-xl transition-all font-black uppercase text-xs tracking-wider cursor-pointer ${
+                downloadState === "loading"
+                  ? "bg-slate-500 cursor-not-allowed shadow-slate-200"
+                  : "bg-slate-800 hover:bg-slate-900 hover:-translate-y-0.5"
+              }`}
+            >
+              {downloadState === "loading" ? (
+                <Icons.Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Icons.FileText size={18} />
+              )}
+              <span>{downloadState === "loading" ? "Gerando..." : "Gerar PDF"}</span>
             </button>
           )}
         </div>
@@ -1226,6 +1247,19 @@ export default function ConsultaCPFPage() {
 
           </div>
         )}
+      <AnimatePresence>
+        {downloadState === "success" && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[9999] bg-emerald-500 text-white px-6 py-3.5 rounded-2xl shadow-[0_10px_30px_rgba(16,185,129,0.3)] border border-emerald-400 flex items-center gap-3 font-bold text-sm tracking-wide"
+          >
+            <span className="text-lg">✨</span>
+            <span>PDF baixado com sucesso!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       </div>
     </div>
   );

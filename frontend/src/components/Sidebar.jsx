@@ -70,9 +70,9 @@ export default function Sidebar() {
   const menuItems = [
     { name: "Nova Simulação", href: "/simulador", icon: <Icons.Calculator />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Ofertas", href: "/ofertas", icon: <Icons.Trophy />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Consulta CPF", href: "/consultas/cpf", icon: <Icons.Search />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Simulações", href: "/dashboard", icon: <Icons.LayoutDashboard /> },
     { name: "Meus Contratos", href: "/meus-contratos", icon: <Icons.FileText />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
-    { name: "Consulta CPF", href: "/consultas/cpf", icon: <Icons.Search />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Bancos e Regras", href: "/bancos", icon: <Icons.Landmark />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Relatórios", href: "/relatorio", icon: <Icons.TrendingUp />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
   ].filter(item => {
@@ -281,7 +281,7 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group mt-4 relative overflow-hidden shadow-2xl border-2 cursor-pointer ${isActive
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group mt-4 relative overflow-hidden shadow-2xl border-2 cursor-pointer ${isActive
                     ? "border-white/40 opacity-100 scale-105"
                     : "border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
                   }`}
