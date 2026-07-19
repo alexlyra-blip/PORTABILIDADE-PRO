@@ -281,6 +281,7 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
+                prefetch={false}
                 className={`flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-300 group mt-4 relative overflow-hidden shadow-2xl border-2 cursor-pointer ${isActive
                     ? "border-white/40 opacity-100 scale-105"
                     : "border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
@@ -303,6 +304,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              prefetch={false}
               className={`flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${isActive 
                 ? "text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)] scale-[1.02]" 
                 : "text-white/50 hover:text-white hover:bg-white/5 hover:translate-x-1"
@@ -345,6 +347,7 @@ export default function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  prefetch={false}
                   className={`flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${isActive 
                     ? "text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)] scale-[1.02]" 
                     : "text-white/50 hover:text-white hover:bg-white/5 hover:translate-x-1"
