@@ -282,6 +282,7 @@ export default function RelatorioPage() {
        return;
     }
 
+    try {
       // Garantir compatibilidade com Next.js SSR carregando o script dinamicamente
       if (!window.html2pdf) {
         await new Promise((resolve, reject) => {
