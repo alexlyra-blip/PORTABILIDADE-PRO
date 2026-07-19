@@ -246,7 +246,10 @@ export default function ConsultaCPFPage() {
           scale: 2, 
           useCORS: true,
           logging: false,
-          windowWidth: 1200
+          windowWidth: 1200,
+          ignoreElements: (el) => {
+            return el.tagName && el.tagName.toLowerCase() === 'img';
+          }
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
@@ -297,10 +300,6 @@ export default function ConsultaCPFPage() {
         console.error("Erro interno do html2pdf:", err);
         alert("Erro ao gerar PDF. Iniciando a visualização de impressão padrão.");
         window.print();
-      }).finally(() => {
-        setTimeout(() => {
-          element.style.display = 'none';
-        }, 1000);
       });
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);

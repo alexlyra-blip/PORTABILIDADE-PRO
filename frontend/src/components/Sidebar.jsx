@@ -271,7 +271,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex flex-1 px-4 py-6 space-y-1.5 overflow-y-auto scrollbar-hide relative z-20 flex-col">
+      <nav className="hidden md:flex flex-1 px-4 py-6 space-y-3 overflow-y-auto scrollbar-hide relative z-20 flex-col">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           const isSimulacao = item.href === "/simulador";
@@ -281,7 +281,7 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 group mt-4 relative overflow-hidden shadow-2xl border-2 cursor-pointer ${isActive
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group mt-4 relative overflow-hidden shadow-2xl border-2 cursor-pointer ${isActive
                     ? "border-white/40 opacity-100 scale-105"
                     : "border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
                   }`}
@@ -303,7 +303,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${isActive 
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${isActive 
                 ? "text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)] scale-[1.02]" 
                 : "text-white/50 hover:text-white hover:bg-white/5 hover:translate-x-1"
                 }`}
@@ -332,7 +332,7 @@ export default function Sidebar() {
         })}
 
         {(user.role === 'admin' || user.role === 'promotora') && (
-          <div className="pt-6 mt-6 border-t border-white/5 space-y-1">
+          <div className="pt-6 mt-6 border-t border-white/5 space-y-2">
             <p className="px-4 text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-3 italic">Área Administrativa</p>
             {[
               { name: "Painel Admin", href: "/admin", icon: <Icons.Settings2 size={16} />, roles: ['admin'] },
@@ -345,7 +345,7 @@ export default function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${isActive 
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${isActive 
                     ? "text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)] scale-[1.02]" 
                     : "text-white/50 hover:text-white hover:bg-white/5 hover:translate-x-1"
                     }`}

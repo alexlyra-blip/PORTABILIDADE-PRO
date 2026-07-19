@@ -221,7 +221,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex flex-1 px-4 py-6 space-y-1.5 overflow-y-auto scrollbar-hide relative z-20 flex-col">
+      <nav className="hidden md:flex flex-1 px-4 py-6 space-y-3 overflow-y-auto scrollbar-hide relative z-20 flex-col">
         <Link
           href="/simulador"
           className="flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-300 group mb-6 relative overflow-hidden shadow-2xl border-2 cursor-pointer border-transparent text-white/90 hover:scale-105 hover:bg-white/10"
@@ -243,7 +243,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${
+              className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 group cursor-pointer relative overflow-hidden ${
                 isActive 
                   ? "text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)] scale-[1.02]" 
                   : "text-white/50 hover:text-white hover:bg-white/5 hover:translate-x-1"
