@@ -148,7 +148,17 @@ export default function BancosPage() {
     if (typeof window === "undefined" || !selectedBank) return;
 
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
+      // Garantir compatibilidade com Next.js SSR carregando o script dinamicamente
+      if (!window.html2pdf) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+      const html2pdf = window.html2pdf;
       const rule = getSelectedRule();
 
       const activeAgreement = rule ? rule.agreement : selectedConvenio;
@@ -338,10 +348,34 @@ export default function BancosPage() {
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      html2pdf().set(opt).from(element).save();
+      html2pdf().set(opt).from(element).toPdf().get('pdf').then(async (pdf) => {
+        const blob = pdf.output('blob');
+        const blobURL = URL.createObjectURL(blob);
+
+        if (navigator.canShare && navigator.canShare({ files: [new File([blob], opt.filename, { type: 'application/pdf' })] })) {
+          try {
+            const file = new File([blob], opt.filename, { type: 'application/pdf' });
+            await navigator.share({
+              title: opt.filename,
+              files: [file]
+            });
+            return;
+          } catch (shareError) {
+            console.error("Erro ao compartilhar:", shareError);
+          }
+        }
+
+        const a = document.createElement('a');
+        a.href = blobURL;
+        a.download = opt.filename;
+        a.click();
+      }).catch(e => {
+        console.error("Erro ao gerar PDF:", e);
+        alert("Ocorreu um erro ao gerar o PDF das regras.");
+      });
     } catch (e) {
-      console.error("Erro ao gerar PDF:", e);
-      alert("Ocorreu um erro ao gerar o PDF das regras.");
+      console.error("Erro geral na exportação do PDF:", e);
+      alert("Ocorreu um erro ao inicializar o PDF.");
     }
   };
 
