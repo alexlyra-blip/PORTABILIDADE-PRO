@@ -225,8 +225,6 @@ export default function ConsultaCPFPage() {
     if (!element) return;
 
     try {
-      // Garantir compatibilidade de módulos
-      // Garantir compatibilidade com Next.js SSR carregando o script dinamicamente
       if (!window.html2pdf) {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
@@ -248,23 +246,18 @@ export default function ConsultaCPFPage() {
           logging: false,
           windowWidth: 1200,
           ignoreElements: (el) => {
-            return el.tagName && el.tagName.toLowerCase() === 'img';
+            const tagName = el.tagName ? el.tagName.toLowerCase() : '';
+            return tagName === 'img' || tagName === 'svg';
           }
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
-
-      const pdfWindow = window.open("", "_blank");
-      if (pdfWindow) {
-        pdfWindow.document.write("<html style='background:#333;'><body style='display:flex;justify-content:center;align-items:center;height:100vh;color:white;font-family:sans-serif;'>Gerando PDF... Por favor, aguarde.</body></html>");
-      }
 
       html2pdf().from(element).set(opt).toPdf().get('pdf').then(async (pdf) => {
         const blob = pdf.output('blob');
         const blobURL = URL.createObjectURL(blob);
 
         if (navigator.canShare && navigator.canShare({ files: [new File([blob], opt.filename, { type: 'application/pdf' })] })) {
-          if (pdfWindow) pdfWindow.close();
           try {
             const file = new File([blob], opt.filename, { type: 'application/pdf' });
             await navigator.share({
@@ -277,26 +270,11 @@ export default function ConsultaCPFPage() {
           }
         }
 
-        if (pdfWindow) {
-          pdfWindow.document.open();
-          pdfWindow.document.write(`
-            <html>
-              <head><title>${opt.filename}</title></head>
-              <body style="margin:0; padding:0; overflow:hidden; background-color: #333;">
-                <iframe src="${blobURL}" width="100%" height="100%" style="border:none; width: 100vw; height: 100vh;"></iframe>
-              </body>
-            </html>
-          `);
-          pdfWindow.document.close();
-        } else {
-          const a = document.createElement('a');
-          a.href = blobURL;
-          a.target = '_blank';
-          a.download = opt.filename;
-          a.click();
-        }
+        const a = document.createElement('a');
+        a.href = blobURL;
+        a.download = opt.filename;
+        a.click();
       }).catch(err => {
-        if (pdfWindow) pdfWindow.close();
         console.error("Erro interno do html2pdf:", err);
         alert("Erro ao gerar PDF. Iniciando a visualização de impressão padrão.");
         window.print();

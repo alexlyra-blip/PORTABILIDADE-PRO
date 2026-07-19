@@ -332,13 +332,13 @@ export default function Sidebar() {
         })}
 
         {(user.role === 'admin' || user.role === 'promotora') && (
-          <div className="pt-6 mt-6 border-t border-white/5 space-y-2">
+          <div className="pt-6 mt-6 border-t border-white/5 space-y-3">
             <p className="px-4 text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-3 italic">Área Administrativa</p>
             {[
-              { name: "Painel Admin", href: "/admin", icon: <Icons.Settings2 size={16} />, roles: ['admin'] },
-              { name: user.role === 'promotora' ? 'Usuários' : 'Gestão Usuários', href: "/admin/users", icon: <Icons.Users size={16} />, roles: ['admin', 'promotora'] },
-              { name: "Regra Bancos", href: "/admin/promotora-rules", icon: <Icons.SlidersHorizontal size={16} />, roles: ['admin', 'promotora'] },
-              { name: "WhatsApp", href: "/admin/whatsapp", icon: <Icons.MessageCircle size={16} />, roles: ['admin', 'promotora'] }
+              { name: "Painel Admin", href: "/admin", icon: <Icons.Settings2 />, roles: ['admin'] },
+              { name: user.role === 'promotora' ? 'Usuários' : 'Gestão Usuários', href: "/admin/users", icon: <Icons.Users />, roles: ['admin', 'promotora'] },
+              { name: "Regra Bancos", href: "/admin/promotora-rules", icon: <Icons.SlidersHorizontal />, roles: ['admin', 'promotora'] },
+              { name: "WhatsApp", href: "/admin/whatsapp", icon: <Icons.MessageCircle />, roles: ['admin', 'promotora'] }
             ].filter(item => item.roles.includes(user.role)).map((item) => {
               const isActive = pathname === item.href;
               return (
