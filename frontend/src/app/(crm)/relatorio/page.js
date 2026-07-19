@@ -344,21 +344,6 @@ export default function RelatorioPage() {
         const blob = pdf.output('blob');
         const blobURL = URL.createObjectURL(blob);
 
-        if (navigator.canShare && navigator.canShare({ files: [new File([blob], opt.filename, { type: 'application/pdf' })] })) {
-          try {
-            const file = new File([blob], opt.filename, { type: 'application/pdf' });
-            await navigator.share({
-              title: opt.filename,
-              files: [file]
-            });
-            setDownloadState("success");
-            setTimeout(() => setDownloadState("idle"), 3000);
-            return;
-          } catch (shareError) {
-            console.error("Erro ao compartilhar:", shareError);
-          }
-        }
-
         const a = document.createElement('a');
         a.href = blobURL;
         a.download = opt.filename;
