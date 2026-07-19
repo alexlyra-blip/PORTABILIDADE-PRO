@@ -7,7 +7,6 @@ import { api } from '@/utils/api';
 export default function Header() {
   const [user, setUser] = useState({ name: 'Usuário', role: 'corretor', avatar_url: '' });
   const [showSettings, setShowSettings] = useState(false);
-  const [apiData, setApiData] = useState(null);
   const [contracts, setContracts] = useState([]);
   const router = useRouter();
   const fileInputRef = useRef(null);
@@ -45,11 +44,9 @@ export default function Header() {
       }
 
       Promise.allSettled([
-        api.get('/admin/dashboard-stats?days=1'),
         api.get('/contracts'),
         api.get('/admin/announcements/active')
-      ]).then(([statsRes, contractsRes, annRes]) => {
-        if (statsRes.status === 'fulfilled') setApiData(statsRes.value);
+      ]).then(([contractsRes, annRes]) => {
         if (contractsRes.status === 'fulfilled') {
           let parsed = Array.isArray(contractsRes.value) ? contractsRes.value : contractsRes.value?.data;
           if (parsed && Array.isArray(parsed)) setContracts(parsed);
