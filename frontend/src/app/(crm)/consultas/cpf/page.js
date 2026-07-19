@@ -226,8 +226,17 @@ export default function ConsultaCPFPage() {
 
     try {
       // Garantir compatibilidade de módulos
-      const html2pdfModule = await import("html2pdf.js");
-      const html2pdf = html2pdfModule.default || html2pdfModule;
+      // Garantir compatibilidade com Next.js SSR carregando o script dinamicamente
+      if (!window.html2pdf) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+      const html2pdf = window.html2pdf;
       
       const opt = {
         margin: [8, 8, 8, 8],
@@ -242,16 +251,29 @@ export default function ConsultaCPFPage() {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      // Tenta abrir numa nova aba, bypassando o bloqueio caso falhe
       const pdfWindow = window.open("", "_blank");
       if (pdfWindow) {
         pdfWindow.document.write("<html style='background:#333;'><body style='display:flex;justify-content:center;align-items:center;height:100vh;color:white;font-family:sans-serif;'>Gerando PDF... Por favor, aguarde.</body></html>");
       }
 
-      html2pdf().from(element).set(opt).toPdf().get('pdf').then((pdf) => {
+      html2pdf().from(element).set(opt).toPdf().get('pdf').then(async (pdf) => {
         const blob = pdf.output('blob');
         const blobURL = URL.createObjectURL(blob);
-        
+
+        if (navigator.canShare && navigator.canShare({ files: [new File([blob], opt.filename, { type: 'application/pdf' })] })) {
+          if (pdfWindow) pdfWindow.close();
+          try {
+            const file = new File([blob], opt.filename, { type: 'application/pdf' });
+            await navigator.share({
+              title: opt.filename,
+              files: [file]
+            });
+            return;
+          } catch (shareError) {
+            console.error("Erro ao compartilhar:", shareError);
+          }
+        }
+
         if (pdfWindow) {
           pdfWindow.document.open();
           pdfWindow.document.write(`
@@ -264,7 +286,6 @@ export default function ConsultaCPFPage() {
           `);
           pdfWindow.document.close();
         } else {
-          // Fallback se o navegador bloqueou o popup: força o download direto
           const a = document.createElement('a');
           a.href = blobURL;
           a.target = '_blank';
@@ -272,10 +293,14 @@ export default function ConsultaCPFPage() {
           a.click();
         }
       }).catch(err => {
-        console.error("Erro interno do html2pdf:", err);
         if (pdfWindow) pdfWindow.close();
-        alert("Falha na geração. Iniciando impressão padrão.");
+        console.error("Erro interno do html2pdf:", err);
+        alert("Erro ao gerar PDF. Iniciando a visualização de impressão padrão.");
         window.print();
+      }).finally(() => {
+        setTimeout(() => {
+          element.style.display = 'none';
+        }, 1000);
       });
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
