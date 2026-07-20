@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
+import { useToast } from "@/components/ToastProvider";
 
 const formatBankName = (codigo, banco) => {
   if (!banco) return '';
@@ -97,6 +98,7 @@ const PremiumBadge = () => (
 );
 
 export default function ConsultaCPFPage() {
+  const toast = useToast();
   const [cpf, setCpf] = useState("");
   const [loading, setLoading] = useState(false);
   const [dados, setDados] = useState(null);
@@ -187,7 +189,7 @@ export default function ConsultaCPFPage() {
       await fetchBalance(provider);
     } catch (err) {
       console.error(err);
-      alert("Erro ao alterar o provedor ativo.");
+      toast.error("Erro ao alterar o provedor ativo.");
     } finally {
       setLoadingProvider(false);
     }
@@ -196,7 +198,7 @@ export default function ConsultaCPFPage() {
   const handleConsultar = async (e) => {
     e.preventDefault();
     if (cpf.length < 14) {
-      alert("Por favor, informe um CPF válido.");
+      toast.warning("Por favor, informe um CPF válido.");
       return;
     }
     setLoading(true);
@@ -210,13 +212,14 @@ export default function ConsultaCPFPage() {
         setDados(res);
         setActiveBenefitIndex(0);
         await fetchBalance(activeProvider);
+        toast.success("Consulta de CPF concluída com sucesso!");
       } else {
-        alert("Consulta não retornou dados.");
+        toast.warning("Consulta não retornou dados.");
       }
     } catch (err) {
       console.error(err);
       const msg = err.response?.data?.detail || err.message || "Erro desconhecido";
-      alert(`Erro ao consultar CPF: ${msg}`);
+      toast.error(`Erro ao consultar CPF: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -437,12 +440,12 @@ export default function ConsultaCPFPage() {
         setTimeout(() => setDownloadState("idle"), 3000);
       }).catch(err => {
         console.error("Erro interno do html2pdf:", err);
-        alert("Não foi possível gerar o PDF de forma automatizada por incompatibilidade no seu navegador. Por favor, utilize o botão de salvar/imprimir padrão.");
+        toast.error("Não foi possível gerar o PDF de forma automatizada por incompatibilidade no seu navegador. Por favor, utilize o botão de salvar/imprimir padrão.");
         setDownloadState("idle");
       });
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      alert("Não foi possível carregar a biblioteca de PDF. Por favor, tente novamente.");
+      toast.error("Não foi possível carregar a biblioteca de PDF. Por favor, tente novamente.");
       setDownloadState("idle");
     }
   };

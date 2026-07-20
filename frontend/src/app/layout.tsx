@@ -3,6 +3,7 @@ import "./globals.css";
 import DynamicFavicon from "@/components/DynamicFavicon";
 import ThemeDecoration from "@/components/ThemeDecoration";
 import { Viewport } from "next";
+import { ToastProvider } from "@/components/ToastProvider";
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -31,7 +32,9 @@ export default function RootLayout({
       <body className="font-inter min-h-screen antialiased bg-slate-50 dark:bg-[#0b1120] text-slate-900 dark:text-white transition-colors duration-200" suppressHydrationWarning>
         <DynamicFavicon />
         <ThemeDecoration />
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );
