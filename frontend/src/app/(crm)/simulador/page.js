@@ -2479,8 +2479,8 @@ function SimuladorPageContent() {
                                 )}
                               </div>
 
-                              <div className="flex-1 grid grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 items-center">
-                                <div className="min-w-0 pr-2">
+                              <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-4 items-center">
+                                <div className="col-span-2 md:col-span-1 min-w-0 pr-2">
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Banco / Contrato</p>
                                   <p className="text-xs font-black text-slate-800 uppercase leading-tight">{formatBankName(loan.codigo, loan.banco)}</p>
                                   <p className="text-[10px] font-bold text-slate-400">{loan.contrato}</p>
@@ -2489,13 +2489,17 @@ function SimuladorPageContent() {
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Parcela / Taxa</p>
                                   <p className="text-xs font-black text-slate-800">{formatBRL(loan.parcela)} <span className="text-emerald-500 ml-1">({Number(loan.taxa || 0).toFixed(2)}%)</span></p>
                                 </div>
-                                <div className="hidden md:block">
-                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Prazo Restante</p>
-                                  <p className="text-xs font-black text-slate-800"><span className="text-slate-800">{loan.prazo_restante}</span> <span className="text-slate-400 font-bold">de {loan.prazo}</span></p>
+                                <div>
+                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Valor Contrato</p>
+                                  <p className="text-xs font-black text-slate-800">{formatBRL(loan.valor_contrato)}</p>
                                 </div>
-                                <div className="hidden md:block">
+                                <div>
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Saldo Devedor</p>
                                   <p className="text-xs font-black text-blue-600">{formatBRL(loan.quitacao)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Prazo Restante</p>
+                                  <p className="text-xs font-black text-slate-800"><span className="text-slate-800">{loan.prazo_restante}</span> <span className="text-slate-400 font-bold">de {loan.prazo}</span></p>
                                 </div>
                               </div>
 
