@@ -6,6 +6,7 @@ import { api } from "@/utils/api";
 import PageHeader from "@/components/PageHeader";
 import { Icons } from "@/components/Icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/components/ToastProvider";
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -22,6 +23,7 @@ const CONVENIO_COLORS = {
 const RANDOM_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
 export default function RelatorioPage() {
+  const toast = useToast();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -280,7 +282,7 @@ export default function RelatorioPage() {
     const reportData = contracts.filter(c => c.status === 'AG. RETORNO CIP' && c.data_cip === todayStr);
     
     if (reportData.length === 0) {
-       alert("Nenhum contrato com saldo retornável (" + todayStr + ") foi localizado na esteira.");
+       toast.warning("Nenhum contrato com saldo retornável (" + todayStr + ") foi localizado na esteira.");
        return;
     }
 
@@ -352,12 +354,12 @@ export default function RelatorioPage() {
         setTimeout(() => setDownloadState("idle"), 3000);
       }).catch(e => {
         console.error("Erro ao gerar PDF:", e);
-        alert("Ocorreu um erro ao gerar o PDF das regras.");
+        toast.error("Ocorreu um erro ao gerar o PDF das regras.");
         setDownloadState("idle");
       });
     } catch (e) {
       console.error("Erro geral na exportação do PDF:", e);
-      alert("Ocorreu um erro ao inicializar o PDF.");
+      toast.error("Ocorreu um erro ao inicializar o PDF.");
       setDownloadState("idle");
     }
   };
