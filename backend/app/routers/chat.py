@@ -1455,6 +1455,46 @@ async def chat_interaction(
 
         # Consulta de regras por menu
         if session.get("state") in ["idle", "waiting_initial_choice", None]:
+            # Reconhece saudações comuns e apresenta o menu inicial
+            if msg_lower in [
+                "oi",
+                "olá",
+                "ola",
+                "bom dia",
+                "boa tarde",
+                "boa noite",
+                "e aí",
+                "e ai",
+                "olá clara",
+                "ola clara"
+            ]:
+                session["state"] = "waiting_initial_choice"
+
+                reply_text = get_welcome_menu(
+                    first_name,
+                    session.get("protocol")
+                )
+
+                session["messages"].append({
+                    "role": "user",
+                    "text": message,
+                    "timestamp": datetime.now().isoformat()
+                })
+
+                session["messages"].append({
+                    "role": "bot",
+                    "text": reply_text,
+                    "timestamp": datetime.now().isoformat()
+                })
+
+                await save_chat_log(db, session, sender, False)
+
+                return {
+                    "status": "success",
+                    "reply": reply_text,
+                    "sender": sender
+                }
+
             if msg_lower in ["2", "regras", "regra", "banco", "bancos"]:
                 session["state"] = "waiting_rules_bank"
                 reply_text = (
@@ -1476,11 +1516,11 @@ async def chat_interaction(
                     "• _Regras do C6_\n\n"
                     "Pode digitar a sua pergunta agora: 👇"
                 )
-            return {
-                "status": "success",
-                "reply": reply_text,
-                "sender": sender
-            }
+                return {
+                    "status": "success",
+                    "reply": reply_text,
+                    "sender": sender
+                }
             
         reply_text = (
             "Entendido! Se quiser realizar uma nova simulação, digite *simular*.\n"
