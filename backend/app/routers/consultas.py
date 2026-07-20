@@ -21,6 +21,7 @@ from app.schemas.consultas import (
     BeneficioDetalhado
 )
 from app.services.consultas.promosys_provider import PromosysProvider
+from app.services.consultas.margin_rules import recalculate_consulta_payload
 from app.services.consultas.multicorban_provider import MultiCorbanProvider
 from app.utils.config_helper import get_active_provider
 from app.services.margem_service import calcular_valor_liberado_margem, obter_coeficiente_fator
@@ -83,6 +84,7 @@ async def _execute_cpf_query_flow(cpf: str, db: AsyncSession, convenio: str = "I
         if (now_utc - cache_updated_at) <= timedelta(days=30):
             try:
                 dados_json = json.loads(cache_json)
+                dados_json = recalculate_consulta_payload(dados_json)
                 
                 # Para recalcular margens, abrimos uma sessão rápida e a fechamos em seguida
                 async with AsyncSessionLocal() as temp_db:
