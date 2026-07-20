@@ -388,6 +388,29 @@ async def list_simulations(db: AsyncSession = Depends(get_db), current_user: Use
 async def get_dashboard_stats(days: int = 30, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     return await AdminService.get_dashboard_stats(db, current_user, days=days)
 
+@router.get("/dashboard-recent")
+async def get_dashboard_recent(
+    days: int = 30,
+    page: int = 1,
+    page_size: int = 10,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    if days < 1 or days > 365:
+        raise HTTPException(status_code=400, detail="days deve estar entre 1 e 365")
+    if page < 1:
+        raise HTTPException(status_code=400, detail="page deve ser maior ou igual a 1")
+    if page_size < 5 or page_size > 20:
+        raise HTTPException(status_code=400, detail="page_size deve estar entre 5 e 20")
+
+    return await AdminService.get_dashboard_recent(
+        db,
+        current_user,
+        days=days,
+        page=page,
+        page_size=page_size
+    )
+
 @router.get("/export-stats-pdf")
 async def export_stats_pdf(days: int = 30, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     if current_user.role not in ["admin", "promotora"]:

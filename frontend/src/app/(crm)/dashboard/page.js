@@ -14,7 +14,8 @@ import { Icons } from "@/components/Icons";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingRecent, setLoadingRecent] = useState(true);
   const [filterDays, setFilterDays] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [role, setRole] = useState("vendedor");
@@ -37,9 +38,12 @@ export default function DashboardPage() {
       top_users: []
     },
     agreements: [],
-    recent_simulations: [],
     historical: []
   });
+
+  const [recentSimulations, setRecentSimulations] = useState([]);
+  const [totalRecent, setTotalRecent] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -49,21 +53,38 @@ export default function DashboardPage() {
         setRole(userObj.role || "vendedor");
       } catch (e) {}
     }
+  }, []);
+
+  // Handle filterDays changes
+  useEffect(() => {
     loadDashboardStats(true);
-    
-    // Auto-refresh inteligente a cada 2 minutos (120000ms) alinhado com o cache
+    if (currentPage === 1) {
+      loadDashboardRecent(true);
+    } else {
+      setCurrentPage(1);
+    }
+  }, [filterDays]);
+
+  // Handle currentPage changes
+  useEffect(() => {
+    loadDashboardRecent(true);
+  }, [currentPage]);
+
+  // Auto-refresh inteligente a cada 2 minutos (120000ms) alinhado com o cache
+  useEffect(() => {
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         loadDashboardStats(false);
+        loadDashboardRecent(false);
       }
     }, 120000);
     
     return () => clearInterval(interval);
-  }, [filterDays]);
+  }, [filterDays, currentPage]);
 
   const loadDashboardStats = async (showLoading = true) => {
     try {
-      if (showLoading) setLoading(true);
+      if (showLoading) setLoadingStats(true);
       const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
       const d = res.data || res;
       
@@ -80,21 +101,37 @@ export default function DashboardPage() {
             top_users: Array.isArray(d.stats?.top_users) ? d.stats.top_users : []
           },
           agreements: Array.isArray(d.agreements) ? d.agreements : [],
-          recent_simulations: Array.isArray(d.recent_simulations) ? d.recent_simulations : [],
           historical: Array.isArray(d.historical) ? d.historical : []
         });
       }
     } catch (err) {
-      console.error("Dashboard Sync Failed:", err);
-      // Mantém o estado padrão de segurança (não trava a tela)
+      console.error("Dashboard Stats Failed:", err);
     } finally {
-      setLoading(false);
+      setLoadingStats(false);
+    }
+  };
+
+  const loadDashboardRecent = async (showLoading = true) => {
+    try {
+      if (showLoading) setLoadingRecent(true);
+      const res = await api.get(`/admin/dashboard-recent?days=${filterDays}&page=${currentPage}&page_size=10`);
+      const d = res.data || res;
+
+      if (d) {
+        setRecentSimulations(Array.isArray(d.items) ? d.items : []);
+        setTotalRecent(d.total || 0);
+        setTotalPages(d.total_pages || 1);
+      }
+    } catch (err) {
+      console.error("Dashboard Recent Failed:", err);
+    } finally {
+      setLoadingRecent(false);
     }
   };
 
   const COLORS = ["#2563eb", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899"];
 
-  if (loading) {
+  if (loadingStats) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-4">
         <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin"></div>
@@ -125,12 +162,7 @@ export default function DashboardPage() {
     { title: "Taxa Média", desc: "Taxa Média", value: data.stats.avg_rate, icon: <Icons.Percent />, color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
   ];
 
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(data.recent_simulations.length / itemsPerPage) || 1;
-  const paginatedSimulations = data.recent_simulations.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+
 
   return (
     <div className="w-full max-w-[98%] mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700">
@@ -247,7 +279,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Simulacoes Recentes (Mesa de Operações) */}
-      <div id="operations-table" className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl overflow-hidden">
+      <div id="operations-table" className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl overflow-hidden relative">
         <div className="p-6 border-b border-slate-100 dark:border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
            <div>
              <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Mesa de Operações</h3>
@@ -255,19 +287,20 @@ export default function DashboardPage() {
            </div>
            {totalPages > 1 && (
              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-white/5 px-4 py-2 rounded-xl border border-slate-100 dark:border-white/5">
-               Página {currentPage} de {totalPages} ({data.recent_simulations.length} total)
+               Página {currentPage} de {totalPages} ({totalRecent} total)
              </div>
            )}
         </div>
-        <div className="p-2 overflow-x-auto">
-          {paginatedSimulations.length > 0 ? (
+        <div className="p-2 overflow-x-auto relative min-h-[200px]">
+          {loadingRecent && (
+            <div className="absolute inset-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-[2px] flex items-center justify-center z-10 transition-all">
+              <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin"></div>
+            </div>
+          )}
+          {recentSimulations.length > 0 ? (
             <div className="min-w-[1000px] divide-y divide-slate-50 dark:divide-white/5">
-              {paginatedSimulations.map((sim, i) => {
-                // Get the best result to show in the table (highest release amount)
-                const results = sim.results || [];
-                const bestResult = results.length > 0 
-                  ? results.reduce((prev, current) => (prev.release_amount > current.release_amount) ? prev : current)
-                  : null;
+              {recentSimulations.map((sim, i) => {
+                const bestResult = sim.results?.[0] || null;
 
                 return (
                   <div key={i} className="grid grid-cols-5 gap-4 items-center p-4 hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-all">
@@ -291,10 +324,10 @@ export default function DashboardPage() {
                       {bestResult ? (
                         <>
                           <div className="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-100 overflow-hidden flex items-center justify-center shrink-0">
-                            {(bestResult.bank_logo || (data.bank_logos && data.bank_logos[bestResult.bank_id])) ? (
-                              <img src={getStaticUrl(bestResult.bank_logo || data.bank_logos[bestResult.bank_id])} loading="eager" fetchPriority="high" className="w-full h-full object-cover" />
+                            {bestResult.bank_logo ? (
+                              <img src={getStaticUrl(bestResult.bank_logo)} loading="eager" fetchPriority="high" className="w-full h-full object-cover" />
                             ) : (
-                              <span className="text-sm font-black text-blue-600">{bestResult.bank_name.charAt(0)}</span>
+                              <span className="text-sm font-black text-blue-600">{(bestResult.bank_name || "B").charAt(0)}</span>
                             )}
                           </div>
                           <div>

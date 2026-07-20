@@ -764,10 +764,6 @@ class AdminService:
             cast(Simulation.created_at, Date), Simulation.agreement
         )
 
-        recent_query = select(Simulation).where(*sim_conds).options(
-            selectinload(Simulation.user), 
-            selectinload(Simulation.results)
-        ).order_by(Simulation.created_at.desc()).limit(50)
 
         banks_q = select(Bank)
         sub_logos_q = select(SubAgreementLogo)
@@ -827,11 +823,7 @@ class AdminService:
             print(f"[ERROR] Query hist_val falhou - {e}")
             hist_val = []
 
-        try:
-            recent_simulations_db = (await db.execute(recent_query)).scalars().all()
-        except Exception as e:
-            print(f"[ERROR] Query recent_query falhou - {e}")
-            recent_simulations_db = []
+        recent_simulations_db = []
 
         counts_row = counts_res[0] if counts_res else None
         total_banks = counts_row[0] if counts_row else 0
@@ -978,35 +970,126 @@ class AdminService:
                 {"name": name, "value": count} for name, count in agreement_counts
             ] if agreement_counts else [],
             "historical": historical_chart[-7:],
-            "bank_logos": banks_logo_map,
-            "recent_simulations": [
-                {
-                    "id": s.id,
-                    "client_name": s.client_name,
-                    "agreement": s.agreement,
-                    "current_bank": s.current_bank,
-                    "user_name": s.user.name if s.user else "Removido",
-                    "user_avatar": (s.user.logo_url or s.user.avatar_url) if s.user else None,
-                    "created_at": s.created_at.strftime("%d/%m/%Y %H:%M") if s.created_at else "N/A",
-                    "results": [
-                        {
-                            "bank_id": r.bank_id,
-                            "bank_name": banks_map.get(r.bank_id, f"Banco {r.bank_id}"),
-                            "table_name": r.table_name,
-                            "offered_rate": r.offered_rate,
-                            "release_amount": float(r.release_amount) if r.release_amount is not None else 0.0,
-                            "term": int(r.term) if r.term is not None else (int(s.total_term) if s.total_term else 84),
-                            "installment": float(r.installment) if r.installment is not None else (float(s.installment_value) if s.installment_value else 0.0),
-                            "contract_value": float(s.debt_balance or 0) + float(r.release_amount or 0),
-                            "is_approved": r.is_approved
-                        } for r in s.results
-                    ]
-                } for s in recent_simulations_db
-            ] if recent_simulations_db else [],
+
             "debug_errors": debug_errors
         }
         AdminService._dashboard_cache[cache_key] = (response_data, now)
         return response_data
+
+    @staticmethod
+    async def get_dashboard_recent(
+        db: AsyncSession,
+        current_user: User,
+        days: int = 30,
+        page: int = 1,
+        page_size: int = 10
+    ):
+        import math
+
+        period_ago = datetime.utcnow() - timedelta(days=days)
+        sim_conds = [Simulation.created_at >= period_ago]
+        if current_user.role == "promotora":
+            sim_conds.append(Simulation.user_id.in_(
+                select(User.id).where((User.id == current_user.id) | (User.broker_id == current_user.id))
+            ))
+        elif current_user.role != "admin":
+            sim_conds.append(Simulation.user_id == current_user.id)
+
+        # Count total
+        total_q = select(func.count(Simulation.id)).where(*sim_conds)
+        total = (await db.execute(total_q)).scalar() or 0
+        total_pages = math.ceil(total / page_size) if total > 0 else 0
+
+        if total == 0:
+            return {
+                "items": [],
+                "page": page,
+                "page_size": page_size,
+                "total": 0,
+                "total_pages": 0
+            }
+
+        # Fetch simulations for the requested page
+        sim_query = select(Simulation).where(*sim_conds).options(
+            selectinload(Simulation.user)
+        ).order_by(Simulation.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+
+        simulations = (await db.execute(sim_query)).scalars().all()
+        sim_ids = [s.id for s in simulations]
+
+        # Row number partition by simulation_id ordered by release_amount desc
+        rn_expr = func.row_number().over(
+            partition_by=SimulationResult.simulation_id,
+            order_by=SimulationResult.release_amount.desc()
+        ).label("rn")
+
+        subq = select(
+            SimulationResult.id.label("result_id"),
+            SimulationResult.simulation_id,
+            SimulationResult.bank_id,
+            SimulationResult.table_name,
+            SimulationResult.offered_rate,
+            SimulationResult.release_amount,
+            SimulationResult.term,
+            SimulationResult.installment,
+            SimulationResult.is_approved,
+            rn_expr
+        ).where(SimulationResult.simulation_id.in_(sim_ids)).subquery()
+
+        best_results_q = select(subq).where(subq.c.rn == 1)
+        best_results = (await db.execute(best_results_q)).all()
+
+        # Load banks for these results
+        bank_ids = list(set([r.bank_id for r in best_results if r.bank_id is not None]))
+        bank_map = {}
+        if bank_ids:
+            banks = (await db.execute(select(Bank).where(Bank.id.in_(bank_ids)))).scalars().all()
+            bank_map = {b.id: {"name": b.name, "logo": b.logo_url} for b in banks}
+
+        # Map results by simulation_id
+        results_map = {}
+        for r in best_results:
+            b_info = bank_map.get(r.bank_id, {})
+            results_map[r.simulation_id] = [{
+                "bank_id": r.bank_id,
+                "bank_name": b_info.get("name", f"Banco {r.bank_id}"),
+                "bank_logo": b_info.get("logo"),
+                "table_name": r.table_name,
+                "offered_rate": float(r.offered_rate) if r.offered_rate is not None else 0.0,
+                "release_amount": float(r.release_amount) if r.release_amount is not None else 0.0,
+                "term": 84,  # will be resolved in fallback below
+                "installment": 0.0,  # will be resolved in fallback below
+                "contract_value": 0.0,  # will be resolved in fallback below
+                "is_approved": bool(r.is_approved)
+            }]
+
+        items = []
+        for s in simulations:
+            res_list = results_map.get(s.id, [])
+            if res_list:
+                r = res_list[0]
+                db_res = next((res for res in best_results if res.simulation_id == s.id), None)
+                if db_res:
+                    r["term"] = int(db_res.term) if db_res.term is not None else (int(s.total_term) if s.total_term else 84)
+                    r["installment"] = float(db_res.installment) if db_res.installment is not None else (float(s.installment_value) if s.installment_value else 0.0)
+                    r["contract_value"] = float(s.debt_balance or 0.0) + float(db_res.release_amount or 0.0)
+            items.append({
+                "id": s.id,
+                "agreement": s.agreement,
+                "current_bank": s.current_bank,
+                "user_name": s.user.name if s.user else "Removido",
+                "user_avatar": (s.user.logo_url or s.user.avatar_url) if s.user else None,
+                "results": res_list
+            })
+
+        return {
+            "items": items,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages
+        }
+
     @staticmethod
     async def get_active_announcement(db: AsyncSession):
         from app.models.sqlalchemy_models import Announcement
