@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { api } from "@/utils/api";
 import { getActiveTheme, invalidateThemeCache, primeActiveTheme } from "@/utils/globalDataCache";
+import { useToast } from "@/components/ToastProvider";
 
 export default function ThemeManager() {
+  const { toast } = useToast();
   const [activeTheme, setActiveTheme] = useState("default");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -41,12 +43,13 @@ export default function ThemeManager() {
         window.dispatchEvent(new Event("storage"));
         window.dispatchEvent(new Event("theme-updated"));
         
+        toast.success("Tema atualizado com sucesso!");
         setSuccess(true);
         setTimeout(() => setSuccess(false), 2000);
       }
     } catch (err) {
       console.error("Erro ao salvar tema:", err);
-      alert("Falha ao salvar configuração do tema.");
+      toast.error("Falha ao salvar configuração do tema.");
     } finally {
       setLoading(false);
     }

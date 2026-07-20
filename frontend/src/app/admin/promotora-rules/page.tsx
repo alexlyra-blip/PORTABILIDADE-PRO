@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { inssBanks } from "@/utils/constants";
 import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/components/ToastProvider";
 
 import { Icons } from "@/components/Icons";
 
@@ -28,6 +29,7 @@ interface SubLogo {
 }
 
 export default function PromotoraRulesPage() {
+  const { toast } = useToast();
   const [banks, setBanks] = useState<Bank[]>([]);
   const [subLogos, setSubLogos] = useState<SubLogo[]>([]);
   const [loggedUser, setLoggedUser] = useState<any>(null);
@@ -131,13 +133,14 @@ export default function PromotoraRulesPage() {
     }
   };
 
-    const savePriorities = async (updated: any[]) => {
+  const savePriorities = async (updated: any[]) => {
     if (!loggedUser) return;
     try {
       await api.post(`/admin/users/${loggedUser.id}/rules`, { rule_key: "priority_config", rule_value: JSON.stringify(updated) });
       setPriorities(updated);
+      toast.success("Prioridades salvas com sucesso!");
     } catch (error) {
-      alert("Erro ao salvar prioridades");
+      toast.error("Erro ao salvar prioridades");
     }
   };
 
@@ -146,8 +149,9 @@ export default function PromotoraRulesPage() {
     try {
       await api.post(`/admin/users/${loggedUser.id}/rules`, { rule_key: "origin_bank_config", rule_value: JSON.stringify(updated) });
       setOriginRules(updated);
+      toast.success("Regras de origem salvas com sucesso!");
     } catch (error) {
-      alert("Erro ao salvar regras de origem");
+      toast.error("Erro ao salvar regras de origem");
     }
   };
 
@@ -156,8 +160,9 @@ export default function PromotoraRulesPage() {
     try {
       await api.post(`/admin/users/${loggedUser.id}/rules`, { rule_key: "origin_bank_blocklist", rule_value: JSON.stringify(updated) });
       setBlockedOriginBanks(updated);
+      toast.success("Bloqueio de origem salvo com sucesso!");
     } catch (error) {
-      alert("Erro ao salvar bloqueio de origem");
+      toast.error("Erro ao salvar bloqueio de origem");
     }
   };
 
@@ -166,8 +171,9 @@ export default function PromotoraRulesPage() {
     try {
       await api.post(`/admin/users/${loggedUser.id}/rules`, { rule_key: "blocked_tables", rule_value: JSON.stringify(updated) });
       setBlockedTables(updated);
+      toast.success("Tabelas bloqueadas salvas com sucesso!");
     } catch (error) {
-      alert("Erro ao salvar tabelas bloqueadas");
+      toast.error("Erro ao salvar tabelas bloqueadas");
     }
   };
 
@@ -205,8 +211,9 @@ export default function PromotoraRulesPage() {
       // Reload visible banks
       const visibleBanksData = await api.get(`/admin/users/${loggedUser.id}/visible-banks`);
       setVisibleBanks(visibleBanksData);
+      toast.success("Configuração do banco atualizada!");
     } catch (error) {
-      alert("Erro ao bloquear banco para simulação");
+      toast.error("Erro ao bloquear banco para simulação");
     }
   };
 

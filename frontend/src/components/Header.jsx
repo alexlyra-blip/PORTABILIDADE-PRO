@@ -4,8 +4,10 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/utils/api';
 import { getActiveAnnouncement } from '@/utils/globalDataCache';
+import { useToast } from "@/components/ToastProvider";
 
 export default function Header() {
+  const { toast } = useToast();
   const [user, setUser] = useState({ name: 'Usuário', role: 'corretor', avatar_url: '' });
   const [showSettings, setShowSettings] = useState(false);
   const [contracts, setContracts] = useState([]);
@@ -192,7 +194,7 @@ export default function Header() {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      alert("Imagem muito grande! Limite de 2MB.");
+      toast.warning("Imagem muito grande! Limite de 2MB.");
       return;
     }
 
@@ -205,9 +207,10 @@ export default function Header() {
         const updatedUser = { ...user, avatar_url: base64String };
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
+        toast.success("Avatar atualizado com sucesso!");
       } catch (err) {
         console.error("Erro ao atualizar avatar:", err);
-        alert("Erro ao salvar avatar.");
+        toast.error("Erro ao salvar avatar.");
       }
     };
     reader.readAsDataURL(file);

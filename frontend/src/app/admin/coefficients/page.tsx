@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
+import { useToast } from "@/components/ToastProvider";
 
 export default function CoefficientsPage() {
+  const { toast } = useToast();
   const [banks, setBanks] = useState<any[]>([]);
   const [selectedBankId, setSelectedBankId] = useState("");
   const [tables, setTables] = useState<any[]>([]);
@@ -217,9 +219,10 @@ export default function CoefficientsPage() {
       }
       handleCloseModal();
       loadAllCoefficients(tables);
+      toast.success("Coeficiente salvo com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar coeficiente:", error);
-      alert("Erro ao salvar coeficiente.");
+      toast.error("Erro ao salvar coeficiente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -230,9 +233,10 @@ export default function CoefficientsPage() {
     try {
       await api.delete(`/admin/coefficients/${id}`);
       loadAllCoefficients(tables);
+      toast.success("Coeficiente excluído com sucesso!");
     } catch (error) {
       console.error("Erro ao excluir coeficiente:", error);
-      alert("Erro ao excluir coeficiente.");
+      toast.error("Erro ao excluir coeficiente.");
     }
   };
 

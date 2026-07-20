@@ -6,6 +6,7 @@ import { api, getStaticUrl } from "@/utils/api";
 import { inssBanks } from "@/utils/constants";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
+import { useToast } from "@/components/ToastProvider";
 
 import { Icons } from "@/components/Icons";
 
@@ -54,6 +55,7 @@ const getConvenioDisplayName = (convenio) => {
 };
 
 export default function BancosPage() {
+  const { toast } = useToast();
   const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -362,12 +364,12 @@ export default function BancosPage() {
         setTimeout(() => setDownloadState("idle"), 3000);
       }).catch(e => {
         console.error("Erro ao gerar PDF:", e);
-        alert("Ocorreu um erro ao gerar o PDF das regras.");
+        toast.error("Ocorreu um erro ao gerar o PDF das regras.");
         setDownloadState("idle");
       });
     } catch (e) {
       console.error("Erro geral na exportação do PDF:", e);
-      alert("Ocorreu um erro ao inicializar o PDF.");
+      toast.error("Ocorreu um erro ao inicializar o PDF.");
       setDownloadState("idle");
     }
   };

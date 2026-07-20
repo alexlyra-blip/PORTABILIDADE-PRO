@@ -7,6 +7,7 @@ import StatsCard from "@/components/admin/StatsCard";
 import AnnouncementManager from "@/components/admin/AnnouncementManager";
 import ThemeManager from "@/components/admin/ThemeManager";
 import { api, getStaticUrl } from "@/utils/api";
+import { useToast } from "@/components/ToastProvider";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   AreaChart, Area, PieChart, Pie, Cell, Legend
@@ -16,6 +17,7 @@ import { Icons } from "@/components/Icons";
 
 
 export default function AdminPage() {
+  const { toast } = useToast();
   const [role, setRole] = useState("vendedor");
   const [downloadState, setDownloadState] = useState("idle"); // 'idle' | 'loading' | 'success'
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,7 @@ export default function AdminPage() {
       setDownloadState("success");
       setTimeout(() => setDownloadState("idle"), 3000);
     } catch (e) {
-      alert("Falha ao exportar PDF.");
+      toast.error("Falha ao exportar PDF.");
       setDownloadState("idle");
     }
   };
