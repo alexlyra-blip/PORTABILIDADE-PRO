@@ -5,8 +5,10 @@ import Link from "next/link";
 import { api, getStaticUrl } from "@/utils/api";
 import PageHeader from "@/components/PageHeader";
 import { Icons } from "@/components/Icons";
+import { useToast } from "@/components/ToastProvider";
 
 export default function MeusContratosPage() {
+   const { toast } = useToast();
    const [contracts, setContracts] = useState([]);
    const [searchQuery, setSearchQuery] = useState("");
    const [dbBanks, setDbBanks] = useState([]);
@@ -102,7 +104,7 @@ export default function MeusContratosPage() {
          window.dispatchEvent(new Event('contracts-updated'));
       } catch (err) {
          console.error("Erro ao atualizar status", err);
-         alert("Erro ao atualizar status");
+         toast.error("Erro ao atualizar status");
       }
    };
 
@@ -112,10 +114,10 @@ export default function MeusContratosPage() {
             await api.delete(`/contracts/${id}`);
             setContracts(prev => prev.filter(c => c.id !== id));
             window.dispatchEvent(new Event('contracts-updated'));
-            alert("Proposta excluída com sucesso!");
+            toast.success("Proposta excluída com sucesso!");
          } catch (err) {
             console.error("Erro ao excluir contrato", err);
-            alert("Erro ao excluir contrato");
+            toast.error("Erro ao excluir contrato");
          }
       }
    };
@@ -181,10 +183,10 @@ export default function MeusContratosPage() {
          setContracts(prev => prev.map(c => c.id === id ? { ...c, ...updatePayload } : c));
          window.dispatchEvent(new Event('contracts-updated'));
          setEditingId(null);
-         alert("Proposta atualizada com sucesso!");
+         toast.success("Proposta atualizada com sucesso!");
       } catch (err) {
          console.error("Erro ao salvar edição", err);
-         alert("Erro ao editar contrato");
+         toast.error("Erro ao editar contrato");
       }
    };
 
@@ -224,7 +226,7 @@ export default function MeusContratosPage() {
          });
       } catch (err) {
          console.error("Erro ao adicionar manualmente", err);
-         alert("Erro ao adicionar contrato manualmente");
+         toast.error("Erro ao adicionar contrato manualmente");
       }
    };
 

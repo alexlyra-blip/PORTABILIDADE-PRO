@@ -8,8 +8,10 @@ import PageHeader from "@/components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { Icons } from "@/components/Icons";
+import { useToast } from "@/components/ToastProvider";
 
 function OfertasPageContent() {
+  const { toast } = useToast();
   const router = useRouter();
   const [data, setData] = useState(null);
   const [inputData, setInputData] = useState(null);
@@ -288,7 +290,7 @@ function OfertasPageContent() {
 
     } catch (error) { 
       console.error("PDF Error:", error); 
-      alert("Erro ao gerar proposta."); 
+      toast.error("Erro ao gerar proposta.");
       setDownloadState("idle");
     }
   };

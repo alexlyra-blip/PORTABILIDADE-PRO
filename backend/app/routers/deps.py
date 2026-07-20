@@ -29,10 +29,13 @@ async def get_current_user(authorization: Optional[str] = Header(None), db: Asyn
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuário não encontrado")
-        
+
     if not user.active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
-        
+
+    if user.current_token and user.current_token != token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sessão encerrada: outro dispositivo realizou o login")
+
     return user
 
 async def get_admin_user(user: User = Depends(get_current_user)):
