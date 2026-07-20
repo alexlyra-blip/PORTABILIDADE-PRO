@@ -1278,7 +1278,7 @@ function SimuladorPageContent() {
                         </button>
                       </div>
                     </div>
-                    <div className="flex gap-3 relative">
+                    <div className="flex flex-col sm:flex-row gap-3 relative">
                         <div className="relative flex-1">
                             <input
                               type="text"
@@ -2157,22 +2157,22 @@ function SimuladorPageContent() {
         return createPortal(
           <div className="fixed inset-0 flex items-center justify-center p-4 animate-in fade-in duration-350" style={{ zIndex: 999999 }}>
             <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setCpfModalOpen(false)}></div>
-            <div className="relative bg-slate-50 rounded-[3rem] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col z-20" style={{ zIndex: 999999 }}>
+            <div className="relative bg-slate-50 shadow-2xl w-full max-w-5xl h-full sm:h-auto max-h-screen sm:max-h-[90vh] rounded-none sm:rounded-[3rem] overflow-y-auto sm:overflow-hidden flex flex-col z-20" style={{ zIndex: 999999 }}>
 
               {/* Header */}
-              <div className="px-8 py-6 bg-white border-b border-slate-150 flex justify-between items-center z-10 shadow-sm">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-tr from-amber-500 to-yellow-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <div className="px-4 py-4 sm:px-8 sm:py-6 bg-white border-b border-slate-150 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 z-10 shadow-sm relative">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full">
+                  <div className="hidden sm:flex w-12 h-12 bg-gradient-to-tr from-amber-500 to-yellow-600 text-white rounded-2xl items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
                     <CrownIcon className="w-6 h-6 text-white" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-black text-slate-800 text-xl uppercase tracking-tight">{activeBenefit.cliente?.nome || "Cliente Não Identificado"}</h3>
+                  <div className="w-full pr-10 sm:pr-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-black text-slate-800 text-base sm:text-xl uppercase tracking-tight break-all sm:break-normal">{activeBenefit.cliente?.nome || "Cliente Não Identificado"}</h3>
                       <PremiumBadge />
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest items-center">
+                    <div className="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1.5 mt-2 text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest items-center">
                       <span className="flex items-center gap-1"><CpfIcon className="w-3.5 h-3.5 text-emerald-500" /> CPF: <span className="text-slate-800">{activeBenefit.cliente?.cpf ? maskCPF(activeBenefit.cliente.cpf) : ""}</span></span>
-                      <span className="flex items-center gap-1"><CalendarIcon className="w-3.5 h-3.5 text-purple-500" /> Nascimento: <span className="text-slate-800">{activeBenefit.cliente?.data_nascimento ? formatDateBRLocal(activeBenefit.cliente.data_nascimento) : "Não Informada"}{activeBenefit.cliente?.idade ? ` (${activeBenefit.cliente.idade} anos)` : ""}</span></span>
+                      <span className="flex items-center gap-1"><CalendarIcon className="w-3.5 h-3.5 text-purple-500" /> Nasc: <span className="text-slate-800">{activeBenefit.cliente?.data_nascimento ? formatDateBRLocal(activeBenefit.cliente.data_nascimento) : "Não Informada"}{activeBenefit.cliente?.idade ? ` (${activeBenefit.cliente.idade} a)` : ""}</span></span>
                       <span className="flex items-center gap-1"><FiliaçãoIcon className="w-3.5 h-3.5 text-indigo-500" /> Filiação: <span className="text-slate-800">{activeBenefit.cliente?.filiacao || "Não Informada"}</span></span>
                       {activeBenefit.telefones && activeBenefit.telefones.length > 0 && (
                         <span className="flex items-center gap-1"><PhoneIcon className="w-3.5 h-3.5 text-teal-500" /> Tel: <span className="text-slate-800">{activeBenefit.telefones.map(t => formatPhoneLocal(t)).join(" / ")}</span></span>
@@ -2181,13 +2181,13 @@ function SimuladorPageContent() {
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setCpfModalOpen(false)} className="w-10 h-10 bg-slate-100 hover:bg-red-100 hover:text-red-500 text-slate-400 rounded-xl flex items-center justify-center transition-colors text-xl font-black">×</button>
+                <button onClick={() => setCpfModalOpen(false)} className="absolute top-4 right-4 sm:relative sm:top-0 sm:right-0 w-8 h-8 sm:w-10 sm:h-10 bg-slate-100 hover:bg-red-100 hover:text-red-500 text-slate-400 rounded-xl flex items-center justify-center transition-colors text-xl font-black">×</button>
               </div>
 
               {/* Abas dos benefícios */}
               {beneficiosCpf.length > 1 && (
-                <div className="px-8 py-4 bg-slate-100 border-b border-slate-200 z-10">
-                  <div className="flex flex-wrap items-center gap-3">
+                <div className="px-4 py-3 sm:px-8 sm:py-4 bg-slate-100 border-b border-slate-200 z-10">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
                       Benefícios encontrados ({beneficiosCpf.length}):
                     </span>
@@ -2251,7 +2251,7 @@ function SimuladorPageContent() {
               )}
 
               {/* Corpo */}
-              <div className="p-8 overflow-y-auto flex-1 flex flex-col gap-8 custom-scrollbar">
+              <div className="p-4 sm:p-8 overflow-y-visible sm:overflow-y-auto flex-none sm:flex-1 flex flex-col gap-6 sm:gap-8 custom-scrollbar">
 
                 {/* Dados Benefício & Bancários */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2574,15 +2574,15 @@ function SimuladorPageContent() {
               </div>
 
               {/* Footer */}
-              <div className="p-8 bg-slate-50 border-t border-slate-200 flex justify-center gap-4 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
-                <button onClick={() => setCpfModalOpen(false)} className="px-8 py-4 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-widest text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">Cancelar</button>
+              <div className="p-4 sm:p-8 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] w-full">
+                <button onClick={() => setCpfModalOpen(false)} className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-widest text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">Cancelar</button>
                 <button
                   onClick={() => {
                     handleUseCpfLoans();
                     setCpfModalOpen(false);
                   }}
                   disabled={selectedCpfLoanIndices.length === 0}
-                  className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Importar ({selectedCpfLoanIndices.length}) Contrato(s)
                 </button>
