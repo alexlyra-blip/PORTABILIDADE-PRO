@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
+import { useToast } from "@/components/ToastProvider";
 
 interface BankRule {
   id?: number;
@@ -37,6 +38,7 @@ interface Bank {
 }
 
 export default function BanksPage() {
+  const { toast } = useToast();
   const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -375,12 +377,12 @@ export default function BanksPage() {
       }
 
       loadBanks();
-      alert("✅ Banco e Regras salvos com sucesso!");
+      toast.success("Banco e Regras salvos com sucesso!");
       handleCloseModal();
     } catch (error: any) {
       console.error("Erro ao salvar banco:", error);
       const detail = error.message || "Erro ao salvar banco. Verifique os dados e tente novamente.";
-      alert(detail);
+      toast.error(detail);
     } finally {
       setIsSubmitting(false);
     }
@@ -428,7 +430,7 @@ export default function BanksPage() {
     if (!newAgreement) return;
     const exists = bankRules.some(r => r.agreement === newAgreement && (r.sub_agreement || "") === newSubAgreement);
     if (exists) {
-      alert(`⚠️ A regra para ${newAgreement}${newSubAgreement ? ` - ${newSubAgreement}` : ""} já existe!`);
+      toast.warning(`A regra para ${newAgreement}${newSubAgreement ? ` - ${newSubAgreement}` : ""} já existe!`);
       handleAgreementChange(newAgreement, newSubAgreement);
       setShowAddRuleForm(false);
       return;
@@ -521,16 +523,16 @@ export default function BanksPage() {
           }
         }));
       }
-      alert("✅ Regra de convênio removida!");
+      toast.success("Regra de convênio removida!");
     } catch (error) {
       console.error("Erro ao excluir regra:", error);
-      alert("Erro ao excluir regra do convênio.");
+      toast.error("Erro ao excluir regra do convênio.");
     }
   };
 
   const handleLogoUpload = async (e) => {
     if (!editingBank) {
-      alert("Salve o banco primeiro para fazer o upload da logo.");
+      toast.warning("Salve o banco primeiro para fazer o upload da logo.");
       return;
     }
     
@@ -549,10 +551,10 @@ export default function BanksPage() {
       // Atualiza o banco na lista lateral
       setBanks(prev => prev.map(b => b.id === editingBank.id ? { ...b, logo_url: response.logo_url } : b));
       
-      alert("✅ Logo enviada com sucesso!");
+      toast.success("Logo enviada com sucesso!");
     } catch (error) {
       console.error("Erro no upload:", error);
-      alert("Erro ao enviar logo.");
+      toast.error("Erro ao enviar logo.");
     } finally {
       loadBanks(); // Recarrega do banco para garantir sincronia
     }
@@ -618,7 +620,7 @@ export default function BanksPage() {
       loadBanks();
     } catch (error) {
       console.error("Erro ao excluir banco:", error);
-      alert("Erro ao excluir banco.");
+      toast.error("Erro ao excluir banco.");
     }
   };
 

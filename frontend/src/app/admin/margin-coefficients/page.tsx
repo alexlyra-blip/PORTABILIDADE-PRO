@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api } from "@/utils/api";
 import { Icons } from "@/components/Icons";
+import { useToast } from "@/components/ToastProvider";
 
 export default function MarginCoefficientsPage() {
+  const { toast } = useToast();
   const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -94,10 +96,10 @@ export default function MarginCoefficientsPage() {
         coefficient: coef
       }));
       await api.post("/admin/margin-coefficients", payload);
-      alert("Coeficientes salvos com sucesso!");
+      toast.success("Coeficientes salvos com sucesso!");
     } catch (e) {
       console.error(e);
-      alert("Erro ao salvar coeficientes.");
+      toast.error("Erro ao salvar coeficientes.");
     } finally {
       setSaving(false);
     }

@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
+import { useToast } from "@/components/ToastProvider";
 
 export default function RulesPage() {
+  const { toast } = useToast();
   const [banks, setBanks] = useState<any[]>([]);
   const [selectedBankId, setSelectedBankId] = useState("");
   const [rules, setRules] = useState<any[]>([]);
@@ -183,9 +185,10 @@ export default function RulesPage() {
       }
       handleCloseModal();
       loadRules(selectedBankId);
+      toast.success("Regra salva com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar regra:", error);
-      alert("Erro ao salvar regra.");
+      toast.error("Erro ao salvar regra.");
     } finally {
       setIsSubmitting(false);
     }
@@ -196,9 +199,10 @@ export default function RulesPage() {
     try {
       await api.delete(`/admin/bank-rules/${id}`);
       loadRules(selectedBankId);
+      toast.success("Regra excluída com sucesso!");
     } catch (error) {
       console.error("Erro ao excluir regra:", error);
-      alert("Erro ao excluir regra.");
+      toast.error("Erro ao excluir regra.");
     }
   };
 

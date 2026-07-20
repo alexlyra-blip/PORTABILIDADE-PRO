@@ -7,6 +7,7 @@ import { api, getStaticUrl } from "@/utils/api";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { inssBanks } from "@/utils/constants";
+import { useToast } from "@/components/ToastProvider";
 
 import { Icons } from "@/components/Icons";
 
@@ -95,6 +96,7 @@ const PremiumBadge = () => (
 );
 
 function SimuladorPageContent() {
+  const { toast } = useToast();
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [dbBanks, setDbBanks] = useState([]);
@@ -458,7 +460,7 @@ function SimuladorPageContent() {
 
   const handleConsultarCPF = async () => {
     if (cpfStatus !== 'valid') {
-       alert("Por favor, informe um CPF válido primeiro.");
+       toast.warning("Por favor, informe um CPF válido primeiro.");
        return;
     }
     setIsLoadingCpf(true);
@@ -480,7 +482,7 @@ function SimuladorPageContent() {
        setCpfModalOpen(true);
     } catch (err) {
        console.error(err);
-       alert("Não foi possível consultar este CPF.");
+       toast.error("Não foi possível consultar este CPF.");
     } finally {
        setIsLoadingCpf(false);
     }
@@ -546,7 +548,7 @@ function SimuladorPageContent() {
     }
     if (!file) return;
     if (file.type !== "application/pdf") {
-      alert("Por favor, selecione um arquivo PDF.");
+      toast.warning("Por favor, selecione um arquivo PDF.");
       return;
     }
     setExtractLoading(true);
@@ -563,7 +565,7 @@ function SimuladorPageContent() {
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
           if (diffDays > 30) {
-            alert(`Extrato inválido! A data do extrato (${res.data.data_extrato}) é superior a 30 dias. O prazo máximo aceito é de 30 dias.`);
+            toast.error(`Extrato inválido! A data do extrato (${res.data.data_extrato}) é superior a 30 dias. O prazo máximo aceito é de 30 dias.`);
             setExtractLoading(false);
             e.target.value = null;
             return;
@@ -583,7 +585,7 @@ function SimuladorPageContent() {
     } catch (err) {
       console.error(err);
       const msg = err.message || "Erro ao ler o PDF. Tente novamente.";
-      alert(msg);
+      toast.error(msg);
     } finally {
       setExtractLoading(false);
     }
@@ -916,12 +918,12 @@ function SimuladorPageContent() {
   const handleSimular = async (e) => {
     e.preventDefault();
     if (formData.cpf && !validateCPF(formData.cpf)) {
-      alert("CPF informado é inválido.");
+      toast.warning("CPF informado é inválido.");
       return;
     }
     const invalid = contracts.filter(c => !c.banco || !c.parcela || !c.saldoDevedor);
     if (invalid.length > 0) {
-      alert("Preencha todos os campos obrigatórios dos contratos.");
+      toast.warning("Preencha todos os campos obrigatórios dos contratos.");
       return;
     }
 
@@ -1010,7 +1012,7 @@ function SimuladorPageContent() {
       }, 1500);
     } catch (err) {
       console.error(err);
-      alert("Erro ao processar simulação.");
+      toast.error("Erro ao processar simulação.");
       setLoading(false);
     }
   };

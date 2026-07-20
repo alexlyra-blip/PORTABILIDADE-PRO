@@ -732,19 +732,19 @@ async def check_timeout(sender: str, db: AsyncSession = Depends(get_db)):
     last_time = session.get("last_request_time", 0.0)
     current_time = datetime.now().timestamp()
     
-    # 15 minutes = 900 seconds
-    if (current_time - last_time) >= 900:
+    # 10 minutes = 600 seconds
+    if (current_time - last_time) >= 600:
         session["state"] = "finished"
         protocol = session.get("protocol", "N/A")
-        
+
         reply_text = (
             "⏳ *Atendimento encerrado por inatividade.*\n\n"
-            f"📝 *Protocolo:* {protocol}\n"
-            "Se precisar de uma nova simulação, estarei sempre à disposição!"
+            f"O atendimento do protocolo *{protocol}* foi encerrado por falta de comunicação ou interação após 10 minutos de inatividade.\n\n"
+            "Agradecemos o seu contato!"
         )
         session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
         await save_chat_log(db, session, sender, True)
-        
+
         return {"timeout": True, "reply": reply_text,
                 "sender": sender}
     
@@ -752,20 +752,20 @@ async def check_timeout(sender: str, db: AsyncSession = Depends(get_db)):
 
 
 async def background_timeout_task(sender: str, session: dict, db: AsyncSession):
-    await asyncio.sleep(900)  # Wait 15 minutes
+    await asyncio.sleep(600)  # Wait 10 minutes
     
     current_time = datetime.now().timestamp()
     last_time = session.get("last_request_time", 0.0)
     
-    if (current_time - last_time) >= 890:
+    if (current_time - last_time) >= 590:
         if session.get("state") != "finished":
             session["state"] = "finished"
             protocol = session.get("protocol", "N/A")
             
             reply_text = (
                 "⏳ *Atendimento encerrado por inatividade.*\n\n"
-                f"📝 *Protocolo:* {protocol}\n"
-                "Se precisar de uma nova simulação, estarei sempre à disposição!"
+                f"O atendimento do protocolo *{protocol}* foi encerrado por falta de comunicação ou interação após 10 minutos de inatividade.\n\n"
+                "Agradecemos o seu contato!"
             )
             session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
             await save_chat_log(db, session, sender, True)
@@ -1211,14 +1211,13 @@ async def chat_interaction(
         session["last_request_time"] = current_time
         session["last_message"] = message
         
-        # 15 minute timeout check (15 * 60 = 900 seconds)
-        if last_time > 0 and (current_time - last_time > 900) and session.get("state") != "idle":
+        # 10 minute timeout check (10 * 60 = 600 seconds)
+        if last_time > 0 and (current_time - last_time > 600) and session.get("state") != "idle":
             protocol = session.get('protocol', 'N/A')
             reply_text = (
-                "⏳ *Sessão Expirada por Inatividade*\n\n"
-                f"Seu atendimento foi encerrado automaticamente devido a 15 minutos de inatividade.\n"
-                f"📝 *Protocolo:* {protocol}\n\n"
-                "Caso deseje iniciar uma nova simulação, basta digitar *Menu*."
+                "⏳ *Atendimento encerrado por inatividade.*\n\n"
+                f"O atendimento do protocolo *{protocol}* foi encerrado por falta de comunicação ou interação após 10 minutos de inatividade.\n\n"
+                "Agradecemos o seu contato!"
             )
             session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
             await save_chat_log(db, session, sender, True)
