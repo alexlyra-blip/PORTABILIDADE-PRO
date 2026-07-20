@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api, getStaticUrl } from "@/utils/api";
+import { getStaticUrl } from "@/utils/api";
+import { getActiveAnnouncement } from "@/utils/globalDataCache";
 
 export default function AnnouncementPopup() {
   const [announcement, setAnnouncement] = useState(null);
@@ -10,9 +11,11 @@ export default function AnnouncementPopup() {
   const [isZoomed, setIsZoomed] = useState(false);
 
   useEffect(() => {
+    let timerId = null;
+
     const fetchAnnouncement = async () => {
       try {
-        const data = await api.get('/admin/announcements/active');
+        const data = await getActiveAnnouncement();
         if (data && data.active) {
           // Check if user already saw this specific announcement
           const readKey = `announcement_read_${data.id}`;
@@ -30,8 +33,12 @@ export default function AnnouncementPopup() {
     const token = localStorage.getItem('token');
     if (token) {
       // Small delay so it feels like a natural popup after loading the dashboard
-      setTimeout(fetchAnnouncement, 1000);
+      timerId = setTimeout(fetchAnnouncement, 1000);
     }
+
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
   }, []);
 
   const handleClose = () => {
