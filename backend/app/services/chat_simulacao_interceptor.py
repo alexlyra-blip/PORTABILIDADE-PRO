@@ -66,6 +66,222 @@ def get_taxa(o):
 def get_troco(o):
     return safe_float(first_value(o, "troco", "troco_normalizado", "valor_troco", "valor_liberado"))
 
+def _get_offers_for_bank(c_obj, target_bank):
+    """Retorna as ofertas do banco preservando a ordem original do motor."""
+    target_normalized = _normalize_bank(target_bank)
+    recommended_bank = c_obj.get("banco_recomendado")
+
+    if target_normalized == _normalize_bank(recommended_bank):
+        recommended_offers = (
+            c_obj.get("tabelas_banco_recomendado")
+            or []
+        )
+
+        if recommended_offers:
+            return list(recommended_offers)
+
+        melhor_oferta = c_obj.get("melhor_oferta")
+        if (
+            isinstance(melhor_oferta, dict)
+            and _normalize_bank(get_banco(melhor_oferta))
+            == target_normalized
+        ):
+            return [melhor_oferta]
+
+    ofertas_por_banco = c_obj.get("ofertas_por_banco") or {}
+
+    if isinstance(ofertas_por_banco, dict):
+        for bank_name, bank_offers in ofertas_por_banco.items():
+            if _normalize_bank(bank_name) == target_normalized:
+                return list(bank_offers or [])
+
+    alternativas = c_obj.get("tabelas_alternativas") or []
+
+    return [
+        oferta
+        for oferta in alternativas
+        if _normalize_bank(get_banco(oferta))
+        == target_normalized
+    ]
+
+
+def _select_primary_offer(offers, requested_term=None):
+    """
+    Seleciona a oferta sem reordenar taxas ou trocos.
+
+    Prioridade:
+    1. Prazo explicitamente solicitado, quando existir.
+    2. Primeira tabela de 108 meses.
+    3. Primeira tabela disponível na ordem do motor.
+    """
+    if not offers:
+        return None
+
+    if requested_term:
+        term_offers = [
+            offer
+            for offer in offers
+            if get_prazo(offer) == requested_term
+        ]
+
+        if term_offers:
+            return term_offers[0]
+
+    offers_108 = [
+        offer
+        for offer in offers
+        if get_prazo(offer) == 108
+    ]
+
+    if offers_108:
+        return offers_108[0]
+
+    return offers[0]
+
+
+def _collect_other_eligible_banks(all_contracts, selected_bank):
+    """Lista outros bancos elegíveis sem repetir o banco selecionado."""
+    selected_normalized = _normalize_bank(selected_bank)
+    banks = []
+    seen = set()
+
+    def add_bank(bank_name):
+        normalized = _normalize_bank(bank_name)
+
+        if (
+            not bank_name
+            or not normalized
+            or normalized == selected_normalized
+            or normalized in seen
+        ):
+            return
+
+        seen.add(normalized)
+        banks.append(str(bank_name))
+
+    for _, contract in all_contracts:
+        recommended_bank = contract.get("banco_recomendado")
+
+        if recommended_bank:
+            recommended_offers = _get_offers_for_bank(
+                contract,
+                recommended_bank,
+            )
+
+            if recommended_offers:
+                add_bank(recommended_bank)
+
+        offers_by_bank = contract.get("ofertas_por_banco") or {}
+
+        if isinstance(offers_by_bank, dict):
+            for bank_name, bank_offers in offers_by_bank.items():
+                if bank_offers:
+                    add_bank(bank_name)
+
+        for offer in contract.get("tabelas_alternativas") or []:
+            add_bank(get_banco(offer))
+
+    return banks
+
+
+def _build_multi_contract_bank_reply(
+    all_contracts,
+    target_bank,
+    requested_term=None,
+):
+    """
+    Mostra automaticamente a oferta do banco solicitado em todos os
+    benefícios e contratos elegíveis.
+    """
+    offer_blocks = []
+
+    for benefit, contract in all_contracts:
+        bank_offers = _get_offers_for_bank(
+            contract,
+            target_bank,
+        )
+
+        selected_offer = _select_primary_offer(
+            bank_offers,
+            requested_term,
+        )
+
+        if not selected_offer:
+            continue
+
+        benefit_index = (
+            benefit.get("indice_beneficio")
+            or benefit.get("beneficio")
+            or "-"
+        )
+
+        contract_index = (
+            contract.get("indice_contrato")
+            or contract.get("contrato")
+            or "-"
+        )
+
+        bank_name = get_banco(selected_offer) or target_bank
+        table_name = get_tabela(selected_offer)
+        installment = get_parcela(selected_offer)
+        term = get_prazo(selected_offer)
+        new_contract = get_novo_contrato(selected_offer)
+        outstanding_balance = get_saldo_devedor(
+            selected_offer,
+            contract,
+        )
+        rate = get_taxa(selected_offer)
+        change_value = get_troco(selected_offer)
+
+        offer_blocks.append(
+            f"📌 *BENEFÍCIO {benefit_index} / "
+            f"CONTRATO {contract_index}*\n\n"
+            f"⭐ *OFERTA SELECIONADA: {bank_name}*\n\n"
+            "📋 *DETALHES DA OPERAÇÃO:*\n"
+            f"• 🏷️ *Tabela:* {table_name}\n"
+            f"• 💵 *Valor da Parcela:* "
+            f"R$ {installment:.2f}\n"
+            f"• 📅 *Prazo:* {term} meses\n"
+            f"• ✍️ *Novo Contrato:* "
+            f"R$ {new_contract:.2f}\n"
+            f"• 🏦 *Saldo Devedor:* "
+            f"R$ {outstanding_balance:.2f}\n"
+            f"• 📈 *Taxa do Refin:* {rate}% a.m.\n\n"
+            f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: "
+            f"R$ {change_value:.2f}* 🤑"
+        )
+
+    if not offer_blocks:
+        return (
+            f"Nenhuma tabela encontrada para {target_bank} "
+            "nos contratos desta simulação."
+        )
+
+    other_banks = _collect_other_eligible_banks(
+        all_contracts,
+        target_bank,
+    )
+
+    reply_parts = [
+        f"🏦 *OFERTAS ENCONTRADAS — "
+        f"{str(target_bank).upper()}*",
+        *offer_blocks,
+    ]
+
+    if other_banks:
+        reply_parts.append(
+            "🏛️ *OUTROS BANCOS ELEGÍVEIS:*\n"
+            + ", ".join(other_banks)
+        )
+
+    reply_parts.append(
+        "Deseja ver *outras tabelas* para este banco? "
+        "Ou digite 'encerrar'."
+    )
+
+    return "\n\n━━━━━━━━━━━━━━━━━━\n\n".join(reply_parts)
+
+
 def processar_comando_simulacao(session, msg_lower, message):
     contexto = None
     if "ultima_simulacao" in session and isinstance(session["ultima_simulacao"], dict):
@@ -197,6 +413,33 @@ def processar_comando_simulacao(session, msg_lower, message):
 
     if not wants_tables and not requested_bank and not requested_term and not resolved_contract and not structured_input:
         return None
+
+    # Quando um banco é solicitado, analisa automaticamente todos os
+    # benefícios e contratos. A consulta de outras tabelas permanece
+    # utilizando o fluxo atual.
+    if (
+        requested_bank
+        and not wants_tables
+        and b_idx is None
+        and c_idx is None
+        and len(all_contracts) > 1
+    ):
+        session.pop("pending_intent", None)
+
+        if (
+            "context_data" in session
+            and isinstance(session["context_data"], dict)
+        ):
+            session["context_data"].pop(
+                "pending_intent",
+                None,
+            )
+
+        return _build_multi_contract_bank_reply(
+            all_contracts,
+            requested_bank,
+            requested_term,
+        )
 
     target_contract_tuple = None
     if b_idx is not None and c_idx is not None:
@@ -366,12 +609,12 @@ def processar_comando_simulacao(session, msg_lower, message):
         if is_recommended and c_obj.get("melhor_oferta"):
             best_offer = c_obj.get("melhor_oferta")
         else:
-            ofertas_ordenadas_para_melhor = sorted(ofertas_validas, key=lambda x: (
-                -get_troco(x),
-                get_taxa(x),
-                get_parcela(x)
-            ))
-            best_offer = ofertas_ordenadas_para_melhor[0]
+            # Preserva a ordem comercial das tabelas e prioriza 108X.
+            # Não seleciona pela menor taxa nem pelo maior troco.
+            best_offer = _select_primary_offer(
+                ofertas_validas,
+                requested_term,
+            )
             
         _banco = get_banco(best_offer) or target_bank
         _tabela = get_tabela(best_offer)
