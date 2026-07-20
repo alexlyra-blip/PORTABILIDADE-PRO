@@ -5,6 +5,7 @@ from typing import Dict, Any
 import datetime
 
 from app.services.consultas.base_provider import ConsultaBeneficioProvider
+from app.services.consultas.margin_rules import recalculate_benefit_margins
 
 
 def money(value) -> float:
@@ -219,7 +220,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
             except Exception:
                 pass
 
-        return {
+        response = {
             "origem": "PROMOSYS",
 
             "cliente": {
@@ -230,12 +231,12 @@ class PromosysProvider(ConsultaBeneficioProvider):
                 "especie": safe_str(raw.get("ESP")),
                 "salario": money(salario),
                 "margem_livre": margem_livre,
-                "valor_liberado_margem": money(margem_livre / 0.02270) if margem_livre > 0 else 0.0,
+                "valor_liberado_margem": 0.0,
                 "banco_pagador": safe_str(dados_bancarios.get("NOME_BANCO_PAGTO") or dados_bancarios.get("NOME_BANCO")),
                 "endereco": endereco_completo,
                 "data_nascimento": data_nasc,
                 "filiacao": safe_str(raw.get("NOME_MAE") or raw.get("MAE") or raw.get("NOMEMAE") or raw.get("NOME_DA_MAE") or raw.get("NOMEDAMAE") or raw.get("MAE_NOME") or raw.get("FILIACAO") or ""),
-                "coeficiente_utilizado": 0.02270
+                "coeficiente_utilizado": 0.0
             },
 
             "margens": {
@@ -243,8 +244,8 @@ class PromosysProvider(ConsultaBeneficioProvider):
                 "margem_emprestimo": margem_emprestimo,
                 "total_comprometido": money(total_comprometido),
                 "margem_livre": margem_livre,
-                "valor_liberado_margem": money(margem_livre / 0.02270) if margem_livre > 0 else 0.0,
-                "coeficiente_utilizado": 0.02270,
+                "valor_liberado_margem": 0.0,
+                "coeficiente_utilizado": 0.0,
                 "margem_cartao": margem_cartao,
                 "possui_cartao": possui_cartao,
                 "cartao_utilizado": money(cartao_utilizado),
@@ -290,6 +291,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
                 "maior_parcela": maior_parcela
             }
         }
+        return recalculate_benefit_margins(response)
 
     async def consultar_beneficios(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
         self.convenio_temp = convenio

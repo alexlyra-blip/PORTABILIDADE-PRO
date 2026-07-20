@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 from app.services.consultas.base_provider import ConsultaBeneficioProvider
+from app.services.consultas.margin_rules import recalculate_benefit_margins
 from app.services.multicorban_service import MultiCorbanService
 
 logger = logging.getLogger("multicorban_provider")
@@ -143,7 +144,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         
         especie = str(beneficiario.get("Especie") or "")
         is_loas = especie in ["87", "88"]
-        percent = 0.30 if is_loas else 0.35
+        percent = 0.35 if is_loas else 0.40
         margem_consignavel = salario * percent
 
         total_loans_installments = sum(safe_float(emp.get("ValorParcela")) for emp in emprestimos_list)
@@ -163,9 +164,6 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         total_comprometido = total_loans_installments + rmc_val + rcc_val
         margem_livre = margem_consignavel - total_comprometido
         
-        display_margem = max(0.0, margem_livre)
-        valor_liberado_margem = display_margem / 0.02270 if display_margem > 0 else 0.0
-
         endereco_partes = []
         if beneficiario.get("Endereco"):
             endereco_partes.append(safe_str(beneficiario.get("Endereco")))
@@ -248,7 +246,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             except:
                 pass
 
-        return {
+        response = {
             "origem": "MULTICORBAN",
             "cliente": {
                 "nome": safe_str(beneficiario.get("Nome")),
@@ -258,20 +256,20 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "especie": especie,
                 "salario": salario,
                 "margem_livre": margem_livre,
-                "valor_liberado_margem": valor_liberado_margem,
+                "valor_liberado_margem": 0.0,
                 "banco_pagador": safe_str(dados_bancarios.get("Banco")),
                 "endereco": endereco_completo,
                 "data_nascimento": safe_str(beneficiario.get("DataNascimento")),
                 "filiacao": safe_str(beneficiario.get("NomeMae") or beneficiario.get("Nome_Mae") or beneficiario.get("Mae") or beneficiario.get("NomeDaMae") or beneficiario.get("Nome_Da_Mae") or beneficiario.get("Filiacao") or ""),
-                "coeficiente_utilizado": 0.02270
+                "coeficiente_utilizado": 0.0
             },
             "margens": {
                 "salario": salario,
                 "margem_emprestimo": margem_consignavel,
                 "total_comprometido": total_comprometido,
                 "margem_livre": margem_livre,
-                "valor_liberado_margem": valor_liberado_margem,
-                "coeficiente_utilizado": 0.02270,
+                "valor_liberado_margem": 0.0,
+                "coeficiente_utilizado": 0.0,
                 "margem_cartao": salario * 0.05,
                 "possui_cartao": len(cartoes) > 0,
                 "cartao_utilizado": rmc_val + rcc_val,
@@ -307,3 +305,4 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "maior_parcela": maior_parcela
             }
         }
+        return recalculate_benefit_margins(response)
