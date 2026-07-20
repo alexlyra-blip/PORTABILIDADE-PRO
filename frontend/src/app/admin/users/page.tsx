@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
+import { useToast } from "@/components/ToastProvider";
 
 
 interface User {
@@ -25,6 +26,7 @@ function getDaysLeft(expiresAt?: string): number | null {
 }
 
 export default function UsersPage() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -70,7 +72,7 @@ export default function UsersPage() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1024 * 1024 * 2) { alert("Máximo 2MB."); return; }
+    if (file.size > 1024 * 1024 * 2) { toast.warning("Tamanho máximo permitido da imagem é de 2MB."); return; }
     const reader = new FileReader();
     reader.onloadend = () => setFormData({ ...formData, avatar_url: reader.result as string, logo_url: reader.result as string });
     reader.readAsDataURL(file);
@@ -114,10 +116,11 @@ export default function UsersPage() {
           setLoggedUser(nu); window.dispatchEvent(new Event('user-updated'));
         }
       } else {
-        if (!formData.password) { alert("Senha é obrigatória."); setIsSubmitting(false); return; }
+        if (!formData.password) { toast.warning("Senha é obrigatória."); setIsSubmitting(false); return; }
         await api.post("/admin/users", formData);
       }
       setModalOpen(false); setEditingUser(null); loadUsers();
+      toast.success("Usuário salvo com sucesso!");
     } catch (e) { console.error(e); } finally { setIsSubmitting(false); }
   };
 
@@ -130,12 +133,20 @@ export default function UsersPage() {
         ...(newActive && user.role === 'promotora' ? { subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() } : {})
       });
       loadUsers();
+      toast.success("Status do usuário atualizado!");
     } catch (e) { console.error(e); }
   };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("Remover usuário?")) return;
-    try { await api.delete(`/admin/users/${id}`); loadUsers(); } catch (e) { console.error(e); }
+    try {
+      await api.delete(`/admin/users/${id}`);
+      loadUsers();
+      toast.success("Usuário removido com sucesso!");
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao remover usuário.");
+    }
   };
 
   const filteredUsers = users.filter(u => {

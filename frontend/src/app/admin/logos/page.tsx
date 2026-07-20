@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
+import { useToast } from "@/components/ToastProvider";
 
 export default function SubLogosPage() {
+  const { toast } = useToast();
   const [logos, setLogos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -79,9 +81,10 @@ export default function SubLogosPage() {
 
       handleCloseModal();
       loadLogos();
+      toast.success("Logo salvo com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      alert("Erro ao salvar. Verifique se o nome não está duplicado.");
+      toast.error("Erro ao salvar. Verifique se o nome não está duplicado.");
     } finally {
       setIsSubmitting(false);
     }
@@ -94,9 +97,10 @@ export default function SubLogosPage() {
       await api.post("/admin/sub-logos", { name: newBankName.trim().toUpperCase(), logo_url: "" });
       setNewBankName("");
       loadLogos();
+      toast.success("Banco adicionado com sucesso!");
     } catch (error) {
       console.error(error);
-      alert("Erro ao adicionar banco. Verifique se o nome já não existe.");
+      toast.warning("Erro ao adicionar banco. Verifique se o nome já não existe.");
     }
   };
 
@@ -113,9 +117,10 @@ export default function SubLogosPage() {
     try {
       await api.delete(`/admin/sub-logos/${id}`);
       loadLogos();
+      toast.success("Logo excluído com sucesso!");
     } catch (error) {
       console.error("Erro ao excluir:", error);
-      alert("Erro ao excluir.");
+      toast.error("Erro ao excluir.");
     }
   };
 

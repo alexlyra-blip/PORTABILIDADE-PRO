@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { api, getStaticUrl } from "@/utils/api";
+import { useToast } from "@/components/ToastProvider";
 
 export default function AnnouncementManager() {
+  const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -31,7 +33,7 @@ export default function AnnouncementManager() {
     if (!file) return;
     
     if (file.size > 3 * 1024 * 1024) {
-      alert("A imagem não pode ser maior que 3MB.");
+      toast.warning("A imagem não pode ser maior que 3MB.");
       return;
     }
 
@@ -47,7 +49,7 @@ export default function AnnouncementManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message && !imageUrl) {
-      alert("Por favor, digite uma mensagem ou anexe um card de imagem.");
+      toast.warning("Por favor, digite uma mensagem ou anexe um card de imagem.");
       return;
     }
     
@@ -78,10 +80,11 @@ export default function AnnouncementManager() {
       
       // Notifica Header/Popup que houve alterações
       window.dispatchEvent(new Event('storage'));
+      toast.success("Comunicado salvo com sucesso!");
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error("Erro ao salvar comunicado:", err);
-      alert("Erro ao salvar comunicado.");
+      toast.error("Erro ao salvar comunicado.");
     } finally {
       setLoading(false);
     }
@@ -112,9 +115,10 @@ export default function AnnouncementManager() {
       }
       await fetchAnnouncements();
       window.dispatchEvent(new Event('storage'));
+      toast.success("Comunicado excluído!");
     } catch (err) {
       console.error("Erro ao excluir comunicado:", err);
-      alert("Erro ao excluir comunicado.");
+      toast.error("Erro ao excluir comunicado.");
     }
   };
 
@@ -125,9 +129,10 @@ export default function AnnouncementManager() {
       });
       await fetchAnnouncements();
       window.dispatchEvent(new Event('storage'));
+      toast.success("Status do comunicado atualizado!");
     } catch (err) {
       console.error("Erro ao alterar status do comunicado:", err);
-      alert("Erro ao alterar status.");
+      toast.error("Erro ao alterar status.");
     }
   };
 

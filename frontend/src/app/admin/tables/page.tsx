@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
+import { useToast } from "@/components/ToastProvider";
 
 export default function TablesPage() {
+  const { toast } = useToast();
   const [banks, setBanks] = useState<any[]>([]);
   const [selectedBankId, setSelectedBankId] = useState("");
   const [tables, setTables] = useState<any[]>([]);
@@ -234,9 +236,10 @@ export default function TablesPage() {
       }
       handleCloseModal();
       loadTables(selectedBankId);
+      toast.success("Tabela salva com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar tabela:", error);
-      alert("Erro ao salvar tabela.");
+      toast.error("Erro ao salvar tabela.");
     } finally {
       setIsSubmitting(false);
     }
@@ -247,9 +250,10 @@ export default function TablesPage() {
     try {
       await api.delete(`/admin/bank-tables/${id}`);
       loadTables(selectedBankId);
+      toast.success("Tabela excluída com sucesso!");
     } catch (error) {
       console.error("Erro ao excluir tabela:", error);
-      alert("Erro ao excluir tabela.");
+      toast.error("Erro ao excluir tabela.");
     }
   };
 
