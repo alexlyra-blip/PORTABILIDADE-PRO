@@ -55,6 +55,9 @@ def get_provider_by_type(provider_type: str):
         return MultiCorbanProvider()
     return PromosysProvider()
 
+CONSULTA_CPF_CACHE_VERSION = 2
+
+
 async def _execute_cpf_query_flow(
     cpf: str,
     db: AsyncSession,
@@ -134,6 +137,11 @@ async def _execute_cpf_query_flow(
         ) <= timedelta(days=30):
             try:
                 dados_json = json.loads(cache_json)
+
+                if dados_json.get("_cache_version") != CONSULTA_CPF_CACHE_VERSION:
+                    raise ValueError(
+                        "Cache antigo ignorado para atualizar valores dos contratos."
+                    )
 
                 # Esta função possui regras de margem
                 # específicas do INSS.
@@ -551,6 +559,7 @@ async def _execute_cpf_query_flow(
     # Portanto, somente INSS pode ser persistido nela.
     if use_persistent_cache:
         resultado_dict = multi_response.model_dump()
+        resultado_dict["_cache_version"] = CONSULTA_CPF_CACHE_VERSION
         dados_str = json.dumps(resultado_dict)
 
         try:

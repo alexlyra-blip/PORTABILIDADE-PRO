@@ -34,13 +34,16 @@ def test_normaliza_nomes_alternativos():
     assert result["valor_contrato"] == 5000.00
 
 
-def test_valor_contrato_faz_fallback_para_valor_liberado():
+def test_valor_contrato_nao_faz_fallback_para_valor_liberado():
     result = normalize_promosys_contract_values({
         "ValorLiberado": "8.500,00",
         "QUITACAOATUAL": "6.200,00",
     })
 
-    assert result["valor_contrato"] == 8500.00
+    assert result["valor_contrato"] == 0.0
+    assert result["valor_liberado"] == 8500.00
+    assert result["saldo_devedor"] == 6200.00
+    assert result["quitacao"] == 6200.00
 
 
 def test_schema_preserva_saldo_devedor():

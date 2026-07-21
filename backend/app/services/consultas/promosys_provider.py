@@ -48,17 +48,83 @@ def money(value) -> float:
     return round(safe_float(value), 2)
 
 
-def first_money_value(data: dict, *keys: str) -> float:
-    """Retorna o primeiro valor monetário válido entre vários nomes de campo."""
+def _normalize_contract_key(value: str) -> str:
+    """Normaliza nomes de campos vindos do provedor."""
+    return re.sub(
+        r"[^a-z0-9]",
+        "",
+        str(value or "").lower(),
+    )
+
+
+def first_money_value(
+    data: dict,
+    *keys: str,
+    absolute: bool = False,
+) -> float:
+    """Retorna o primeiro valor monetário não zero."""
+
+    source = data or {}
+
+    normalized_values = {
+        _normalize_contract_key(key): value
+        for key, value in source.items()
+    }
+
     for key in keys:
-        value = money(data.get(key))
+        normalized_key = _normalize_contract_key(key)
+
+        raw_value = (
+            source.get(key)
+            if key in source
+            else normalized_values.get(normalized_key)
+        )
+
+        value = money(raw_value)
+
         if value != 0:
-            return value
+            return abs(value) if absolute else value
+
+    return 0.0
+
+
+def first_money_by_tokens(
+    data: dict,
+    *tokens: str,
+    absolute: bool = False,
+) -> float:
+    """Procura campos monetários por partes normalizadas do nome."""
+
+    normalized_tokens = [
+        _normalize_contract_key(token)
+        for token in tokens
+    ]
+
+    for key, raw_value in (data or {}).items():
+        normalized_key = _normalize_contract_key(key)
+
+        if not any(
+            token in normalized_key
+            for token in normalized_tokens
+        ):
+            continue
+
+        value = money(raw_value)
+
+        if value != 0:
+            return abs(value) if absolute else value
+
     return 0.0
 
 
 def normalize_promosys_contract_values(contract: dict) -> dict:
-    """Normaliza valor original, valor liberado e saldo devedor do INSS."""
+    """
+    Mantém separados:
+    - valor original do contrato;
+    - valor efetivamente liberado;
+    - saldo devedor/valor para quitação.
+    """
+
     saldo_devedor = first_money_value(
         contract,
         "QUITACAOATUAL",
@@ -68,10 +134,33 @@ def normalize_promosys_contract_values(contract: dict) -> dict:
         "QUITACAO",
         "quitacao",
         "Vl_Quitacao",
+        "VL_QUITACAO",
+        "VlrQuitacao",
         "ValorQuitacao",
+        "Valor_Quitacao",
+        "ValorQuitacaoAtual",
+        "VlQuitacaoAtual",
+        "VlrQuitacaoAtual",
         "SaldoDevedor",
+        "SALDO_DEVEDOR",
         "saldo_devedor",
+        "Saldo_Devedor",
+        "SaldoDevedorAtual",
+        "SaldoAtual",
+        "ValorSaldoDevedor",
+        "ValorLiquidacao",
+        "Valor_Liquidacao",
+        absolute=True,
     )
+
+    if saldo_devedor == 0:
+        saldo_devedor = first_money_by_tokens(
+            contract,
+            "saldodevedor",
+            "quitacao",
+            "liquidacao",
+            absolute=True,
+        )
 
     valor_liberado = first_money_value(
         contract,
@@ -80,25 +169,55 @@ def normalize_promosys_contract_values(contract: dict) -> dict:
         "valor_liberado",
         "Valor_Liberado",
         "Vl_Liberado",
+        "VlrLiberado",
+        "ValorLiquidoLiberado",
+        absolute=True,
     )
+
+    if valor_liberado == 0:
+        valor_liberado = first_money_by_tokens(
+            contract,
+            "valorliberado",
+            "vlliberado",
+            "vlrliberado",
+            absolute=True,
+        )
 
     valor_contrato = first_money_value(
         contract,
         "Vl_Emprestimo",
         "VL_EMPRESTIMO",
         "vl_emprestimo",
+        "VlrEmprestimo",
         "ValorEmprestimo",
         "Valor_Emprestimo",
         "ValorOriginal",
+        "VALOR_ORIGINAL",
         "ValorContrato",
+        "VALOR_CONTRATO",
         "valor_contrato",
+        "ValorFinanciado",
+        "VlFinanciado",
+        "ValorOperacao",
+        "ValorOperação",
+        absolute=True,
     )
 
-    # Algumas respostas da Promosys não trazem o valor original,
-    # mas trazem o valor efetivamente liberado.
     if valor_contrato == 0:
-        valor_contrato = valor_liberado or saldo_devedor
+        valor_contrato = first_money_by_tokens(
+            contract,
+            "valoremprestimo",
+            "vlemprestimo",
+            "vlremprestimo",
+            "valorcontrato",
+            "valororiginal",
+            "valorfinanciado",
+            "vlfinanciado",
+            "valoroperacao",
+            absolute=True,
+        )
 
+    # Não substituir valor do contrato pelo valor liberado.
     return {
         "quitacao": saldo_devedor,
         "saldo_devedor": saldo_devedor,

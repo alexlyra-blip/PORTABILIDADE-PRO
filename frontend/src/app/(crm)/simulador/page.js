@@ -877,9 +877,19 @@ function SimuladorPageContent() {
           numeroContrato: emp.contrato,
           banco: matchedBank,
           parcela: emp.parcela ? formatCurrencyConsult(emp.parcela) : "",
-          saldoDevedor: (emp.saldo_devedor ?? emp.quitacao)
-              ? formatCurrencyConsult(emp.saldo_devedor ?? emp.quitacao)
-              : "",
+          saldoDevedor: Number(
+            emp.saldo_devedor || emp.quitacao || 0
+          )
+            ? formatCurrencyConsult(
+                Math.abs(
+                  Number(
+                    emp.saldo_devedor ||
+                    emp.quitacao ||
+                    0
+                  )
+                )
+              )
+            : "",
           prazoTotal: pTotal,
           prazoRestante: isSiapeBenefit ? pTotal : (emp.prazo_restante ? emp.prazo_restante.toString() : ""),
           parcelasPagas: isSiapeBenefit ? "0" : (emp.parcelas_pagas ? emp.parcelas_pagas.toString() : ""),
@@ -2699,11 +2709,11 @@ function SimuladorPageContent() {
                                 </div>
                                 <div>
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Valor Contrato</p>
-                                  <p className="text-xs font-black text-slate-800">{formatBRL(loan.valor_contrato)}</p>
+                                  <p className="text-xs font-black text-slate-800">{formatBRL(Math.abs(Number(loan.valor_contrato || 0)))}</p>
                                 </div>
                                 <div>
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Saldo Devedor</p>
-                                  <p className="text-xs font-black text-blue-600">{formatBRL(loan.saldo_devedor ?? loan.quitacao)}</p>
+                                  <p className="text-xs font-black text-blue-600">{formatBRL(Math.abs(Number(loan.saldo_devedor || loan.quitacao || 0)))}</p>
                                 </div>
                                 <div>
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Prazo Restante</p>
