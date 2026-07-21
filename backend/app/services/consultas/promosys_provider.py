@@ -1,4 +1,5 @@
 import os
+import re
 import httpx
 import math
 from typing import Dict, Any
@@ -8,20 +9,102 @@ from app.services.consultas.base_provider import ConsultaBeneficioProvider
 from app.services.consultas.margin_rules import recalculate_benefit_margins
 
 
-def money(value) -> float:
-    try:
-        return round(float(value), 2)
-    except Exception:
-        return 0.0
-
-
 def safe_float(value) -> float:
-    try:
-        if value is None or value == "":
-            return 0.0
-        return float(str(value).replace(",", "."))
-    except Exception:
+    """Converte números da API, inclusive valores no padrão brasileiro."""
+    if value is None or value == "":
         return 0.0
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip()
+    text = re.sub(r"[^0-9,.-]", "", text)
+
+    if not text or text in {"-", ".", ","}:
+        return 0.0
+
+    try:
+        if "," in text and "." in text:
+            if text.rfind(",") > text.rfind("."):
+                # Exemplo brasileiro: 23.877,58
+                text = text.replace(".", "").replace(",", ".")
+            else:
+                # Exemplo internacional: 23,877.58
+                text = text.replace(",", "")
+        elif "," in text:
+            # Exemplo: 23877,58
+            text = text.replace(".", "").replace(",", ".")
+        elif text.count(".") > 1:
+            # Mantém o último ponto como separador decimal.
+            parts = text.split(".")
+            text = "".join(parts[:-1]) + "." + parts[-1]
+
+        return float(text)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def money(value) -> float:
+    return round(safe_float(value), 2)
+
+
+def first_money_value(data: dict, *keys: str) -> float:
+    """Retorna o primeiro valor monetário válido entre vários nomes de campo."""
+    for key in keys:
+        value = money(data.get(key))
+        if value != 0:
+            return value
+    return 0.0
+
+
+def normalize_promosys_contract_values(contract: dict) -> dict:
+    """Normaliza valor original, valor liberado e saldo devedor do INSS."""
+    saldo_devedor = first_money_value(
+        contract,
+        "QUITACAOATUAL",
+        "QuitacaoAtual",
+        "quitacao_atual",
+        "Quitacao",
+        "QUITACAO",
+        "quitacao",
+        "Vl_Quitacao",
+        "ValorQuitacao",
+        "SaldoDevedor",
+        "saldo_devedor",
+    )
+
+    valor_liberado = first_money_value(
+        contract,
+        "ValorLiberado",
+        "VALORLIBERADO",
+        "valor_liberado",
+        "Valor_Liberado",
+        "Vl_Liberado",
+    )
+
+    valor_contrato = first_money_value(
+        contract,
+        "Vl_Emprestimo",
+        "VL_EMPRESTIMO",
+        "vl_emprestimo",
+        "ValorEmprestimo",
+        "Valor_Emprestimo",
+        "ValorOriginal",
+        "ValorContrato",
+        "valor_contrato",
+    )
+
+    # Algumas respostas da Promosys não trazem o valor original,
+    # mas trazem o valor efetivamente liberado.
+    if valor_contrato == 0:
+        valor_contrato = valor_liberado or saldo_devedor
+
+    return {
+        "quitacao": saldo_devedor,
+        "saldo_devedor": saldo_devedor,
+        "valor_liberado": valor_liberado,
+        "valor_contrato": valor_contrato,
+    }
 
 
 def safe_int(value) -> int:
@@ -152,8 +235,11 @@ class PromosysProvider(ConsultaBeneficioProvider):
             banco_codigo = safe_str(ct.get("Banco"))
             contrato = safe_str(ct.get("Contrato"))
             parcela = money(ct.get("Vl_Parcela"))
-            quitacao = money(ct.get("QUITACAOATUAL"))
-            valor_liberado = money(ct.get("ValorLiberado"))
+            contract_values = normalize_promosys_contract_values(ct)
+            quitacao = contract_values["quitacao"]
+            saldo_devedor = contract_values["saldo_devedor"]
+            valor_liberado = contract_values["valor_liberado"]
+            valor_contrato = contract_values["valor_contrato"]
             prazo = safe_int(ct.get("Prazo"))
             parcelas_pagas = safe_int(ct.get("ParcPagas"))
             prazo_restante = max(0, prazo - parcelas_pagas)
@@ -165,6 +251,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
                     "contrato": contrato,
                     "parcela": parcela,
                     "quitacao": quitacao,
+                    "saldo_devedor": saldo_devedor,
                     "valor_liberado": valor_liberado,
                     "prazo": prazo,
                     "parcelas_pagas": parcelas_pagas,
@@ -172,7 +259,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
                     "taxa": safe_float(ct.get("TaxaJuros")),
                     "taxa_ponderada": safe_float(ct.get("TaxaJurosPonderada")),
                     "situacao": safe_str(ct.get("Situacao")),
-                    "valor_contrato": money(ct.get("Vl_Emprestimo"))
+                    "valor_contrato": valor_contrato
                 })
             else:
                 cartoes.append({

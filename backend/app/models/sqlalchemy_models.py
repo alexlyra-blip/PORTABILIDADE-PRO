@@ -1,3 +1,4 @@
+from sqlalchemy import UniqueConstraint
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Numeric
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
@@ -316,12 +317,31 @@ class ConsultaCpfCache(Base):
 
 class DailyMarginCoefficient(Base):
     __tablename__ = "daily_margin_coefficients"
+    __table_args__ = (
+        UniqueConstraint(
+            "bank_id",
+            "date",
+            "convenio",
+            name="uq_daily_margin_bank_date_convenio",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    bank_id = Column(Integer, ForeignKey("banks.id"))
+    bank_id = Column(Integer, ForeignKey("banks.id"), nullable=False)
     date = Column(DateTime(timezone=True), nullable=False)
+    convenio = Column(
+        String(20),
+        nullable=False,
+        default="INSS",
+        server_default="INSS",
+        index=True,
+    )
     coefficient = Column(Float, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     bank = relationship("Bank", back_populates="daily_margin_coefficients")

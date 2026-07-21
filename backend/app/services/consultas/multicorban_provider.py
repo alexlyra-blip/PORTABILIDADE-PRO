@@ -49,51 +49,51 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
     async def consultar_por_cpf(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
         clean_cpf = ''.join(filter(str.isdigit, cpf))
         convenio = str(convenio or "INSS").strip().upper()
-        
+
         if convenio == "SIAPE":
             data = await self.service.consultar_siape(clean_cpf)
         elif convenio in ["GOVERNO", "CLT", "CLT PRIVADO"]:
             data = await self.service.consultar_geral(clean_cpf)
         else:
             data = await self.service.consultar_cpf(clean_cpf)
-            
+
         if not data:
             raise ValueError("Nenhum benefício encontrado para este CPF.")
-            
+
         if isinstance(data, dict):
             data = [data]
-            
+
         self._cache[f"{convenio}:{clean_cpf}"] = data
         return await self._normalize_response(data[0], convenio=convenio)
 
     async def consultar_beneficios(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
         clean_cpf = ''.join(filter(str.isdigit, cpf))
         convenio = str(convenio or "INSS").strip().upper()
-        
+
         if convenio == "SIAPE":
             data = await self.service.consultar_siape(clean_cpf)
         elif convenio in ["GOVERNO", "CLT", "CLT PRIVADO"]:
             data = await self.service.consultar_geral(clean_cpf)
         else:
             data = await self.service.consultar_cpf(clean_cpf)
-            
+
         if not data:
             raise ValueError("Nenhum benefício encontrado para este CPF.")
-            
+
         if isinstance(data, dict):
             data = [data]
-            
+
         self._cache[f"{convenio}:{clean_cpf}"] = data
-        
+
         beneficios = []
         for item in data:
             nb = self._extract_identifier(item)
             if nb:
                 beneficios.append(nb)
-                
+
         if not beneficios:
             raise ValueError("Nenhum benefício encontrado para este CPF.")
-            
+
         return {
             "success": True,
             "cpf": clean_cpf,
@@ -119,7 +119,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                     break
             if target_item:
                 break
-                
+
         if not target_item:
             # Query offline directly if not in cache
             data = await self.service.consultar_offline(beneficio)
@@ -127,10 +127,10 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 target_item = data[0]
             elif isinstance(data, dict):
                 target_item = data
-                
+
         if not target_item:
             raise ValueError(f"Benefício {beneficio} não encontrado.")
-            
+
         return await self._normalize_response(target_item, convenio=convenio)
 
     async def consultar_creditos(self) -> Dict[str, Any]:
@@ -145,7 +145,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             }
         except Exception as e:
             logger.error(f"Erro ao consultar saldo legando MultiCorban: {e}")
-            
+
         return {
             "success": True,
             "creditos": 0,
@@ -172,11 +172,11 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         telefones_list = raw.get("Telefone", []) or []
 
         salario = safe_float(resumo_fin.get("ValorBeneficio") or beneficiario.get("ValorBeneficio") or 0.0)
-        
+
         especie = str(beneficiario.get("Especie") or "")
         is_loas = especie in ["87", "88"]
         percent = 0.35 if is_loas else 0.40
-        
+
         # Procurar margem consignável em vários campos possíveis que a consulta do Multicorban pode entregar
         margem_consignavel_api = None
         for dict_obj in [resumo_fin, beneficiario, raw]:
@@ -193,14 +193,14 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                         pass
             if margem_consignavel_api is not None:
                 break
-                
+
         if margem_consignavel_api is not None:
             margem_consignavel = margem_consignavel_api
         else:
             margem_consignavel = salario * percent
 
         total_loans_installments = sum(safe_float(emp.get("ValorParcela")) for emp in emprestimos_list)
-        
+
         rmc_val = 0.0
         if isinstance(rmc_raw, dict):
             rmc_val = safe_float(rmc_raw.get("ValorParcela") or rmc_raw.get("Valor") or 0.0)
@@ -214,7 +214,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             rcc_val = safe_float(rcc_raw[0].get("ValorParcela") or rcc_raw[0].get("Valor") or 0.0)
 
         total_comprometido = total_loans_installments + rmc_val + rcc_val
-        
+
         # Procurar margem livre em vários campos possíveis que a consulta do Multicorban pode entregar (especialmente para SIAPE)
         margem_livre_api = None
         for dict_obj in [resumo_fin, beneficiario, raw]:
@@ -231,12 +231,12 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                         pass
             if margem_livre_api is not None:
                 break
-                
+
         if margem_livre_api is not None:
             margem_livre = margem_livre_api
         else:
             margem_livre = margem_consignavel - total_comprometido
-        
+
         endereco_partes = []
         if beneficiario.get("Endereco"):
             endereco_partes.append(safe_str(beneficiario.get("Endereco")))
@@ -261,7 +261,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             prazo = safe_int(emp.get("Prazo"))
             restantes = safe_int(emp.get("ParcelasRestantes"))
             pagas = max(0, prazo - restantes)
-            
+
             emprestimos.append({
                 "banco": safe_str(emp.get("NomeBanco") or emp.get("Banco")),
                 "codigo": safe_str(emp.get("Banco")),
@@ -290,7 +290,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "disponivel": 0.0,
                 "situacao": "ATIVO"
             })
-            
+
         if rcc_val > 0 or rcc_raw.get("Contrato"):
             cartoes.append({
                 "banco": safe_str(rcc_raw.get("NomeBanco") or rcc_raw.get("Banco")),
