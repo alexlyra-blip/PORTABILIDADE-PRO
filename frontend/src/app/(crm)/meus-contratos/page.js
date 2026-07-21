@@ -467,7 +467,7 @@ export default function MeusContratosPage() {
                <div className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] border border-slate-100 dark:border-white/10 text-center shadow-lg">
                   <span className="text-6xl mb-6 block opacity-20">📭</span>
                   <h3 className="text-xl font-black text-slate-500 uppercase tracking-widest">Nenhum contrato fechado ainda.</h3>
-                  <p className="text-slate-400 text-sm mt-3">Faça uma simulação e clique em "Aceitar" para listar os contratos aqui.</p>
+                  <p className="text-slate-400 text-sm mt-3">Faça uma simulação e clique em &quot;Aceitar&quot; para listar os contratos aqui.</p>
                </div>
             ) : (
                getSortedContracts().map((contract, pIdx) => {
