@@ -507,6 +507,9 @@ function SimuladorPageContent() {
     setContracts(contracts.map(c => {
       if (c.id !== id) return c;
       let newC = { ...c, [name]: val };
+      if (formData.agreement === "SIAPE") {
+        newC.parcelasPagas = "0";
+      }
       if (["parcela", "saldoDevedor", "parcelasPagas", "prazoTotal"].includes(name)) {
         const pmt = parseCurrency(newC.parcela);
         const pv = parseCurrency(newC.saldoDevedor);
@@ -526,8 +529,9 @@ function SimuladorPageContent() {
 
   const addContract = () => {
     if (contracts.length >= 5) return;
+    const isSiape = formData.agreement === "SIAPE";
     setContracts([...contracts, {
-      id: Date.now(), banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: "", taxaAtual: "", taxaAjustada: ""
+      id: Date.now(), banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: isSiape ? "0" : "", taxaAtual: "", taxaAjustada: ""
     }]);
     setActiveContractIndex(contracts.length);
   };
@@ -756,16 +760,21 @@ function SimuladorPageContent() {
   const handleUseCpfLoans = () => {
     if (selectedCpfLoanIndices.length === 0 || !activeBenefit) return;
 
+    const currentAgr = consultaConvenio || "INSS";
+    const isSiape = currentAgr === "SIAPE";
+
     setFormData(prev => ({
        ...prev,
        nome_cliente: activeBenefit.cliente?.nome || prev.nome_cliente,
        cpf: maskCPF(activeBenefit.cliente?.cpf || formData.cpf),
        idade: activeBenefit.cliente?.idade ? activeBenefit.cliente.idade.toString() : prev.idade,
-       agreement: "INSS",
+       agreement: currentAgr,
        benefit_species: extrairCodigoEspecie(activeBenefit.cliente?.especie) || prev.benefit_species,
        margem_livre: activeBenefit.margens?.margem_livre || 0,
-       margem_emprestimo: activeBenefit.margens?.margem_emprestimo || 0,
-       total_comprometido: activeBenefit.margens?.total_comprometido || 0
+       margem_consignavel: activeBenefit.margens?.margem_emprestimo || 0,
+       total_comprometido: activeBenefit.margens?.total_comprometido || 0,
+       coeficiente_utilizado: activeBenefit.margens?.coeficiente_utilizado ?? 0.02270,
+       valor_liberado_margem: activeBenefit.margens?.valor_liberado_margem ?? 0
     }));
 
     if (activeBenefit.margens) {
@@ -810,7 +819,7 @@ function SimuladorPageContent() {
       if (targetIndex === -1 && newContracts.length < 5) {
         targetIndex = newContracts.length;
         newContracts.push({
-          id: Date.now() + targetIndex, banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: "", taxaAtual: "", taxaAjustada: ""
+          id: Date.now() + targetIndex, banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: isSiape ? "0" : "", taxaAtual: "", taxaAjustada: ""
         });
       }
 
@@ -843,15 +852,16 @@ function SimuladorPageContent() {
           }
         }
 
+        const pTotal = emp.prazo ? emp.prazo.toString() : "";
         newContracts[targetIndex] = {
           ...newContracts[targetIndex],
           numeroContrato: emp.contrato,
           banco: matchedBank,
           parcela: emp.parcela ? formatCurrencyConsult(emp.parcela) : "",
           saldoDevedor: emp.quitacao ? formatCurrencyConsult(emp.quitacao) : "",
-          prazoTotal: emp.prazo ? emp.prazo.toString() : "",
-          prazoRestante: emp.prazo_restante ? emp.prazo_restante.toString() : "",
-          parcelasPagas: emp.parcelas_pagas ? emp.parcelas_pagas.toString() : "",
+          prazoTotal: pTotal,
+          prazoRestante: isSiape ? pTotal : (emp.prazo_restante ? emp.prazo_restante.toString() : ""),
+          parcelasPagas: isSiape ? "0" : (emp.parcelas_pagas ? emp.parcelas_pagas.toString() : ""),
           taxaAtual: emp.taxa ? Number(emp.taxa).toFixed(2).replace('.', ',') : "",
           taxaAjustada: emp.taxa ? Number(emp.taxa).toFixed(2).replace('.', ',') : ""
         };
@@ -1438,6 +1448,29 @@ function SimuladorPageContent() {
                     </div>
                   )}
 
+                  {/* Informações de Margem Disponível (SIAPE ou quando houver margem_livre) */}
+                  {formData.margem_livre !== undefined && formData.margem_livre > 0 && (
+                    <div className="pt-4 border-t border-slate-100 space-y-3 animate-in slide-in-from-top-2 duration-500">
+                      <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100/80">
+                        <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                          <Icons.Sparkles size={12} className="text-emerald-500 animate-pulse" /> Margem Disponível Importada
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="block text-[8px] font-black text-slate-400 uppercase">Margem Livre</span>
+                            <span className="text-sm font-black text-slate-800">{formatBRL(formData.margem_livre)}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[8px] font-black text-slate-400 uppercase">Liberado Aproximado</span>
+                            <span className="text-sm font-black text-emerald-700">
+                              {formatBRL(formData.valor_liberado_margem || (formData.margem_livre / (formData.coeficiente_utilizado || 0.02270)))}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>
@@ -1508,7 +1541,25 @@ function SimuladorPageContent() {
                              {["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT PRIVADO"]
                                .filter(name => !agreementSearch || (name || "").toUpperCase().includes(agreementSearch.toUpperCase()))
                                .map(name => (
-                                 <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); setAgreementSearch(""); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                                 <button key={name} type="button" onClick={() => {
+                                    setFormData(p => {
+                                      const newD = { ...p, agreement: name, sub_agreement: "" };
+                                      if (name === "SIAPE" && !newD.margem_livre) {
+                                        newD.margem_livre = 0;
+                                        newD.valor_liberado_margem = 0;
+                                      }
+                                      return newD;
+                                    });
+                                    setDropdownOpen(p => ({ ...p, agreement: false }));
+                                    setAgreementSearch("");
+                                    if (name === "SIAPE") {
+                                      setContracts(prev => prev.map(c => ({
+                                        ...c,
+                                        parcelasPagas: "0",
+                                        prazoRestante: c.prazoTotal || c.prazoRestante
+                                      })));
+                                    }
+                                  }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
                                    <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
                                      {(() => {
                                         const logoUrl = getAgreementLogoUrl(name);
@@ -1877,7 +1928,20 @@ function SimuladorPageContent() {
 
                        <div className="space-y-1.5">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Parcelas Pagas</label>
-                          <input type="text" name="parcelasPagas" value={contracts[activeContractIndex].parcelasPagas} onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)} placeholder="12" className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-center" required />
+                          <input
+                            type="text"
+                            name="parcelasPagas"
+                            value={formData.agreement === "SIAPE" ? "0" : contracts[activeContractIndex].parcelasPagas}
+                            onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)}
+                            placeholder="12"
+                            disabled={formData.agreement === "SIAPE"}
+                            className={`w-full h-14 px-6 rounded-2xl border transition-all outline-none font-black text-center ${
+                              formData.agreement === "SIAPE"
+                                ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                : "bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-800"
+                            }`}
+                            required
+                          />
                        </div>
 
                        <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-4 pt-4 border-t border-slate-100">
