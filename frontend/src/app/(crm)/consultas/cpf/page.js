@@ -135,8 +135,6 @@ export default function ConsultaCPFPage() {
               }
             })
             .catch(err => console.error("Erro ao carregar configuração de provedor:", err));
-        } else if (!user.can_consult_cpf) {
-          window.location.href = "/simulador";
         }
       } else {
         window.location.href = "/login";
@@ -376,8 +374,8 @@ export default function ConsultaCPFPage() {
                       <td style="padding: 8px 10px; color: #0f172a; font-weight: 900; text-transform: uppercase;">${formatBankName(emp.codigo, emp.banco)}</td>
                       <td style="padding: 8px 10px; color: #475569; font-weight: bold;">${emp.contrato || 'N/A'}</td>
                       <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 900;">${formatBRL(emp.parcela)}</td>
-                      <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 700;">${formatBRL(emp.valor_contrato)}</td>
-                      <td style="padding: 8px 10px; text-align: right; color: #2563eb; font-weight: 900;">${formatBRL(emp.quitacao)}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 700;">${formatBRL(emp.valor_contrato || emp.valor_liberado || 0)}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #2563eb; font-weight: 900;">${formatBRL(emp.saldo_devedor || emp.quitacao || 0)}</td>
                       <td style="padding: 8px 10px; text-align: center; color: #0f172a; font-weight: 700;">${emp.prazo_restante} de ${emp.prazo}</td>
                       <td style="padding: 8px 10px; text-align: center; color: #166534; font-weight: 900;">${Number(emp.taxa || 0).toFixed(2)}% a.m.</td>
                     </tr>
@@ -1132,12 +1130,12 @@ export default function ConsultaCPFPage() {
 
                           <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor Contrato</p>
-                            <p className="text-sm font-black text-slate-800">{formatBRL(emp.valor_contrato)}</p>
+                            <p className="text-sm font-black text-slate-800">{formatBRL(emp.valor_contrato || emp.valor_liberado || 0)}</p>
                           </div>
                           
                           <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo Devedor</p>
-                            <p className="text-sm font-black text-blue-600">{formatBRL(emp.quitacao)}</p>
+                            <p className="text-sm font-black text-blue-600">{formatBRL(emp.saldo_devedor || emp.quitacao || 0)}</p>
                           </div>
                           
                           <div>

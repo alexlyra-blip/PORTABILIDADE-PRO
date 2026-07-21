@@ -24,7 +24,7 @@ from app.services.consultas.promosys_provider import PromosysProvider
 from app.services.consultas.margin_rules import recalculate_consulta_payload
 from app.services.consultas.multicorban_provider import MultiCorbanProvider
 from app.utils.config_helper import get_active_provider
-from app.services.margem_service import calcular_valor_liberado_margem, obter_coeficiente_fator
+from app.services.margem_service import calcular_valor_liberado_margem, obter_coeficiente_fator, resolve_margin_convenio
 
 logger = logging.getLogger("consultas_router")
 
@@ -61,6 +61,7 @@ async def _execute_cpf_query_flow(cpf: str, db: AsyncSession, convenio: str = "I
         raise HTTPException(status_code=400, detail="CPF é obrigatório.")
     
     masked_cpf = f"{clean_cpf[:3]}******{clean_cpf[-2:]}" if len(clean_cpf) >= 5 else "***"
+    margin_convenio = resolve_margin_convenio(convenio)
     
     # 1. Verifica o cache no banco de dados usando a sessão existente
     stmt = select(ConsultaCpfCache).where(ConsultaCpfCache.cpf == clean_cpf)
@@ -88,35 +89,35 @@ async def _execute_cpf_query_flow(cpf: str, db: AsyncSession, convenio: str = "I
                 
                 # Para recalcular margens, abrimos uma sessão rápida e a fechamos em seguida
                 async with AsyncSessionLocal() as temp_db:
-                    coef_fator = await obter_coeficiente_fator(temp_db)
+                    coef_fator = await obter_coeficiente_fator(temp_db, margin_convenio)
                     for b in dados_json.get("beneficios", []):
                         if "margens" in b and b["margens"]:
                             margem_livre = b["margens"].get("margem_livre", 0.0)
-                            b["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                            b["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
                             b["margens"]["coeficiente_utilizado"] = coef_fator
                         if "cliente" in b and b["cliente"]:
                             margem_livre = b["cliente"].get("margem_livre", 0.0) or b.get("margens", {}).get("margem_livre", 0.0)
-                            b["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                            b["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
                             b["cliente"]["coeficiente_utilizado"] = coef_fator
                     
                     bp = dados_json.get("beneficio_principal")
                     if bp:
                         if "margens" in bp and bp["margens"]:
                             margem_livre = bp["margens"].get("margem_livre", 0.0)
-                            bp["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                            bp["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
                             bp["margens"]["coeficiente_utilizado"] = coef_fator
                         if "cliente" in bp and bp["cliente"]:
                             margem_livre = bp["cliente"].get("margem_livre", 0.0) or bp.get("margens", {}).get("margem_livre", 0.0)
-                            bp["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                            bp["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
                             bp["cliente"]["coeficiente_utilizado"] = coef_fator
                             
                     if "margens" in dados_json and dados_json["margens"]:
                         margem_livre = dados_json["margens"].get("margem_livre", 0.0)
-                        dados_json["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                        dados_json["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
                         dados_json["margens"]["coeficiente_utilizado"] = coef_fator
                     if "cliente" in dados_json and dados_json["cliente"]:
                         margem_livre = dados_json["cliente"].get("margem_livre", 0.0) or dados_json.get("margens", {}).get("margem_livre", 0.0)
-                        dados_json["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                        dados_json["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
                         dados_json["cliente"]["coeficiente_utilizado"] = coef_fator
                 
                 # Filtra telefones nulos
@@ -171,7 +172,7 @@ async def _execute_cpf_query_flow(cpf: str, db: AsyncSession, convenio: str = "I
     results = []
     
     async with AsyncSessionLocal() as temp_db:
-        coef_fator = await obter_coeficiente_fator(temp_db)
+        coef_fator = await obter_coeficiente_fator(temp_db, margin_convenio)
         for nb in numeros_beneficios:
             try:
                 res = await provider.consultar_por_beneficio(nb)
@@ -181,11 +182,11 @@ async def _execute_cpf_query_flow(cpf: str, db: AsyncSession, convenio: str = "I
                 # Recalcular margens com base no banco e registrar coeficiente
                 if "margens" in res and res["margens"]:
                     margem_livre = res["margens"].get("margem_livre", 0.0)
-                    res["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                    res["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
                     res["margens"]["coeficiente_utilizado"] = coef_fator
                 if "cliente" in res and res["cliente"]:
                     margem_livre = res["cliente"].get("margem_livre", 0.0) or res.get("margens", {}).get("margem_livre", 0.0)
-                    res["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db)
+                    res["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
                     res["cliente"]["coeficiente_utilizado"] = coef_fator
                     
                 results.append((nb, res))
@@ -254,9 +255,8 @@ async def consultar_cpf_unificado(
     db: AsyncSession = Depends(get_db), 
     current_user = Depends(get_current_user)
 ):
-    if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
-        raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
-    
+    # A rota continua protegida por get_current_user, mas está disponível
+    # para todos os perfis autenticados do CRM.
     provider_type = get_active_provider()
     
     if provider_type == "multicorban":

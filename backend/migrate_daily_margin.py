@@ -31,9 +31,11 @@ def migrate_sqlite():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             bank_id INTEGER,
             date DATETIME NOT NULL,
+            convenio TEXT NOT NULL DEFAULT 'INSS',
             coefficient FLOAT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (bank_id, date, convenio),
             FOREIGN KEY (bank_id) REFERENCES banks (id)
         );
         """)
@@ -79,9 +81,11 @@ def migrate_postgres(url):
                     id SERIAL PRIMARY KEY,
                     bank_id INTEGER REFERENCES public.banks(id) ON DELETE CASCADE,
                     date TIMESTAMP WITH TIME ZONE NOT NULL,
+                    convenio VARCHAR(20) NOT NULL DEFAULT 'INSS',
                     coefficient DOUBLE PRECISION NOT NULL,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (bank_id, date, convenio)
                 );
                 """)
                 print("[POSTGRES] Created daily_margin_coefficients table.")
@@ -101,14 +105,16 @@ def main():
     # Run SQLite migration if local db exists
     migrate_sqlite()
     
-    # Run Postgres migration if DATABASE_URL is defined or fallback to default Supabase URL
+    # Executa o PostgreSQL somente com variável de ambiente.
     db_url = os.getenv("DATABASE_URL")
-    if not db_url:
-        # Fallback to the one hardcoded in app/database.py
-        db_url = "postgresql+asyncpg://postgres.dnuftfvuzggwyidghfgk:alexandrelyra2013@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
-        print(f"[INFO] DATABASE_URL not set in environment. Using default Supabase URL.")
-        
-    migrate_postgres(db_url)
+
+    if db_url:
+        migrate_postgres(db_url)
+    else:
+        print(
+            "[INFO] DATABASE_URL não configurada. "
+            "Migração PostgreSQL ignorada."
+        )
     
     print("--- DATABASE MIGRATION COMPLETED ---")
 

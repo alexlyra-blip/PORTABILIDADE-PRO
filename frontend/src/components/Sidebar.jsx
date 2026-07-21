@@ -77,7 +77,6 @@ export default function Sidebar() {
     { name: "Relatórios", href: "/relatorio", icon: <Icons.TrendingUp />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
   ].filter(item => {
     if (item.roles && !item.roles.includes(user.role)) return false;
-    if (item.href === "/consultas/cpf" && user.role !== 'admin' && !user.can_consult_cpf) return false;
     return true;
   });
 

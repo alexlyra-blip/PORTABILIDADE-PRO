@@ -15,6 +15,7 @@ export default function MarginCoefficientsPage() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
+  const [selectedConvenio, setSelectedConvenio] = useState<"INSS" | "SIAPE">("INSS");
   const [selectedBank, setSelectedBank] = useState<number | "">("");
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
@@ -31,7 +32,7 @@ export default function MarginCoefficientsPage() {
     } else {
       setCoefficients({});
     }
-  }, [selectedBank, selectedYear, selectedMonth]);
+  }, [selectedConvenio, selectedBank, selectedYear, selectedMonth]);
 
   const loadBanks = async () => {
     try {
@@ -55,8 +56,14 @@ export default function MarginCoefficientsPage() {
   const loadCoefficients = async () => {
     try {
       setLoading(true);
-      const data = await api.get(`/admin/margin-coefficients?year=${selectedYear}&month=${selectedMonth}`);
-      const bankData = data.filter((d: any) => d.bank_id === Number(selectedBank));
+      const data = await api.get(
+        `/admin/margin-coefficients?year=${selectedYear}&month=${selectedMonth}&convenio=${selectedConvenio}`
+      );
+      const bankData = data.filter(
+        (d: any) =>
+          d.bank_id === Number(selectedBank) &&
+          String(d.convenio || "INSS").toUpperCase() === selectedConvenio
+      );
       
       const newCoefs: Record<string, number> = {};
       bankData.forEach((d: any) => {
@@ -92,6 +99,7 @@ export default function MarginCoefficientsPage() {
     try {
       const payload = Object.entries(coefficients).map(([date, coef]) => ({
         bank_id: Number(selectedBank),
+        convenio: selectedConvenio,
         date,
         coefficient: coef
       }));
@@ -129,11 +137,18 @@ export default function MarginCoefficientsPage() {
       <PageHeader
         title="Coeficientes de"
         highlight="Margem Livre"
-        subtitle="Gerencie os coeficientes diários para cálculo da margem livre"
+        subtitle="Gerencie separadamente os coeficientes diários dos convênios INSS e SIAPE"
       />
 
       <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 border border-slate-100 dark:border-white/10 shadow-2xl">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Convênio</label>
+              <select value={selectedConvenio} onChange={(e) => setSelectedConvenio(e.target.value as "INSS" | "SIAPE")} className="w-full py-3.5 px-5 bg-slate-50 dark:bg-white/5 rounded-2xl border-none shadow-inner text-xs font-semibold text-slate-800 dark:text-white outline-none">
+                <option value="INSS">INSS</option>
+                <option value="SIAPE">SIAPE</option>
+              </select>
+            </div>
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Banco Prioritário</label>
             <select
@@ -199,7 +214,7 @@ export default function MarginCoefficientsPage() {
           <div className="space-y-6">
             <div className="flex justify-between items-center bg-blue-50/50 dark:bg-blue-500/5 p-5 rounded-[2rem] border border-blue-100 dark:border-blue-500/10">
               <div>
-                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">Calendário de Coeficientes</h4>
+                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">Calendário de Coeficientes — {selectedConvenio}</h4>
                 <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Preencha o coeficiente para os dias úteis. Finais de semana herdam o coeficiente dos dias anteriores.</p>
               </div>
               <button 

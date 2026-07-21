@@ -53,6 +53,7 @@ class ConsultaEmprestimo(BaseModel):
     contrato: str = ""
     parcela: float = 0.0
     quitacao: float = 0.0
+    saldo_devedor: float = 0.0
     valor_liberado: float = 0.0
     prazo: int = 0
     parcelas_pagas: int = 0

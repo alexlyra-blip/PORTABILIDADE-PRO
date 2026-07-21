@@ -233,13 +233,37 @@ async def delete_coefficient(coeff_id: int, db: AsyncSession = Depends(get_db), 
 
 # Coefficients
 @router.get("/margin-coefficients")
-async def get_daily_margin_coefficients(year: int, month: int, db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
-    return await AdminService.get_daily_margin_coefficients(db, year, month)
+async def get_daily_margin_coefficients(
+    year: int,
+    month: int,
+    convenio: str = "INSS",
+    db: AsyncSession = Depends(get_db),
+    admin: UserResponse = Depends(get_admin_user),
+):
+    try:
+        return await AdminService.get_daily_margin_coefficients(
+            db,
+            year,
+            month,
+            convenio,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 @router.post("/margin-coefficients")
-async def save_daily_margin_coefficients(data: list = Body(...), db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
-    success = await AdminService.save_daily_margin_coefficients(db, data)
-    return {"success": success}
+async def save_daily_margin_coefficients(
+    data: list = Body(...),
+    db: AsyncSession = Depends(get_db),
+    admin: UserResponse = Depends(get_admin_user),
+):
+    try:
+        success = await AdminService.save_daily_margin_coefficients(
+            db,
+            data,
+        )
+        return {"success": success}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 # SubAgreementLogos
 @router.get("/sub-logos", response_model=List[SubAgreementLogoResponse])

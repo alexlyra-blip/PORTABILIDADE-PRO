@@ -210,36 +210,82 @@ class AdminService:
         return False
 
     @staticmethod
-    async def get_daily_margin_coefficients(db: AsyncSession, year: int, month: int):
-        from app.models.sqlalchemy_models import DailyMarginCoefficient
+    async def get_daily_margin_coefficients(
+        db: AsyncSession,
+        year: int,
+        month: int,
+        convenio: str = "INSS",
+    ):
         from sqlalchemy import extract
+        from app.models.sqlalchemy_models import DailyMarginCoefficient
+        from app.services.margem_service import normalize_margin_convenio
+
+        normalized_convenio = normalize_margin_convenio(convenio)
+
         result = await db.execute(
             select(DailyMarginCoefficient)
-            .where(extract('year', DailyMarginCoefficient.date) == year)
-            .where(extract('month', DailyMarginCoefficient.date) == month)
+            .where(extract("year", DailyMarginCoefficient.date) == year)
+            .where(extract("month", DailyMarginCoefficient.date) == month)
+            .where(DailyMarginCoefficient.convenio == normalized_convenio)
+            .order_by(
+                DailyMarginCoefficient.date.asc(),
+                DailyMarginCoefficient.bank_id.asc(),
+            )
         )
+
         return result.scalars().all()
 
     @staticmethod
-    async def save_daily_margin_coefficients(db: AsyncSession, data: list):
-        from app.models.sqlalchemy_models import DailyMarginCoefficient
+    async def save_daily_margin_coefficients(
+        db: AsyncSession,
+        data: list,
+    ):
         from datetime import datetime, timezone
+
+        from app.models.sqlalchemy_models import DailyMarginCoefficient
+        from app.services.margem_service import normalize_margin_convenio
+
         for item in data:
             bank_id = item.get("bank_id")
             date_str = item.get("date")
-            coef_date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
             coefficient = item.get("coefficient")
-            
-            result = await db.execute(
-                select(DailyMarginCoefficient)
-                .where(DailyMarginCoefficient.bank_id == bank_id, DailyMarginCoefficient.date == coef_date)
+            convenio = normalize_margin_convenio(
+                item.get("convenio", "INSS")
             )
+
+            if not bank_id:
+                raise ValueError("Banco é obrigatório.")
+
+            if not date_str:
+                raise ValueError("Data do coeficiente é obrigatória.")
+
+            coef_date = datetime.strptime(
+                date_str,
+                "%Y-%m-%d",
+            ).replace(tzinfo=timezone.utc)
+
+            result = await db.execute(
+                select(DailyMarginCoefficient).where(
+                    DailyMarginCoefficient.bank_id == bank_id,
+                    DailyMarginCoefficient.date == coef_date,
+                    DailyMarginCoefficient.convenio == convenio,
+                )
+            )
+
             existing = result.scalar_one_or_none()
+
             if existing:
                 existing.coefficient = coefficient
             else:
-                new_coef = DailyMarginCoefficient(bank_id=bank_id, date=coef_date, coefficient=coefficient)
-                db.add(new_coef)
+                db.add(
+                    DailyMarginCoefficient(
+                        bank_id=bank_id,
+                        date=coef_date,
+                        convenio=convenio,
+                        coefficient=coefficient,
+                    )
+                )
+
         await db.commit()
         return True
 
