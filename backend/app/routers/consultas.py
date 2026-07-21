@@ -597,23 +597,23 @@ async def _execute_cpf_query_flow(
 # ROTA UNIFICADA CPF
 @router.post("/cpf", response_model=ConsultaCpfMultiResponse)
 async def consultar_cpf_unificado(
-    request: CpfRequest, 
-    db: AsyncSession = Depends(get_db), 
+    request: CpfRequest,
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
-    
+
     provider_type = get_active_provider()
-    
+
     if provider_type == "multicorban":
         conv_upper = str(request.convenio or "INSS").upper()
         if conv_upper not in ["INSS", "SIAPE", "GOVERNO", "CLT", "CLT PRIVADO"]:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"Convênio '{request.convenio}' não é suportado pelo provedor MultiCorban."
             )
-            
+
     try:
         return await _execute_cpf_query_flow(request.cpf, db, request.convenio, provider_type)
     except HTTPException:
@@ -635,8 +635,8 @@ async def consultar_promosys_cpf(request: CpfRequest, db: AsyncSession = Depends
 
 @internal_router.post("/promosys/cpf", response_model=ConsultaCpfMultiResponse)
 async def consultar_promosys_cpf_internal(
-    request: CpfRequest, 
-    db: AsyncSession = Depends(get_db), 
+    request: CpfRequest,
+    db: AsyncSession = Depends(get_db),
     api_key: str = Depends(verify_n8n_internal_key)
 ):
     return await _execute_cpf_query_flow(request.cpf, db, request.convenio, "promosys")
@@ -715,11 +715,11 @@ async def get_multicorban_saldo(current_user = Depends(get_current_user)):
     global multicorban_saldo_cache
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Acesso negado.")
-        
+
     now = datetime.now()
     if multicorban_saldo_cache["data"] and now < multicorban_saldo_cache["expires_at"]:
         return multicorban_saldo_cache["data"]
-        
+
     provider = MultiCorbanProvider()
     try:
         res = await provider.consultar_creditos()
@@ -732,7 +732,7 @@ async def get_multicorban_saldo(current_user = Depends(get_current_user)):
             "saldo_total": res.get("saldo_total"),
             "raw": res.get("raw", {})
         }
-        
+
         multicorban_saldo_cache["data"] = normalized
         multicorban_saldo_cache["expires_at"] = now + timedelta(seconds=45) # 45 segundos de cache
         return normalized
