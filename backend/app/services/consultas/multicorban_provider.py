@@ -5,6 +5,7 @@ from datetime import datetime
 
 from app.services.consultas.base_provider import ConsultaBeneficioProvider
 from app.services.consultas.margin_rules import recalculate_benefit_margins
+from app.services.consultas.siape_normalizer import is_siape_response, normalize_siape_response
 from app.services.multicorban_service import MultiCorbanService
 
 logger = logging.getLogger("multicorban_provider")
@@ -31,11 +32,23 @@ def safe_str(value) -> str:
 class MultiCorbanProvider(ConsultaBeneficioProvider):
     _cache = {}
 
+    @staticmethod
+    def _extract_identifier(item: dict) -> str:
+        beneficiario = item.get("Beneficiario", {}) or {}
+        cadastro = item.get("Cadastro", {}) or {}
+
+        return str(
+            beneficiario.get("Beneficio", "")
+            or item.get("Beneficio", "")
+            or cadastro.get("Matricula", "")
+        ).strip()
+
     def __init__(self):
         self.service = MultiCorbanService()
 
     async def consultar_por_cpf(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
         clean_cpf = ''.join(filter(str.isdigit, cpf))
+        convenio = str(convenio or "INSS").strip().upper()
         
         if convenio == "SIAPE":
             data = await self.service.consultar_siape(clean_cpf)
@@ -50,11 +63,12 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         if isinstance(data, dict):
             data = [data]
             
-        self._cache[clean_cpf] = data
-        return await self._normalize_response(data[0])
+        self._cache[f"{convenio}:{clean_cpf}"] = data
+        return await self._normalize_response(data[0], convenio=convenio)
 
     async def consultar_beneficios(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
         clean_cpf = ''.join(filter(str.isdigit, cpf))
+        convenio = str(convenio or "INSS").strip().upper()
         
         if convenio == "SIAPE":
             data = await self.service.consultar_siape(clean_cpf)
@@ -69,11 +83,11 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         if isinstance(data, dict):
             data = [data]
             
-        self._cache[clean_cpf] = data
+        self._cache[f"{convenio}:{clean_cpf}"] = data
         
         beneficios = []
         for item in data:
-            nb = str(item.get("Beneficiario", {}).get("Beneficio", "") or item.get("Beneficio", ""))
+            nb = self._extract_identifier(item)
             if nb:
                 beneficios.append(nb)
                 
@@ -87,11 +101,19 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             "beneficios": beneficios
         }
 
-    async def consultar_por_beneficio(self, beneficio: str) -> Dict[str, Any]:
+    async def consultar_por_beneficio(
+        self,
+        beneficio: str,
+        convenio: str = "INSS",
+    ) -> Dict[str, Any]:
+        convenio = str(convenio or "INSS").strip().upper()
         target_item = None
-        for cpf, items in list(self._cache.items()):
+        for cache_key, items in list(self._cache.items()):
+            if not str(cache_key).startswith(f"{convenio}:"):
+                continue
+
             for item in items:
-                nb = str(item.get("Beneficiario", {}).get("Beneficio", "") or item.get("Beneficio", ""))
+                nb = self._extract_identifier(item)
                 if nb == beneficio:
                     target_item = item
                     break
@@ -109,7 +131,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         if not target_item:
             raise ValueError(f"Benefício {beneficio} não encontrado.")
             
-        return await self._normalize_response(target_item)
+        return await self._normalize_response(target_item, convenio=convenio)
 
     async def consultar_creditos(self) -> Dict[str, Any]:
         try:
@@ -131,7 +153,16 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             "creditos_geracao_leads": 0
         }
 
-    async def _normalize_response(self, raw: dict) -> Dict[str, Any]:
+    async def _normalize_response(
+        self,
+        raw: dict,
+        convenio: str = "INSS",
+    ) -> Dict[str, Any]:
+        convenio = str(convenio or "INSS").strip().upper()
+
+        if convenio == "SIAPE" or is_siape_response(raw):
+            return normalize_siape_response(raw)
+
         beneficiario = raw.get("Beneficiario", {}) or {}
         resumo_fin = raw.get("ResumoFinanceiro", {}) or {}
         dados_bancarios = raw.get("DadosBancarios", {}) or {}
@@ -145,7 +176,28 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         especie = str(beneficiario.get("Especie") or "")
         is_loas = especie in ["87", "88"]
         percent = 0.35 if is_loas else 0.40
-        margem_consignavel = salario * percent
+        
+        # Procurar margem consignável em vários campos possíveis que a consulta do Multicorban pode entregar
+        margem_consignavel_api = None
+        for dict_obj in [resumo_fin, beneficiario, raw]:
+            if not dict_obj or not isinstance(dict_obj, dict):
+                continue
+            for key in ["MargemConsignavel", "MargemConsignavelSiape", "MargemBruta", "Margem_Consignavel"]:
+                if key in dict_obj and dict_obj[key] is not None:
+                    try:
+                        val = safe_float(dict_obj[key])
+                        if val != 0.0:
+                            margem_consignavel_api = val
+                            break
+                    except:
+                        pass
+            if margem_consignavel_api is not None:
+                break
+                
+        if margem_consignavel_api is not None:
+            margem_consignavel = margem_consignavel_api
+        else:
+            margem_consignavel = salario * percent
 
         total_loans_installments = sum(safe_float(emp.get("ValorParcela")) for emp in emprestimos_list)
         
@@ -162,7 +214,28 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             rcc_val = safe_float(rcc_raw[0].get("ValorParcela") or rcc_raw[0].get("Valor") or 0.0)
 
         total_comprometido = total_loans_installments + rmc_val + rcc_val
-        margem_livre = margem_consignavel - total_comprometido
+        
+        # Procurar margem livre em vários campos possíveis que a consulta do Multicorban pode entregar (especialmente para SIAPE)
+        margem_livre_api = None
+        for dict_obj in [resumo_fin, beneficiario, raw]:
+            if not dict_obj or not isinstance(dict_obj, dict):
+                continue
+            for key in ["MargemLivre", "MargemLivreSiape", "MargemDisponivel", "MargemDisponivelSiape", "MargemLivreNovo", "Margem_Livre"]:
+                if key in dict_obj and dict_obj[key] is not None:
+                    try:
+                        val = safe_float(dict_obj[key])
+                        if val != 0.0:
+                            margem_livre_api = val
+                            break
+                    except:
+                        pass
+            if margem_livre_api is not None:
+                break
+                
+        if margem_livre_api is not None:
+            margem_livre = margem_livre_api
+        else:
+            margem_livre = margem_consignavel - total_comprometido
         
         endereco_partes = []
         if beneficiario.get("Endereco"):

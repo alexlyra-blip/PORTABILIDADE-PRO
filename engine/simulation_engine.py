@@ -600,7 +600,14 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                 if not banco_tem_oferta:
                     motivo_final = "Nenhuma tabela compatível."
                     if motivos_tabelas:
-                        motivo_final = "Sem tabelas disponíveis para os dados informados."
+                        # Obter motivos únicos mantendo a ordem para exibir detalhadamente
+                        vistos = set()
+                        motivos_unicos = []
+                        for m in motivos_tabelas:
+                            if m not in vistos:
+                                vistos.add(m)
+                                motivos_unicos.append(m)
+                        motivo_final = " | ".join(motivos_unicos)
                     
                     rejeitados.append({
                         "banco": banco.name,

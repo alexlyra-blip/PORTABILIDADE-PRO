@@ -135,6 +135,8 @@ export default function ConsultaCPFPage() {
               }
             })
             .catch(err => console.error("Erro ao carregar configuração de provedor:", err));
+        } else if (!user.can_consult_cpf) {
+          window.location.href = "/simulador";
         }
       } else {
         window.location.href = "/login";
@@ -375,7 +377,7 @@ export default function ConsultaCPFPage() {
                       <td style="padding: 8px 10px; color: #475569; font-weight: bold;">${emp.contrato || 'N/A'}</td>
                       <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 900;">${formatBRL(emp.parcela)}</td>
                       <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 700;">${formatBRL(emp.valor_contrato || emp.valor_liberado || 0)}</td>
-                      <td style="padding: 8px 10px; text-align: right; color: #2563eb; font-weight: 900;">${formatBRL(emp.saldo_devedor || emp.quitacao || 0)}</td>
+                      <td style="padding: 8px 10px; text-align: right; color: #2563eb; font-weight: 900;">${formatBRL(emp.saldo_devedor ?? emp.quitacao ?? 0)}</td>
                       <td style="padding: 8px 10px; text-align: center; color: #0f172a; font-weight: 700;">${emp.prazo_restante} de ${emp.prazo}</td>
                       <td style="padding: 8px 10px; text-align: center; color: #166534; font-weight: 900;">${Number(emp.taxa || 0).toFixed(2)}% a.m.</td>
                     </tr>
@@ -504,24 +506,138 @@ export default function ConsultaCPFPage() {
     return matchByName ? matchByName.logo_url : null;
   };
 
-  // Calculo de Margem Inteligente conforme regras de 35% LOAS e 40% Geral
+  const isSiape = String(
+    activeBenefit?.convenio || convenio || ""
+  ).trim().toUpperCase() === "SIAPE";
+
   const getMarginData = () => {
     if (!activeBenefit) return null;
-    const salario = Number(activeBenefit.margens?.salario || activeBenefit.cliente?.salario || 0);
-    const especie = String(activeBenefit.cliente?.especie || "");
-    const isLOAS = especie.includes("87") || especie.includes("88") || activeBenefit.cliente?.especie === "87" || activeBenefit.cliente?.especie === "88";
+
+    const margens = activeBenefit.margens || {};
+    const cliente = activeBenefit.cliente || {};
+
+    if (isSiape) {
+      const salarioBruto = Number(
+        margens.salario_bruto ??
+        margens.salario ??
+        cliente.salario ??
+        0
+      );
+
+      const valorLiquido = Number(
+        margens.valor_liquido ?? 0
+      );
+
+      const descontos = Number(
+        margens.descontos ?? 0
+      );
+
+      const margemDisponivel = Number(
+        margens.margem_disponivel ??
+        margens.margem_livre ??
+        cliente.margem_livre ??
+        0
+      );
+
+      const showMargem = Math.max(
+        0,
+        margemDisponivel
+      );
+
+      const coeficienteUtilizado = Number(
+        cliente.coeficiente_utilizado ??
+        margens.coeficiente_utilizado ??
+        0
+      );
+
+      const valorBackend = Number(
+        margens.valor_liberado_margem ??
+        cliente.valor_liberado_margem ??
+        0
+      );
+
+      const valorLiberadoMargem =
+        valorBackend > 0
+          ? valorBackend
+          : coeficienteUtilizado > 0
+            ? showMargem / coeficienteUtilizado
+            : 0;
+
+      return {
+        isSiape: true,
+        salario: salarioBruto,
+        salarioBruto,
+        valorLiquido,
+        descontos,
+        isLOAS: false,
+        percent: 0,
+        margemConsignavel: 0,
+        totalComprometido: descontos,
+        margemLivreReal: margemDisponivel,
+        showMargem,
+        valorLiberadoMargem,
+        coeficienteUtilizado
+      };
+    }
+
+    const salario = Number(
+      margens.salario ||
+      cliente.salario ||
+      0
+    );
+
+    const especie = String(
+      cliente.especie || ""
+    );
+
+    const isLOAS =
+      especie.includes("87") ||
+      especie.includes("88") ||
+      cliente.especie === "87" ||
+      cliente.especie === "88";
+
     const percent = isLOAS ? 0.35 : 0.40;
-    
-    // Obter dados diretamente do backend para evitar qualquer erro de arredondamento
-    const margemConsignavel = Number(activeBenefit.margens?.margem_emprestimo || (salario * percent));
-    const totalComprometido = Number(activeBenefit.margens?.total_comprometido || 0);
-    const margemLivreReal = activeBenefit.margens && activeBenefit.margens.margem_livre !== undefined ? Number(activeBenefit.margens.margem_livre) : (margemConsignavel - totalComprometido);
-    const showMargem = margemLivreReal < 0 ? 0.00 : margemLivreReal;
-    const coeficienteUtilizado = Number(activeBenefit.cliente?.coeficiente_utilizado || activeBenefit.margens?.coeficiente_utilizado || 0.02270);
-    const valorLiberadoMargem = Number(activeBenefit.margens?.valor_liberado_margem || (showMargem / coeficienteUtilizado));
+
+    const margemConsignavel = Number(
+      margens.margem_emprestimo ||
+      salario * percent
+    );
+
+    const totalComprometido = Number(
+      margens.total_comprometido || 0
+    );
+
+    const margemLivreReal =
+      margens.margem_livre !== undefined
+        ? Number(margens.margem_livre)
+        : margemConsignavel - totalComprometido;
+
+    const showMargem = Math.max(
+      0,
+      margemLivreReal
+    );
+
+    const coeficienteUtilizado = Number(
+      cliente.coeficiente_utilizado ||
+      margens.coeficiente_utilizado ||
+      0.02270
+    );
+
+    const valorLiberadoMargem = Number(
+      margens.valor_liberado_margem ||
+      (
+        coeficienteUtilizado > 0
+          ? showMargem / coeficienteUtilizado
+          : 0
+      )
+    );
 
     return {
+      isSiape: false,
       salario,
+      salarioBruto: salario,
+      valorLiquido: 0,
+      descontos: 0,
       isLOAS,
       percent,
       margemConsignavel,
@@ -906,7 +1022,11 @@ export default function ConsultaCPFPage() {
                     <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 print:bg-slate-50 print:text-purple-700 print:border-slate-200">
                       <Icons.UserCheck size={20} />
                     </div>
-                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dados do Benefício</h3>
+                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
+                        {isSiape
+                          ? "Dados do Vínculo SIAPE"
+                          : "Dados do Benefício"}
+                      </h3>
                   </div>
                   
                   {/* Cadeado Premium para Empréstimo */}
@@ -928,56 +1048,150 @@ export default function ConsultaCPFPage() {
                 </div>
 
                 <div className="space-y-4 print:space-y-2">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
-                    <div className="md:col-span-1">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Número (NB)</p>
-                      <p className="text-sm font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
-                        {activeBenefit.cliente?.beneficio || activeBenefit.numero}
-                      </p>
-                    </div>
-                    
-                    <div className="md:col-span-3">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Espécie</p>
-                      <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">{activeBenefit.cliente?.especie || "Não Informada"}</p>
-                    </div>
-                  </div>
+                    {isSiape ? (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Matrícula
+                            </p>
+                            <p className="text-sm font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
+                              {activeBenefit.beneficio?.matricula
+                                || activeBenefit.cliente?.beneficio
+                                || activeBenefit.numero
+                                || "Não Informada"}
+                            </p>
+                          </div>
 
-                  <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Situação</p>
-                      <p className={`text-[10px] font-black uppercase inline-block px-2.5 py-1 rounded-xl mt-0.5 ${
-                        (activeBenefit.beneficio?.situacao || "").toUpperCase() === "ATIVO" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
-                      } print:bg-transparent print:p-0 print:text-xs`}>
-                        {activeBenefit.beneficio?.situacao || "Desconhecida"}
-                      </p>
-                    </div>
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Regime Jurídico
+                            </p>
+                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                              {activeBenefit.beneficio?.regime_juridico
+                                || "Não Informado"}
+                            </p>
+                          </div>
+                        </div>
 
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Concessão (DDB)</p>
-                      <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
-                        {activeBenefit.beneficio?.ddb ? formatDateBR(activeBenefit.beneficio.ddb) : "Não Informada"}
-                      </p>
-                    </div>
-                  </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Órgão
+                            </p>
+                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                              {activeBenefit.beneficio?.orgao
+                                || "Não Informado"}
+                            </p>
+                          </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3 border-t border-slate-100 print:grid-cols-3 print:gap-2">
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">UF Benefício</p>
-                      <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">{activeBenefit.beneficio?.uf || "Não Informada"}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor do Benefício</p>
-                      <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">{formatBRL(marginInfo.salario)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Meio Pagamento</p>
-                      <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                        {activeBenefit.banco_pagador?.tipo_pagamento || (isCartaoMagnetico(activeBenefit) ? "Cartão Magnético" : "Conta Corrente")}
-                      </p>
-                    </div>
-                  </div>
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Instituto
+                            </p>
+                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                              {activeBenefit.beneficio?.instituto
+                                || "Não Informado"}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
+                          <div className="md:col-span-1">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Número (NB)
+                            </p>
+                            <p className="text-sm font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
+                              {activeBenefit.cliente?.beneficio
+                                || activeBenefit.numero}
+                            </p>
+                          </div>
 
-                  {/* Dados Bancários Condicionais */}
+                          <div className="md:col-span-3">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Espécie
+                            </p>
+                            <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
+                              {activeBenefit.cliente?.especie
+                                || "Não Informada"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Situação
+                            </p>
+                            <p className={`text-[10px] font-black uppercase inline-block px-2.5 py-1 rounded-xl mt-0.5 ${
+                              (
+                                activeBenefit.beneficio?.situacao
+                                || ""
+                              ).toUpperCase() === "ATIVO"
+                                ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                                : "bg-red-50 text-red-600 border border-red-100"
+                            } print:bg-transparent print:p-0 print:text-xs`}>
+                              {activeBenefit.beneficio?.situacao
+                                || "Desconhecida"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Concessão (DDB)
+                            </p>
+                            <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
+                              {activeBenefit.beneficio?.ddb
+                                ? formatDateBR(
+                                    activeBenefit.beneficio.ddb
+                                  )
+                                : "Não Informada"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3 border-t border-slate-100 print:grid-cols-3 print:gap-2">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              UF Benefício
+                            </p>
+                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                              {activeBenefit.beneficio?.uf
+                                || "Não Informada"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Valor do Benefício
+                            </p>
+                            <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
+                              {formatBRL(marginInfo.salario)}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                              Meio Pagamento
+                            </p>
+                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                              {activeBenefit.banco_pagador?.tipo_pagamento
+                                || (
+                                  isCartaoMagnetico(
+                                    activeBenefit
+                                  )
+                                    ? "Cartão Magnético"
+                                    : "Conta Corrente"
+                                )}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Dados Bancários Condicionais */}
                   <div className="pt-3.5 border-t border-slate-100 bg-slate-50/60 p-4 rounded-2xl border border-slate-150">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                       <Icons.Landmark size={14} className="text-slate-500" /> DADOS BANCÁRIOS DE RECEBIMENTO
@@ -1016,13 +1230,17 @@ export default function ConsultaCPFPage() {
             {/* Resumo Financeiro (Margens Inteligentes) */}
             <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 relative overflow-hidden print-no-break">
               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -mr-20 -mt-20 opacity-50 pointer-events-none print:hidden"></div>
-              
+
               <div className="flex items-center gap-3 mb-8 relative z-10">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 print:bg-slate-50 print:text-emerald-700 print:border-slate-200">
                   <Icons.TrendingUp size={20} />
                 </div>
-                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Resumo Financeiro (Margens)</h3>
-                {marginInfo.isLOAS && (
+
+                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
+                  Resumo Financeiro (Margens)
+                </h3>
+
+                {!isSiape && marginInfo.isLOAS && (
                   <span className="ml-3 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[9px] font-black uppercase tracking-wider">
                     LOAS 35%
                   </span>
@@ -1031,55 +1249,79 @@ export default function ConsultaCPFPage() {
 
               <div className="grid grid-cols-2 md:grid-cols-5 gap-6 relative z-10 print:grid-cols-5">
                 <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Salário Base</p>
-                  <p className="text-lg font-black text-slate-800">{formatBRL(marginInfo.salario)}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    {isSiape ? "Salário Bruto" : "Salário Base"}
+                  </p>
+                  <p className="text-lg font-black text-slate-800">
+                    {formatBRL(marginInfo.salarioBruto)}
+                  </p>
                 </div>
-                
+
                 <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Consignável ({marginInfo.percent * 100}%)</p>
-                  <p className="text-lg font-black text-slate-800">{formatBRL(marginInfo.margemConsignavel)}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    {isSiape ? "Valor Líquido" : `Consignável (${marginInfo.percent * 100}%)`}
+                  </p>
+                  <p className="text-lg font-black text-slate-800">
+                    {formatBRL(isSiape ? marginInfo.valorLiquido : marginInfo.margemConsignavel)}
+                  </p>
                 </div>
-                
+
                 <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Total Comprometido</p>
-                  <p className="text-lg font-black text-slate-800">{formatBRL(marginInfo.totalComprometido)}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    {isSiape ? "Descontos" : "Total Comprometido"}
+                  </p>
+                  <p className="text-lg font-black text-slate-800">
+                    {formatBRL(isSiape ? marginInfo.descontos : marginInfo.totalComprometido)}
+                  </p>
                 </div>
-                
-                {/* Margem Disponível (Vermelho se negativo, Verde se positivo/zero) */}
+
                 <div className={`p-5 rounded-2xl border flex flex-col justify-center ${
-                  marginInfo.margemLivreReal < 0 
-                    ? 'bg-red-50/60 dark:bg-red-950/20 border-red-200 dark:border-red-900/30' 
-                    : 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/30'
+                  marginInfo.margemLivreReal < 0
+                    ? "bg-red-50/60 dark:bg-red-950/20 border-red-200 dark:border-red-900/30"
+                    : "bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/30"
                 }`}>
                   <p className={`text-[10px] font-black uppercase tracking-widest mb-1.5 ${
-                    marginInfo.margemLivreReal < 0 ? 'text-red-600' : 'text-emerald-600'
-                  }`}>Margem Disponível</p>
-                  
-                  <p className={`text-xl font-black ${
-                    marginInfo.margemLivreReal < 0 ? 'text-red-600' : 'text-emerald-700'
+                    marginInfo.margemLivreReal < 0 ? "text-red-600" : "text-emerald-600"
                   }`}>
-                    {marginInfo.margemLivreReal < 0 ? "R$ 0,00" : formatBRL(marginInfo.showMargem)}
+                    Margem Disponível
                   </p>
-                  
-                  {marginInfo.margemLivreReal < 0 && (
+
+                  <p className={`text-xl font-black ${
+                    marginInfo.margemLivreReal < 0 ? "text-red-600" : "text-emerald-700"
+                  }`}>
+                    {isSiape
+                      ? formatBRL(marginInfo.margemLivreReal)
+                      : marginInfo.margemLivreReal < 0
+                        ? "R$ 0,00"
+                        : formatBRL(marginInfo.showMargem)}
+                  </p>
+
+                  {!isSiape && marginInfo.margemLivreReal < 0 && (
                     <span className="text-[9px] font-bold text-red-500 uppercase mt-0.5 tracking-wider">
                       Negativo: {formatBRL(marginInfo.margemLivreReal)}
                     </span>
                   )}
                 </div>
 
-                {/* Valor Liberado da Margem */}
                 <div className={`p-5 rounded-2xl border flex flex-col justify-center ${
-                  marginInfo.margemLivreReal < 0 
-                    ? 'bg-slate-50 border-slate-200 opacity-60' 
-                    : 'bg-gradient-to-tr from-emerald-500/10 to-teal-500/5 border-emerald-200'
+                  marginInfo.margemLivreReal < 0
+                    ? "bg-slate-50 border-slate-200 opacity-60"
+                    : "bg-gradient-to-tr from-emerald-500/10 to-teal-500/5 border-emerald-200"
                 }`}>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Valor Liberado Aprox.</p>
-                  <p className={`text-2xl font-black ${marginInfo.margemLivreReal < 0 ? 'text-slate-400' : 'text-emerald-700'}`}>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
+                    Valor Liberado Aprox.
+                  </p>
+
+                  <p className={`text-2xl font-black ${
+                    marginInfo.margemLivreReal < 0 ? "text-slate-400" : "text-emerald-700"
+                  }`}>
                     {formatBRL(marginInfo.valorLiberadoMargem)}
                   </p>
+
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                    Coeficiente {marginInfo.coeficienteUtilizado.toFixed(5).replace('.', ',')}
+                    {marginInfo.coeficienteUtilizado > 0
+                      ? `Coeficiente ${marginInfo.coeficienteUtilizado.toFixed(5).replace(".", ",")}`
+                      : "Coeficiente SIAPE não configurado"}
                   </span>
                 </div>
               </div>
@@ -1135,7 +1377,7 @@ export default function ConsultaCPFPage() {
                           
                           <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo Devedor</p>
-                            <p className="text-sm font-black text-blue-600">{formatBRL(emp.saldo_devedor || emp.quitacao || 0)}</p>
+                            <p className="text-sm font-black text-blue-600">{formatBRL(emp.saldo_devedor ?? emp.quitacao ?? 0)}</p>
                           </div>
                           
                           <div>
@@ -1162,6 +1404,62 @@ export default function ConsultaCPFPage() {
             </div>
 
             {/* Cartões RMC / RCC */}
+            {isSiape ? (
+              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
+                    <Icons.CreditCard size={20} />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
+                    Margens de Cartão Disponíveis
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    {
+                      key: "RMC",
+                      title: "Reserva de Margem Consignável",
+                      value: Number(activeBenefit.margens_cartao?.rmc_disponivel || 0)
+                    },
+                    {
+                      key: "RCC",
+                      title: "Reserva de Cartão Consignado",
+                      value: Number(activeBenefit.margens_cartao?.rcc_disponivel || 0)
+                    }
+                  ].map((item) => (
+                    <div
+                      key={item.key}
+                      className="p-5 rounded-2xl border border-amber-100 bg-amber-50/40"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest">
+                          {item.key}
+                        </span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                          Informativo
+                        </span>
+                      </div>
+
+                      <p className="text-xs font-black text-slate-700 uppercase mb-2">
+                        {item.title}
+                      </p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        Margem disponível
+                      </p>
+                      <p className="text-xl font-black text-emerald-700 mt-1">
+                        {formatBRL(item.value)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="mt-4 text-[10px] font-bold text-slate-400 leading-relaxed">
+                  As margens RMC e RCC são apenas informativas. Elas não representam cartões ativos,
+                  contratos ou operações disponíveis para portabilidade.
+                </p>
+              </div>
+            ) : (
             <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center border border-pink-100 print:bg-slate-50 print:text-pink-700 print:border-slate-200">
@@ -1230,6 +1528,7 @@ export default function ConsultaCPFPage() {
                 )}
               </div>
             </div>
+            )}
 
           </div>
         )}

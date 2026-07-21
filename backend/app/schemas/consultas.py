@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 class ConsultaCliente(BaseModel):
     nome: str = ""
@@ -18,6 +18,10 @@ class ConsultaCliente(BaseModel):
 
 class ConsultaMargem(BaseModel):
     salario: float = 0.0
+    salario_bruto: float = 0.0
+    valor_liquido: float = 0.0
+    descontos: float = 0.0
+    margem_disponivel: float = 0.0
     margem_emprestimo: float = 0.0
     total_comprometido: float = 0.0
     margem_livre: float = 0.0
@@ -40,6 +44,14 @@ class ConsultaBeneficio(BaseModel):
     uf: Optional[str] = ""
     ddb: Optional[str] = ""
 
+    matricula: Optional[str] = ""
+    regime_juridico: Optional[str] = ""
+    orgao: Optional[str] = ""
+    instituto: Optional[str] = ""
+    dados_bancarios: Dict[str, Any] = Field(
+        default_factory=dict
+    )
+
 class ConsultaBancoPagador(BaseModel):
     codigo: str = ""
     nome: str = ""
@@ -59,6 +71,7 @@ class ConsultaEmprestimo(BaseModel):
     parcelas_pagas: int = 0
     prazo_restante: int = 0
     taxa: float = 0.0
+    taxa_saldo_devedor: float = 0.0
     situacao: str = ""
     valor_contrato: float = 0.0
 
@@ -73,6 +86,11 @@ class ConsultaCartao(BaseModel):
     disponivel: float = 0.0
     situacao: str = ""
 
+class ConsultaMargensCartao(BaseModel):
+    rmc_disponivel: float = 0.0
+    rcc_disponivel: float = 0.0
+
+
 class ConsultaResumo(BaseModel):
     total_emprestimos: int = 0
     total_cartoes: int = 0
@@ -82,6 +100,7 @@ class ConsultaResumo(BaseModel):
 
 class ConsultaResponse(BaseModel):
     origem: str
+    convenio: Optional[str] = "INSS"
     cliente: ConsultaCliente
     margens: ConsultaMargem
     beneficio: ConsultaBeneficio
@@ -89,16 +108,23 @@ class ConsultaResponse(BaseModel):
     telefones: List[Optional[str]] = []
     emprestimos: List[ConsultaEmprestimo] = []
     cartoes: List[ConsultaCartao] = []
+    margens_cartao: ConsultaMargensCartao = Field(
+        default_factory=ConsultaMargensCartao
+    )
     resumo: ConsultaResumo
 
 class BeneficioDetalhado(BaseModel):
     numero: str
+    convenio: Optional[str] = "INSS"
     cliente: ConsultaCliente
     margens: ConsultaMargem
     beneficio: ConsultaBeneficio
     banco_pagador: Optional[ConsultaBancoPagador] = None
     emprestimos: List[ConsultaEmprestimo] = []
     cartoes: List[ConsultaCartao] = []
+    margens_cartao: ConsultaMargensCartao = Field(
+        default_factory=ConsultaMargensCartao
+    )
     telefones: List[Optional[str]] = []
     resumo: Optional[ConsultaResumo] = None
 

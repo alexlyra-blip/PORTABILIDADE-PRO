@@ -55,197 +55,543 @@ def get_provider_by_type(provider_type: str):
         return MultiCorbanProvider()
     return PromosysProvider()
 
-async def _execute_cpf_query_flow(cpf: str, db: AsyncSession, convenio: str = "INSS", provider_type: str = "promosys"):
-    clean_cpf = ''.join(filter(str.isdigit, cpf))
+async def _execute_cpf_query_flow(
+    cpf: str,
+    db: AsyncSession,
+    convenio: str = "INSS",
+    provider_type: str = "promosys",
+):
+    clean_cpf = "".join(filter(str.isdigit, cpf))
+
     if not clean_cpf:
-        raise HTTPException(status_code=400, detail="CPF é obrigatório.")
-    
-    masked_cpf = f"{clean_cpf[:3]}******{clean_cpf[-2:]}" if len(clean_cpf) >= 5 else "***"
+        raise HTTPException(
+            status_code=400,
+            detail="CPF é obrigatório.",
+        )
+
+    convenio = str(
+        convenio or "INSS"
+    ).strip().upper()
     margin_convenio = resolve_margin_convenio(convenio)
-    
-    # 1. Verifica o cache no banco de dados usando a sessão existente
-    stmt = select(ConsultaCpfCache).where(ConsultaCpfCache.cpf == clean_cpf)
-    result = await db.execute(stmt)
-    cache_entry = result.scalar_one_or_none()
-    
+
+    provider_type = str(
+        provider_type or "promosys"
+    ).strip().lower()
+
+    masked_cpf = (
+        f"{clean_cpf[:3]}******{clean_cpf[-2:]}"
+        if len(clean_cpf) >= 5
+        else "***"
+    )
+
+    # A tabela consulta_cpf_cache possui CPF único e não
+    # diferencia convênio. Para impedir mistura entre INSS
+    # e SIAPE, somente o INSS utiliza esse cache persistente.
+    use_persistent_cache = convenio == "INSS"
+
     cache_json = None
-    if cache_entry:
-        cache_json = cache_entry.dados_json
-        cache_updated_at = cache_entry.updated_at or cache_entry.created_at
-        if cache_updated_at.tzinfo is None:
-            cache_updated_at = cache_updated_at.replace(tzinfo=timezone.utc)
-            
-    # Liberamos a sessão do DB imediatamente para evitar segurar a conexão
-    # durante a chamada externa de API
+    cache_updated_at = None
+
+    if use_persistent_cache:
+        stmt = select(ConsultaCpfCache).where(
+            ConsultaCpfCache.cpf == clean_cpf
+        )
+
+        result = await db.execute(stmt)
+        cache_entry = result.scalar_one_or_none()
+
+        if cache_entry:
+            cache_json = cache_entry.dados_json
+            cache_updated_at = (
+                cache_entry.updated_at
+                or cache_entry.created_at
+            )
+
+            if (
+                cache_updated_at
+                and cache_updated_at.tzinfo is None
+            ):
+                cache_updated_at = (
+                    cache_updated_at.replace(
+                        tzinfo=timezone.utc
+                    )
+                )
+
+    # Não mantemos a conexão aberta durante a chamada
+    # externa ao provedor.
     await db.close()
-    
-    # 2. Se temos cache válido (<= 30 dias), retornamos ele após recalcular margens
-    if cache_json:
+
+    # Cache persistente exclusivo do INSS.
+    if (
+        use_persistent_cache
+        and cache_json
+        and cache_updated_at
+    ):
         now_utc = datetime.now(timezone.utc)
-        if (now_utc - cache_updated_at) <= timedelta(days=30):
+
+        if (
+            now_utc - cache_updated_at
+        ) <= timedelta(days=30):
             try:
                 dados_json = json.loads(cache_json)
-                dados_json = recalculate_consulta_payload(dados_json)
-                
-                # Para recalcular margens, abrimos uma sessão rápida e a fechamos em seguida
+
+                # Esta função possui regras de margem
+                # específicas do INSS.
+                dados_json = recalculate_consulta_payload(
+                    dados_json
+                )
+
                 async with AsyncSessionLocal() as temp_db:
-                    coef_fator = await obter_coeficiente_fator(temp_db, margin_convenio)
-                    for b in dados_json.get("beneficios", []):
-                        if "margens" in b and b["margens"]:
-                            margem_livre = b["margens"].get("margem_livre", 0.0)
-                            b["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
-                            b["margens"]["coeficiente_utilizado"] = coef_fator
-                        if "cliente" in b and b["cliente"]:
-                            margem_livre = b["cliente"].get("margem_livre", 0.0) or b.get("margens", {}).get("margem_livre", 0.0)
-                            b["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
-                            b["cliente"]["coeficiente_utilizado"] = coef_fator
-                    
-                    bp = dados_json.get("beneficio_principal")
-                    if bp:
-                        if "margens" in bp and bp["margens"]:
-                            margem_livre = bp["margens"].get("margem_livre", 0.0)
-                            bp["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
-                            bp["margens"]["coeficiente_utilizado"] = coef_fator
-                        if "cliente" in bp and bp["cliente"]:
-                            margem_livre = bp["cliente"].get("margem_livre", 0.0) or bp.get("margens", {}).get("margem_livre", 0.0)
-                            bp["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
-                            bp["cliente"]["coeficiente_utilizado"] = coef_fator
-                            
-                    if "margens" in dados_json and dados_json["margens"]:
-                        margem_livre = dados_json["margens"].get("margem_livre", 0.0)
-                        dados_json["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
-                        dados_json["margens"]["coeficiente_utilizado"] = coef_fator
-                    if "cliente" in dados_json and dados_json["cliente"]:
-                        margem_livre = dados_json["cliente"].get("margem_livre", 0.0) or dados_json.get("margens", {}).get("margem_livre", 0.0)
-                        dados_json["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
-                        dados_json["cliente"]["coeficiente_utilizado"] = coef_fator
-                
-                # Filtra telefones nulos
-                for b in dados_json.get("beneficios", []):
-                    if "telefones" in b and isinstance(b["telefones"], list):
-                        b["telefones"] = [t for t in b["telefones"] if t]
-                if bp and "telefones" in bp and isinstance(bp["telefones"], list):
-                    bp["telefones"] = [t for t in bp["telefones"] if t]
-                    
-                print(f"[CACHE] Usando cache para o CPF {masked_cpf}")
-                return ConsultaCpfMultiResponse(**dados_json)
+                    coef_fator = (
+                        await obter_coeficiente_fator(
+                            temp_db,
+                            convenio=margin_convenio,
+                        )
+                    )
+
+                    async def atualizar_valores(
+                        item: dict,
+                    ):
+                        if not isinstance(item, dict):
+                            return
+
+                        item["convenio"] = (
+                            item.get("convenio")
+                            or convenio
+                        )
+
+                        margens = (
+                            item.get("margens")
+                            or {}
+                        )
+
+                        cliente = (
+                            item.get("cliente")
+                            or {}
+                        )
+
+                        margem_livre = margens.get(
+                            "margem_livre"
+                        )
+
+                        if margem_livre is None:
+                            margem_livre = cliente.get(
+                                "margem_livre",
+                                0.0,
+                            )
+
+                        valor_liberado = (
+                            await calcular_valor_liberado_margem(
+                                margem_livre or 0.0,
+                                temp_db,
+                                convenio=margin_convenio,
+                            )
+                        )
+
+                        if margens:
+                            margens[
+                                "valor_liberado_margem"
+                            ] = valor_liberado
+                            margens[
+                                "coeficiente_utilizado"
+                            ] = coef_fator
+
+                        if cliente:
+                            cliente[
+                                "valor_liberado_margem"
+                            ] = valor_liberado
+                            cliente[
+                                "coeficiente_utilizado"
+                            ] = coef_fator
+
+                    for beneficio_item in dados_json.get(
+                        "beneficios",
+                        [],
+                    ):
+                        await atualizar_valores(
+                            beneficio_item
+                        )
+
+                    beneficio_principal = dados_json.get(
+                        "beneficio_principal"
+                    )
+
+                    if beneficio_principal:
+                        await atualizar_valores(
+                            beneficio_principal
+                        )
+
+                    await atualizar_valores(dados_json)
+
+                for beneficio_item in dados_json.get(
+                    "beneficios",
+                    [],
+                ):
+                    telefones = beneficio_item.get(
+                        "telefones"
+                    )
+
+                    if isinstance(telefones, list):
+                        beneficio_item["telefones"] = [
+                            telefone
+                            for telefone in telefones
+                            if telefone
+                        ]
+
+                if beneficio_principal:
+                    telefones = beneficio_principal.get(
+                        "telefones"
+                    )
+
+                    if isinstance(telefones, list):
+                        beneficio_principal[
+                            "telefones"
+                        ] = [
+                            telefone
+                            for telefone in telefones
+                            if telefone
+                        ]
+
+                print(
+                    f"[CACHE] Usando cache para o CPF "
+                    f"{masked_cpf}"
+                )
+
+                return ConsultaCpfMultiResponse(
+                    **dados_json
+                )
+
             except Exception as cache_err:
-                print(f"[WARNING] Erro ao carregar cache para o CPF {masked_cpf}: {cache_err}")
-                
-    # 3. Consulta externa via Provedor Ativo
+                print(
+                    "[WARNING] Erro ao carregar cache "
+                    f"para o CPF {masked_cpf}: "
+                    f"{cache_err}"
+                )
+
     provider = get_provider_by_type(provider_type)
-    
+
     try:
-        beneficios_info = await provider.consultar_beneficios(clean_cpf, convenio=convenio)
-    except ValueError as e:
-        err_msg = str(e)
-        if "token" in err_msg.lower() or "autentica" in err_msg.lower() or "credencia" in err_msg.lower():
-            raise HTTPException(status_code=401, detail=f"Falha de autenticação no provedor {provider_type}.")
-        if "nenhum benefício encontrado" in err_msg.lower() or "não encontrado" in err_msg.lower():
-            raise HTTPException(status_code=404, detail="Nenhum benefício encontrado para este CPF.")
-        raise HTTPException(status_code=502, detail=f"Erro no provedor {provider_type} ao listar benefícios: {err_msg}")
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Erro de comunicação com o provedor {provider_type}: {str(e)}")
-        
-    beneficios_list = beneficios_info.get("beneficios", [])
+        beneficios_info = (
+            await provider.consultar_beneficios(
+                clean_cpf,
+                convenio=convenio,
+            )
+        )
+
+    except ValueError as error:
+        err_msg = str(error)
+
+        if (
+            "token" in err_msg.lower()
+            or "autentica" in err_msg.lower()
+            or "credencia" in err_msg.lower()
+        ):
+            raise HTTPException(
+                status_code=401,
+                detail=(
+                    "Falha de autenticação no provedor "
+                    f"{provider_type}."
+                ),
+            )
+
+        if (
+            "nenhum benefício encontrado"
+            in err_msg.lower()
+            or "não encontrado" in err_msg.lower()
+        ):
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "Nenhum benefício encontrado "
+                    "para este CPF."
+                ),
+            )
+
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"Erro no provedor {provider_type} "
+                "ao listar benefícios: "
+                f"{err_msg}"
+            ),
+        )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Erro de comunicação com o provedor "
+                f"{provider_type}: {str(error)}"
+            ),
+        )
+
+    beneficios_list = beneficios_info.get(
+        "beneficios",
+        [],
+    )
+
     if not beneficios_list:
-        raise HTTPException(status_code=404, detail="Nenhum benefício encontrado para este CPF.")
-        
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Nenhum benefício encontrado "
+                "para este CPF."
+            ),
+        )
+
     numeros_beneficios = []
     numeros_vistos = set()
+
     for item in beneficios_list:
-        numero = "".join(filter(str.isdigit, str(item)))
+        numero = "".join(
+            filter(str.isdigit, str(item))
+        )
+
         if not numero:
             continue
+
         if numero in numeros_vistos:
             continue
+
         numeros_vistos.add(numero)
         numeros_beneficios.append(numero)
-        
+
     if not numeros_beneficios:
         raise HTTPException(
             status_code=502,
-            detail=f"O provedor {provider_type} retornou benefícios, mas os números dos NBs não puderam ser identificados."
+            detail=(
+                f"O provedor {provider_type} retornou "
+                "benefícios, mas os identificadores "
+                "não puderam ser identificados."
+            ),
         )
-        
+
     detailed_beneficios = []
     results = []
-    
+
     async with AsyncSessionLocal() as temp_db:
-        coef_fator = await obter_coeficiente_fator(temp_db, margin_convenio)
-        for nb in numeros_beneficios:
+        coef_fator = await obter_coeficiente_fator(
+            temp_db,
+            convenio=margin_convenio,
+        )
+
+        for numero_beneficio in numeros_beneficios:
             try:
-                res = await provider.consultar_por_beneficio(nb)
-                if "telefones" in res and isinstance(res["telefones"], list):
-                    res["telefones"] = [t for t in res["telefones"] if t]
-                
-                # Recalcular margens com base no banco e registrar coeficiente
-                if "margens" in res and res["margens"]:
-                    margem_livre = res["margens"].get("margem_livre", 0.0)
-                    res["margens"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
-                    res["margens"]["coeficiente_utilizado"] = coef_fator
-                if "cliente" in res and res["cliente"]:
-                    margem_livre = res["cliente"].get("margem_livre", 0.0) or res.get("margens", {}).get("margem_livre", 0.0)
-                    res["cliente"]["valor_liberado_margem"] = await calcular_valor_liberado_margem(margem_livre, temp_db, margin_convenio)
-                    res["cliente"]["coeficiente_utilizado"] = coef_fator
-                    
-                results.append((nb, res))
-                
+                # O MultiCorban precisa do convênio para
+                # localizar a matrícula no cache correto.
+                if provider_type == "multicorban":
+                    res = (
+                        await provider.consultar_por_beneficio(
+                            numero_beneficio,
+                            convenio=convenio,
+                        )
+                    )
+                else:
+                    res = (
+                        await provider.consultar_por_beneficio(
+                            numero_beneficio
+                        )
+                    )
+
+                res["convenio"] = (
+                    res.get("convenio")
+                    or convenio
+                )
+
+                if (
+                    "telefones" in res
+                    and isinstance(
+                        res["telefones"],
+                        list,
+                    )
+                ):
+                    res["telefones"] = [
+                        telefone
+                        for telefone in res["telefones"]
+                        if telefone
+                    ]
+
+                margens = res.get("margens") or {}
+                cliente = res.get("cliente") or {}
+
+                margem_livre = margens.get(
+                    "margem_livre"
+                )
+
+                if margem_livre is None:
+                    margem_livre = cliente.get(
+                        "margem_livre",
+                        0.0,
+                    )
+
+                valor_liberado = (
+                    await calcular_valor_liberado_margem(
+                        margem_livre or 0.0,
+                        temp_db,
+                        convenio=margin_convenio,
+                    )
+                )
+
+                if margens:
+                    margens[
+                        "valor_liberado_margem"
+                    ] = valor_liberado
+                    margens[
+                        "coeficiente_utilizado"
+                    ] = coef_fator
+
+                if cliente:
+                    cliente[
+                        "valor_liberado_margem"
+                    ] = valor_liberado
+                    cliente[
+                        "coeficiente_utilizado"
+                    ] = coef_fator
+
+                results.append(
+                    (numero_beneficio, res)
+                )
+
                 detalhe = BeneficioDetalhado(
-                    numero=nb,
+                    numero=numero_beneficio,
+                    convenio=res.get(
+                        "convenio",
+                        convenio,
+                    ),
                     cliente=res["cliente"],
                     margens=res["margens"],
                     beneficio=res["beneficio"],
-                    banco_pagador=res["banco_pagador"],
-                    emprestimos=res["emprestimos"],
-                    cartoes=res["cartoes"],
-                    telefones=res.get("telefones", []),
-                    resumo=res["resumo"]
+                    banco_pagador=res.get(
+                        "banco_pagador"
+                    ),
+                    emprestimos=res.get(
+                        "emprestimos",
+                        [],
+                    ),
+                    cartoes=res.get(
+                        "cartoes",
+                        [],
+                    ),
+                    margens_cartao=res.get(
+                        "margens_cartao",
+                        {},
+                    ),
+                    telefones=res.get(
+                        "telefones",
+                        [],
+                    ),
+                    resumo=res.get("resumo"),
                 )
-                detailed_beneficios.append(detalhe)
-            except Exception as erro_beneficio:
-                nb_mascarado = f"***{nb[-4:]}" if len(nb) >= 4 else "***"
-                print(f"[WARNING] Erro ao consultar benefício {nb_mascarado} no provedor {provider_type}: {erro_beneficio}")
-                results.append((nb, None))
-            
+
+                detailed_beneficios.append(
+                    detalhe
+                )
+
+            except Exception as error:
+                numero_mascarado = (
+                    f"***{numero_beneficio[-4:]}"
+                    if len(numero_beneficio) >= 4
+                    else "***"
+                )
+
+                print(
+                    "[WARNING] Erro ao consultar "
+                    f"benefício {numero_mascarado} "
+                    f"no provedor {provider_type}: "
+                    f"{error}"
+                )
+
+                results.append(
+                    (numero_beneficio, None)
+                )
+
     if not detailed_beneficios:
-        raise HTTPException(status_code=404, detail="Não foi possível recuperar dados detalhados para os benefícios.")
-        
-    first_res = next((res for nb, res in results if res is not None), None)
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Não foi possível recuperar dados "
+                "detalhados para os benefícios."
+            ),
+        )
+
+    first_res = next(
+        (
+            result_data
+            for _, result_data in results
+            if result_data is not None
+        ),
+        None,
+    )
+
     if not first_res:
-        raise HTTPException(status_code=404, detail="Não foi possível recuperar dados detalhados para os benefícios.")
-        
-    beneficio_principal = ConsultaResponse(**first_res)
-    
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Não foi possível recuperar dados "
+                "detalhados para os benefícios."
+            ),
+        )
+
+    beneficio_principal = ConsultaResponse(
+        **first_res
+    )
+
     multi_response = ConsultaCpfMultiResponse(
         success=True,
         cpf=clean_cpf,
-        total_beneficios=len(detailed_beneficios),
+        total_beneficios=len(
+            detailed_beneficios
+        ),
         beneficios=detailed_beneficios,
         beneficio_principal=beneficio_principal,
-        **first_res
+        **first_res,
     )
-    
-    # 4. Salva no cache abrindo uma nova conexão rápida
-    resultado_dict = multi_response.model_dump()
-    dados_str = json.dumps(resultado_dict)
-    
-    try:
-        async with AsyncSessionLocal() as write_db:
-            stmt = select(ConsultaCpfCache).where(ConsultaCpfCache.cpf == clean_cpf)
-            res_cache = await write_db.execute(stmt)
-            existing_cache = res_cache.scalar_one_or_none()
-            
-            if existing_cache:
-                existing_cache.dados_json = dados_str
-                existing_cache.updated_at = func.now()
-            else:
-                nova_consulta = ConsultaCpfCache(cpf=clean_cpf, dados_json=dados_str)
-                write_db.add(nova_consulta)
-            await write_db.commit()
-    except Exception as cache_write_err:
-        print(f"[WARNING] Falha ao gravar cache no banco: {cache_write_err}")
-        
+
+    # A tabela atual não possui coluna de convênio.
+    # Portanto, somente INSS pode ser persistido nela.
+    if use_persistent_cache:
+        resultado_dict = multi_response.model_dump()
+        dados_str = json.dumps(resultado_dict)
+
+        try:
+            async with AsyncSessionLocal() as write_db:
+                stmt = select(
+                    ConsultaCpfCache
+                ).where(
+                    ConsultaCpfCache.cpf
+                    == clean_cpf
+                )
+
+                res_cache = await write_db.execute(
+                    stmt
+                )
+
+                existing_cache = (
+                    res_cache.scalar_one_or_none()
+                )
+
+                if existing_cache:
+                    existing_cache.dados_json = (
+                        dados_str
+                    )
+                    existing_cache.updated_at = (
+                        func.now()
+                    )
+                else:
+                    nova_consulta = ConsultaCpfCache(
+                        cpf=clean_cpf,
+                        dados_json=dados_str,
+                    )
+                    write_db.add(nova_consulta)
+
+                await write_db.commit()
+
+        except Exception as cache_write_err:
+            print(
+                "[WARNING] Falha ao gravar cache "
+                f"no banco: {cache_write_err}"
+            )
+
     return multi_response
 
 # ROTA UNIFICADA CPF
@@ -255,8 +601,9 @@ async def consultar_cpf_unificado(
     db: AsyncSession = Depends(get_db), 
     current_user = Depends(get_current_user)
 ):
-    # A rota continua protegida por get_current_user, mas está disponível
-    # para todos os perfis autenticados do CRM.
+    if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
+    
     provider_type = get_active_provider()
     
     if provider_type == "multicorban":

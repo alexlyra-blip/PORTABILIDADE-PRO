@@ -507,6 +507,9 @@ function SimuladorPageContent() {
     setContracts(contracts.map(c => {
       if (c.id !== id) return c;
       let newC = { ...c, [name]: val };
+      if (formData.agreement === "SIAPE") {
+        newC.parcelasPagas = "0";
+      }
       if (["parcela", "saldoDevedor", "parcelasPagas", "prazoTotal"].includes(name)) {
         const pmt = parseCurrency(newC.parcela);
         const pv = parseCurrency(newC.saldoDevedor);
@@ -526,8 +529,9 @@ function SimuladorPageContent() {
 
   const addContract = () => {
     if (contracts.length >= 5) return;
+    const isSiape = formData.agreement === "SIAPE";
     setContracts([...contracts, {
-      id: Date.now(), banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: "", taxaAtual: "", taxaAjustada: ""
+      id: Date.now(), banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: isSiape ? "0" : "", taxaAtual: "", taxaAjustada: ""
     }]);
     setActiveContractIndex(contracts.length);
   };
@@ -756,24 +760,48 @@ function SimuladorPageContent() {
   const handleUseCpfLoans = () => {
     if (selectedCpfLoanIndices.length === 0 || !activeBenefit) return;
 
+    const activeConvention = String(
+      activeBenefit?.convenio || "INSS"
+    ).trim().toUpperCase();
+
+    const isSiapeBenefit = activeConvention === "SIAPE";
+
+    const margemDisponivelAtiva = Number(
+      activeBenefit.margens?.margem_disponivel ??
+      activeBenefit.margens?.margem_livre ??
+      0
+    );
+
     setFormData(prev => ({
        ...prev,
        nome_cliente: activeBenefit.cliente?.nome || prev.nome_cliente,
        cpf: maskCPF(activeBenefit.cliente?.cpf || formData.cpf),
        idade: activeBenefit.cliente?.idade ? activeBenefit.cliente.idade.toString() : prev.idade,
-       agreement: "INSS",
-       benefit_species: extrairCodigoEspecie(activeBenefit.cliente?.especie) || prev.benefit_species,
-       margem_livre: activeBenefit.margens?.margem_livre || 0,
-       margem_emprestimo: activeBenefit.margens?.margem_emprestimo || 0,
-       total_comprometido: activeBenefit.margens?.total_comprometido || 0
+       agreement: activeConvention,
+       benefit_species: isSiapeBenefit
+         ? ""
+         : extrairCodigoEspecie(activeBenefit.cliente?.especie) || prev.benefit_species,
+       margem_livre: margemDisponivelAtiva,
+       margem_consignavel: isSiapeBenefit
+         ? 0
+         : activeBenefit.margens?.margem_emprestimo || 0,
+       total_comprometido: isSiapeBenefit
+         ? 0
+         : activeBenefit.margens?.total_comprometido || 0,
+       coeficiente_utilizado: activeBenefit.margens?.coeficiente_utilizado ?? 0.02270,
+       valor_liberado_margem: activeBenefit.margens?.valor_liberado_margem ?? 0
     }));
 
     if (activeBenefit.margens) {
-        if (activeBenefit.margens.margem_livre < 0) {
-            const valorNegativo = Math.abs(activeBenefit.margens.margem_livre);
+        if (margemDisponivelAtiva < 0) {
+            const valorNegativo = Math.abs(margemDisponivelAtiva);
             setValorMargemNegativa(`R$ ${valorNegativo.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
         }
-        if (activeBenefit.cartoes && activeBenefit.cartoes.length >= 2) {
+        if (
+            !isSiapeBenefit &&
+            activeBenefit.cartoes &&
+            activeBenefit.cartoes.length >= 2
+          ) {
             setPossuiDoisCartoes("sim");
         } else {
             setPossuiDoisCartoes("nao");
@@ -810,7 +838,7 @@ function SimuladorPageContent() {
       if (targetIndex === -1 && newContracts.length < 5) {
         targetIndex = newContracts.length;
         newContracts.push({
-          id: Date.now() + targetIndex, banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: "", taxaAtual: "", taxaAjustada: ""
+          id: Date.now() + targetIndex, banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: isSiapeBenefit ? "0" : "", taxaAtual: "", taxaAjustada: ""
         });
       }
 
@@ -843,15 +871,18 @@ function SimuladorPageContent() {
           }
         }
 
+        const pTotal = emp.prazo ? emp.prazo.toString() : "";
         newContracts[targetIndex] = {
           ...newContracts[targetIndex],
           numeroContrato: emp.contrato,
           banco: matchedBank,
           parcela: emp.parcela ? formatCurrencyConsult(emp.parcela) : "",
-          saldoDevedor: emp.quitacao ? formatCurrencyConsult(emp.quitacao) : "",
-          prazoTotal: emp.prazo ? emp.prazo.toString() : "",
-          prazoRestante: emp.prazo_restante ? emp.prazo_restante.toString() : "",
-          parcelasPagas: emp.parcelas_pagas ? emp.parcelas_pagas.toString() : "",
+          saldoDevedor: (emp.saldo_devedor ?? emp.quitacao)
+              ? formatCurrencyConsult(emp.saldo_devedor ?? emp.quitacao)
+              : "",
+          prazoTotal: pTotal,
+          prazoRestante: isSiapeBenefit ? pTotal : (emp.prazo_restante ? emp.prazo_restante.toString() : ""),
+          parcelasPagas: isSiapeBenefit ? "0" : (emp.parcelas_pagas ? emp.parcelas_pagas.toString() : ""),
           taxaAtual: emp.taxa ? Number(emp.taxa).toFixed(2).replace('.', ',') : "",
           taxaAjustada: emp.taxa ? Number(emp.taxa).toFixed(2).replace('.', ',') : ""
         };
@@ -1438,6 +1469,29 @@ function SimuladorPageContent() {
                     </div>
                   )}
 
+                  {/* Informações de Margem Disponível (SIAPE ou quando houver margem_livre) */}
+                  {formData.margem_livre !== undefined && formData.margem_livre > 0 && (
+                    <div className="pt-4 border-t border-slate-100 space-y-3 animate-in slide-in-from-top-2 duration-500">
+                      <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100/80">
+                        <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                          <Icons.Sparkles size={12} className="text-emerald-500 animate-pulse" /> Margem Disponível Importada
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="block text-[8px] font-black text-slate-400 uppercase">Margem Livre</span>
+                            <span className="text-sm font-black text-slate-800">{formatBRL(formData.margem_livre)}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[8px] font-black text-slate-400 uppercase">Liberado Aproximado</span>
+                            <span className="text-sm font-black text-emerald-700">
+                              {formatBRL(formData.valor_liberado_margem || (formData.margem_livre / (formData.coeficiente_utilizado || 0.02270)))}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>
@@ -1508,7 +1562,25 @@ function SimuladorPageContent() {
                              {["INSS", "SIAPE", "FORÇAS ARMADAS", "GOVERNOS", "CLT PRIVADO"]
                                .filter(name => !agreementSearch || (name || "").toUpperCase().includes(agreementSearch.toUpperCase()))
                                .map(name => (
-                                 <button key={name} type="button" onClick={() => { setFormData(p => ({ ...p, agreement: name, sub_agreement: "" })); setDropdownOpen(p => ({ ...p, agreement: false })); setAgreementSearch(""); }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
+                                 <button key={name} type="button" onClick={() => {
+                                    setFormData(p => {
+                                      const newD = { ...p, agreement: name, sub_agreement: "" };
+                                      if (name === "SIAPE" && !newD.margem_livre) {
+                                        newD.margem_livre = 0;
+                                        newD.valor_liberado_margem = 0;
+                                      }
+                                      return newD;
+                                    });
+                                    setDropdownOpen(p => ({ ...p, agreement: false }));
+                                    setAgreementSearch("");
+                                    if (name === "SIAPE") {
+                                      setContracts(prev => prev.map(c => ({
+                                        ...c,
+                                        parcelasPagas: "0",
+                                        prazoRestante: c.prazoTotal || c.prazoRestante
+                                      })));
+                                    }
+                                  }} className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${formData.agreement === name ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-slate-50 text-slate-700 border-slate-100 hover:border-blue-300'}`}>
                                    <div className="w-10 h-10 bg-white rounded-xl shrink-0 flex items-center justify-center border shadow-sm overflow-hidden">
                                      {(() => {
                                         const logoUrl = getAgreementLogoUrl(name);
@@ -1877,7 +1949,20 @@ function SimuladorPageContent() {
 
                        <div className="space-y-1.5">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Parcelas Pagas</label>
-                          <input type="text" name="parcelasPagas" value={contracts[activeContractIndex].parcelasPagas} onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)} placeholder="12" className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-center" required />
+                          <input
+                            type="text"
+                            name="parcelasPagas"
+                            value={formData.agreement === "SIAPE" ? "0" : contracts[activeContractIndex].parcelasPagas}
+                            onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)}
+                            placeholder="12"
+                            disabled={formData.agreement === "SIAPE"}
+                            className={`w-full h-14 px-6 rounded-2xl border transition-all outline-none font-black text-center ${
+                              formData.agreement === "SIAPE"
+                                ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                : "bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-800"
+                            }`}
+                            required
+                          />
                        </div>
 
                        <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-4 pt-4 border-t border-slate-100">
@@ -2066,11 +2151,31 @@ function SimuladorPageContent() {
           activeBenefit?.resumo?.margens ||
           {};
 
+        const activeConventionModal = String(
+          activeBenefit?.convenio ||
+          formData.agreement ||
+          "INSS"
+        ).trim().toUpperCase();
+
+        const isSiapeModal =
+          activeConventionModal === "SIAPE";
+
         const salario = Number(
+          (isSiapeModal
+            ? margensAtivas.salario_bruto
+            : undefined) ??
           margensAtivas.salario ??
           activeBenefit?.cliente?.salario ??
           activeBenefit?.salario ??
           0
+        );
+
+        const valorLiquido = Number(
+          margensAtivas.valor_liquido ?? 0
+        );
+
+        const descontos = Number(
+          margensAtivas.descontos ?? 0
         );
 
         const especie = String(
@@ -2079,44 +2184,71 @@ function SimuladorPageContent() {
           ""
         );
 
-        const codigoEspecie = especie.match(/\d+/)?.[0] || "";
-        const isLOAS = ["87", "88"].includes(codigoEspecie);
+        const codigoEspecie =
+          especie.match(/\d+/)?.[0] || "";
+
+        const isLOAS =
+          !isSiapeModal &&
+          ["87", "88"].includes(codigoEspecie);
+
         const percent = isLOAS ? 0.35 : 0.40;
 
-        const margemConsignavel = Number(
-          margensAtivas.margem_emprestimo ??
-          margensAtivas.margem_consignavel ??
-          (salario * percent)
-        );
+        const margemConsignavel = isSiapeModal
+          ? 0
+          : Number(
+              margensAtivas.margem_emprestimo ??
+              margensAtivas.margem_consignavel ??
+              (salario * percent)
+            );
 
-        const totalComprometido = Number(
-          margensAtivas.total_comprometido ??
-          margensAtivas.total_comprometimento ??
-          0
-        );
+        const totalComprometido = isSiapeModal
+          ? descontos
+          : Number(
+              margensAtivas.total_comprometido ??
+              margensAtivas.total_comprometimento ??
+              0
+            );
 
-        const margemLivreInformada =
-          margensAtivas.margem_livre ??
-          activeBenefit?.margem_livre;
+        const margemLivreInformada = isSiapeModal
+          ? (
+              margensAtivas.margem_disponivel ??
+              margensAtivas.margem_livre ??
+              activeBenefit?.margem_livre
+            )
+          : (
+              margensAtivas.margem_livre ??
+              activeBenefit?.margem_livre
+            );
 
         const margemLivreReal =
           margemLivreInformada !== undefined &&
           margemLivreInformada !== null
             ? Number(margemLivreInformada)
-            : margemConsignavel - totalComprometido;
+            : isSiapeModal
+              ? 0
+              : margemConsignavel -
+                totalComprometido;
 
-        const showMargem = Math.max(margemLivreReal, 0);
+        const showMargem = Math.max(
+          margemLivreReal,
+          0
+        );
 
         const coeficienteUtilizado = Number(
           activeBenefit?.cliente?.coeficiente_utilizado ??
-          activeBenefit?.margens?.coeficiente_utilizado ??
-          0.02270
+          margensAtivas.coeficiente_utilizado ??
+          (isSiapeModal ? 0 : 0.02270)
         );
 
         const valorLiberadoMargem = Number(
           margensAtivas.valor_liberado_margem ??
           activeBenefit?.valor_liberado_margem ??
-          (showMargem > 0 ? showMargem / coeficienteUtilizado : 0)
+          (
+            showMargem > 0 &&
+            coeficienteUtilizado > 0
+              ? showMargem / coeficienteUtilizado
+              : 0
+          )
         );
 
         const isMagnetico = () => {
@@ -2202,11 +2334,34 @@ function SimuladorPageContent() {
                         beneficioItem?.beneficio?.numero ||
                         `Benefício ${idx + 1}`;
 
-                      const especieBeneficio =
-                        beneficioItem?.cliente?.especie ||
-                        beneficioItem?.beneficio?.especie ||
-                        beneficioItem?.especie ||
-                        "";
+                        const itemConvention = String(
+                          beneficioItem?.convenio ||
+                          activeConventionModal
+                        ).trim().toUpperCase();
+
+                        const isSiapeItem =
+                          itemConvention === "SIAPE";
+
+                        const matriculaBeneficio =
+                          beneficioItem?.beneficio?.matricula ||
+                          beneficioItem?.matricula ||
+                          beneficioItem?.cliente?.matricula ||
+                          numeroBeneficio;
+
+                        const descricaoBeneficio = isSiapeItem
+                          ? (
+                              beneficioItem?.beneficio?.orgao ||
+                              beneficioItem?.orgao ||
+                              beneficioItem?.beneficio?.instituto ||
+                              beneficioItem?.instituto ||
+                              ""
+                            )
+                          : (
+                              beneficioItem?.cliente?.especie ||
+                              beneficioItem?.beneficio?.especie ||
+                              beneficioItem?.especie ||
+                              ""
+                            );
 
                       return (
                         <button
@@ -2223,16 +2378,16 @@ function SimuladorPageContent() {
                           }`}
                         >
                           <span className="block text-[9px] font-black uppercase tracking-widest opacity-75">
-                            Benefício {idx + 1}
+                            {isSiapeItem ? "Vínculo" : "Benefício"} {idx + 1}
                           </span>
 
                           <span className="block text-xs font-black uppercase mt-0.5">
-                            NB {numeroBeneficio}
+                            {isSiapeItem ? "Matrícula" : "NB"}{" "}{isSiapeItem ? matriculaBeneficio : numeroBeneficio}
                           </span>
 
-                          {especieBeneficio && (
+                          {descricaoBeneficio && (
                             <span className="block text-[8px] font-bold uppercase mt-1 truncate opacity-80">
-                              {especieBeneficio}
+                              {descricaoBeneficio}
                             </span>
                           )}
                         </button>
@@ -2258,6 +2413,52 @@ function SimuladorPageContent() {
                 {/* Dados Benefício & Bancários */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Benefício */}
+                  {isSiapeModal ? (
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-150 shadow-sm relative">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                        Dados do Vínculo SIAPE
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-bold text-slate-800">
+                        <div>
+                          <span className="block text-[9px] text-slate-400 uppercase">Matrícula</span>
+                          <p className="text-sm font-black mt-0.5">
+                            {activeBenefit.beneficio?.matricula || activeBenefit.matricula || "Não Informada"}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="block text-[9px] text-slate-400 uppercase">Regime Jurídico</span>
+                          <p className="text-sm font-black mt-0.5">
+                            {activeBenefit.beneficio?.regime_juridico || activeBenefit.regime_juridico || "Não Informado"}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="block text-[9px] text-slate-400 uppercase">Órgão</span>
+                          <p className="text-sm font-black mt-0.5">
+                            {activeBenefit.beneficio?.orgao || activeBenefit.orgao || "Não Informado"}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="block text-[9px] text-slate-400 uppercase">Instituto</span>
+                          <p className="text-sm font-black mt-0.5">
+                            {activeBenefit.beneficio?.instituto || activeBenefit.instituto || "Não Informado"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {activeBenefit.cliente?.endereco && (
+                        <div className="mt-4 pt-3 border-t border-slate-100">
+                          <span className="block text-[9px] text-slate-400 uppercase">Endereço</span>
+                          <p className="text-[11px] font-medium text-slate-600 uppercase">
+                            {activeBenefit.cliente.endereco}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
                   <div className="bg-white p-6 rounded-[2rem] border border-slate-150 shadow-sm relative">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Detalhamento do Benefício</h4>
@@ -2310,6 +2511,7 @@ function SimuladorPageContent() {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* Dados Bancários */}
                   <div className="bg-white p-6 rounded-[2rem] border border-slate-150 shadow-sm flex flex-col justify-between">
@@ -2348,14 +2550,14 @@ function SimuladorPageContent() {
                     </h4>
 
                     <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[9px] font-black uppercase">
-                      {isLOAS ? "LOAS 35%" : "Margem 40%"}
+                      {isSiapeModal ? "Margem SIAPE" : isLOAS ? "LOAS 35%" : "Margem 40%"}
                     </span>
                   </div>
 
                   <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                     <div className="min-h-[92px] bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col justify-center">
                       <span className="text-[9px] font-black text-slate-400 uppercase mb-1">
-                        Salário Base
+                        {isSiapeModal ? "Salário Bruto" : "Salário Base"}
                       </span>
                       <span className="text-base font-black text-slate-800">
                         {formatBRL(salario)}
@@ -2364,19 +2566,19 @@ function SimuladorPageContent() {
 
                     <div className="min-h-[92px] bg-blue-50 p-4 rounded-2xl border border-blue-100 flex flex-col justify-center">
                       <span className="text-[9px] font-black text-blue-500 uppercase mb-1">
-                        Consignável ({percent * 100}%)
+                        {isSiapeModal ? "Valor Líquido" : `Consignável (${percent * 100}%)`}
                       </span>
                       <span className="text-base font-black text-blue-700">
-                        {formatBRL(margemConsignavel)}
+                        {formatBRL(isSiapeModal ? valorLiquido : margemConsignavel)}
                       </span>
                     </div>
 
                     <div className="min-h-[92px] bg-amber-50 p-4 rounded-2xl border border-amber-100 flex flex-col justify-center">
                       <span className="text-[9px] font-black text-amber-600 uppercase mb-1">
-                        Total Comprometido
+                        {isSiapeModal ? "Descontos" : "Total Comprometido"}
                       </span>
                       <span className="text-base font-black text-amber-700">
-                        {formatBRL(totalComprometido)}
+                        {formatBRL(isSiapeModal ? descontos : totalComprometido)}
                       </span>
                     </div>
 
@@ -2390,7 +2592,7 @@ function SimuladorPageContent() {
                           ? "text-red-600"
                           : "text-emerald-600"
                       }`}>
-                        Margem Livre
+                        {isSiapeModal ? "Margem Disponível" : "Margem Livre"}
                       </span>
 
                       <span className={`text-lg font-black ${
@@ -2408,7 +2610,7 @@ function SimuladorPageContent() {
                         : "bg-emerald-50 border-emerald-200"
                     }`}>
                       <span className="text-[9px] font-black text-slate-500 uppercase mb-1">
-                        Liberado Aproximado
+                        {isSiapeModal ? "Valor Liberado Aprox." : "Liberado Aproximado"}
                       </span>
 
                       <span className={`text-lg font-black ${
@@ -2419,7 +2621,11 @@ function SimuladorPageContent() {
                         {formatBRL(margemLivreReal > 0 ? valorLiberadoMargem : 0)}
                       </span>
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                        Coeficiente {coeficienteUtilizado.toFixed(5).replace('.', ',')}
+                        {isSiapeModal && coeficienteUtilizado <= 0
+                            ? "Coeficiente SIAPE não configurado"
+                            : `Coeficiente ${coeficienteUtilizado
+                                .toFixed(5)
+                                .replace(".", ",")}`}
                       </span>
                     </div>
                   </div>
@@ -2497,7 +2703,7 @@ function SimuladorPageContent() {
                                 </div>
                                 <div>
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Saldo Devedor</p>
-                                  <p className="text-xs font-black text-blue-600">{formatBRL(loan.quitacao)}</p>
+                                  <p className="text-xs font-black text-blue-600">{formatBRL(loan.saldo_devedor ?? loan.quitacao)}</p>
                                 </div>
                                 <div>
                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Prazo Restante</p>
@@ -2519,6 +2725,37 @@ function SimuladorPageContent() {
                 </div>
 
                 {/* Cartões */}
+                  {isSiapeModal ? (
+                    <div>
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">
+                        Margens de Cartão Disponíveis
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-white p-5 rounded-[2rem] border border-slate-150 shadow-sm">
+                          <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                            RMC Disponível
+                          </span>
+                          <p className="text-xl font-black text-emerald-600 mt-2">
+                            {formatBRL(Number(activeBenefit.margens_cartao?.rmc_disponivel || 0))}
+                          </p>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-[2rem] border border-slate-150 shadow-sm">
+                          <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                            RCC Disponível
+                          </span>
+                          <p className="text-xl font-black text-emerald-600 mt-2">
+                            {formatBRL(Number(activeBenefit.margens_cartao?.rcc_disponivel || 0))}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-3 pl-2">
+                        Valores informativos de margem disponível. Não representam cartões ativos.
+                      </p>
+                    </div>
+                  ) : (
                 <div>
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">Cartões Reservados (RMC / RCC) ({activeBenefit.cartoes?.length || 0})</h4>
                   <div className="space-y-4">
@@ -2576,6 +2813,8 @@ function SimuladorPageContent() {
                     )}
                   </div>
                 </div>
+                  )}
+
 
               </div>
 
