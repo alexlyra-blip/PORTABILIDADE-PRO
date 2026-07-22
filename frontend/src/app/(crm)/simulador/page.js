@@ -507,9 +507,6 @@ function SimuladorPageContent() {
     setContracts(contracts.map(c => {
       if (c.id !== id) return c;
       let newC = { ...c, [name]: val };
-      if (formData.agreement === "SIAPE") {
-        newC.parcelasPagas = "0";
-      }
       if (["parcela", "saldoDevedor", "parcelasPagas", "prazoTotal"].includes(name)) {
         const pmt = parseCurrency(newC.parcela);
         const pv = parseCurrency(newC.saldoDevedor);
@@ -559,7 +556,7 @@ function SimuladorPageContent() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await api.postFormData("/pdf-extractor/inss", fd);
+      const res = await api.postFormData("/pdf-extractor/extrato", fd);
       if (res.success && res.data) {
         if (res.data.data_extrato) {
           const [dia, mes, ano] = res.data.data_extrato.split('/');
@@ -640,9 +637,16 @@ function SimuladorPageContent() {
   const handleUseLoan = () => {
     if (selectedExtractLoanIndices.length === 0 || !extractedData) return;
 
+    const activeConvention = String(
+      extractedData.convenio || "INSS"
+    ).trim().toUpperCase();
+
+    const isSiapeExtract =
+      activeConvention === "SIAPE";
+
     // Tenta encontrar a espécie correspondente
     let matchedSpecies = "";
-    if (extractedData.especie) {
+    if (!isSiapeExtract && extractedData.especie) {
       const matchedLabel = getMatchedSpecies(extractedData.especie);
       const found = inssSpecies.find(s => s.label === matchedLabel);
       if (found) matchedSpecies = found.value;
@@ -651,8 +655,13 @@ function SimuladorPageContent() {
     setFormData(prev => ({
       ...prev,
       nome_cliente: extractedData.cliente || prev.nome_cliente,
-      agreement: "INSS",
-      benefit_species: matchedSpecies || prev.benefit_species
+      cpf: extractedData.cpf
+        ? maskCPF(extractedData.cpf)
+        : prev.cpf,
+      agreement: activeConvention,
+      benefit_species: isSiapeExtract
+        ? ""
+        : (matchedSpecies || prev.benefit_species)
     }));
 
     const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0).replace(/\s/g, " ");
@@ -682,7 +691,9 @@ function SimuladorPageContent() {
       }
 
       let matchedBank = "";
-      let rawBankName = selectedLoan.banco;
+      let rawBankName = String(
+        selectedLoan.banco || ""
+      );
       if (rawBankName.includes('-')) rawBankName = rawBankName.substring(rawBankName.indexOf('-') + 1);
       const bClean = norm(rawBankName);
 
@@ -695,11 +706,46 @@ function SimuladorPageContent() {
         }
       }
 
-      const extractedCodeMatch = selectedLoan.banco.match(/^(\d{3})/);
+      const extractedCodeMatch = String(
+        selectedLoan.banco || ""
+      ).match(/^(\d{3})/);
       const extractedCode = extractedCodeMatch ? extractedCodeMatch[1] : null;
 
-      const bankNameUpper = String(selectedLoan.banco || "").toUpperCase();
-      if (extractedCode === "329" || bankNameUpper.includes("FINANTO") || bankNameUpper.includes("HAPPI") || bankNameUpper.includes("ICRED")) {
+      const bankNameUpper = String(
+        selectedLoan.banco || ""
+      ).toUpperCase();
+
+      const siapeBankAliases = [
+        {
+          code: "104",
+          aliases: ["CEF", "CAIXA"],
+        },
+        {
+          code: "335",
+          aliases: ["DIGIO"],
+        },
+        {
+          code: "341",
+          aliases: ["ITAU BM", "ITAU", "ITAÚ"],
+        },
+      ];
+
+      const siapeBankMatch = isSiapeExtract
+        ? siapeBankAliases.find((item) =>
+            item.aliases.some((alias) =>
+              bankNameUpper.includes(alias)
+            )
+          )
+        : null;
+
+      if (siapeBankMatch) {
+        matchedBank = siapeBankMatch.code;
+      } else if (
+        extractedCode === "329" ||
+        bankNameUpper.includes("FINANTO") ||
+        bankNameUpper.includes("HAPPI") ||
+        bankNameUpper.includes("ICRED")
+      ) {
         matchedBank = "329";
       } else {
         let foundInssBank = inssBanks.find(b => extractedCode && b.value === extractedCode);
@@ -731,7 +777,14 @@ function SimuladorPageContent() {
           saldoDevedor: formatCurrency(selectedLoan.saldo_devedor),
           prazoTotal: selectedLoan.prazo_total.toString(),
           prazoRestante: selectedLoan.prazo_restante.toString(),
-          parcelasPagas: (selectedLoan.prazo_total - selectedLoan.prazo_restante).toString(),
+          parcelasPagas: String(
+            selectedLoan.parcela_atual ??
+            Math.max(
+              0,
+              Number(selectedLoan.prazo_total || 0) -
+              Number(selectedLoan.prazo_restante || 0)
+            )
+          ),
           taxaAtual: Number(selectedLoan.taxa_mensal).toFixed(2).replace(".", ","),
           taxaAjustada: Number(selectedLoan.taxa_mensal).toFixed(2).replace(".", ",")
         };
@@ -742,7 +795,7 @@ function SimuladorPageContent() {
       }
     }
 
-    if (extractedData.margem_disponivel < 0) {
+    if (!isSiapeExtract && extractedData.margem_disponivel < 0) {
       setPossuiDoisCartoes("sim");
       setValorMargemNegativa(formatCurrency(Math.abs(extractedData.margem_disponivel)));
     } else {
@@ -1266,7 +1319,7 @@ function SimuladorPageContent() {
                 <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
                   <Icons.FileText size={28} />
                 </div>
-                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">Extrato INSS</h4>
+                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">Extrato INSS / SIAPE</h4>
                 <p className="text-[10px] text-slate-500 font-bold uppercase mb-4">Envie o PDF para preencher automático</p>
 
                 <div className="flex items-center justify-center gap-3 w-full mt-2">
@@ -2002,15 +2055,15 @@ function SimuladorPageContent() {
                           <input
                             type="text"
                             name="parcelasPagas"
-                            value={formData.agreement === "SIAPE" ? "0" : contracts[activeContractIndex].parcelasPagas}
-                            onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)}
+                            value={contracts[activeContractIndex].parcelasPagas}
+                            onChange={(e) =>
+                              handleContractChange(
+                                contracts[activeContractIndex].id,
+                                e
+                              )
+                            }
                             placeholder="12"
-                            disabled={formData.agreement === "SIAPE"}
-                            className={`w-full h-14 px-6 rounded-2xl border transition-all outline-none font-black text-center ${
-                              formData.agreement === "SIAPE"
-                                ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                                : "bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-800"
-                            }`}
+                            className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-center"
                             required
                           />
                        </div>
@@ -2062,10 +2115,10 @@ function SimuladorPageContent() {
                   <h3 className="font-black text-slate-800 text-xl uppercase tracking-tight">{extractedData.cliente || "Cliente Não Identificado"}</h3>
                   <div className="flex flex-col gap-1 mt-1.5">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      Nº DO BENEFÍCIO: <span className="text-blue-600 font-black bg-blue-50 px-2 py-0.5 rounded-md ml-1">{extractedData.beneficio}</span>
+                      {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" ? "MATRÍCULA" : "Nº DO BENEFÍCIO"}: <span className="text-blue-600 font-black bg-blue-50 px-2 py-0.5 rounded-md ml-1">{extractedData.beneficio}</span>
                     </p>
                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md inline-block w-fit mt-0.5">
-                      {getMatchedSpecies(extractedData.especie)}
+                      {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" ? (extractedData.orgao?.nome || "SERVIDOR FEDERAL — SIAPE") : getMatchedSpecies(extractedData.especie)}
                     </p>
                     {extractedData.bloqueado_emprestimo !== undefined && extractedData.bloqueado_emprestimo !== null && (
                       <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md w-fit mt-0.5 ${extractedData.bloqueado_emprestimo ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
@@ -2089,7 +2142,7 @@ function SimuladorPageContent() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 items-center">
                     <div className="flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Margem Consignável</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" ? "Margem Facultativa Global" : "Margem Consignável"}</span>
                       <span className="text-xl font-black text-slate-800">{formatBRL(extractedData.margem_maxima)}</span>
                     </div>
                     <div className="flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6 md:pl-2">
@@ -2111,6 +2164,110 @@ function SimuladorPageContent() {
                   </div>
                 </div>
               </div>
+
+                {String(
+                  extractedData.convenio || "INSS"
+                ).toUpperCase() === "SIAPE" && (
+                  <>
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          Detalhamento das Margens SIAPE
+                        </h4>
+
+                        <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl">
+                          Taxa padrão: 1,60% a.m.
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                        {[
+                          [
+                            "Facultativa — Bruta",
+                            extractedData.margens
+                              ?.bruta_facultativa_global,
+                          ],
+                          [
+                            "Facultativa — Utilizada",
+                            extractedData.margens
+                              ?.utilizada_facultativa,
+                          ],
+                          [
+                            "Facultativa — Líquida",
+                            extractedData.margens
+                              ?.liquida_facultativa_global,
+                          ],
+                          [
+                            "Cartão — Bruta",
+                            extractedData.margens
+                              ?.bruta_cartao,
+                          ],
+                          [
+                            "Cartão — Utilizada",
+                            extractedData.margens
+                              ?.utilizada_cartao,
+                          ],
+                          [
+                            "Cartão — Líquida",
+                            extractedData.margens
+                              ?.liquida_cartao,
+                          ],
+                          [
+                            "Cartão Benefício — Bruta",
+                            extractedData.margens
+                              ?.bruta_cartao_beneficio,
+                          ],
+                          [
+                            "Cartão Benefício — Utilizada",
+                            extractedData.margens
+                              ?.utilizada_cartao_beneficio,
+                          ],
+                          [
+                            "Cartão Benefício — Líquida",
+                            extractedData.margens
+                              ?.liquida_cartao_beneficio,
+                          ],
+                        ].map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="p-4 bg-slate-50 border border-slate-100 rounded-2xl"
+                          >
+                            <span className="block text-[8px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                              {label}
+                            </span>
+
+                            <span className="text-sm font-black text-slate-800">
+                              {formatBRL(value ?? 0)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                        Os saldos devedores são estimados pela taxa
+                        padrão SIAPE de 1,60% ao mês.
+                      </p>
+                    </div>
+
+                    {extractedData.validacoes && (
+                      extractedData.validacoes
+                        .emprestimos_conferem_com_margem === false ||
+                      extractedData.validacoes
+                        .cartoes_conferem_com_margem === false ||
+                      extractedData.validacoes
+                        .margem_global_confere === false
+                    ) && (
+                      <div className="p-5 bg-amber-50 border border-amber-200 rounded-[2rem]">
+                        <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">
+                          Atenção: foi encontrada divergência entre
+                          as parcelas e as margens apresentadas no PDF.
+                          Revise os dados antes de simular.
+                        </p>
+                      </div>
+                    )}
+
+                  </>
+                )}
 
               <div>
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">Empréstimos Ativos ({extractedData.emprestimos_ativos?.length || 0})</h4>
@@ -2158,7 +2315,7 @@ function SimuladorPageContent() {
                                 <p className="text-xs font-black text-slate-800"><span className="text-slate-800">{loan.prazo_restante}</span> <span className="text-slate-400 font-bold">de {loan.prazo_total}</span></p>
                               </div>
                               <div className="hidden md:block">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Saldo Devedor</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{loan.saldo_devedor_estimado ? "Saldo Devedor Estimado" : "Saldo Devedor"}</p>
                                 <p className="text-xs font-black text-blue-600">{formatBRL(loan.saldo_devedor)}</p>
                               </div>
                             </div>
@@ -2174,6 +2331,86 @@ function SimuladorPageContent() {
                   )}
                 </div>
               </div>
+
+              {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" && (extractedData.cartoes_beneficio?.length || 0) > 0 && (
+                <div>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">
+                    Cartões Benefício SIAPE (
+                    {extractedData.cartoes_beneficio.length})
+                  </h4>
+
+                  <div className="space-y-3">
+                    {extractedData.cartoes_beneficio.map(
+                      (card, idx) => (
+                        <div
+                          key={
+                            card.numero_contrato ||
+                            card.contrato ||
+                            idx
+                          }
+                          className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm"
+                        >
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Instituição / Contrato
+                              </p>
+
+                              <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                                {card.instituicao ||
+                                  card.banco ||
+                                  "Não identificada"}
+                              </p>
+
+                              <p className="text-[10px] font-bold text-slate-400">
+                                {card.numero_contrato ||
+                                  card.contrato ||
+                                  "—"}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Valor da Parcela
+                              </p>
+
+                              <p className="text-xs font-black text-blue-600 mt-1">
+                                {formatBRL(
+                                  card.valor_parcela ??
+                                    card.parcela ??
+                                    0
+                                )}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Parcela Atual
+                              </p>
+
+                              <p className="text-xs font-black text-slate-800 mt-1">
+                                {card.parcela_atual || 0} de{" "}
+                                {card.prazo_total || 0}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Vigência
+                              </p>
+
+                              <p className="text-xs font-black text-slate-800 mt-1">
+                                {card.inicio || "—"} até{" "}
+                                {card.fim || "—"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-8 bg-slate-50 border-t border-slate-200 flex justify-center gap-4 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
