@@ -1009,15 +1009,84 @@ function SimuladorPageContent() {
     return true;
   };
 
-  const handleSimular = async (e) => {
-    e.preventDefault();
+  const handleSimular = async (e) => {    e.preventDefault();
+
+    if (loading) return;
+
     if (formData.cpf && !validateCPF(formData.cpf)) {
       toast.warning("CPF informado é inválido.");
       return;
     }
-    const invalid = contracts.filter(c => !c.banco || !c.parcela || !c.saldoDevedor);
+
+    if (!formData.agreement) {
+      toast.warning("Selecione o convênio da simulação.");
+      return;
+    }
+
+    if (!formData.idade || Number(formData.idade) <= 0) {
+      toast.warning("Informe a idade do cliente.");
+      return;
+    }
+
+    if (
+      formData.agreement === "INSS" &&
+      !formData.benefit_species
+    ) {
+      toast.warning("Selecione a espécie do benefício.");
+      return;
+    }
+
+    const contratosPreenchidos = contracts.filter(
+      (contract) => (
+        contract.banco ||
+        contract.parcela ||
+        contract.saldoDevedor ||
+        contract.prazoTotal ||
+        contract.prazoRestante ||
+        contract.taxaAtual ||
+        contract.taxaAjustada
+      )
+    );
+
+    if (contratosPreenchidos.length === 0) {
+      toast.warning(
+        "Adicione pelo menos um contrato para simular."
+      );
+      return;
+    }
+
+    const invalid = contratosPreenchidos.filter(
+      (contract) => {
+        const taxa = Number(
+          String(
+            contract.taxaAjustada ||
+            contract.taxaAtual ||
+            ""
+          ).replace(",", ".")
+        );
+
+        const prazoTotal = Number(contract.prazoTotal);
+        const prazoRestante = Number(
+          contract.prazoRestante
+        );
+
+        return (
+          !contract.banco ||
+          parseCurrency(contract.parcela) <= 0 ||
+          parseCurrency(contract.saldoDevedor) <= 0 ||
+          prazoTotal <= 0 ||
+          prazoRestante <= 0 ||
+          prazoRestante > prazoTotal ||
+          !Number.isFinite(taxa) ||
+          taxa <= 0
+        );
+      }
+    );
+
     if (invalid.length > 0) {
-      toast.warning("Preencha todos os campos obrigatórios dos contratos.");
+      toast.warning(
+        "Revise banco, parcela, saldo devedor, prazo e taxa dos contratos."
+      );
       return;
     }
 
@@ -1025,7 +1094,7 @@ function SimuladorPageContent() {
     try {
       let maxParcelaId = null;
       let maxParcelaValue = -1;
-      contracts.forEach(c => {
+      contratosPreenchidos.forEach(c => {
          const pVal = parseCurrency(c.parcela);
          if (pVal > maxParcelaValue) {
             maxParcelaValue = pVal;
@@ -1033,7 +1102,7 @@ function SimuladorPageContent() {
          }
       });
 
-      const promises = contracts.map(c => {
+      const promises = contratosPreenchidos.map(c => {
         const payload = {
           nome_cliente: formData.nome_cliente,
           cpf: formData.cpf.replace(/\D/g, ""),
@@ -1054,13 +1123,17 @@ function SimuladorPageContent() {
           possui_dois_cartoes: possuiDoisCartoes === "sim",
           valor_margem_negativa: (possuiDoisCartoes === "sim" && c.id === maxParcelaId) ? parseCurrency(valorMargemNegativa) : 0.0
         };
-        return api.post('/simular', payload).then(res => ({ contrato_id: c.id, ...res }));
+        return api.post(
+            '/simular',
+            payload,
+            { timeout: 45000 }
+          ).then(res => ({
+            contrato_id: c.id,
+            ...res
+          }));
       });
 
-      const [results] = await Promise.all([
-        Promise.all(promises),
-        new Promise(resolve => setTimeout(resolve, 4000))
-      ]);
+      const results = await Promise.all(promises);
 
       const combinedOfertas = [];
       const combinedRejeitados = [];
@@ -1078,7 +1151,7 @@ function SimuladorPageContent() {
         total_rejeitados: combinedRejeitados.length
       };
 
-      const mappedContracts = contracts.map(c => {
+      const mappedContracts = contratosPreenchidos.map(c => {
          const found = inssBanks.find(b => b.value === c.banco);
          let finalParcela = c.parcela;
          if (possuiDoisCartoes === "sim" && c.id === maxParcelaId) {
@@ -1096,7 +1169,7 @@ function SimuladorPageContent() {
       sessionStorage.setItem("simulation_results", JSON.stringify(finalData));
 
       // Sincronizar taxa calculada para o Admin Preview
-      const rateToSync = contracts[0].taxaAjustada || contracts[0].taxaAtual || 0;
+      const rateToSync = contratosPreenchidos[0].taxaAjustada || contratosPreenchidos[0].taxaAtual || 0;
       localStorage.setItem("last_simulation_rate", rateToSync.toString());
 
       setShowSuccess(true);
@@ -1106,7 +1179,13 @@ function SimuladorPageContent() {
       }, 1500);
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao processar simulação.");
+
+      toast.error(
+        err?.message?.includes("Tempo limite")
+          ? err.message
+          : "Erro ao processar simulação."
+      );
+    } finally {
       setLoading(false);
     }
   };
@@ -1268,7 +1347,7 @@ function SimuladorPageContent() {
           </div>
         </div>
 
-        <form onSubmit={handleSimular} className="grid grid-cols-1 xl:grid-cols-12 gap-10">
+        <form noValidate onSubmit={handleSimular} className="grid grid-cols-1 xl:grid-cols-12 gap-10">
 
           {/* Lado Esquerdo: Dados do Cliente */}
           <div className="xl:col-span-5 space-y-8">

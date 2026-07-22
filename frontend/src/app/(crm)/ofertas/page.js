@@ -759,13 +759,28 @@ function OfertasPageContent() {
                   // Função para exibir motivos exatos
                   const renderMotivo = (msg) => {
                     if (!msg) return <span>❌ REQUISITOS NÃO ATENDIDOS</span>;
-                    const parts = msg.split(" | ");
+
+                    const parts = msg
+                      .split(" | ")
+                      .map((part) => part.trim())
+                      .filter(Boolean);
+
+                    const apenasMotivosDeTabela = parts.every(
+                      (part) =>
+                        /^tabela\b/i.test(part) ||
+                        /sem tabelas disponíveis|sem tabelas configuradas|nenhuma tabela compatível/i.test(part)
+                    );
+
+                    if (apenasMotivosDeTabela) {
+                      return <span>❌ SEM TABELAS DISPONÍVEIS NO REFIN</span>;
+                    }
+
                     return (
                       <div className="space-y-1">
-                        {parts.map((p, idx) => (
+                        {parts.map((part, idx) => (
                           <div key={idx} className="flex items-start gap-1">
                             <span>❌</span>
-                            <span className="flex-1">{p}</span>
+                            <span className="flex-1">{part}</span>
                           </div>
                         ))}
                       </div>
