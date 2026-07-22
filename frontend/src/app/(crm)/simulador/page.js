@@ -559,7 +559,7 @@ function SimuladorPageContent() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await api.postFormData("/pdf-extractor/inss", fd);
+      const res = await api.postFormData("/pdf-extractor/extrato", fd);
       if (res.success && res.data) {
         if (res.data.data_extrato) {
           const [dia, mes, ano] = res.data.data_extrato.split('/');
@@ -640,9 +640,16 @@ function SimuladorPageContent() {
   const handleUseLoan = () => {
     if (selectedExtractLoanIndices.length === 0 || !extractedData) return;
 
+    const activeConvention = String(
+      extractedData.convenio || "INSS"
+    ).trim().toUpperCase();
+
+    const isSiapeExtract =
+      activeConvention === "SIAPE";
+
     // Tenta encontrar a espécie correspondente
     let matchedSpecies = "";
-    if (extractedData.especie) {
+    if (!isSiapeExtract && extractedData.especie) {
       const matchedLabel = getMatchedSpecies(extractedData.especie);
       const found = inssSpecies.find(s => s.label === matchedLabel);
       if (found) matchedSpecies = found.value;
@@ -651,8 +658,13 @@ function SimuladorPageContent() {
     setFormData(prev => ({
       ...prev,
       nome_cliente: extractedData.cliente || prev.nome_cliente,
-      agreement: "INSS",
-      benefit_species: matchedSpecies || prev.benefit_species
+      cpf: extractedData.cpf
+        ? maskCPF(extractedData.cpf)
+        : prev.cpf,
+      agreement: activeConvention,
+      benefit_species: isSiapeExtract
+        ? ""
+        : (matchedSpecies || prev.benefit_species)
     }));
 
     const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0).replace(/\s/g, " ");
@@ -682,7 +694,9 @@ function SimuladorPageContent() {
       }
 
       let matchedBank = "";
-      let rawBankName = selectedLoan.banco;
+      let rawBankName = String(
+        selectedLoan.banco || ""
+      );
       if (rawBankName.includes('-')) rawBankName = rawBankName.substring(rawBankName.indexOf('-') + 1);
       const bClean = norm(rawBankName);
 
@@ -695,11 +709,46 @@ function SimuladorPageContent() {
         }
       }
 
-      const extractedCodeMatch = selectedLoan.banco.match(/^(\d{3})/);
+      const extractedCodeMatch = String(
+        selectedLoan.banco || ""
+      ).match(/^(\d{3})/);
       const extractedCode = extractedCodeMatch ? extractedCodeMatch[1] : null;
 
-      const bankNameUpper = String(selectedLoan.banco || "").toUpperCase();
-      if (extractedCode === "329" || bankNameUpper.includes("FINANTO") || bankNameUpper.includes("HAPPI") || bankNameUpper.includes("ICRED")) {
+      const bankNameUpper = String(
+        selectedLoan.banco || ""
+      ).toUpperCase();
+
+      const siapeBankAliases = [
+        {
+          code: "104",
+          aliases: ["CEF", "CAIXA"],
+        },
+        {
+          code: "335",
+          aliases: ["DIGIO"],
+        },
+        {
+          code: "341",
+          aliases: ["ITAU BM", "ITAU", "ITAÚ"],
+        },
+      ];
+
+      const siapeBankMatch = isSiapeExtract
+        ? siapeBankAliases.find((item) =>
+            item.aliases.some((alias) =>
+              bankNameUpper.includes(alias)
+            )
+          )
+        : null;
+
+      if (siapeBankMatch) {
+        matchedBank = siapeBankMatch.code;
+      } else if (
+        extractedCode === "329" ||
+        bankNameUpper.includes("FINANTO") ||
+        bankNameUpper.includes("HAPPI") ||
+        bankNameUpper.includes("ICRED")
+      ) {
         matchedBank = "329";
       } else {
         let foundInssBank = inssBanks.find(b => extractedCode && b.value === extractedCode);
@@ -742,7 +791,7 @@ function SimuladorPageContent() {
       }
     }
 
-    if (extractedData.margem_disponivel < 0) {
+    if (!isSiapeExtract && extractedData.margem_disponivel < 0) {
       setPossuiDoisCartoes("sim");
       setValorMargemNegativa(formatCurrency(Math.abs(extractedData.margem_disponivel)));
     } else {
@@ -1232,7 +1281,7 @@ function SimuladorPageContent() {
                 <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
                   <Icons.FileText size={28} />
                 </div>
-                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">Extrato INSS</h4>
+                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">Extrato INSS / SIAPE</h4>
                 <p className="text-[10px] text-slate-500 font-bold uppercase mb-4">Envie o PDF para preencher automático</p>
 
                 <div className="flex items-center justify-center gap-3 w-full mt-2">
@@ -2022,10 +2071,10 @@ function SimuladorPageContent() {
                   <h3 className="font-black text-slate-800 text-xl uppercase tracking-tight">{extractedData.cliente || "Cliente Não Identificado"}</h3>
                   <div className="flex flex-col gap-1 mt-1.5">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      Nº DO BENEFÍCIO: <span className="text-blue-600 font-black bg-blue-50 px-2 py-0.5 rounded-md ml-1">{extractedData.beneficio}</span>
+                      {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" ? "MATRÍCULA" : "Nº DO BENEFÍCIO"}: <span className="text-blue-600 font-black bg-blue-50 px-2 py-0.5 rounded-md ml-1">{extractedData.beneficio}</span>
                     </p>
                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md inline-block w-fit mt-0.5">
-                      {getMatchedSpecies(extractedData.especie)}
+                      {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" ? (extractedData.orgao?.nome || "SERVIDOR FEDERAL — SIAPE") : getMatchedSpecies(extractedData.especie)}
                     </p>
                     {extractedData.bloqueado_emprestimo !== undefined && extractedData.bloqueado_emprestimo !== null && (
                       <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md w-fit mt-0.5 ${extractedData.bloqueado_emprestimo ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
@@ -2049,7 +2098,7 @@ function SimuladorPageContent() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 items-center">
                     <div className="flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Margem Consignável</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">{String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" ? "Margem Facultativa Global" : "Margem Consignável"}</span>
                       <span className="text-xl font-black text-slate-800">{formatBRL(extractedData.margem_maxima)}</span>
                     </div>
                     <div className="flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6 md:pl-2">
@@ -2118,7 +2167,7 @@ function SimuladorPageContent() {
                                 <p className="text-xs font-black text-slate-800"><span className="text-slate-800">{loan.prazo_restante}</span> <span className="text-slate-400 font-bold">de {loan.prazo_total}</span></p>
                               </div>
                               <div className="hidden md:block">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Saldo Devedor</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{loan.saldo_devedor_estimado ? "Saldo Devedor Estimado" : "Saldo Devedor"}</p>
                                 <p className="text-xs font-black text-blue-600">{formatBRL(loan.saldo_devedor)}</p>
                               </div>
                             </div>
