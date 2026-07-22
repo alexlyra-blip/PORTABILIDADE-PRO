@@ -105,41 +105,121 @@ def _extract_header(texto: str) -> dict[str, str]:
     }
 
 
-def _extract_margins(texto: str) -> dict[str, float]:
-    global_section = _section(
+def _extract_margins(
+    texto: str,
+) -> dict[str, float]:
+    """
+    Extrai margens dos diferentes layouts de texto
+    produzidos pelo pdfplumber para o extrato SIAPE.
+
+    Layout tradicional:
+    - 8 valores das margens globais;
+    - depois 3 valores de cartão-benefício.
+
+    Layout compacto:
+    - 8 valores brutos/líquidos na primeira linha;
+    - depois 3 valores utilizados.
+    """
+    demonstrativo = re.search(
+        r"Demonstrativo\s+de\s+uso\s+da\s+margem",
         texto,
-        r"Bruta\s+Compuls[oó]ria",
-        r"Extrato\s+de\s+Consigna[cç][oõ]es\s+Vigentes",
+        re.IGNORECASE,
     )
-    values = [_money(item) for item in _MONEY_RE.findall(global_section)]
-    if len(values) < 8:
+
+    margem_texto = (
+        texto[:demonstrativo.start()]
+        if demonstrativo
+        else texto
+    )
+
+    valores = [
+        _money(value)
+        for value in _MONEY_RE.findall(margem_texto)
+    ]
+
+    if len(valores) < 8:
         raise ValueError(
-            "Não foi possível identificar as margens globais do extrato SIAPE."
+            "Não foi possível identificar as margens "
+            "globais do extrato SIAPE."
         )
 
-    card_section = _section(
-        texto,
+    primeiro_valor = _MONEY_RE.search(margem_texto)
+
+    cabecalho_cartao_beneficio = re.search(
         r"Bruta\s+Cart[aã]o\s+Benef[ií]cio",
-        r"\(\*\)",
+        margem_texto,
+        re.IGNORECASE,
     )
-    card_values = [
-        _money(item) for item in _MONEY_RE.findall(card_section)
-    ]
-    if len(card_values) < 3:
-        raise ValueError(
-            "Não foi possível identificar as margens do cartão benefício."
-        )
+
+    layout_compacto = bool(
+        primeiro_valor
+        and cabecalho_cartao_beneficio
+        and cabecalho_cartao_beneficio.start()
+        < primeiro_valor.start()
+    )
+
+    if layout_compacto:
+        if len(valores) < 11:
+            raise ValueError(
+                "Não foi possível identificar todas as "
+                "margens do layout compacto SIAPE."
+            )
+
+        return {
+            "bruta_compulsoria": valores[0],
+            "liquida_compulsoria": valores[1],
+            "bruta_facultativa_global": valores[2],
+            "liquida_facultativa_global": valores[3],
+            "bruta_cartao": valores[4],
+            "liquida_cartao": valores[5],
+            "bruta_cartao_beneficio": valores[6],
+            "liquida_cartao_beneficio": valores[7],
+            "utilizada_facultativa": valores[8],
+            "utilizada_cartao": valores[9],
+            "utilizada_cartao_beneficio": valores[10],
+        }
+
+    valores_cartao_beneficio = []
+
+    if cabecalho_cartao_beneficio:
+        trecho_cartao_beneficio = margem_texto[
+            cabecalho_cartao_beneficio.start():
+        ]
+
+        valores_cartao_beneficio = [
+            _money(value)
+            for value in _MONEY_RE.findall(
+                trecho_cartao_beneficio
+            )
+        ]
+
+    if len(valores_cartao_beneficio) < 3:
+        if len(valores) >= 11:
+            valores_cartao_beneficio = valores[8:11]
+        else:
+            raise ValueError(
+                "Não foi possível identificar as margens "
+                "de cartão-benefício do extrato SIAPE."
+            )
 
     return {
-        "bruta_facultativa_global": values[2],
-        "utilizada_facultativa": values[6],
-        "liquida_facultativa_global": values[3],
-        "bruta_cartao": values[4],
-        "liquida_cartao": values[5],
-        "utilizada_cartao": values[7],
-        "bruta_cartao_beneficio": card_values[0],
-        "liquida_cartao_beneficio": card_values[1],
-        "utilizada_cartao_beneficio": card_values[2],
+        "bruta_compulsoria": valores[0],
+        "liquida_compulsoria": valores[1],
+        "bruta_facultativa_global": valores[2],
+        "liquida_facultativa_global": valores[3],
+        "bruta_cartao": valores[4],
+        "liquida_cartao": valores[5],
+        "utilizada_facultativa": valores[6],
+        "utilizada_cartao": valores[7],
+        "bruta_cartao_beneficio": (
+            valores_cartao_beneficio[0]
+        ),
+        "liquida_cartao_beneficio": (
+            valores_cartao_beneficio[1]
+        ),
+        "utilizada_cartao_beneficio": (
+            valores_cartao_beneficio[2]
+        ),
     }
 
 
