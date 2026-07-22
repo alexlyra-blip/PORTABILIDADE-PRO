@@ -819,11 +819,28 @@ function SimuladorPageContent() {
 
     const isSiapeBenefit = activeConvention === "SIAPE";
 
-    const margemDisponivelAtiva = Number(
-      activeBenefit.margens?.margem_disponivel ??
-      activeBenefit.margens?.margem_livre ??
-      0
-    );
+    /*
+     * Algumas respostas possuem margem_disponivel = 0 e
+     * margem_livre negativa. O operador ?? considera zero
+     * um valor válido e impediria o uso da margem negativa.
+     *
+     * Priorizamos primeiro qualquer valor negativo recebido,
+     * depois o primeiro valor diferente de zero.
+     */
+    const margensImportadas = [
+      activeBenefit.margens?.margem_disponivel,
+      activeBenefit.margens?.margem_livre,
+      activeBenefit.margens?.margem_calculada,
+      activeBenefit.cliente?.margem_livre,
+      activeBenefit.margem_livre,
+    ]
+      .map((valor) => Number(valor))
+      .filter((valor) => Number.isFinite(valor));
+
+    const margemDisponivelAtiva =
+      margensImportadas.find((valor) => valor < 0) ??
+      margensImportadas.find((valor) => valor !== 0) ??
+      0;
 
     setFormData(prev => ({
        ...prev,
@@ -845,20 +862,37 @@ function SimuladorPageContent() {
        valor_liberado_margem: activeBenefit.margens?.valor_liberado_margem ?? 0
     }));
 
-    if (activeBenefit.margens) {
-        if (margemDisponivelAtiva < 0) {
-            const valorNegativo = Math.abs(margemDisponivelAtiva);
-            setValorMargemNegativa(`R$ ${valorNegativo.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
-        }
-        if (
-            !isSiapeBenefit &&
-            activeBenefit.cartoes &&
-            activeBenefit.cartoes.length >= 2
-          ) {
-            setPossuiDoisCartoes("sim");
-        } else {
-            setPossuiDoisCartoes("nao");
-        }
+    const possuiDoisCartoesImportado =
+      !isSiapeBenefit &&
+      Array.isArray(activeBenefit.cartoes) &&
+      activeBenefit.cartoes.length >= 2;
+
+    if (possuiDoisCartoesImportado) {
+      const valorNegativoImportado = Math.abs(
+        Math.min(margemDisponivelAtiva, 0)
+      );
+
+      setPossuiDoisCartoes("sim");
+
+      /*
+       * Usa a margem negativa real da consulta.
+       * R$ 81,05 permanece apenas como padrão quando
+       * a API não disponibilizar um valor negativo.
+       */
+      setValorMargemNegativa(
+        valorNegativoImportado > 0
+          ? `R$ ${valorNegativoImportado.toLocaleString(
+              "pt-BR",
+              {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }
+            )}`
+          : "R$ 81,05"
+      );
+    } else {
+      setPossuiDoisCartoes("nao");
+      setValorMargemNegativa("");
     }
 
     const formatCurrencyConsult = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0).replace(/\s/g, " ");
@@ -1488,7 +1522,13 @@ function SimuladorPageContent() {
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
-                            onClick={() => setPossuiDoisCartoes("sim")}
+                            onClick={() => {
+                              setPossuiDoisCartoes("sim");
+                              setValorMargemNegativa(
+                                (valorAtual) =>
+                                  valorAtual || "R$ 81,05"
+                              );
+                            }}
                             className={`h-12 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition-all flex items-center justify-center gap-2 ${
                               possuiDoisCartoes === "sim"
                                 ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
