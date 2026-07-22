@@ -75,11 +75,20 @@ export const api = {
     }
   },
   async post(endpoint, data, options = {}) {
+    const timeoutMs = Number(options.timeout || 0);
+    const controller = timeoutMs > 0
+      ? new AbortController()
+      : null;
+    const timeoutId = controller
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : null;
+
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(data),
+        ...(controller ? { signal: controller.signal } : {}),
       });
 
       if (options.responseType === 'blob' && response.ok) {
@@ -88,9 +97,17 @@ export const api = {
 
       return await handleResponse(response, endpoint, 'POST');
     } catch (err) {
+      if (err?.name === 'AbortError') {
+        throw new Error(
+          `Tempo limite excedido ao processar ${endpoint}. Tente novamente.`
+        );
+      }
+
       if (err.message.includes('Erro na API')) throw err;
       console.error("POST Error:", err);
       throw new Error(`Erro ao enviar dados para ${endpoint}.`);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   },
   async postFormData(endpoint, formData) {

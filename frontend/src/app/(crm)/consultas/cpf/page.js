@@ -316,13 +316,30 @@ export default function ConsultaCPFPage() {
                   <td style="padding: 4px 0; color: #64748b; font-weight: bold;">UF:</td>
                   <td style="padding: 4px 0; color: #0f172a; font-weight: 900; text-transform: uppercase;">${activeBenefit.beneficio?.uf || 'N/A'}</td>
                 </tr>
-                <tr>
-                  <td style="padding: 4px 0; color: #64748b; font-weight: bold; vertical-align: top;">Pagamento:</td>
-                  <td style="padding: 4px 0; color: #0f172a; font-weight: 700; text-transform: uppercase; line-height: 1.2;">
-                    ${formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)} 
-                    ${activeBenefit.banco_pagador?.agencia ? `(Ag: ${activeBenefit.banco_pagador.agencia})` : ''}
-                  </td>
-                </tr>
+                  <tr>
+                    <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Meio de pagamento:</td>
+                    <td style="padding: 4px 0; color: ${isCartaoMagnetico(activeBenefit) ? '#b45309' : '#166534'}; font-weight: 900; text-transform: uppercase;">
+                      ${isCartaoMagnetico(activeBenefit)
+                        ? 'Cartão Magnético'
+                        : 'Conta Corrente'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; color: #64748b; font-weight: bold; vertical-align: top;">Banco pagador:</td>
+                    <td style="padding: 4px 0; color: #0f172a; font-weight: 700; text-transform: uppercase; line-height: 1.35;">
+                      ${formatBankName(
+                        activeBenefit.banco_pagador?.codigo,
+                        activeBenefit.banco_pagador?.nome
+                      )}
+                      ${activeBenefit.banco_pagador?.agencia
+                        ? `<br>Agência: ${activeBenefit.banco_pagador.agencia}`
+                        : ''}
+                      ${!isCartaoMagnetico(activeBenefit) &&
+                        activeBenefit.banco_pagador?.conta
+                        ? `<br>Conta: ${activeBenefit.banco_pagador.conta}`
+                        : ''}
+                    </td>
+                  </tr>
               </table>
             </div>
           </div>
@@ -344,8 +361,8 @@ export default function ConsultaCPFPage() {
                 <p style="font-size: 11px; font-weight: 900; color: #0f172a; margin: 0;">${formatBRL(marginInfo.totalComprometido)}</p>
               </div>
               <div style="background-color: ${marginInfo.margemLivreReal < 0 ? '#fef2f2' : '#f0fdf4'}; border: 1px solid ${marginInfo.margemLivreReal < 0 ? '#fee2e2' : '#bbf7d0'}; border-radius: 8px; padding: 8px;">
-                <p style="font-size: 8px; font-weight: 700; color: ${marginInfo.margemLivreReal < 0 ? '#991b1b' : '#166534'}; margin: 0 0 4px 0; text-transform: uppercase;">Margem Livre</p>
-                <p style="font-size: 11px; font-weight: 900; color: ${marginInfo.margemLivreReal < 0 ? '#991b1b' : '#166534'}; margin: 0;">${marginInfo.margemLivreReal < 0 ? 'R$ 0,00' : formatBRL(marginInfo.showMargem)}</p>
+                <p style="font-size: 8px; font-weight: 700; color: ${marginInfo.margemLivreReal < 0 ? '#991b1b' : '#166534'}; margin: 0 0 4px 0; text-transform: uppercase;">Margem Disponível</p>
+                <p style="font-size: 11px; font-weight: 900; color: ${marginInfo.margemLivreReal < 0 ? '#991b1b' : '#166534'}; margin: 0;">${formatBRL(marginInfo.margemLivreReal)}</p>
               </div>
               <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px;">
                 <p style="font-size: 8px; font-weight: 700; color: #166534; margin: 0 0 4px 0; text-transform: uppercase;">Liberado Aprox.</p>
@@ -1289,16 +1306,14 @@ export default function ConsultaCPFPage() {
                   <p className={`text-xl font-black ${
                     marginInfo.margemLivreReal < 0 ? "text-red-600" : "text-emerald-700"
                   }`}>
-                    {isSiape
-                      ? formatBRL(marginInfo.margemLivreReal)
-                      : marginInfo.margemLivreReal < 0
-                        ? "R$ 0,00"
-                        : formatBRL(marginInfo.showMargem)}
+                    {formatBRL(
+                      marginInfo.margemLivreReal
+                    )}
                   </p>
 
                   {!isSiape && marginInfo.margemLivreReal < 0 && (
                     <span className="text-[9px] font-bold text-red-500 uppercase mt-0.5 tracking-wider">
-                      Negativo: {formatBRL(marginInfo.margemLivreReal)}
+                      Margem negativa
                     </span>
                   )}
                 </div>
