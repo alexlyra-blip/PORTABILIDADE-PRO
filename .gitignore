@@ -45,3 +45,7 @@ Thumbs.db
 
 # Uploads
 backend/uploads/
+
+# Cache do Python
+__pycache__/
+*.py[cod]
