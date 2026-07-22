@@ -5,6 +5,10 @@ import re
 from datetime import datetime
 import math
 from app.services.margem_service import calcular_valor_liberado_margem
+from app.services.extratos.siape_parser import (
+    detectar_extrato_siape,
+    parse_siape_extrato,
+)
 
 router = APIRouter()
 
@@ -72,6 +76,7 @@ def calcular_taxa(valor: float, parcela: float, parcelas: int) -> float:
             break
     return ((min_rate + max_rate) / 2.0) * 100.0
 
+@router.post("/extrato")
 @router.post("/inss")
 async def extract_inss_pdf(file: UploadFile = File(...)):
     content_type = getattr(file, "content_type", "")
@@ -80,6 +85,36 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
 
     try:
         contents = await file.read()
+
+        # Primeira leitura: identifica automaticamente o convênio.
+        all_text_parts = []
+
+        with pdfplumber.open(
+            io.BytesIO(contents)
+        ) as detection_pdf:
+            for page in detection_pdf.pages:
+                try:
+                    all_text_parts.append(
+                        page.extract_text() or ""
+                    )
+                except Exception:
+                    all_text_parts.append("")
+
+        all_text = "\n".join(all_text_parts)
+
+        if detectar_extrato_siape(all_text):
+            siape_data = parse_siape_extrato(all_text)
+
+            # Nunca utiliza o coeficiente INSS em extratos SIAPE.
+            siape_data["valor_liberado_margem"] = 0.0
+
+            return {
+                "success": True,
+                "data": siape_data,
+            }
+
+        # Documento não identificado como SIAPE:
+        # preserva integralmente o leitor INSS existente.
         pdf_stream = io.BytesIO(contents)
         
         extracted_data = {
