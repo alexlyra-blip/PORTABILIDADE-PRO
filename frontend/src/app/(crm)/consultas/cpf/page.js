@@ -106,44 +106,75 @@ export default function ConsultaCPFPage() {
   const [subLogos, setSubLogos] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [creditos, setCreditos] = useState(null);
-  const [activeProvider, setActiveProvider] = useState("promosys");
+  const [activeProvider, setActiveProvider] = useState(null);
   const [loadingProvider, setLoadingProvider] = useState(false);
+  const [providerConfigLoaded, setProviderConfigLoaded] = useState(false);
   const [convenio, setConvenio] = useState("INSS");
   const [downloadState, setDownloadState] = useState("idle");
 
   const maskCPF = (val) => val.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})/, "$1-$2").replace(/(-\d{2})\d+?$/, "$1");
 
   useEffect(() => {
-    // Carregar logos secundários do banco
     api.get("/admin/sub-logos")
-      .then(res => setSubLogos(res || []))
-      .catch(err => console.error("Erro ao carregar logos secundários:", err));
-    // Validar se o usuário atual é Administrador e carregar limite de créditos/config
-    try {
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        if (user.role === "admin") {
-          setIsAdmin(true);
-          
-          // Carregar config do provider
-          api.get("/admin/cpf-config")
-            .then(async (res) => {
-              if (res && res.active_provider) {
-                setActiveProvider(res.active_provider);
-                await fetchBalance(res.active_provider);
-              }
-            })
-            .catch(err => console.error("Erro ao carregar configuração de provedor:", err));
-        } else if (!user.can_consult_cpf) {
-          window.location.href = "/simulador";
+      .then((res) => setSubLogos(res || []))
+      .catch((error) => {
+        console.error(
+          "Erro ao carregar logos secundários:",
+          error
+        );
+      });
+
+    const loadPageConfiguration = async () => {
+      try {
+        const userStr = localStorage.getItem("user");
+
+        if (!userStr) {
+          window.location.href = "/login";
+          return;
         }
-      } else {
-        window.location.href = "/login";
+
+        const user = JSON.parse(userStr);
+        const adminUser = user.role === "admin";
+
+        setIsAdmin(adminUser);
+
+        if (!adminUser && !user.can_consult_cpf) {
+          window.location.href = "/simulador";
+          return;
+        }
+
+        const response = await api.get(
+          "/admin/cpf-config"
+        );
+
+        const provider = [
+          "promosys",
+          "multicorban",
+        ].includes(response?.active_provider)
+          ? response.active_provider
+          : null;
+
+        setActiveProvider(provider);
+
+        if (adminUser && provider) {
+          await fetchBalance(provider);
+        } else {
+          setCreditos(null);
+        }
+      } catch (error) {
+        console.error(
+          "Erro ao carregar configuração de provedor:",
+          error
+        );
+
+        setActiveProvider(null);
+        setCreditos(null);
+      } finally {
+        setProviderConfigLoaded(true);
       }
-    } catch (e) {
-      console.error("Erro ao verificar nível de acesso do usuário:", e);
-    }
+    };
+
+    void loadPageConfiguration();
   }, []);
 
   const fetchBalance = async (provider) => {
@@ -183,13 +214,40 @@ export default function ConsultaCPFPage() {
 
   const handleProviderChange = async (provider) => {
     setLoadingProvider(true);
+
     try {
-      await api.post("/admin/cpf-config", { active_provider: provider });
-      setActiveProvider(provider);
-      await fetchBalance(provider);
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao alterar o provedor ativo.");
+      const response = await api.post(
+        "/admin/cpf-config",
+        {
+          active_provider: provider
+        }
+      );
+
+      const savedProvider =
+        response?.active_provider;
+
+      if (savedProvider !== provider) {
+        throw new Error(
+          "O banco não confirmou a configuração."
+        );
+      }
+
+      setActiveProvider(savedProvider);
+      setDados(null);
+
+      await fetchBalance(savedProvider);
+
+      toast.success(
+        savedProvider === "multicorban"
+          ? "MultiCorban definido como provedor ativo."
+          : "Promosys definido como provedor ativo."
+      );
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        "Erro ao alterar o provedor ativo."
+      );
     } finally {
       setLoadingProvider(false);
     }
@@ -197,6 +255,21 @@ export default function ConsultaCPFPage() {
 
   const handleConsultar = async (e) => {
     e.preventDefault();
+
+    if (!providerConfigLoaded) {
+      toast.warning(
+        "Aguarde o carregamento da configuração."
+      );
+      return;
+    }
+
+    if (!activeProvider) {
+      toast.warning(
+        "Provedor de consulta CPF não configurado pelo administrador."
+      );
+      return;
+    }
+
     if (cpf.length < 14) {
       toast.warning("Por favor, informe um CPF válido.");
       return;
@@ -810,7 +883,7 @@ export default function ConsultaCPFPage() {
         </div>
 
         {/* Painel do Administrador: Toggles Provedor & Saldo */}
-        {isAdmin && creditos && (
+        {isAdmin && (
           <div className="bg-gradient-to-r from-slate-900 to-blue-950 p-6 rounded-[2.5rem] shadow-xl border border-blue-900/50 text-white flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6 relative overflow-hidden print:hidden">
             <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-12 -mt-12 pointer-events-none"></div>
             <div className="space-y-2 z-10">
@@ -824,7 +897,7 @@ export default function ConsultaCPFPage() {
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Provedor Ativo:</span>
                 <div className="flex bg-slate-950/60 p-1 rounded-xl border border-white/10">
                   <button
-                    disabled={loadingProvider}
+                    disabled={loadingProvider || !providerConfigLoaded}
                     type="button"
                     onClick={() => handleProviderChange("promosys")}
                     className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${activeProvider === "promosys" ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}
@@ -832,7 +905,7 @@ export default function ConsultaCPFPage() {
                     PROMOSYS
                   </button>
                   <button
-                    disabled={loadingProvider}
+                    disabled={loadingProvider || !providerConfigLoaded}
                     type="button"
                     onClick={() => handleProviderChange("multicorban")}
                     className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${activeProvider === "multicorban" ? "bg-amber-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}
@@ -847,15 +920,15 @@ export default function ConsultaCPFPage() {
             <div className="flex gap-4 z-10 w-full md:w-auto self-end md:self-auto">
               <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
                 <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Créditos Online</p>
-                <p className="text-lg font-black">{creditos.creditos !== null && creditos.creditos !== undefined ? creditos.creditos : "—"}</p>
+                <p className="text-lg font-black">{creditos?.creditos !== null && creditos?.creditos !== undefined ? creditos?.creditos : "—"}</p>
               </div>
               <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
                 <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Créditos Offline</p>
-                <p className="text-lg font-black">{creditos.creditos_offline !== null && creditos.creditos_offline !== undefined ? creditos.creditos_offline : "—"}</p>
+                <p className="text-lg font-black">{creditos?.creditos_offline !== null && creditos?.creditos_offline !== undefined ? creditos?.creditos_offline : "—"}</p>
               </div>
               <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
                 <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Geração Leads</p>
-                <p className="text-lg font-black">{creditos.creditos_geracao_leads !== null && creditos.creditos_geracao_leads !== undefined ? creditos.creditos_geracao_leads : "—"}</p>
+                <p className="text-lg font-black">{creditos?.creditos_geracao_leads !== null && creditos?.creditos_geracao_leads !== undefined ? creditos?.creditos_geracao_leads : "—"}</p>
               </div>
             </div>
           </div>
@@ -890,7 +963,12 @@ export default function ConsultaCPFPage() {
           )}
           <button
             type="submit"
-            disabled={loading || !cpf}
+            disabled={
+              loading ||
+              !cpf ||
+              !providerConfigLoaded ||
+              !activeProvider
+            }
             className="h-14 px-8 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 w-full md:w-auto"
           >
             {loading ? <Icons.Loader2 className="animate-spin" /> : <><Icons.Search size={18} /> Consultar</>}

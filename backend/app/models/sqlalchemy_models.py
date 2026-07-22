@@ -315,6 +315,28 @@ class ConsultaCpfCache(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    setting_key = Column(
+        String(100),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    setting_value = Column(Text, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class DailyMarginCoefficient(Base):
     __tablename__ = "daily_margin_coefficients"
     __table_args__ = (

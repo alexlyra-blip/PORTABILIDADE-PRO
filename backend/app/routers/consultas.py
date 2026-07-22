@@ -90,7 +90,10 @@ async def _execute_cpf_query_flow(
     # A tabela consulta_cpf_cache possui CPF único e não
     # diferencia convênio. Para impedir mistura entre INSS
     # e SIAPE, somente o INSS utiliza esse cache persistente.
-    use_persistent_cache = convenio == "INSS"
+    use_persistent_cache = (
+        convenio == "INSS"
+        and provider_type == "promosys"
+    )
 
     cache_json = None
     cache_updated_at = None
@@ -613,7 +616,16 @@ async def consultar_cpf_unificado(
     if current_user.role != "admin" and not getattr(current_user, "can_consult_cpf", False):
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
 
-    provider_type = get_active_provider()
+    provider_type = await get_active_provider(db)
+
+    if not provider_type:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Provedor de consulta CPF não configurado "
+                "pelo administrador."
+            ),
+        )
 
     if provider_type == "multicorban":
         conv_upper = str(request.convenio or "INSS").upper()

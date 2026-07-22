@@ -585,19 +585,34 @@ class CpfConfigInput(BaseModel):
     active_provider: str
 
 @router.get("/cpf-config")
-async def get_cpf_config(current_user = Depends(get_admin_user)):
+async def get_cpf_config(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
     return {
-        "active_provider": get_active_provider()
+        "active_provider": await get_active_provider(db)
     }
 
+
 @router.post("/cpf-config")
-async def save_cpf_config(payload: CpfConfigInput, current_user = Depends(get_admin_user)):
+async def save_cpf_config(
+    payload: CpfConfigInput,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_admin_user),
+):
     try:
-        set_active_provider(payload.active_provider)
+        saved_provider = await set_active_provider(
+            db,
+            payload.active_provider,
+        )
+
         return {
             "success": True,
-            "active_provider": get_active_provider()
+            "active_provider": saved_provider,
         }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
 
