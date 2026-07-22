@@ -323,7 +323,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         "banco": banco.name,
                         "bank_id": banco.id,
                         "logo_url": banco.logo_url,
-                        "motivo": f"Sem tabelas configuradas para o convênio {convenio_input}.",
+                        "motivo": "Sem tabelas disponíveis no Refin",
                         "elegivel": False
                     })
                     continue
@@ -449,14 +449,13 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                     if not tabela.active:
                         continue
                         
-                    if tabela.id in p_blocked_tables:
-                        motivos_tabelas.append(f"Tabela {tabela.name}: Bloqueada pela promotora.")
-                        continue
-                    
-                    # Additional Table Validation: Agreement Matching (INSS, SIAPE, etc.)
+                    # Ignora totalmente tabelas de outro convênio.
                     t_conv = normalize_agr(tabela.agreement)
                     if t_conv and t_conv != convenio_input:
-                        motivos_tabelas.append(f"Tabela {tabela.name}: Convênio {t_conv} diferente de {convenio_input}")
+                        continue
+
+                    if tabela.id in p_blocked_tables:
+                        motivos_tabelas.append(f"Tabela {tabela.name}: Bloqueada pela promotora.")
                         continue
                         
                     # Additional Table Validation: Sub-Agreement
@@ -598,17 +597,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                             motivos_tabelas.append(f"Tabela {tabela.name}: Sem coeficiente compatível.")
                 
                 if not banco_tem_oferta:
-                    motivo_final = "Nenhuma tabela compatível."
-                    if motivos_tabelas:
-                        # Obter motivos únicos mantendo a ordem para exibir detalhadamente
-                        vistos = set()
-                        motivos_unicos = []
-                        for m in motivos_tabelas:
-                            if m not in vistos:
-                                vistos.add(m)
-                                motivos_unicos.append(m)
-                        motivo_final = " | ".join(motivos_unicos)
-                    
+                    motivo_final = "Sem tabelas disponíveis no Refin"
                     rejeitados.append({
                         "banco": banco.name,
                         "bank_id": banco.id,
