@@ -202,7 +202,7 @@ function SimuladorPageContent() {
     id: 1, banco: "", parcela: "", saldoDevedor: "", prazoTotal: "", prazoRestante: "", parcelasPagas: "", taxaAtual: "", taxaAjustada: ""
   }]);
   const [possuiDoisCartoes, setPossuiDoisCartoes] = useState("nao");
-  const [valorMargemNegativa, setValorMargemNegativa] = useState("R$ 81,05");
+  const [valorMargemNegativa, setValorMargemNegativa] = useState("R$ 0,00");
   const [activeContractIndex, setActiveContractIndex] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState({});
   const [subDropdownOpen, setSubDropdownOpen] = useState(false);
@@ -868,32 +868,20 @@ function SimuladorPageContent() {
       activeBenefit.cartoes.length >= 2;
 
     if (possuiDoisCartoesImportado) {
-      const valorNegativoImportado = Math.abs(
-        Math.min(margemDisponivelAtiva, 0)
-      );
-
       setPossuiDoisCartoes("sim");
-
-      /*
-       * Usa a margem negativa real da consulta.
-       * R$ 81,05 permanece apenas como padrão quando
-       * a API não disponibilizar um valor negativo.
-       */
-      setValorMargemNegativa(
-        valorNegativoImportado > 0
-          ? `R$ ${valorNegativoImportado.toLocaleString(
-              "pt-BR",
-              {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              }
-            )}`
-          : "R$ 81,05"
-      );
     } else {
       setPossuiDoisCartoes("nao");
-      setValorMargemNegativa("");
     }
+
+    // Dois cartões não significam automaticamente
+    // que o cliente possui margem negativa.
+    setValorMargemNegativa(
+      margemDisponivelAtiva < 0
+        ? formatCurrency(
+            Math.abs(margemDisponivelAtiva)
+          )
+        : formatCurrency(0)
+    );
 
     const formatCurrencyConsult = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0).replace(/\s/g, " ");
 
