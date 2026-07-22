@@ -2121,6 +2121,189 @@ function SimuladorPageContent() {
                 </div>
               </div>
 
+                {String(
+                  extractedData.convenio || "INSS"
+                ).toUpperCase() === "SIAPE" && (
+                  <>
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          Detalhamento das Margens SIAPE
+                        </h4>
+
+                        <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl">
+                          Taxa padrão: 1,60% a.m.
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                        {[
+                          [
+                            "Facultativa — Bruta",
+                            extractedData.margens
+                              ?.bruta_facultativa_global,
+                          ],
+                          [
+                            "Facultativa — Utilizada",
+                            extractedData.margens
+                              ?.utilizada_facultativa,
+                          ],
+                          [
+                            "Facultativa — Líquida",
+                            extractedData.margens
+                              ?.liquida_facultativa_global,
+                          ],
+                          [
+                            "Cartão — Bruta",
+                            extractedData.margens
+                              ?.bruta_cartao,
+                          ],
+                          [
+                            "Cartão — Utilizada",
+                            extractedData.margens
+                              ?.utilizada_cartao,
+                          ],
+                          [
+                            "Cartão — Líquida",
+                            extractedData.margens
+                              ?.liquida_cartao,
+                          ],
+                          [
+                            "Cartão Benefício — Bruta",
+                            extractedData.margens
+                              ?.bruta_cartao_beneficio,
+                          ],
+                          [
+                            "Cartão Benefício — Utilizada",
+                            extractedData.margens
+                              ?.utilizada_cartao_beneficio,
+                          ],
+                          [
+                            "Cartão Benefício — Líquida",
+                            extractedData.margens
+                              ?.liquida_cartao_beneficio,
+                          ],
+                        ].map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="p-4 bg-slate-50 border border-slate-100 rounded-2xl"
+                          >
+                            <span className="block text-[8px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                              {label}
+                            </span>
+
+                            <span className="text-sm font-black text-slate-800">
+                              {formatBRL(value ?? 0)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                        Os saldos devedores são estimados pela taxa
+                        padrão SIAPE de 1,60% ao mês.
+                      </p>
+                    </div>
+
+                    {extractedData.validacoes && (
+                      extractedData.validacoes
+                        .emprestimos_conferem_com_margem === false ||
+                      extractedData.validacoes
+                        .cartoes_conferem_com_margem === false ||
+                      extractedData.validacoes
+                        .margem_global_confere === false
+                    ) && (
+                      <div className="p-5 bg-amber-50 border border-amber-200 rounded-[2rem]">
+                        <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">
+                          Atenção: foi encontrada divergência entre
+                          as parcelas e as margens apresentadas no PDF.
+                          Revise os dados antes de simular.
+                        </p>
+                      </div>
+                    )}
+
+                    {(extractedData.cartoes_beneficio?.length || 0) > 0 && (
+                      <div>
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">
+                          Cartões Benefício SIAPE (
+                          {extractedData.cartoes_beneficio.length})
+                        </h4>
+
+                        <div className="space-y-3">
+                          {extractedData.cartoes_beneficio.map(
+                            (card, idx) => (
+                              <div
+                                key={
+                                  card.numero_contrato ||
+                                  card.contrato ||
+                                  idx
+                                }
+                                className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm"
+                              >
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                  <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                      Instituição / Contrato
+                                    </p>
+
+                                    <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                                      {card.instituicao ||
+                                        card.banco ||
+                                        "Não identificada"}
+                                    </p>
+
+                                    <p className="text-[10px] font-bold text-slate-400">
+                                      {card.numero_contrato ||
+                                        card.contrato ||
+                                        "—"}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                      Valor da Parcela
+                                    </p>
+
+                                    <p className="text-xs font-black text-blue-600 mt-1">
+                                      {formatBRL(
+                                        card.valor_parcela ??
+                                          card.parcela ??
+                                          0
+                                      )}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                      Parcela Atual
+                                    </p>
+
+                                    <p className="text-xs font-black text-slate-800 mt-1">
+                                      {card.parcela_atual || 0} de{" "}
+                                      {card.prazo_total || 0}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                      Vigência
+                                    </p>
+
+                                    <p className="text-xs font-black text-slate-800 mt-1">
+                                      {card.inicio || "—"} até{" "}
+                                      {card.fim || "—"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
               <div>
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">Empréstimos Ativos ({extractedData.emprestimos_ativos?.length || 0})</h4>
                 <div className="space-y-4">
