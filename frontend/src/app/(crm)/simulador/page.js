@@ -507,9 +507,6 @@ function SimuladorPageContent() {
     setContracts(contracts.map(c => {
       if (c.id !== id) return c;
       let newC = { ...c, [name]: val };
-      if (formData.agreement === "SIAPE") {
-        newC.parcelasPagas = "0";
-      }
       if (["parcela", "saldoDevedor", "parcelasPagas", "prazoTotal"].includes(name)) {
         const pmt = parseCurrency(newC.parcela);
         const pv = parseCurrency(newC.saldoDevedor);
@@ -780,7 +777,14 @@ function SimuladorPageContent() {
           saldoDevedor: formatCurrency(selectedLoan.saldo_devedor),
           prazoTotal: selectedLoan.prazo_total.toString(),
           prazoRestante: selectedLoan.prazo_restante.toString(),
-          parcelasPagas: (selectedLoan.prazo_total - selectedLoan.prazo_restante).toString(),
+          parcelasPagas: String(
+            selectedLoan.parcela_atual ??
+            Math.max(
+              0,
+              Number(selectedLoan.prazo_total || 0) -
+              Number(selectedLoan.prazo_restante || 0)
+            )
+          ),
           taxaAtual: Number(selectedLoan.taxa_mensal).toFixed(2).replace(".", ","),
           taxaAjustada: Number(selectedLoan.taxa_mensal).toFixed(2).replace(".", ",")
         };
@@ -2011,15 +2015,15 @@ function SimuladorPageContent() {
                           <input
                             type="text"
                             name="parcelasPagas"
-                            value={formData.agreement === "SIAPE" ? "0" : contracts[activeContractIndex].parcelasPagas}
-                            onChange={(e) => handleContractChange(contracts[activeContractIndex].id, e)}
+                            value={contracts[activeContractIndex].parcelasPagas}
+                            onChange={(e) =>
+                              handleContractChange(
+                                contracts[activeContractIndex].id,
+                                e
+                              )
+                            }
                             placeholder="12"
-                            disabled={formData.agreement === "SIAPE"}
-                            className={`w-full h-14 px-6 rounded-2xl border transition-all outline-none font-black text-center ${
-                              formData.agreement === "SIAPE"
-                                ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                                : "bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-800"
-                            }`}
+                            className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-center"
                             required
                           />
                        </div>
@@ -2222,85 +2226,6 @@ function SimuladorPageContent() {
                       </div>
                     )}
 
-                    {(extractedData.cartoes_beneficio?.length || 0) > 0 && (
-                      <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">
-                          Cartões Benefício SIAPE (
-                          {extractedData.cartoes_beneficio.length})
-                        </h4>
-
-                        <div className="space-y-3">
-                          {extractedData.cartoes_beneficio.map(
-                            (card, idx) => (
-                              <div
-                                key={
-                                  card.numero_contrato ||
-                                  card.contrato ||
-                                  idx
-                                }
-                                className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm"
-                              >
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                  <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                      Instituição / Contrato
-                                    </p>
-
-                                    <p className="text-xs font-black text-slate-800 uppercase mt-1">
-                                      {card.instituicao ||
-                                        card.banco ||
-                                        "Não identificada"}
-                                    </p>
-
-                                    <p className="text-[10px] font-bold text-slate-400">
-                                      {card.numero_contrato ||
-                                        card.contrato ||
-                                        "—"}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                      Valor da Parcela
-                                    </p>
-
-                                    <p className="text-xs font-black text-blue-600 mt-1">
-                                      {formatBRL(
-                                        card.valor_parcela ??
-                                          card.parcela ??
-                                          0
-                                      )}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                      Parcela Atual
-                                    </p>
-
-                                    <p className="text-xs font-black text-slate-800 mt-1">
-                                      {card.parcela_atual || 0} de{" "}
-                                      {card.prazo_total || 0}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                      Vigência
-                                    </p>
-
-                                    <p className="text-xs font-black text-slate-800 mt-1">
-                                      {card.inicio || "—"} até{" "}
-                                      {card.fim || "—"}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
 
@@ -2366,6 +2291,86 @@ function SimuladorPageContent() {
                   )}
                 </div>
               </div>
+
+              {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" && (extractedData.cartoes_beneficio?.length || 0) > 0 && (
+                <div>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pl-2">
+                    Cartões Benefício SIAPE (
+                    {extractedData.cartoes_beneficio.length})
+                  </h4>
+
+                  <div className="space-y-3">
+                    {extractedData.cartoes_beneficio.map(
+                      (card, idx) => (
+                        <div
+                          key={
+                            card.numero_contrato ||
+                            card.contrato ||
+                            idx
+                          }
+                          className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm"
+                        >
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Instituição / Contrato
+                              </p>
+
+                              <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                                {card.instituicao ||
+                                  card.banco ||
+                                  "Não identificada"}
+                              </p>
+
+                              <p className="text-[10px] font-bold text-slate-400">
+                                {card.numero_contrato ||
+                                  card.contrato ||
+                                  "—"}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Valor da Parcela
+                              </p>
+
+                              <p className="text-xs font-black text-blue-600 mt-1">
+                                {formatBRL(
+                                  card.valor_parcela ??
+                                    card.parcela ??
+                                    0
+                                )}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Parcela Atual
+                              </p>
+
+                              <p className="text-xs font-black text-slate-800 mt-1">
+                                {card.parcela_atual || 0} de{" "}
+                                {card.prazo_total || 0}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Vigência
+                              </p>
+
+                              <p className="text-xs font-black text-slate-800 mt-1">
+                                {card.inicio || "—"} até{" "}
+                                {card.fim || "—"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-8 bg-slate-50 border-t border-slate-200 flex justify-center gap-4 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
