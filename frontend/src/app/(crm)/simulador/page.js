@@ -873,17 +873,26 @@ function SimuladorPageContent() {
       setPossuiDoisCartoes("nao");
     }
 
+    const formatCurrencyConsult = (val) =>
+      new Intl.NumberFormat(
+        "pt-BR",
+        {
+          style: "currency",
+          currency: "BRL",
+        }
+      )
+        .format(Number(val) || 0)
+        .replace(/\s/g, " ");
+
     // Dois cartões não significam automaticamente
     // que o cliente possui margem negativa.
     setValorMargemNegativa(
-      margemDisponivelAtiva < 0
-        ? formatCurrency(
-            Math.abs(margemDisponivelAtiva)
-          )
-        : formatCurrency(0)
+      formatCurrencyConsult(
+        margemDisponivelAtiva < 0
+          ? Math.abs(margemDisponivelAtiva)
+          : 0
+      )
     );
-
-    const formatCurrencyConsult = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0).replace(/\s/g, " ");
 
     const newContracts = [...contracts];
     let addedCount = 0;
@@ -900,7 +909,12 @@ function SimuladorPageContent() {
     };
 
     for (const idx of selectedCpfLoanIndices) {
-      const emp = activeBenefit.emprestimos[idx];
+      const emp = activeBenefit.emprestimos?.[idx];
+
+      if (!emp) {
+        continue;
+      }
+
       if (isCpfLoanAlreadyImported(emp)) {
         continue;
       }
@@ -919,7 +933,9 @@ function SimuladorPageContent() {
 
       if (targetIndex !== -1) {
         let matchedBank = "";
-        const paddedCode = (emp.codigo || "").padStart(3, "0");
+        const paddedCode = String(
+          emp?.codigo ?? ""
+        ).padStart(3, "0");
         const bankNameUpper = String(emp.banco || "").toUpperCase();
         if (paddedCode === "329" || bankNameUpper.includes("FINANTO") || bankNameUpper.includes("HAPPI") || bankNameUpper.includes("ICRED")) {
           matchedBank = "329";
