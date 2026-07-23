@@ -842,10 +842,35 @@ function SimuladorPageContent() {
       margensImportadas.find((valor) => valor !== 0) ??
       0;
 
+    const queriedCpfDigits = String(
+      lastQueriedCpf || ""
+    ).replace(/\D/g, "");
+
+    const currentCpfDigits = String(
+      formData.cpf || ""
+    ).replace(/\D/g, "");
+
+    const apiCpfDigits = String(
+      activeBenefit.cliente?.cpf || ""
+    ).replace(/\D/g, "");
+
+    /*
+     * Preserva o CPF original consultado porque algumas
+     * APIs removem o zero inicial ao tratá-lo como número.
+     */
+    const cpfDigitsToImport =
+      queriedCpfDigits.length === 11
+        ? queriedCpfDigits
+        : apiCpfDigits.length === 11
+          ? apiCpfDigits
+          : currentCpfDigits.length === 11
+            ? currentCpfDigits
+            : apiCpfDigits.padStart(11, "0");
+
     setFormData(prev => ({
        ...prev,
        nome_cliente: activeBenefit.cliente?.nome || prev.nome_cliente,
-       cpf: maskCPF(activeBenefit.cliente?.cpf || formData.cpf),
+       cpf: maskCPF(cpfDigitsToImport),
        idade: activeBenefit.cliente?.idade ? activeBenefit.cliente.idade.toString() : prev.idade,
        agreement: activeConvention,
        benefit_species: isSiapeBenefit
