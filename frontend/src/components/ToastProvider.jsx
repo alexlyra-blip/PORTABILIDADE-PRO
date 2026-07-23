@@ -112,7 +112,12 @@ export function ToastProvider({ children }) {
   };
 
   return (
-    <ToastContext.Provider value={toast}>
+    <ToastContext.Provider
+      value={{
+        ...toast,
+        toast,
+      }}
+    >
       {children}
 
       <style>{`
