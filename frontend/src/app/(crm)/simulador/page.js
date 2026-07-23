@@ -873,26 +873,17 @@ function SimuladorPageContent() {
       setPossuiDoisCartoes("nao");
     }
 
-    const formatCurrencyConsult = (val) =>
-      new Intl.NumberFormat(
-        "pt-BR",
-        {
-          style: "currency",
-          currency: "BRL",
-        }
-      )
-        .format(Number(val) || 0)
-        .replace(/\s/g, " ");
-
     // Dois cartões não significam automaticamente
     // que o cliente possui margem negativa.
     setValorMargemNegativa(
-      formatCurrencyConsult(
-        margemDisponivelAtiva < 0
-          ? Math.abs(margemDisponivelAtiva)
-          : 0
-      )
+      margemDisponivelAtiva < 0
+        ? formatCurrency(
+            Math.abs(margemDisponivelAtiva)
+          )
+        : formatCurrency(0)
     );
+
+    const formatCurrencyConsult = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0).replace(/\s/g, " ");
 
     const newContracts = [...contracts];
     let addedCount = 0;
@@ -909,12 +900,7 @@ function SimuladorPageContent() {
     };
 
     for (const idx of selectedCpfLoanIndices) {
-      const emp = activeBenefit.emprestimos?.[idx];
-
-      if (!emp) {
-        continue;
-      }
-
+      const emp = activeBenefit.emprestimos[idx];
       if (isCpfLoanAlreadyImported(emp)) {
         continue;
       }
@@ -933,9 +919,7 @@ function SimuladorPageContent() {
 
       if (targetIndex !== -1) {
         let matchedBank = "";
-        const paddedCode = String(
-          emp?.codigo ?? ""
-        ).padStart(3, "0");
+        const paddedCode = (emp.codigo || "").padStart(3, "0");
         const bankNameUpper = String(emp.banco || "").toUpperCase();
         if (paddedCode === "329" || bankNameUpper.includes("FINANTO") || bankNameUpper.includes("HAPPI") || bankNameUpper.includes("ICRED")) {
           matchedBank = "329";
@@ -2174,7 +2158,7 @@ function SimuladorPageContent() {
 
             <div className="flex flex-col md:flex-row gap-4 justify-end pt-8">
                <button type="button" onClick={() => router.back()} className="px-10 py-5 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-[0.2em] text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-xl">Cancelar</button>
-               <button type="submit" disabled={loading} className="px-12 py-5 rounded-2xl bg-blue-600 text-white font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-700 transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] flex items-center gap-3 relative overflow-hidden group">
+               <button type="button" onClick={handleSimular} disabled={loading} className="px-12 py-5 rounded-2xl bg-blue-600 text-white font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-700 transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] flex items-center gap-3 relative overflow-hidden group">
                   {loading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <Icons.Rocket />}
                   {loading ? "PROCESSANDO..." : "INICIAR ANÁLISE MASTER"}
                </button>

@@ -154,7 +154,7 @@ export default function MeusContratosPage() {
 
    const cancelEditing = () => {
       setEditingId(null);
-      setEditData({ cliente: "", cpf: "", numero_proposta: "", data_aceite: "", taxa_juros: "", banco_origem: "", banco: "", parcela: "", prazo_restante: "", saldo: "", valor_contrato: "", valor_liberado: "" });
+      setEditData({ cliente: "", cpf: "", numero_proposta: "", data_aceite: "", data_envio_cip: "", data_cip: "", taxa_juros: "", banco_origem: "", banco: "", parcela: "", prazo_restante: "", saldo: "", valor_contrato: "", valor_liberado: "" });
    };
 
    const saveEdit = async (id) => {
@@ -165,6 +165,8 @@ export default function MeusContratosPage() {
             cpf: editData.cpf,
             numero_proposta: editData.numero_proposta,
             data_aceite: editData.data_aceite,
+            data_envio_cip: editData.data_envio_cip !== undefined ? editData.data_envio_cip : contract.data_envio_cip,
+            data_cip: editData.data_cip !== undefined ? editData.data_cip : contract.data_cip,
             taxa_juros: parseFloat(editData.taxa_juros) || contract.taxa_juros,
             banco_origem: editData.banco_origem || contract.banco_origem,
             banco: editData.banco || contract.banco,
@@ -174,10 +176,6 @@ export default function MeusContratosPage() {
             valor_contrato: parseFloat(editData.valor_contrato) || contract.valor_contrato,
             valor_liberado: parseFloat(editData.valor_liberado) || contract.valor_liberado
          };
-
-         if (contract?.status === 'AG. RETORNO CIP' && editData.data_aceite) {
-            updatePayload.data_cip = addBusinessDays(editData.data_aceite, 5);
-         }
 
          await api.patch(`/contracts/${id}`, updatePayload);
          setContracts(prev => prev.map(c => c.id === id ? { ...c, ...updatePayload } : c));
