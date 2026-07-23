@@ -873,17 +873,24 @@ function SimuladorPageContent() {
       setPossuiDoisCartoes("nao");
     }
 
-    // Dois cartões não significam automaticamente
-    // que o cliente possui margem negativa.
-    setValorMargemNegativa(
-      margemDisponivelAtiva < 0
-        ? formatCurrency(
-            Math.abs(margemDisponivelAtiva)
-          )
-        : formatCurrency(0)
-    );
+    const formatCurrencyConsult = (val) =>
+      new Intl.NumberFormat(
+        "pt-BR",
+        {
+          style: "currency",
+          currency: "BRL",
+        }
+      )
+        .format(Number(val) || 0)
+        .replace(/\s/g, " ");
 
-    const formatCurrencyConsult = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0).replace(/\s/g, " ");
+    setValorMargemNegativa(
+      formatCurrencyConsult(
+        margemDisponivelAtiva < 0
+          ? Math.abs(margemDisponivelAtiva)
+          : 0
+      )
+    );
 
     const newContracts = [...contracts];
     let addedCount = 0;
@@ -900,7 +907,12 @@ function SimuladorPageContent() {
     };
 
     for (const idx of selectedCpfLoanIndices) {
-      const emp = activeBenefit.emprestimos[idx];
+      const emp = activeBenefit.emprestimos?.[idx];
+
+      if (!emp) {
+        continue;
+      }
+
       if (isCpfLoanAlreadyImported(emp)) {
         continue;
       }
@@ -919,7 +931,9 @@ function SimuladorPageContent() {
 
       if (targetIndex !== -1) {
         let matchedBank = "";
-        const paddedCode = (emp.codigo || "").padStart(3, "0");
+        const paddedCode = String(
+          emp?.codigo ?? ""
+        ).padStart(3, "0");
         const bankNameUpper = String(emp.banco || "").toUpperCase();
         if (paddedCode === "329" || bankNameUpper.includes("FINANTO") || bankNameUpper.includes("HAPPI") || bankNameUpper.includes("ICRED")) {
           matchedBank = "329";
@@ -3176,10 +3190,8 @@ function SimuladorPageContent() {
               <div className="p-4 sm:p-8 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] w-full">
                 <button onClick={() => setCpfModalOpen(false)} className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-widest text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">Cancelar</button>
                 <button
-                  onClick={() => {
-                    handleUseCpfLoans();
-                    setCpfModalOpen(false);
-                  }}
+                  type="button"
+                    onClick={handleUseCpfLoans}
                   disabled={selectedCpfLoanIndices.length === 0}
                   className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
