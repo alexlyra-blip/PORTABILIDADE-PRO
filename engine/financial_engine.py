@@ -62,19 +62,14 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     ajuste_port = float(tabela_obj.portability_adjustment or 0.0)
     taxa_port_ajustada = taxa_port_base + ajuste_port
 
-    # Taxa da Tabela para comparação e cálculo ponderado
+    # Taxa da Tabela para comparação
     taxa_tabela = float(tabela_obj.taxa_convenio or 0.0)
     if taxa_tabela <= 0:
         taxa_tabela = float(coeficiente_obj.interest_rate)
 
-    # 5. Cálculo da Taxa Ponderada Real (Weighted Rate)
-    # Média Ponderada = ((Saldo Devedor * Taxa Cliente) + (Troco * Taxa Tabela)) / Valor Total
-    valor_total = saldo_devedor + valor_liberado
-    if valor_total > 0:
-        media_taxas = float(((saldo_devedor * Decimal(str(taxa_port_base))) + (valor_liberado * Decimal(str(taxa_tabela)))) / valor_total)
-    else:
-        media_taxas = taxa_port_base
-
+    # 5. Cálculo do Teto (Final Refin) - CONFORME CÓDIGO DO PREVIEW
+    # Média entre a taxa do cliente e a taxa com ajuste de portabilidade
+    media_taxas = (taxa_port_base + taxa_port_ajustada) / 2
     ajuste_refin = float(tabela_obj.refin_adjustment or 0.0)
     final_refin_rate = media_taxas + ajuste_refin
 
