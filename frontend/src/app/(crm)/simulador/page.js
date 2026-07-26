@@ -1315,7 +1315,8 @@ function SimuladorPageContent() {
 
   const isSimulacaoValid = () => {
     const contratosPreenchidos = contracts.filter((c) => c.banco || c.parcela);
-    if (!formData.idade || !formData.benefit_species || contratosPreenchidos.length === 0) return false;
+    if (!formData.idade || contratosPreenchidos.length === 0) return false;
+    if (formData.agreement === "INSS" && !formData.benefit_species) return false;
     if (showDataConcessao && !formData.data_concessao) return false;
     return contratosPreenchidos.every(contract => {
         const taxa = Number(
