@@ -639,8 +639,8 @@ export default function RulesPage() {
                       className="w-5 h-5 rounded border-slate-300 text-red-600 cursor-pointer" 
                     />
                     <div className="leading-tight">
-                       <label htmlFor="disable_w" className="text-sm font-bold text-red-700 cursor-pointer select-none">DESATIVAR Validação de Taxa Ponderada?</label>
-                       <p className="text-[10px] text-slate-500 font-medium italic">Se marcado, o sistema NÃO irá validar se a taxa da tabela é menor que a taxa final da operação para este banco.</p>
+                       <label htmlFor="disable_w" className="text-sm font-bold text-red-700 cursor-pointer select-none">ATIVAR Validação de Taxa Ponderada?</label>
+                       <p className="text-[10px] text-slate-500 font-medium italic">Se marcado, o sistema IRÁ validar a taxa ponderada (útil para bancos que exigem que a média ponderada seja maior ou igual à taxa da tabela).</p>
                     </div>
                  </div>
               </div>

@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabela_obj, disable_weighted_validation=False, abate_hp12c=False):
+def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabela_obj, enable_weighted_validation=False, abate_hp12c=False):
     """
     Realiza os cálculos financeiros baseados no coeficiente e novas regras de tabela (Phase 5).
     """
@@ -17,7 +17,7 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     parcela_para_portabilidade = parcela_atual
 
     if margem_negativa > 0:
-        if disable_weighted_validation:
+        if not enable_weighted_validation:
             # Taxa ponderada DESATIVADA: deduz apenas no cálculo do refinanciamento (troco)
             parcela_para_refin = max(Decimal('0.0'), parcela_atual - margem_negativa)
             parcela_para_portabilidade = parcela_atual
@@ -84,7 +84,7 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
 
     # 6. Validação de Vantagem Real (Trava de Disponibilidade)
     # A tabela só fica disponível se a Taxa Refin Final for MAIOR OU IGUAL à taxa da tabela
-    if not disable_weighted_validation:
+    if enable_weighted_validation:
         if final_refin_rate < round(taxa_tabela, 2) - 0.01:
             return False, 0.0, None, f"Tabela indisponível: Taxa Refin ({final_refin_rate:.3f}%) menor que Taxa Tabela ({taxa_tabela:.3f}%)"
 
