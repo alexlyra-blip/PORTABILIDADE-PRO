@@ -1167,7 +1167,7 @@ function SimuladorPageContent() {
         const payload = {
           nome_cliente: formData.nome_cliente,
           cpf: formData.cpf.replace(/\D/g, ""),
-          idade: parseInt(formData.idade),
+          idade: parseInt(formData.idade) || 0,
           convenio: formData.agreement === "CLT PRIVADO" ? "CLT_PRIVADO" : formData.agreement,
           sub_convenio: formData.sub_agreement ? formData.sub_agreement.split(' - ')[0] : "",
           benefit_species: formData.benefit_species,
@@ -1315,7 +1315,8 @@ function SimuladorPageContent() {
 
   const isSimulacaoValid = () => {
     const contratosPreenchidos = contracts.filter((c) => c.banco || c.parcela);
-    if (!formData.idade || !formData.especie || contratosPreenchidos.length === 0) return false;
+    if (!formData.idade || !formData.benefit_species || contratosPreenchidos.length === 0) return false;
+    if (showDataConcessao && !formData.data_concessao) return false;
     return contratosPreenchidos.every(contract => {
         const taxa = Number(
           String(

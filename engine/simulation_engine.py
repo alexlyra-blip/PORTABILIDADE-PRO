@@ -319,13 +319,6 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         break
                 
                 if not tem_tabelas_convenio:
-                    rejeitados.append({
-                        "banco": banco.name,
-                        "bank_id": banco.id,
-                        "logo_url": banco.logo_url,
-                        "motivo": "Sem tabelas disponíveis no Refin",
-                        "elegivel": False
-                    })
                     continue
 
                 # FILTRO 2: Promotora/Admin Blocklist para Bancos Destino
@@ -415,13 +408,6 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                 regras_aplicaveis = regras_especificas if regras_especificas else regras_globais
                 
                 if not regras_aplicaveis:
-                    rejeitados.append({
-                        "banco": banco.name,
-                        "bank_id": banco.id,
-                        "logo_url": banco.logo_url,
-                        "motivo": f"Sem regras configuradas para o convênio {convenio_input}.",
-                        "elegivel": False
-                    })
                     continue
                     
                 # Aplicar todas as regras aplicáveis. Se qualquer uma rejeitar, o banco é rejeitado.
@@ -588,6 +574,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                                 "elegivel": True
                             })
                         except Exception as e:
+                            motivos_tabelas.append(f"Tabela {tabela.name}: Erro interno ({str(e)})")
                             continue
                     
                     if not tem_coeficiente_valido:
@@ -606,6 +593,15 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         "elegivel": False
                     })
             except Exception as e:
+                import traceback
+                traceback.print_exc()
+                rejeitados.append({
+                    "banco": getattr(banco, "name", "Banco Desconhecido"),
+                    "bank_id": getattr(banco, "id", 0),
+                    "logo_url": getattr(banco, "logo_url", ""),
+                    "motivo": f"Erro interno ao processar banco: {str(e)}",
+                    "elegivel": False
+                })
                 continue
         
         # Aplicar Prioridades do Administrador e da Promotora
