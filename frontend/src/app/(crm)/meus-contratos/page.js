@@ -7,6 +7,25 @@ import PageHeader from "@/components/PageHeader";
 import { Icons } from "@/components/Icons";
 import { useToast } from "@/components/ToastProvider";
 
+const getBusinessDaysDifference = (startDate, endDate) => {
+   let days = 0;
+   let current = new Date(startDate.getTime());
+   current.setHours(12, 0, 0, 0);
+   const end = new Date(endDate.getTime());
+   end.setHours(12, 0, 0, 0);
+   
+   if (current > end) return 0;
+   
+   while (current < end) {
+      current.setDate(current.getDate() + 1);
+      const day = current.getDay();
+      if (day !== 0 && day !== 6) {
+         days++;
+      }
+   }
+   return days;
+};
+
 export default function MeusContratosPage() {
    const { toast } = useToast();
    const [contracts, setContracts] = useState([]);
@@ -243,7 +262,7 @@ export default function MeusContratosPage() {
          const today = new Date();
          today.setHours(12, 0, 0, 0);
          const diff = target.getTime() - today.getTime();
-         const daysLeft = Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
+         const daysLeft = getBusinessDaysDifference(today, target);
          return daysLeft === 0;
       }).length;
    };
@@ -476,7 +495,7 @@ export default function MeusContratosPage() {
                      const today = new Date();
                      today.setHours(12, 0, 0, 0);
                      const diff = target.getTime() - today.getTime();
-                     daysLeft = Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
+                     daysLeft = getBusinessDaysDifference(today, target);
                   }
 
                   let cardBgClass = "bg-white dark:bg-slate-900";
@@ -831,6 +850,11 @@ export default function MeusContratosPage() {
                                     {contract.status === 'REPROVADO' && (
                                        <span className="px-3 py-1 bg-red-600 text-white text-[9px] font-black rounded-lg uppercase shadow-sm">
                                           REPROVADO
+                                       </span>
+                                    )}
+                                    {contract.status === 'ANDAMENTO' && (
+                                       <span className="px-3 py-1 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase shadow-sm">
+                                          ANDAMENTO
                                        </span>
                                     )}
                                     {contract.status === 'PAGO' && (

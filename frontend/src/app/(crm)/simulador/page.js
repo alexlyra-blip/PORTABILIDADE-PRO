@@ -1313,6 +1313,32 @@ function SimuladorPageContent() {
     } catch (e) { return "37, 99, 235"; }
   };
 
+  const isSimulacaoValid = () => {
+    const contratosPreenchidos = contracts.filter((c) => c.banco || c.parcela);
+    if (!formData.idade || !formData.especie || contratosPreenchidos.length === 0) return false;
+    return contratosPreenchidos.every(contract => {
+        const taxa = Number(
+          String(
+            contract.taxaAjustada ||
+            contract.taxaAtual ||
+            ""
+          ).replace(",", ".")
+        );
+        const prazoTotal = Number(contract.prazoTotal);
+        const prazoRestante = Number(contract.prazoRestante);
+        return !(
+          !contract.banco ||
+          parseCurrency(contract.parcela) <= 0 ||
+          parseCurrency(contract.saldoDevedor) <= 0 ||
+          prazoTotal <= 0 ||
+          prazoRestante <= 0 ||
+          prazoRestante > prazoTotal ||
+          !Number.isFinite(taxa) ||
+          taxa <= 0
+        );
+    });
+  };
+
   return (
     <div className="min-h-screen pb-20 animate-in fade-in duration-700 brand-themed">
       <style dangerouslySetInnerHTML={{ __html: `
@@ -1533,10 +1559,10 @@ function SimuladorPageContent() {
                         <button
                           type="button"
                           onClick={handleCpfButtonClick}
-                          disabled={isLoadingCpf || !formData.cpf}
+                          disabled={isLoadingCpf || cpfStatus !== 'valid'}
                           className={`h-14 px-4 font-black text-[11px] uppercase tracking-wider rounded-2xl transition-all flex items-center justify-center min-w-[110px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 ${
-                            isLoadingCpf
-                              ? 'bg-slate-300 text-slate-500'
+                            isLoadingCpf || cpfStatus !== 'valid'
+                              ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
                               : (formData.cpf.replace(/\D/g, '') === lastQueriedCpf && lastQueriedCpf !== "")
                                 ? 'bg-gradient-to-r from-emerald-600 to-emerald-800 hover:from-emerald-700 hover:to-emerald-900 text-white shadow-emerald-500/30 hover:shadow-emerald-500/40'
                                 : 'bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white shadow-blue-500/30 hover:shadow-blue-500/40'
@@ -2197,7 +2223,11 @@ function SimuladorPageContent() {
 
             <div className="flex flex-col md:flex-row gap-4 justify-end pt-8">
                <button type="button" onClick={() => router.back()} className="px-10 py-5 rounded-2xl bg-white text-slate-500 font-black uppercase tracking-[0.2em] text-xs border border-slate-200 hover:bg-slate-50 transition-all shadow-xl">Cancelar</button>
-               <button type="button" onClick={handleSimular} disabled={loading} className="px-12 py-5 rounded-2xl bg-blue-600 text-white font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-700 transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] flex items-center gap-3 relative overflow-hidden group">
+               <button type="button" onClick={handleSimular} disabled={loading || !isSimulacaoValid()} className={`px-12 py-5 rounded-2xl text-white font-black uppercase tracking-[0.2em] text-sm transition-all flex items-center gap-3 relative overflow-hidden group ${
+                 loading || !isSimulacaoValid() 
+                   ? 'bg-slate-300 cursor-not-allowed text-slate-500' 
+                   : 'bg-blue-600 hover:bg-blue-700 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)]'
+               }`}>
                   {loading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <Icons.Rocket />}
                   {loading ? "PROCESSANDO..." : "INICIAR ANÁLISE MASTER"}
                </button>

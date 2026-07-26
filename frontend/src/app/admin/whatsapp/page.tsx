@@ -244,8 +244,8 @@ export default function WhatsappLogsPage() {
                       {isBot && <div className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">Clara</div>}
                       {!isBot && <div className="text-[10px] font-black uppercase tracking-widest text-green-700 dark:text-green-300 mb-2">{selectedLog.client_name || 'Cliente'}</div>}
                       
-                      <div className={`text-sm font-medium whitespace-pre-wrap leading-relaxed text-slate-800 dark:text-slate-200`}>
-                        {msg.text.split(/(\*[^*]+\*)/g).map((part, i) => 
+                      <div className={`text-sm font-medium whitespace-pre-wrap break-words min-w-0 leading-relaxed text-slate-800 dark:text-slate-200`}>
+                        {String(msg.text || "").replace(/\*\*/g, '*').split(/(\*[^*]+\*)/g).map((part, i) => 
                           part.startsWith('*') && part.endsWith('*') 
                             ? <strong key={i} className="font-bold text-black dark:text-white">{part.slice(1, -1)}</strong> 
                             : part
