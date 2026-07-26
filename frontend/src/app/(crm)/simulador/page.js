@@ -1315,7 +1315,8 @@ function SimuladorPageContent() {
 
   const isSimulacaoValid = () => {
     const contratosPreenchidos = contracts.filter((c) => c.banco || c.parcela);
-    if (!formData.especie || contratosPreenchidos.length === 0) return false;
+    if (!formData.idade || !formData.benefit_species || contratosPreenchidos.length === 0) return false;
+    if (showDataConcessao && !formData.data_concessao) return false;
     return contratosPreenchidos.every(contract => {
         const taxa = Number(
           String(
@@ -1597,6 +1598,7 @@ function SimuladorPageContent() {
                           onChange={handleChange}
                           placeholder="80"
                           className="w-full h-14 px-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-bold text-slate-800 text-center"
+                          required
                        />
                     </div>
                     <div className="flex flex-col space-y-1.5 justify-end">
@@ -1637,6 +1639,7 @@ function SimuladorPageContent() {
                         value={formData.data_concessao}
                         onChange={handleChange}
                         className="w-full h-14 px-5 rounded-2xl bg-blue-50 border border-blue-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-bold text-slate-800"
+                        required
                       />
                       <p className="text-[9px] font-bold text-blue-400 italic px-2">Necessário para validar regra de invalidez antes dos 60 anos.</p>
                     </div>
