@@ -584,7 +584,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                             motivos_tabelas.append(f"Tabela {tabela.name}: Sem coeficiente compatível.")
                 
                 if not banco_tem_oferta:
-                    motivo_final = "Sem tabelas disponíveis no Refin"
+                    motivo_final = " | ".join(motivos_tabelas) if motivos_tabelas else "Sem tabelas compatíveis com o perfil"
                     rejeitados.append({
                         "banco": banco.name,
                         "bank_id": banco.id,
