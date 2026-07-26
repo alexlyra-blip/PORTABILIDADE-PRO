@@ -73,11 +73,9 @@ def calcular_viabilidade_financeira(cliente_input, banco, coeficiente_obj, tabel
     if taxa_tabela <= 0:
         taxa_tabela = float(coeficiente_obj.interest_rate)
 
-    # 5.5. Validação Pró-Ativa de Taxa (Cliente vs Banco Destino)
-    # Se a taxa atual do cliente for menor que a taxa oferecida pelo banco de destino,
-    # a portabilidade é inviável por taxa incompatível e não calcula refinanciamento.
-    if taxa_port_base > 0 and taxa_port_base < round(taxa_tabela, 2) - 0.01:
-        return False, 0.0, None, f"Taxa da portabilidade ({taxa_port_base:.2f}%) menor que a taxa do banco ({taxa_tabela:.2f}%) - Refinanciamento não calculado"
+    # 5.5. Validação Pró-Ativa de Taxa (Removida)
+    # A validação restrita da taxa de portabilidade antes dos ajustes foi removida, 
+    # pois alguns bancos (ex: Daycoval) utilizam refin_adjustment para compensar taxas baixas.
 
     # 6. Validação de Vantagem Real (Trava de Disponibilidade)
     # A tabela só fica disponível se a Taxa Refin Final for MAIOR OU IGUAL à taxa da tabela
