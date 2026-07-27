@@ -275,7 +275,7 @@ export default function WhatsappLogsPage() {
             </div>
           </div>
         </div>
-      ), document.body)}
+      , document.body)}
     </div>
   );
 }

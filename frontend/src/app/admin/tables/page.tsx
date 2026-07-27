@@ -1063,7 +1063,7 @@ export default function TablesPage() {
             </form>
           </div>
         </div>
-      ), document.body)}
+      , document.body)}
     </div>
   );
 }

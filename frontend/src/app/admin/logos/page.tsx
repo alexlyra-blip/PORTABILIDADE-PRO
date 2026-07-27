@@ -322,7 +322,7 @@ export default function SubLogosPage() {
             </form>
           </div>
         </div>
-      ), document.body)}
+      , document.body)}
     </div>
   );
 }

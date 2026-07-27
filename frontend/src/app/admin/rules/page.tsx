@@ -655,7 +655,7 @@ export default function RulesPage() {
             </form>
           </div>
         </div>
-      ), document.body)}
+      , document.body)}
     </div>
   );
 }

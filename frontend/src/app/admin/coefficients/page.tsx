@@ -937,7 +937,7 @@ export default function CoefficientsPage() {
             </form>
           </div>
         </div>
-      ), document.body)}
+      , document.body)}
     </div>
   );
 }
