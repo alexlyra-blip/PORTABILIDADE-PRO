@@ -4,6 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
 import { useToast } from "@/components/ToastProvider";
+import { createPortal } from "react-dom";
 
 
 interface User {
@@ -375,7 +376,7 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {modalOpen && (
+      {modalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => { setModalOpen(false); setEditingUser(null); }}></div>
           <div className="relative bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-up border border-white/20">
@@ -477,7 +478,7 @@ export default function UsersPage() {
             </form>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }
