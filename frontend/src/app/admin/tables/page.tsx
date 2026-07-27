@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
@@ -757,7 +758,7 @@ export default function TablesPage() {
         )}
       </div>
 
-      {modalOpen && (
+      {modalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={handleCloseModal}></div>
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-white/20 flex flex-col max-h-[95vh]">
@@ -1062,7 +1063,7 @@ export default function TablesPage() {
             </form>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }

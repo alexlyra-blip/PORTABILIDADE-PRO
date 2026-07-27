@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { api } from "@/utils/api";
 import { Icons } from "@/components/Icons";
+import { createPortal } from "react-dom";
 
 interface ChatMessage {
   role: string;
@@ -215,7 +216,7 @@ export default function WhatsappLogsPage() {
       </div>
 
       {/* Chat Modal */}
-      {modalOpen && selectedLog && (
+      {modalOpen && selectedLog && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
@@ -274,7 +275,7 @@ export default function WhatsappLogsPage() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }

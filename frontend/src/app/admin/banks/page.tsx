@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
 import { useToast } from "@/components/ToastProvider";
+import { createPortal } from "react-dom";
 
 interface BankRule {
   id?: number;
@@ -752,7 +753,7 @@ export default function BanksPage() {
       </div>
 
       {/* Modal */}
-      {modalOpen && (
+      {modalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={handleCloseModal}></div>
           <div className="relative bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden animate-scale-up border border-slate-100 dark:border-white/10 flex flex-col max-h-[90vh]">
@@ -1489,7 +1490,7 @@ export default function BanksPage() {
             </form>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }
