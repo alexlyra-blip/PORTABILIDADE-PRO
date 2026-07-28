@@ -1102,6 +1102,21 @@ export default function BanksPage() {
                                 </select>
                               </div>
                             )}
+                            
+                            {newAgreement === "SIAPE" && (
+                              <div>
+                                <label className="block text-[8px] font-black text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-widest">Situação</label>
+                                <select
+                                  value={newSubAgreement}
+                                  onChange={(e) => setNewSubAgreement(e.target.value)}
+                                  className="w-full bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                >
+                                  <option value="">Selecione a Situação...</option>
+                                  <option value="ATIVO E APOSENTADO">ATIVO E APOSENTADO</option>
+                                  <option value="PENSIONISTA">PENSIONISTA</option>
+                                </select>
+                              </div>
+                            )}
                           </div>
                           
                           <button

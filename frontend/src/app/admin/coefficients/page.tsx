@@ -393,6 +393,19 @@ export default function CoefficientsPage() {
                </select>
             </div>
           )}
+          {selectedAgreement === "SIAPE" && (
+            <div className="relative w-full md:w-48 animate-in zoom-in duration-300">
+               <select 
+                 value={selectedSubAgreement}
+                 onChange={(e) => setSelectedSubAgreement(e.target.value)}
+                 className="w-full py-3.5 px-6 bg-amber-50 dark:bg-amber-500/10 rounded-2xl border-none shadow-inner text-[11px] font-black uppercase tracking-widest focus:ring-2 ring-amber-500/20 transition-all cursor-pointer text-amber-600"
+               >
+                 <option value="">SITUAÇÃO</option>
+                 <option value="ATIVO E APOSENTADO">ATIVO E APOSENTADO</option>
+                 <option value="PENSIONISTA">PENSIONISTA</option>
+               </select>
+            </div>
+          )}
 
           {/* Botões Master Expandir/Recolher Todos */}
           <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-white/5 p-1 rounded-2xl border border-slate-100 dark:border-white/5 w-full md:w-auto justify-center">

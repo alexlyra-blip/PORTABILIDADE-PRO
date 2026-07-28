@@ -470,6 +470,16 @@ export default function RulesPage() {
                     </select>
                   </div>
                 )}
+                {formData.agreement === "SIAPE" && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Situação (Opcional)</label>
+                    <select value={formData.sub_agreement || ""} onChange={(e) => setFormData({...formData, sub_agreement: e.target.value})} className="input-admin">
+                      <option value="">Todas</option>
+                      <option value="ATIVO E APOSENTADO">ATIVO E APOSENTADO</option>
+                      <option value="PENSIONISTA">PENSIONISTA</option>
+                    </select>
+                  </div>
+                )}
                 <div className={formData.agreement === "FORCAS" || formData.agreement === "GOV_EST" ? "col-span-2" : ""}>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Idade (Min - Max) *</label>
                   <div className="flex gap-2">
