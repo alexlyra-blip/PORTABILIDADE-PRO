@@ -30,7 +30,12 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
             if not name: return ""
             import unicodedata
             s = str(name).strip().upper()
-            return "".join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+            s = "".join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+            if s in ["01- ATIVO", "02- APOSENTADO", "ATIVO", "APOSENTADO"]:
+                return "ATIVO E APOSENTADO"
+            if s in ["03- PENSIONISTA", "PENSIONISTA"]:
+                return "PENSIONISTA"
+            return s
 
         # Sobrescreve no input para que todas as funções subsequentes usem o nome normalizado
         cliente_input.convenio = normalize_agr(cliente_input.convenio)

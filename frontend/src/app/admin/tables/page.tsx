@@ -493,7 +493,7 @@ export default function TablesPage() {
               });
             }
 
-            const shouldGroup = agr === "FORÇAS ARMADAS" || agr === "GOVERNOS";
+            const shouldGroup = agr === "FORÇAS ARMADAS" || agr === "GOVERNOS" || agr === "SIAPE";
             let groupedTables: Record<string, any[]> = {};
             if (shouldGroup) {
                finalTables.forEach(t => {
@@ -822,6 +822,16 @@ export default function TablesPage() {
                       <option value="RJ">Rio de Janeiro (RJ)</option><option value="RN">Rio Grande do Norte (RN)</option><option value="RS">Rio Grande do Sul (RS)</option>
                       <option value="RO">Rondônia (RO)</option><option value="RR">Roraima (RR)</option><option value="SC">Santa Catarina (SC)</option>
                       <option value="SP">São Paulo (SP)</option><option value="SE">Sergipe (SE)</option><option value="TO">Tocantins (TO)</option>
+                    </select>
+                  </div>
+                )}
+                {formData.agreement === "SIAPE" && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Situação (Opcional)</label>
+                    <select value={formData.sub_agreement || ""} onChange={(e) => setFormData({...formData, sub_agreement: e.target.value})} className="input-admin !py-2">
+                      <option value="">Todas</option>
+                      <option value="ATIVO E APOSENTADO">ATIVO E APOSENTADO</option>
+                      <option value="PENSIONISTA">PENSIONISTA</option>
                     </select>
                   </div>
                 )}
