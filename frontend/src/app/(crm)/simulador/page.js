@@ -164,20 +164,20 @@ function SimuladorPageContent() {
   const getSubLogo = (code, name) => {
     const extractBankCode = (value) =>
       String(value || "")
-        .match(/(?:^|\\D)(\\d{3})(?:\\D|$)/)?.[1] || "";
+        .match(/(?:^|\D)(\d{3})(?:\D|$)/)?.[1] || "";
 
     const normalizeBankLogoName = (value) =>
       String(value || "")
         .normalize("NFD")
-        .replace(/[\\u0300-\\u036f]/g, "")
+        .replace(/[\u0300-\u036f]/g, "")
         .toUpperCase()
-        .replace(/\\b\\d{3}\\b/g, " ")
+        .replace(/\b\d{3}\b/g, " ")
         .replace(
-          /\\b(BANCO|BANK|CONSIGNADO|CONSIGNADA|FINANCEIRA|CFI|S\\.?A\\.?|SA)\\b/g,
+          /\b(BANCO|BANK|CONSIGNADO|CONSIGNADA|FINANCEIRA|CFI|S\.?A\.?|SA)\b/g,
           " "
         )
         .replace(/[^A-Z0-9]+/g, " ")
-        .replace(/\\s+/g, " ")
+        .replace(/\s+/g, " ")
         .trim();
 
     const cleanCode =
