@@ -162,20 +162,112 @@ function SimuladorPageContent() {
   };
 
   const getSubLogo = (code, name) => {
-    const normName = (name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-    const cleanCode = (code || "").replace(/\D/g, "");
+    const extractBankCode = (value) =>
+      String(value || "")
+        .match(/(?:^|\\D)(\\d{3})(?:\\D|$)/)?.[1] || "";
+
+    const normalizeBankLogoName = (value) =>
+      String(value || "")
+        .normalize("NFD")
+        .replace(/[\\u0300-\\u036f]/g, "")
+        .toUpperCase()
+        .replace(/\\b\\d{3}\\b/g, " ")
+        .replace(
+          /\\b(BANCO|BANK|CONSIGNADO|CONSIGNADA|FINANCEIRA|CFI|S\\.?A\\.?|SA)\\b/g,
+          " "
+        )
+        .replace(/[^A-Z0-9]+/g, " ")
+        .replace(/\\s+/g, " ")
+        .trim();
+
+    const cleanCode =
+      extractBankCode(code) ||
+      extractBankCode(name);
+
+    const availableLogos = [
+      ...(Array.isArray(subLogos)
+        ? subLogos.map((logo) => ({
+            name: logo?.name || "",
+            code:
+              logo?.codigo ||
+              logo?.code ||
+              logo?.bank_code ||
+              "",
+            logo_url: logo?.logo_url || ""
+          }))
+        : []),
+
+      ...(Array.isArray(banksForAnim)
+        ? banksForAnim.map((bank) => ({
+            name:
+              bank?.name ||
+              bank?.label ||
+              "",
+            code:
+              bank?.codigo ||
+              bank?.code ||
+              bank?.bank_code ||
+              bank?.value ||
+              "",
+            logo_url: bank?.logo_url || ""
+          }))
+        : [])
+    ].filter((item) => item.logo_url);
+
     if (cleanCode) {
-      const matchByCode = subLogos.find(l => {
-        const logoName = l.name.toUpperCase();
-        return logoName.startsWith(cleanCode) || logoName.includes(` ${cleanCode} `) || logoName.includes(`-${cleanCode}`) || logoName.includes(`${cleanCode}-`);
-      });
-      if (matchByCode) return matchByCode.logo_url;
+      const matchByCode = availableLogos.find(
+        (item) => {
+          const itemCode =
+            extractBankCode(item.code) ||
+            extractBankCode(item.name);
+
+          return itemCode === cleanCode;
+        }
+      );
+
+      if (matchByCode) {
+        return matchByCode.logo_url;
+      }
     }
-    const matchByName = subLogos.find(l => {
-      const logoNameNorm = l.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-      return logoNameNorm.includes(normName) || normName.includes(logoNameNorm);
-    });
-    return matchByName ? matchByName.logo_url : null;
+
+    const aliasesByCode = {
+      "001": ["BANCO DO BRASIL", "BRASIL"],
+      "033": ["SANTANDER"],
+      "104": ["CAIXA"],
+      "121": ["AGIBANK"],
+      "237": ["BRADESCO"],
+      "318": ["BMG"],
+      "341": ["ITAU"],
+      "389": ["MERCANTIL"],
+      "623": ["PAN"],
+      "626": ["C6"],
+      "707": ["DAYCOVAL"]
+    };
+
+    const normalizedNames = [
+      normalizeBankLogoName(name),
+      ...(aliasesByCode[cleanCode] || [])
+        .map(normalizeBankLogoName)
+    ].filter(Boolean);
+
+    const matchByName = availableLogos.find(
+      (item) => {
+        const candidateName =
+          normalizeBankLogoName(item.name);
+
+        if (!candidateName) {
+          return false;
+        }
+
+        return normalizedNames.some(
+          (normalizedName) =>
+            candidateName.includes(normalizedName) ||
+            normalizedName.includes(candidateName)
+        );
+      }
+    );
+
+    return matchByName?.logo_url || null;
   };
 
   // Mock de logos caso o DB esteja vazio
