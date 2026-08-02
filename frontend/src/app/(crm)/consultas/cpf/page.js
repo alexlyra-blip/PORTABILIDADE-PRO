@@ -110,9 +110,18 @@ export default function ConsultaCPFPage() {
   const [loadingProvider, setLoadingProvider] = useState(false);
   const [providerConfigLoaded, setProviderConfigLoaded] = useState(false);
   const [convenio, setConvenio] = useState("INSS");
+  const [searchType, setSearchType] = useState("CPF");
+  const [searchFilter, setSearchFilter] = useState("");
   const [downloadState, setDownloadState] = useState("idle");
 
-  const maskCPF = (val) => val.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})/, "$1-$2").replace(/(-\d{2})\d+?$/, "$1");
+  const maskCpfCnpj = (val) => {
+    let v = val.replace(/\D/g, "");
+    if (v.length <= 11) {
+      return v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})/, "$1-$2").replace(/(-\d{2})\d+?$/, "$1");
+    } else {
+      return v.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2").substring(0, 18);
+    }
+  };
 
   useEffect(() => {
     api.get("/admin/sub-logos")
@@ -540,8 +549,20 @@ export default function ConsultaCPFPage() {
     }
   };
 
-  const activeBenefit = (dados && dados.beneficios && dados.beneficios.length > 0)
-    ? dados.beneficios[activeBenefitIndex]
+  useEffect(() => {
+    setActiveBenefitIndex(0);
+  }, [searchFilter]);
+
+  const filteredBeneficios = (dados && dados.beneficios) ? dados.beneficios.filter(b => {
+    if (!searchFilter) return true;
+    const filterLower = searchFilter.toLowerCase();
+    const nome = (b.cliente?.nome || "").toLowerCase();
+    const cpfNum = (b.cliente?.cpf || "").replace(/\D/g, "");
+    return nome.includes(filterLower) || cpfNum.includes(filterLower.replace(/\D/g, ""));
+  }) : [];
+
+  const activeBenefit = (dados && filteredBeneficios && filteredBeneficios.length > 0)
+    ? filteredBeneficios[activeBenefitIndex]
     : dados;
 
   // Formatação de telefone
@@ -937,12 +958,21 @@ export default function ConsultaCPFPage() {
         {/* Form Consulta */}
         <form onSubmit={handleConsultar} className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col md:flex-row gap-4 items-end print:hidden">
           <div className="flex-1 space-y-2 w-full">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF do Cliente</label>
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{searchType === "CNPJ" ? "CNPJ da Empresa" : "CPF do Cliente"}</label>
+              {(convenio === "GOVERNO" || convenio === "CLT") && (
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => {setSearchType("CPF"); setCpf("");}} className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest transition-all ${searchType === "CPF" ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>CPF</button>
+                  <button type="button" onClick={() => {setSearchType("CNPJ"); setCpf("");}} className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest transition-all ${searchType === "CNPJ" ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>CNPJ</button>
+                </div>
+              )}
+            </div>
             <input
               type="text"
               value={cpf}
-              onChange={(e) => setCpf(maskCPF(e.target.value))}
-              placeholder="000.000.000-00"
+              onChange={(e) => setCpf(maskCpfCnpj(e.target.value))}
+              placeholder={searchType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00"}
+              maxLength={searchType === "CNPJ" ? 18 : 14}
               className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-lg"
             />
           </div>
@@ -991,28 +1021,83 @@ export default function ConsultaCPFPage() {
               </div>
             </div>
 
-            {/* Abas de Benefícios Múltiplos */}
-            {dados.beneficios && dados.beneficios.length > 1 && (
-              <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-xl print:hidden">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center pl-2 pr-4 border-r border-slate-150">Benefícios ({dados.total_beneficios}):</span>
-                <div className="flex flex-wrap gap-2">
-                  {dados.beneficios.map((b, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setActiveBenefitIndex(idx)}
-                      className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-                        activeBenefitIndex === idx 
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                      }`}
-                    >
-                      <Icons.UserCheck size={14} />
-                      NB {b.numero}
-                    </button>
-                  ))}
+            {/* Dados do Empregador/Convênio */}
+            {activeBenefit?.cliente?.empresa && activeBenefit.cliente.empresa.razao_social && (
+              <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break mb-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+                    <Icons.Briefcase size={20} className="text-indigo-500" />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dados do Empregador</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Razão Social</p>
+                    <p className="text-sm font-black text-slate-800">{activeBenefit.cliente.empresa.razao_social}</p>
+                  </div>
+                  {activeBenefit.cliente.empresa.cnpj && (
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ</p>
+                      <p className="text-sm font-black text-slate-800">{maskCpfCnpj(activeBenefit.cliente.empresa.cnpj)}</p>
+                    </div>
+                  )}
+                  {activeBenefit.cliente.empresa.quantidade_funcionarios > 0 && (
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Funcionários</p>
+                      <p className="text-sm font-black text-slate-800">{activeBenefit.cliente.empresa.quantidade_funcionarios}</p>
+                    </div>
+                  )}
                 </div>
               </div>
+            )}
+
+            {/* Abas de Benefícios ou Navegação de Servidores (CNPJ) */}
+            {dados.is_cnpj_query ? (
+              <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-xl mb-6 print:hidden">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-emerald-100 text-emerald-700 font-black px-3 py-1.5 rounded-full text-xs uppercase tracking-widest">
+                      Servidor {filteredBeneficios.length > 0 ? activeBenefitIndex + 1 : 0} de {filteredBeneficios.length}
+                    </div>
+                    {searchFilter && <span className="text-[10px] text-slate-400 font-bold uppercase">(Filtro Ativo)</span>}
+                  </div>
+                  <div className="flex flex-1 items-center gap-2 max-w-sm w-full relative">
+                     <Icons.Search size={16} className="absolute left-3 text-slate-400" />
+                     <input type="text" placeholder="Filtrar por nome ou CPF..." value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-emerald-500 focus:bg-white outline-none transition-all" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setActiveBenefitIndex(prev => Math.max(0, prev - 1))} disabled={activeBenefitIndex === 0 || filteredBeneficios.length === 0} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 transition-all text-slate-700">
+                      <Icons.ChevronLeft size={20} />
+                    </button>
+                    <button onClick={() => setActiveBenefitIndex(prev => Math.min(filteredBeneficios.length - 1, prev + 1))} disabled={activeBenefitIndex >= filteredBeneficios.length - 1 || filteredBeneficios.length === 0} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 transition-all text-slate-700">
+                      <Icons.ChevronRight size={20} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              dados.beneficios && dados.beneficios.length > 1 && (
+                <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-xl mb-6 print:hidden">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center pl-2 pr-4 border-r border-slate-150">Benefícios ({dados.total_beneficios}):</span>
+                  <div className="flex flex-wrap gap-2">
+                    {dados.beneficios.map((b, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActiveBenefitIndex(idx)}
+                        className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                          activeBenefitIndex === idx 
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        }`}
+                      >
+                        <Icons.UserCheck size={14} />
+                        NB {b.numero}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
             )}
 
             {/* Grid 1: Dados Pessoais (Cabeçalho Premium) e Dados do Benefício */}
