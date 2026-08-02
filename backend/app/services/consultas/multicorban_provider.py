@@ -345,13 +345,22 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         original_query = safe_str(raw.get("_original_query", ""))
         total_count = raw.get("_total_count", 0)
         
-        razao_social = safe_str(raw.get("RAZAO_SOCIAL") or beneficiario.get("RazaoSocial") or "")
-        cnpj_empresa = original_query if len(original_query) > 11 else ""
+        razao_social = safe_str(raw.get("RAZAO_SOCIAL") or beneficiario.get("RazaoSocial") or raw.get("Razao Social") or "")
+        
+        cnpj_empresa = safe_str(raw.get("CNPJ_EMPRESA") or raw.get("CNPJ") or raw.get("Cnpj") or "")
+        if not cnpj_empresa and len(original_query) > 11:
+            cnpj_empresa = original_query
+            
+        quantidade_funcionarios = total_count
+        if not quantidade_funcionarios:
+            qnt_str = safe_str(raw.get("TOTAL_REGISTROS") or raw.get("Total Registros") or raw.get("Total de Registros") or "")
+            if qnt_str and qnt_str.isdigit():
+                quantidade_funcionarios = int(qnt_str)
         
         empresa_data = {
             "razao_social": razao_social,
             "cnpj": cnpj_empresa,
-            "quantidade_funcionarios": total_count if cnpj_empresa else 0
+            "quantidade_funcionarios": quantidade_funcionarios
         }
 
         response = {
