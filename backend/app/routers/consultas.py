@@ -553,6 +553,7 @@ async def _execute_cpf_query_flow(
         total_beneficios=len(
             detailed_beneficios
         ),
+        is_cnpj_query=len(clean_cpf) > 11,
         beneficios=detailed_beneficios,
         beneficio_principal=beneficio_principal,
         **first_res,

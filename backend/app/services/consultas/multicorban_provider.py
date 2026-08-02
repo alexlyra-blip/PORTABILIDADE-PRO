@@ -41,6 +41,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             beneficiario.get("Beneficio", "")
             or item.get("Beneficio", "")
             or cadastro.get("Matricula", "")
+            or item.get("CPF", "")
         ).strip()
 
     def __init__(self):
@@ -60,8 +61,18 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         if not data:
             raise ValueError("Nenhum benefício encontrado para este CPF.")
 
+        count = 1
         if isinstance(data, dict):
-            data = [data]
+            if "value" in data and isinstance(data["value"], list):
+                count = data.get("Count", len(data["value"]))
+                data = data["value"]
+            else:
+                data = [data]
+
+        for item in data:
+            if isinstance(item, dict):
+                item["_original_query"] = clean_cpf
+                item["_total_count"] = count
 
         self._cache[f"{convenio}:{clean_cpf}"] = data
         return await self._normalize_response(data[0], convenio=convenio)
@@ -80,8 +91,18 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         if not data:
             raise ValueError("Nenhum benefício encontrado para este CPF.")
 
+        count = 1
         if isinstance(data, dict):
-            data = [data]
+            if "value" in data and isinstance(data["value"], list):
+                count = data.get("Count", len(data["value"]))
+                data = data["value"]
+            else:
+                data = [data]
+
+        for item in data:
+            if isinstance(item, dict):
+                item["_original_query"] = clean_cpf
+                item["_total_count"] = count
 
         self._cache[f"{convenio}:{clean_cpf}"] = data
 
@@ -319,11 +340,24 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             except:
                 pass
 
+        original_query = safe_str(raw.get("_original_query", ""))
+        total_count = raw.get("_total_count", 0)
+        
+        razao_social = safe_str(raw.get("RAZAO_SOCIAL") or beneficiario.get("RazaoSocial") or "")
+        cnpj_empresa = original_query if len(original_query) > 11 else ""
+        
+        empresa_data = {
+            "razao_social": razao_social,
+            "cnpj": cnpj_empresa,
+            "quantidade_funcionarios": total_count if cnpj_empresa else 0
+        }
+
         response = {
             "origem": "MULTICORBAN",
             "cliente": {
-                "nome": safe_str(beneficiario.get("Nome")),
-                "cpf": safe_str(beneficiario.get("CPF")),
+                "empresa": empresa_data,
+                "nome": safe_str(beneficiario.get("Nome") or raw.get("NOME")),
+                "cpf": safe_str(beneficiario.get("CPF") or raw.get("CPF")),
                 "beneficio": safe_str(beneficiario.get("Beneficio")),
                 "idade": idade,
                 "especie": especie,

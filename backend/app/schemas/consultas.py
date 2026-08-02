@@ -1,6 +1,11 @@
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
 
+class ConsultaEmpresa(BaseModel):
+    razao_social: str = ""
+    cnpj: str = ""
+    quantidade_funcionarios: int = 0
+
 class ConsultaCliente(BaseModel):
     nome: str = ""
     cpf: str = ""
@@ -15,6 +20,7 @@ class ConsultaCliente(BaseModel):
     data_nascimento: Optional[str] = ""
     filiacao: Optional[str] = ""
     coeficiente_utilizado: Optional[float] = 0.02270
+    empresa: Optional[ConsultaEmpresa] = None
 
 class ConsultaMargem(BaseModel):
     salario: float = 0.0
@@ -132,6 +138,7 @@ class ConsultaCpfMultiResponse(ConsultaResponse):
     success: bool
     cpf: str
     total_beneficios: int
+    is_cnpj_query: bool = False
     beneficios: List[BeneficioDetalhado]
     beneficio_principal: Optional[ConsultaResponse] = None
 
