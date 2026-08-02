@@ -42,6 +42,8 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             or item.get("Beneficio", "")
             or cadastro.get("Matricula", "")
             or item.get("CPF", "")
+            or item.get("MATRICULA", "")
+            or item.get("CNPJ", "")
         ).strip()
 
     def __init__(self):
@@ -358,7 +360,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "empresa": empresa_data,
                 "nome": safe_str(beneficiario.get("Nome") or raw.get("NOME")),
                 "cpf": safe_str(beneficiario.get("CPF") or raw.get("CPF")),
-                "beneficio": safe_str(beneficiario.get("Beneficio")),
+                "beneficio": safe_str(beneficiario.get("Beneficio") or raw.get("Beneficio") or raw.get("MATRICULA") or raw.get("Matricula")),
                 "idade": idade,
                 "especie": especie,
                 "salario": salario,

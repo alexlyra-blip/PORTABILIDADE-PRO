@@ -22,6 +22,13 @@ const CONVENIO_COLORS = {
 
 const RANDOM_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
+const MONTHS = [
+  { value: 1, label: 'Janeiro' }, { value: 2, label: 'Fevereiro' }, { value: 3, label: 'Março' },
+  { value: 4, label: 'Abril' }, { value: 5, label: 'Maio' }, { value: 6, label: 'Junho' },
+  { value: 7, label: 'Julho' }, { value: 8, label: 'Agosto' }, { value: 9, label: 'Setembro' },
+  { value: 10, label: 'Outubro' }, { value: 11, label: 'Novembro' }, { value: 12, label: 'Dezembro' }
+];
+
 export default function RelatorioPage() {
   const toast = useToast();
   const [mounted, setMounted] = useState(false);
@@ -42,6 +49,25 @@ export default function RelatorioPage() {
   const [totals, setTotals] = useState({ qtd: 0, valor: 0, troco: 0, cipHojeQtd: 0, cipHojeValor: 0 });
   const [meta, setMeta] = useState({ tipo: 'mensal', valor_diario: 5000, valor_alvo: 110000, progresso: 0 });
   const [downloadState, setDownloadState] = useState("idle");
+
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  const fetchServerData = async (month, year, metaToUse = meta) => {
+    try {
+      const res = await api.get(`/contracts/stats?month=${month}&year=${year}`);
+      const serverData = Array.isArray(res) ? res : (res.data || []);
+      
+      setContracts(serverData);
+      processChartData(serverData, metaToUse);
+    } catch (error) {
+      console.error("Erro ao carregar relatrio:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchServerData(selectedMonth, selectedYear);
+  }, [selectedMonth, selectedYear]);
 
   useEffect(() => {
     const savedMetaRaw = localStorage.getItem("meta_config");
@@ -74,20 +100,8 @@ export default function RelatorioPage() {
       setMeta(prev => ({ ...prev, ...currentMeta }));
     };
 
-    const fetchServerData = async () => {
-      try {
-        const res = await api.get('/contracts/stats');
-        const serverData = Array.isArray(res) ? res : res.data;
-        
-        setContracts(serverData);
-        processChartData(serverData, currentMeta);
-      } catch (error) {
-        console.error("Erro ao carregar relatório:", error);
-      }
-    };
-
     loadInitialData();
-    fetchServerData();
+    fetchServerData(selectedMonth, selectedYear, currentMeta);
 
     // Sincronização em tempo real com o Header
     const handleStorageChange = () => {
@@ -394,6 +408,28 @@ export default function RelatorioPage() {
           <Icons.Plus size={14} className="text-white" /> Nova Simulação
         </Link>
       </PageHeader>
+
+        <div className="flex justify-end gap-4 px-4">
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl px-4 py-3 text-sm font-bold shadow-sm outline-none focus:border-blue-500"
+          >
+            {MONTHS.map(m => (
+               <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl px-4 py-3 text-sm font-bold shadow-sm outline-none focus:border-blue-500"
+          >
+            {[...Array(5)].map((_, i) => {
+               const y = new Date().getFullYear() - i;
+               return <option key={y} value={y}>{y}</option>;
+            })}
+          </select>
+        </div>
 
       {totals.qtd === 0 ? (
           <div className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] border border-slate-100 dark:border-white/10 text-center shadow-sm">

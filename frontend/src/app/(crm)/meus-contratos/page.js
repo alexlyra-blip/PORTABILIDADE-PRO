@@ -33,6 +33,8 @@ export default function MeusContratosPage() {
    const [dbBanks, setDbBanks] = useState([]);
    const [subLogos, setSubLogos] = useState([]);
    const [currentUser, setCurrentUser] = useState(null);
+   const [filterUsers, setFilterUsers] = useState([]);
+   const [selectedUserId, setSelectedUserId] = useState("");
    const [editingId, setEditingId] = useState(null);
    const [editData, setEditData] = useState({ cliente: "", cpf: "", numero_proposta: "", data_aceite: "", data_envio_cip: "", data_cip: "", taxa_juros: "", banco_origem: "", banco: "", parcela: "", prazo_restante: "", saldo: "", valor_contrato: "", valor_liberado: "" });
 
@@ -41,10 +43,11 @@ export default function MeusContratosPage() {
       cliente: "", cpf: "", banco: "", convenio: "INSS", parcela: "", tabela: "MANUAL", taxa: "", valor_contrato: "", valor_troco: "", instituicao_origem: "", saldo_devedor: "", produto: "PORTABILIDADE", prazo: ""
    });
 
-   const fetchContracts = async () => {
+   const fetchContracts = async (userId = selectedUserId) => {
       try {
-         const res = await api.get("/contracts");
-         let parsed = Array.isArray(res) ? res : res.data;
+         const url = userId ? `/contracts?user_filter_id=${userId}` : "/contracts";
+         const res = await api.get(url);
+         let parsed = Array.isArray(res) ? res : (res.data && res.data.data ? res.data.data : (res.data || []));
          parsed.forEach(c => {
             if (!c.status) c.status = 'PENDENTE';
          });
@@ -59,7 +62,13 @@ export default function MeusContratosPage() {
       const user = userStr ? JSON.parse(userStr) : null;
       setCurrentUser(user);
 
-      fetchContracts();
+      if (user && (user.role === 'admin' || user.role === 'promotora')) {
+         api.get("/contracts/users").then(res => {
+            setFilterUsers(Array.isArray(res) ? res : (res.data || []));
+         }).catch(err => console.error("Error fetching users:", err));
+      }
+
+      fetchContracts(selectedUserId);
 
       Promise.all([
          api.get("/admin/banks").catch(() => []),
@@ -294,19 +303,28 @@ export default function MeusContratosPage() {
    };
 
    const getStats = () => {
-      const total = contracts.length;
-      const totalValue = contracts.reduce((acc, c) => acc + Number(c.valor_contrato || c.parcela || 0), 0);
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      
+      const currentMonthContracts = contracts.filter(c => {
+         if (!c.data_aceite) return false;
+         const d = new Date(c.data_aceite + "T12:00:00");
+         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
 
-      const pendentes = contracts.filter(c => (c.status || 'PENDENTE') === 'PENDENTE');
+      const total = currentMonthContracts.length;
+      const totalValue = currentMonthContracts.reduce((acc, c) => acc + Number(c.valor_contrato || c.parcela || 0), 0);
+
+      const pendentes = currentMonthContracts.filter(c => (c.status || 'PENDENTE') === 'PENDENTE');
       const pendentesValue = pendentes.reduce((acc, c) => acc + Number(c.valor_contrato || c.parcela || 0), 0);
 
-      const andamento = contracts.filter(c => ['AG. RETORNO CIP', 'SALDO QUITADO'].includes(c.status));
+      const andamento = currentMonthContracts.filter(c => ['AG. RETORNO CIP', 'SALDO QUITADO'].includes(c.status));
       const andamentoValue = andamento.reduce((acc, c) => acc + Number(c.valor_contrato || c.parcela || 0), 0);
 
-      const pagas = contracts.filter(c => c.status === 'PAGO');
+      const pagas = currentMonthContracts.filter(c => c.status === 'PAGO');
       const pagasValue = pagas.reduce((acc, c) => acc + Number(c.valor_contrato || c.parcela || 0), 0);
 
-      const reprovadas = contracts.filter(c => c.status === 'REPROVADO');
+      const reprovadas = currentMonthContracts.filter(c => c.status === 'REPROVADO');
       const reprovadasValue = reprovadas.reduce((acc, c) => acc + Number(c.valor_contrato || c.parcela || 0), 0);
 
       return {
@@ -370,6 +388,24 @@ export default function MeusContratosPage() {
                <Icons.Plus size={14} className="text-white" /> Nova Simulação
             </Link>
          </PageHeader>
+
+         {currentUser && ['admin', 'promotora'].includes(currentUser.role) && (
+            <div className="flex justify-end px-4">
+               <select 
+                  value={selectedUserId} 
+                  onChange={(e) => {
+                     setSelectedUserId(e.target.value);
+                     fetchContracts(e.target.value);
+                  }}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl px-4 py-3 text-sm font-bold shadow-sm outline-none focus:border-blue-500"
+               >
+                  <option value="">Todos os Usuários</option>
+                  {filterUsers.map(u => (
+                     <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                  ))}
+               </select>
+            </div>
+         )}
 
          {/* Estatísticas */}
          {(() => {

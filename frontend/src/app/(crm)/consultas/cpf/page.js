@@ -960,7 +960,7 @@ export default function ConsultaCPFPage() {
           <div className="flex-1 space-y-2 w-full">
             <div className="flex justify-between items-center ml-1">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{searchType === "CNPJ" ? "CNPJ da Empresa" : "CPF do Cliente"}</label>
-              {(convenio === "GOVERNO" || convenio === "CLT") && (
+              {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
                 <div className="flex gap-2">
                   <button type="button" onClick={() => {setSearchType("CPF"); setCpf("");}} className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest transition-all ${searchType === "CPF" ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>CPF</button>
                   <button type="button" onClick={() => {setSearchType("CNPJ"); setCpf("");}} className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest transition-all ${searchType === "CNPJ" ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>CNPJ</button>
