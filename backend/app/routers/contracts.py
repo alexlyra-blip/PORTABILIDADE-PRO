@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from typing import List
+from typing import List, Optional
 
 from app.database import get_db
 from app.models.sqlalchemy_models import Contract, User
@@ -25,18 +25,43 @@ async def create_contract(
     await db.refresh(new_contract)
     return new_contract
 
+@router.get("/users")
+async def get_contract_users(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role == "admin":
+        query = select(User.id, User.name, User.role)
+    elif current_user.role == "promotora":
+        query = select(User.id, User.name, User.role).where(
+            (User.id == current_user.id) | (User.broker_id == current_user.id)
+        )
+    else:
+        query = select(User.id, User.name, User.role).where(User.id == current_user.id)
+        
+    result = await db.execute(query)
+    users = result.all()
+    return [{"id": u.id, "name": u.name, "role": u.role} for u in users]
+
 @router.get("")
 async def get_contracts(
     skip: int = 0,
     limit: int = 1000,
+    user_filter_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     query = select(Contract).order_by(Contract.id.desc())
     if current_user.role == "admin":
-        pass
+        if user_filter_id:
+            query = query.where(Contract.user_id == user_filter_id)
     elif current_user.role == "promotora":
-        query = query.where((Contract.user_id == current_user.id) | (Contract.broker_id == current_user.id))
+        if user_filter_id:
+            query = query.where(Contract.user_id == user_filter_id).where(
+                (Contract.user_id == current_user.id) | (Contract.broker_id == current_user.id)
+            )
+        else:
+            query = query.where((Contract.user_id == current_user.id) | (Contract.broker_id == current_user.id))
     else:
         query = query.where(Contract.user_id == current_user.id)
     
@@ -54,16 +79,29 @@ async def get_contracts(
 
 @router.get("/stats")
 async def get_contracts_stats(
+    user_filter_id: Optional[int] = None,
+    month: Optional[int] = None,
+    year: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     query = select(Contract)
     if current_user.role == "admin":
-        pass
+        if user_filter_id:
+            query = query.where(Contract.user_id == user_filter_id)
     elif current_user.role == "promotora":
-        query = query.where((Contract.user_id == current_user.id) | (Contract.broker_id == current_user.id))
+        if user_filter_id:
+            query = query.where(Contract.user_id == user_filter_id).where(
+                (Contract.user_id == current_user.id) | (Contract.broker_id == current_user.id)
+            )
+        else:
+            query = query.where((Contract.user_id == current_user.id) | (Contract.broker_id == current_user.id))
     else:
         query = query.where(Contract.user_id == current_user.id)
+        
+    if month and year:
+        month_str = f"{year}-{month:02d}"
+        query = query.where(Contract.data_aceite.startswith(month_str))
         
     result = await db.execute(query)
     contracts = result.scalars().all()
