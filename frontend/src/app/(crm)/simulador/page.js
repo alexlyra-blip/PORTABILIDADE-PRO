@@ -162,20 +162,112 @@ function SimuladorPageContent() {
   };
 
   const getSubLogo = (code, name) => {
-    const normName = (name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-    const cleanCode = (code || "").replace(/\D/g, "");
+    const extractBankCode = (value) =>
+      String(value || "")
+        .match(/(?:^|\D)(\d{3})(?:\D|$)/)?.[1] || "";
+
+    const normalizeBankLogoName = (value) =>
+      String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/\b\d{3}\b/g, " ")
+        .replace(
+          /\b(BANCO|BANK|CONSIGNADO|CONSIGNADA|FINANCEIRA|CFI|S\.?A\.?|SA)\b/g,
+          " "
+        )
+        .replace(/[^A-Z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const cleanCode =
+      extractBankCode(code) ||
+      extractBankCode(name);
+
+    const availableLogos = [
+      ...(Array.isArray(subLogos)
+        ? subLogos.map((logo) => ({
+            name: logo?.name || "",
+            code:
+              logo?.codigo ||
+              logo?.code ||
+              logo?.bank_code ||
+              "",
+            logo_url: logo?.logo_url || ""
+          }))
+        : []),
+
+      ...(Array.isArray(banksForAnim)
+        ? banksForAnim.map((bank) => ({
+            name:
+              bank?.name ||
+              bank?.label ||
+              "",
+            code:
+              bank?.codigo ||
+              bank?.code ||
+              bank?.bank_code ||
+              bank?.value ||
+              "",
+            logo_url: bank?.logo_url || ""
+          }))
+        : [])
+    ].filter((item) => item.logo_url);
+
     if (cleanCode) {
-      const matchByCode = subLogos.find(l => {
-        const logoName = l.name.toUpperCase();
-        return logoName.startsWith(cleanCode) || logoName.includes(` ${cleanCode} `) || logoName.includes(`-${cleanCode}`) || logoName.includes(`${cleanCode}-`);
-      });
-      if (matchByCode) return matchByCode.logo_url;
+      const matchByCode = availableLogos.find(
+        (item) => {
+          const itemCode =
+            extractBankCode(item.code) ||
+            extractBankCode(item.name);
+
+          return itemCode === cleanCode;
+        }
+      );
+
+      if (matchByCode) {
+        return matchByCode.logo_url;
+      }
     }
-    const matchByName = subLogos.find(l => {
-      const logoNameNorm = l.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-      return logoNameNorm.includes(normName) || normName.includes(logoNameNorm);
-    });
-    return matchByName ? matchByName.logo_url : null;
+
+    const aliasesByCode = {
+      "001": ["BANCO DO BRASIL", "BRASIL"],
+      "033": ["SANTANDER"],
+      "104": ["CAIXA"],
+      "121": ["AGIBANK"],
+      "237": ["BRADESCO"],
+      "318": ["BMG"],
+      "341": ["ITAU"],
+      "389": ["MERCANTIL"],
+      "623": ["PAN"],
+      "626": ["C6"],
+      "707": ["DAYCOVAL"]
+    };
+
+    const normalizedNames = [
+      normalizeBankLogoName(name),
+      ...(aliasesByCode[cleanCode] || [])
+        .map(normalizeBankLogoName)
+    ].filter(Boolean);
+
+    const matchByName = availableLogos.find(
+      (item) => {
+        const candidateName =
+          normalizeBankLogoName(item.name);
+
+        if (!candidateName) {
+          return false;
+        }
+
+        return normalizedNames.some(
+          (normalizedName) =>
+            candidateName.includes(normalizedName) ||
+            normalizedName.includes(candidateName)
+        );
+      }
+    );
+
+    return matchByName?.logo_url || null;
   };
 
   // Mock de logos caso o DB esteja vazio
@@ -795,9 +887,94 @@ function SimuladorPageContent() {
       }
     }
 
-    if (!isSiapeExtract && extractedData.margem_disponivel < 0) {
+    /*
+     * Importa para o formulário as margens recebidas pelo
+     * leitor de PDF, da mesma forma que a consulta por CPF.
+     */
+    const normalizarNumeroExtrato = (...valores) => {
+      const numeros = valores
+        .filter(
+          (valor) =>
+            valor !== undefined &&
+            valor !== null &&
+            valor !== ""
+        )
+        .map((valor) => Number(valor))
+        .filter((valor) => Number.isFinite(valor));
+
+      /*
+       * Algumas respostas podem trazer um campo zerado
+       * e outro campo com a margem real.
+       *
+       * Prioridade:
+       * 1. margem negativa;
+       * 2. primeiro valor diferente de zero;
+       * 3. zero.
+       */
+      return (
+        numeros.find((valor) => valor < 0) ??
+        numeros.find((valor) => valor !== 0) ??
+        numeros[0] ??
+        0
+      );
+    };
+
+    const margemDisponivelExtrato = normalizarNumeroExtrato(
+      extractedData.margem_disponivel,
+      extractedData.margem_livre
+    );
+
+    const margemConsignavelExtrato = normalizarNumeroExtrato(
+      extractedData.margem_maxima,
+      extractedData.margem_consignavel,
+      extractedData.margem_emprestimo
+    );
+
+    const totalComprometidoExtrato = normalizarNumeroExtrato(
+      extractedData.margem_comprometida,
+      extractedData.total_comprometido
+    );
+
+    const coeficienteExtrato = normalizarNumeroExtrato(
+      extractedData.coeficiente_utilizado,
+      isSiapeExtract ? 0 : 0.02270
+    );
+
+    const valorLiberadoInformado = normalizarNumeroExtrato(
+      extractedData.valor_liberado_margem
+    );
+
+    const valorLiberadoExtrato =
+      valorLiberadoInformado > 0
+        ? valorLiberadoInformado
+        : (
+            !isSiapeExtract &&
+            margemDisponivelExtrato > 0 &&
+            coeficienteExtrato > 0
+              ? margemDisponivelExtrato /
+                coeficienteExtrato
+              : 0
+          );
+
+    setFormData((prev) => ({
+      ...prev,
+      margem_livre: margemDisponivelExtrato,
+      margem_consignavel: margemConsignavelExtrato,
+      total_comprometido: totalComprometidoExtrato,
+      coeficiente_utilizado: coeficienteExtrato,
+      valor_liberado_margem: valorLiberadoExtrato
+    }));
+
+    if (
+      !isSiapeExtract &&
+      margemDisponivelExtrato < 0
+    ) {
       setPossuiDoisCartoes("sim");
-      setValorMargemNegativa(formatCurrency(Math.abs(extractedData.margem_disponivel)));
+      setValorMargemNegativa(
+        formatCurrency(
+          Math.abs(margemDisponivelExtrato)
+        )
+      );
     } else {
       setPossuiDoisCartoes("nao");
       setValorMargemNegativa("");
@@ -1721,7 +1898,25 @@ function SimuladorPageContent() {
                           <div>
                             <span className="block text-[8px] font-black text-slate-400 uppercase">Liberado Aproximado</span>
                             <span className="text-sm font-black text-emerald-700">
-                              {formatBRL(formData.valor_liberado_margem || (formData.margem_livre / (formData.coeficiente_utilizado || 0.02270)))}
+                              {Number(formData.valor_liberado_margem) > 0
+                                ? formatBRL(
+                                    Number(
+                                      formData.valor_liberado_margem
+                                    )
+                                  )
+                                : String(
+                                    formData.agreement || ""
+                                  ).trim().toUpperCase() === "SIAPE"
+                                  ? "A calcular"
+                                  : formatBRL(
+                                      Number(
+                                        formData.margem_livre
+                                      ) /
+                                      Number(
+                                        formData.coeficiente_utilizado ||
+                                        0.02270
+                                      )
+                                    )}
                             </span>
                           </div>
                         </div>
@@ -2423,6 +2618,14 @@ function SimuladorPageContent() {
                         const isSelected = selectedExtractLoanIndices.includes(idx);
                         const Tag = loanIsUsed ? 'div' : 'label';
 
+                        const extractedBankCode =
+                          String(loan.codigo || loan.banco || "")
+                            .match(/(?:^|\D)(\d{3})(?:\D|$)/)?.[1] || "";
+
+                        const loanLogoUrl = getSubLogo(
+                          extractedBankCode,
+                          loan.banco
+                        );
                         return (
                         <Tag key={idx} className={`block relative bg-white p-5 rounded-[2rem] border-2 transition-all ${loanIsUsed ? 'opacity-50 cursor-not-allowed border-slate-100 bg-slate-50' : 'cursor-pointer hover:shadow-xl'} ${isSelected ? 'border-blue-500 shadow-blue-500/20' : 'border-slate-100'}`}>
                           <div className="flex items-center gap-4">
@@ -2437,6 +2640,26 @@ function SimuladorPageContent() {
                                 );
                               }}
                             />
+
+                            <div className="relative w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex-shrink-0 overflow-hidden flex items-center justify-center">
+                              {loanLogoUrl ? (
+                                <img
+                                  src={getStaticUrl(loanLogoUrl)}
+                                  alt={loan.banco || "Banco"}
+                                  className="w-full h-full object-cover scale-110"
+                                  onError={(event) => {
+                                    event.currentTarget.style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-[9px] font-black text-slate-400 uppercase">
+                                  {String(loan.banco || "B")
+                                    .replace(/[^A-Za-zÀ-ÿ]/g, "")
+                                    .slice(0, 2)
+                                    .toUpperCase() || "B"}
+                                </span>
+                              )}
+                            </div>
 
                             <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
                               <div className="min-w-0 pr-2">
