@@ -356,7 +356,7 @@ export default function ConsultaCPFPage() {
                 </tr>
                 <tr>
                   <td style="padding: 4px 0; color: #64748b; font-weight: bold;">CPF:</td>
-                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900;">${activeBenefit.cliente?.cpf ? maskCPF(activeBenefit.cliente.cpf) : 'N/A'}</td>
+                  <td style="padding: 4px 0; color: #0f172a; font-weight: 900;">${activeBenefit.cliente?.cpf ? maskCpfCnpj(activeBenefit.cliente.cpf) : 'N/A'}</td>
                 </tr>
                 <tr>
                   <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Nascimento:</td>
@@ -1130,7 +1130,7 @@ export default function ConsultaCPFPage() {
                       <CpfIcon className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CPF</p>
-                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.cpf ? maskCPF(activeBenefit.cliente.cpf) : ""}</p>
+                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.cpf ? maskCpfCnpj(activeBenefit.cliente.cpf) : ""}</p>
                       </div>
                     </div>
                   </div>
