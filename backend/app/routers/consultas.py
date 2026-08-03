@@ -55,7 +55,7 @@ def get_provider_by_type(provider_type: str):
         return MultiCorbanProvider()
     return PromosysProvider()
 
-CONSULTA_CPF_CACHE_VERSION = 2
+CONSULTA_CPF_CACHE_VERSION = 3
 
 
 async def _execute_cpf_query_flow(
