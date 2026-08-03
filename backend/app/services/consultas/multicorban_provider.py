@@ -363,6 +363,13 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             "quantidade_funcionarios": quantidade_funcionarios
         }
 
+        tempo_contrib_str = safe_str(beneficiario.get("TempoContribuicao") or raw.get("TEMPO_CONTRIBUICAO") or "")
+        tempo_contrib_val = 0
+        if tempo_contrib_str.isdigit():
+            tempo_contrib_val = int(tempo_contrib_str)
+
+        saldo_aprox_val = safe_float(raw.get("SALDO_FGTS") or raw.get("SALDO_APROXIMADO") or beneficiario.get("SaldoFgts") or beneficiario.get("SaldoAproximado") or 0.0)
+
         response = {
             "origem": "MULTICORBAN",
             "cliente": {
@@ -377,8 +384,17 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "valor_liberado_margem": 0.0,
                 "banco_pagador": safe_str(dados_bancarios.get("Banco")),
                 "endereco": endereco_completo,
-                "data_nascimento": safe_str(beneficiario.get("DataNascimento")),
-                "filiacao": safe_str(beneficiario.get("NomeMae") or beneficiario.get("Nome_Mae") or beneficiario.get("Mae") or beneficiario.get("NomeDaMae") or beneficiario.get("Nome_Da_Mae") or beneficiario.get("Filiacao") or ""),
+                "data_nascimento": safe_str(beneficiario.get("DataNascimento") or raw.get("DATA_NASCIMENTO")),
+                "filiacao": safe_str(beneficiario.get("NomeMae") or beneficiario.get("Nome_Mae") or beneficiario.get("Mae") or beneficiario.get("NomeDaMae") or beneficiario.get("Nome_Da_Mae") or beneficiario.get("Filiacao") or raw.get("NOME_MAE") or ""),
+                "rg": safe_str(beneficiario.get("RG") or raw.get("RG")),
+                "titulo_eleitor": safe_str(beneficiario.get("TituloEleitor") or raw.get("TITULO_ELEITOR")),
+                "sexo": safe_str(beneficiario.get("Sexo") or raw.get("SEXO")),
+                "nome_pai": safe_str(beneficiario.get("NomePai") or raw.get("NOME_PAI")),
+                "data_admissao": safe_str(beneficiario.get("DataAdmissao") or beneficiario.get("Admissao") or raw.get("DATA_ADMISSAO")),
+                "data_desligamento": safe_str(beneficiario.get("DataDesligamento") or raw.get("DATA_DESLIGAMENTO")),
+                "tempo_contribuicao_meses": tempo_contrib_val,
+                "situacao_trabalhista": safe_str(beneficiario.get("Situacao") or raw.get("SITUACAO")),
+                "saldo_aproximado": saldo_aprox_val,
                 "coeficiente_utilizado": 0.0
             },
             "margens": {

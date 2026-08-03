@@ -1180,8 +1180,8 @@ export default function ConsultaCPFPage() {
               )
             )}
 
-            {/* Grid 1: Dados Pessoais (Cabeçalho Premium) e Dados do Benefício */}
-            <div className={`grid grid-cols-1 ${(convenio === "GOVERNO" || convenio === "CLT PRIVADO") ? 'md:grid-cols-1' : 'md:grid-cols-2'} gap-8 print:grid-cols-2 print:gap-4`}>
+            {/* Grid 1: Dados Pessoais (Cabeçalho Premium) e Dados do Benefício/Trabalho */}
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-4`}>
               
               {/* Dados do Cliente - Cabeçalho Premium com Ícone Premium Crown */}
               <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
@@ -1202,7 +1202,7 @@ export default function ConsultaCPFPage() {
                       <UserIcon className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome Completo</p>
-                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.nome}</p>
+                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.nome || "Não Informado"}</p>
                       </div>
                     </div>
                     
@@ -1210,19 +1210,29 @@ export default function ConsultaCPFPage() {
                       <CpfIcon className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CPF</p>
-                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.cpf ? maskCpfCnpj(activeBenefit.cliente.cpf) : ""}</p>
+                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.cpf ? maskCpfCnpj(activeBenefit.cliente.cpf) : "Não Informado"}</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Campo Filiação adicionado logo abaixo do nome e do cpf */}
-                  <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                    <FiliaçãoIcon className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
-                    <div className="w-full">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Filiação</p>
-                      <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.filiacao || "Não Informada"}</p>
+                  {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3 print:gap-2">
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex flex-col">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">RG</p>
+                        <p className="text-xs font-black text-slate-800 uppercase mt-0.5 print:text-[10px]">{activeBenefit.cliente?.rg || "Não Informado"}</p>
+                      </div>
+                      
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex flex-col">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Título de Eleitor</p>
+                        <p className="text-xs font-black text-slate-800 uppercase mt-0.5 print:text-[10px]">{activeBenefit.cliente?.titulo_eleitor || "Não Informado"}</p>
+                      </div>
+
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex flex-col">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sexo</p>
+                        <p className="text-xs font-black text-slate-800 uppercase mt-0.5 print:text-[10px]">{activeBenefit.cliente?.sexo || "Não Informado"}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
@@ -1262,6 +1272,26 @@ export default function ConsultaCPFPage() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
+                    <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
+                      <FiliaçãoIcon className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
+                      <div className="w-full">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome da Mãe</p>
+                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.filiacao || "Não Informada"}</p>
+                      </div>
+                    </div>
+
+                    {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
+                        <FiliaçãoIcon className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                        <div className="w-full">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome do Pai</p>
+                          <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.nome_pai || "Não Informado"}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {activeBenefit.cliente?.endereco && (
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
                       <MapPinIcon className="w-4.5 h-4.5 text-amber-500 mt-0.5 shrink-0" />
@@ -1273,6 +1303,59 @@ export default function ConsultaCPFPage() {
                   )}
                 </div>
               </div>
+
+              {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden flex flex-col">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center border border-teal-100 print:bg-slate-50 print:text-teal-700 print:border-slate-200">
+                      <Icons.Briefcase size={20} />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Informações Trabalhistas</h3>
+                  </div>
+
+                  <div className="space-y-4 print:space-y-2 flex-grow">
+                    <div className="grid grid-cols-2 gap-4 print:gap-2">
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data de Admissão</p>
+                        <p className="text-sm font-black text-slate-800 uppercase mt-1">{activeBenefit.cliente?.data_admissao ? formatDateBR(activeBenefit.cliente.data_admissao) : "Não Informada"}</p>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data de Desligamento</p>
+                        <p className="text-sm font-black text-slate-800 uppercase mt-1">{activeBenefit.cliente?.data_desligamento ? formatDateBR(activeBenefit.cliente.data_desligamento) : "Não Informado"}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 print:gap-2">
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tempo de Contribuição</p>
+                        <p className="text-sm font-black text-slate-800 uppercase mt-1">
+                          {activeBenefit.cliente?.tempo_contribuicao_meses ? `${activeBenefit.cliente.tempo_contribuicao_meses} meses` : "Não Informado"}
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Situação</p>
+                        <p className="text-sm font-black text-slate-800 uppercase mt-1">{activeBenefit.cliente?.situacao_trabalhista || "Não Informada"}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 print:gap-2 mt-auto">
+                      <div className="bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-100">
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Renda</p>
+                        <p className="text-xl font-black text-emerald-700 uppercase mt-1">
+                          {formatCurrency(activeBenefit.cliente?.salario || 0)}
+                        </p>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100">
+                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Saldo Aproximado</p>
+                        <p className="text-xl font-black text-blue-700 uppercase mt-1">
+                          {formatCurrency(activeBenefit.cliente?.saldo_aproximado || 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Dados do Benefício & Dados Bancários */}
               {!(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
