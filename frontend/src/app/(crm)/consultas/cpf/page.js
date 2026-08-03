@@ -1343,13 +1343,13 @@ export default function ConsultaCPFPage() {
                       <div className="bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-100">
                         <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Renda</p>
                         <p className="text-xl font-black text-emerald-700 uppercase mt-1">
-                          {formatCurrency(activeBenefit.cliente?.salario || 0)}
+                          {formatBRL(activeBenefit.cliente?.salario || 0)}
                         </p>
                       </div>
                       <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100">
                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Saldo Aproximado</p>
                         <p className="text-xl font-black text-blue-700 uppercase mt-1">
-                          {formatCurrency(activeBenefit.cliente?.saldo_aproximado || 0)}
+                          {formatBRL(activeBenefit.cliente?.saldo_aproximado || 0)}
                         </p>
                       </div>
                     </div>
