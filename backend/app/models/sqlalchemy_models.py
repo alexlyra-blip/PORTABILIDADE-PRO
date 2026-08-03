@@ -306,11 +306,23 @@ class WhatsappChatLog(Base):
 
     user = relationship("User")
 
+class ConsultaLog(Base):
+    __tablename__ = "consulta_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    convenio = Column(String(50), nullable=False, index=True)
+    documento = Column(String(20), nullable=False) # CPF or CNPJ
+    nome = Column(String(255), nullable=True) # Nome do cliente ou Razão Social
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+
 class ConsultaCpfCache(Base):
     __tablename__ = "consulta_cpf_cache"
 
     id = Column(Integer, primary_key=True, index=True)
-    cpf = Column(String(14), unique=True, index=True, nullable=False)
+    cpf = Column(String(18), unique=True, index=True, nullable=False) # Changed to 18 to support CNPJ formatting as well if needed, though they currently just strip non-digits. The existing was 14.
     dados_json = Column(Text, nullable=False) # Armazena a resposta completa da Promosys em formato JSON
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
