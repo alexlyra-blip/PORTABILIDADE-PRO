@@ -113,7 +113,23 @@ export default function ConsultaCPFPage() {
   const [searchType, setSearchType] = useState("CPF");
   const [searchFilter, setSearchFilter] = useState("");
   const [downloadState, setDownloadState] = useState("idle");
+  const [recentQueries, setRecentQueries] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
+  useEffect(() => {
+    const fetchHistory = async () => {
+      setLoadingHistory(true);
+      try {
+        const response = await api.get(`/consultas/historico?convenio=${encodeURIComponent(convenio)}`);
+        setRecentQueries(response || []);
+      } catch (err) {
+        console.error("Erro ao buscar historico:", err);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+    fetchHistory();
+  }, [convenio]);
   const maskCpfCnpj = (val) => {
     let v = val.replace(/\D/g, "");
     if (v.length <= 11) {
@@ -259,6 +275,41 @@ export default function ConsultaCPFPage() {
       );
     } finally {
       setLoadingProvider(false);
+    }
+  };
+
+  const handleHistoryClick = async (query) => {
+    const formattedCpf = maskCpfCnpj(query.documento);
+    setCpf(formattedCpf);
+    
+    // Auto submit
+    setLoading(true);
+    setDados(null);
+    try {
+      const payload = {
+        cpf: formattedCpf.replace(/\D/g, ""),
+        convenio: query.convenio,
+      };
+
+      const endpoint = activeProvider === "multicorban" 
+        ? "/consultas/cpf"
+        : "/consultas/promosys/cpf";
+        
+      const response = await api.post(endpoint, payload);
+      setDados(response);
+      setActiveBenefitIndex(0);
+      
+      if (isAdmin && activeProvider) {
+        fetchBalance(activeProvider);
+      }
+      
+      toast.success("Consulta recuperada com sucesso!");
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.detail || err.message || "Erro desconhecido";
+      toast.error(`Erro ao carregar consulta: ${msg}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1004,6 +1055,35 @@ export default function ConsultaCPFPage() {
             {loading ? <Icons.Loader2 className="animate-spin" /> : <><Icons.Search size={18} /> Consultar</>}
           </button>
         </form>
+
+        {/* Histórico de Consultas */}
+        {recentQueries.length > 0 && (
+          <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 print:hidden mt-4 animate-in fade-in">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Icons.History className="text-blue-500 w-4 h-4" />
+              Últimas Consultas
+            </h3>
+            {loadingHistory ? (
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <Icons.Loader2 className="w-4 h-4 animate-spin" /> Carregando histórico...
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {recentQueries.map((query) => (
+                  <button
+                    key={query.id}
+                    type="button"
+                    onClick={() => handleHistoryClick(query)}
+                    className="px-4 py-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl transition-all text-left group"
+                  >
+                    <p className="text-xs font-black text-slate-700 group-hover:text-blue-700 uppercase">{query.nome || "DESCONHECIDO"}</p>
+                    <p className="text-[10px] font-bold text-slate-500 group-hover:text-blue-500">{maskCpfCnpj(query.documento)}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Resultados */}
         {dados && activeBenefit && marginInfo && (

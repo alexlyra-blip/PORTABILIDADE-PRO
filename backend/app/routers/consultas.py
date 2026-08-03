@@ -10,7 +10,7 @@ import logging
 
 from app.database import get_db, AsyncSessionLocal
 from app.routers.deps import get_current_user, verify_n8n_internal_key
-from app.models.sqlalchemy_models import ConsultaCpfCache
+from app.models.sqlalchemy_models import ConsultaCpfCache, ConsultaLog
 from app.schemas.consultas import (
     ConsultaResponse,
     ConsultaCpfMultiResponse,
@@ -610,6 +610,37 @@ async def _execute_cpf_query_flow(
 
     return multi_response
 
+@router.get("/historico")
+async def get_historico_consultas(
+    convenio: str = "INSS",
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    try:
+        conv_upper = convenio.strip().upper()
+        # CLT PRIVADO or CLT should match, we can just exact match for now
+        stmt = select(ConsultaLog).where(
+            ConsultaLog.user_id == current_user.id,
+            ConsultaLog.convenio == conv_upper
+        ).order_by(ConsultaLog.created_at.desc()).limit(10)
+        
+        result = await db.execute(stmt)
+        logs = result.scalars().all()
+        
+        return [
+            {
+                "id": log.id,
+                "documento": log.documento,
+                "nome": log.nome,
+                "convenio": log.convenio,
+                "created_at": log.created_at
+            }
+            for log in logs
+        ]
+    except Exception as e:
+        logger.error(f"Erro ao buscar historico: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno ao buscar historico")
+
 # ROTA UNIFICADA CPF
 @router.post("/cpf", response_model=ConsultaCpfMultiResponse)
 async def consultar_cpf_unificado(
@@ -640,7 +671,32 @@ async def consultar_cpf_unificado(
             )
 
     try:
-        return await _execute_cpf_query_flow(request.cpf, db, request.convenio, provider_type)
+        response_data = await _execute_cpf_query_flow(request.cpf, db, request.convenio, provider_type)
+
+        try:
+            nome_cliente = "Desconhecido"
+            if hasattr(response_data, "cliente") and response_data.cliente:
+                nome_cliente = response_data.cliente.nome
+            
+            # Additional check if it's a dict or model with empresa_data
+            if nome_cliente == "Desconhecido" and hasattr(response_data, "model_dump"):
+                dumped = response_data.model_dump()
+                if "empresa_data" in dumped and dumped["empresa_data"]:
+                    nome_cliente = dumped["empresa_data"].get("razao_social", "Desconhecido")
+                    
+            async with AsyncSessionLocal() as write_db:
+                log_entry = ConsultaLog(
+                    user_id=current_user.id,
+                    convenio=request.convenio or "INSS",
+                    documento=request.cpf,
+                    nome=nome_cliente
+                )
+                write_db.add(log_entry)
+                await write_db.commit()
+        except Exception as log_e:
+            logger.error(f"Erro ao salvar historico de consulta: {log_e}")
+
+        return response_data
     except HTTPException:
         raise
     except ValueError as e:
