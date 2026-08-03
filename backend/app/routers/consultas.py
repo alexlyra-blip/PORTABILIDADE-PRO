@@ -377,6 +377,9 @@ async def _execute_cpf_query_flow(
             ),
         )
 
+    # Limitar para evitar sobrecarga (502 Gateway Timeout) em buscas por CNPJ que retornam milhares
+    numeros_beneficios = numeros_beneficios[:100]
+
     detailed_beneficios = []
     results = []
 

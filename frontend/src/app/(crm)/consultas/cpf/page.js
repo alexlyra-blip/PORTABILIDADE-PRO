@@ -1101,7 +1101,7 @@ export default function ConsultaCPFPage() {
             )}
 
             {/* Grid 1: Dados Pessoais (Cabeçalho Premium) e Dados do Benefício */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-4">
+            <div className={`grid grid-cols-1 ${(convenio === "GOVERNO" || convenio === "CLT PRIVADO") ? 'md:grid-cols-1' : 'md:grid-cols-2'} gap-8 print:grid-cols-2 print:gap-4`}>
               
               {/* Dados do Cliente - Cabeçalho Premium com Ícone Premium Crown */}
               <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
@@ -1195,220 +1195,225 @@ export default function ConsultaCPFPage() {
               </div>
 
               {/* Dados do Benefício & Dados Bancários */}
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 print:bg-slate-50 print:text-purple-700 print:border-slate-200">
-                      <Icons.UserCheck size={20} />
+              {!(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 print:bg-slate-50 print:text-purple-700 print:border-slate-200">
+                        <Icons.UserCheck size={20} />
+                      </div>
+                      <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
+                          {isSiape
+                            ? "Dados do Vínculo SIAPE"
+                            : "Dados do Benefício"}
+                        </h3>
                     </div>
-                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
-                        {isSiape
-                          ? "Dados do Vínculo SIAPE"
-                          : "Dados do Benefício"}
-                      </h3>
-                  </div>
-                  
-                  {/* Cadeado Premium para Empréstimo */}
-                  {activeBenefit.beneficio?.bloqueio_emprestimo && (
-                    <div>
-                      {activeBenefit.beneficio.bloqueio_emprestimo.toLowerCase().includes("sim") || activeBenefit.beneficio.bloqueado === true ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 shadow-sm animate-pulse">
-                          <LockPremiumIcon className="w-3.5 h-3.5" />
-                          <span className="text-[8px] font-black uppercase tracking-wider">BLOQUEADO</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-sm">
-                          <UnlockPremiumIcon className="w-3.5 h-3.5" />
-                          <span className="text-[8px] font-black uppercase tracking-wider">LIBERADO</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4 print:space-y-2">
-                    {isSiape ? (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Matrícula
-                            </p>
-                            <p className="text-sm font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
-                              {activeBenefit.beneficio?.matricula
-                                || activeBenefit.cliente?.beneficio
-                                || activeBenefit.numero
-                                || "Não Informada"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Regime Jurídico
-                            </p>
-                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                              {activeBenefit.beneficio?.regime_juridico
-                                || "Não Informado"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Órgão
-                            </p>
-                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                              {activeBenefit.beneficio?.orgao
-                                || "Não Informado"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Instituto
-                            </p>
-                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                              {activeBenefit.beneficio?.instituto
-                                || "Não Informado"}
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
-                          <div className="md:col-span-1">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Número (NB)
-                            </p>
-                            <p className="text-sm font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
-                              {activeBenefit.cliente?.beneficio
-                                || activeBenefit.numero}
-                            </p>
-                          </div>
-
-                          <div className="md:col-span-3">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Espécie
-                            </p>
-                            <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
-                              {activeBenefit.cliente?.especie
-                                || "Não Informada"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Situação
-                            </p>
-                            <p className={`text-[10px] font-black uppercase inline-block px-2.5 py-1 rounded-xl mt-0.5 ${
-                              (
-                                activeBenefit.beneficio?.situacao
-                                || ""
-                              ).toUpperCase() === "ATIVO"
-                                ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                                : "bg-red-50 text-red-600 border border-red-100"
-                            } print:bg-transparent print:p-0 print:text-xs`}>
-                              {activeBenefit.beneficio?.situacao
-                                || "Desconhecida"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Concessão (DDB)
-                            </p>
-                            <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
-                              {activeBenefit.beneficio?.ddb
-                                ? formatDateBR(
-                                    activeBenefit.beneficio.ddb
-                                  )
-                                : "Não Informada"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3 border-t border-slate-100 print:grid-cols-3 print:gap-2">
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              UF Benefício
-                            </p>
-                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                              {activeBenefit.beneficio?.uf
-                                || "Não Informada"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Valor do Benefício
-                            </p>
-                            <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
-                              {formatBRL(marginInfo.salario)}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Meio Pagamento
-                            </p>
-                            <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                              {activeBenefit.banco_pagador?.tipo_pagamento
-                                || (
-                                  isCartaoMagnetico(
-                                    activeBenefit
-                                  )
-                                    ? "Cartão Magnético"
-                                    : "Conta Corrente"
-                                )}
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Dados Bancários Condicionais */}
-                  <div className="pt-3.5 border-t border-slate-100 bg-slate-50/60 p-4 rounded-2xl border border-slate-150">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                      <Icons.Landmark size={14} className="text-slate-500" /> DADOS BANCÁRIOS DE RECEBIMENTO
-                    </p>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2.5fr)_minmax(70px,0.6fr)_minmax(110px,1fr)] gap-4">
+                    {/* Cadeado Premium para Empréstimo */}
+                    {activeBenefit.beneficio?.bloqueio_emprestimo && (
                       <div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">Banco</span>
-                        <p className="text-xs font-black text-slate-800 uppercase leading-tight break-words">
-                          {formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)}
-                        </p>
+                        {activeBenefit.beneficio.bloqueio_emprestimo.toLowerCase().includes("sim") || activeBenefit.beneficio.bloqueado === true ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 shadow-sm animate-pulse">
+                            <LockPremiumIcon className="w-3.5 h-3.5" />
+                            <span className="text-[8px] font-black uppercase tracking-wider">BLOQUEADO</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-sm">
+                            <UnlockPremiumIcon className="w-3.5 h-3.5" />
+                            <span className="text-[8px] font-black uppercase tracking-wider">LIBERADO</span>
+                          </div>
+                        )}
                       </div>
-                      
-                      <div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">Agência</span>
-                        <p className="text-xs font-black text-slate-800">
-                          {activeBenefit.banco_pagador?.agencia || "Não Informada"}
-                        </p>
-                      </div>
+                    )}
+                  </div>
 
-                      {/* Exibir conta somente se NÃO for cartão magnético */}
-                      {!isCartaoMagnetico(activeBenefit) && (
+                  <div className="space-y-4 print:space-y-2">
+                      {isSiape ? (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Matrícula
+                              </p>
+                              <p className="text-sm font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
+                                {activeBenefit.beneficio?.matricula
+                                  || activeBenefit.cliente?.beneficio
+                                  || activeBenefit.numero
+                                  || "Não Informada"}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Regime Jurídico
+                              </p>
+                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                                {activeBenefit.beneficio?.regime_juridico
+                                  || "Não Informado"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Órgão
+                              </p>
+                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                                {activeBenefit.beneficio?.orgao
+                                  || "Não Informado"}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Instituto
+                              </p>
+                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                                {activeBenefit.beneficio?.instituto
+                                  || "Não Informado"}
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
+                            <div className="md:col-span-1">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Número (NB)
+                              </p>
+                              <p className="text-sm font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
+                                {activeBenefit.cliente?.beneficio
+                                  || activeBenefit.numero}
+                              </p>
+                            </div>
+
+                            <div className="md:col-span-3">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Espécie
+                              </p>
+                              <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
+                                {activeBenefit.cliente?.especie
+                                  || "Não Informada"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Situação
+                              </p>
+                              <p className={`text-[10px] font-black uppercase inline-block px-2.5 py-1 rounded-xl mt-0.5 ${
+                                (
+                                  activeBenefit.beneficio?.situacao
+                                  || ""
+                                ).toUpperCase() === "ATIVO"
+                                  ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                                  : "bg-red-50 text-red-600 border border-red-100"
+                              } print:bg-transparent print:p-0 print:text-xs`}>
+                                {activeBenefit.beneficio?.situacao
+                                  || "Desconhecida"}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Concessão (DDB)
+                              </p>
+                              <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
+                                {activeBenefit.beneficio?.ddb
+                                  ? formatDateBR(
+                                      activeBenefit.beneficio.ddb
+                                    )
+                                  : "Não Informada"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3 border-t border-slate-100 print:grid-cols-3 print:gap-2">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                UF Benefício
+                              </p>
+                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                                {activeBenefit.beneficio?.uf
+                                  || "Não Informada"}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Valor do Benefício
+                              </p>
+                              <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
+                                {formatBRL(marginInfo.salario)}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Meio Pagamento
+                              </p>
+                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
+                                {activeBenefit.banco_pagador?.tipo_pagamento
+                                  || (
+                                    isCartaoMagnetico(
+                                      activeBenefit
+                                    )
+                                      ? "Cartão Magnético"
+                                      : "Conta Corrente"
+                                  )}
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Dados Bancários Condicionais */}
+                    <div className="pt-3.5 border-t border-slate-100 bg-slate-50/60 p-4 rounded-2xl border border-slate-150">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                        <Icons.Landmark size={14} className="text-slate-500" /> DADOS BANCÁRIOS DE RECEBIMENTO
+                      </p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2.5fr)_minmax(70px,0.6fr)_minmax(110px,1fr)] gap-4">
                         <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">Conta Corrente</span>
-                          <p className="text-xs font-black text-slate-800">
-                            {activeBenefit.banco_pagador?.conta || "Não Informada"}
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">Banco</span>
+                          <p className="text-xs font-black text-slate-800 uppercase leading-tight break-words">
+                            {formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)}
                           </p>
                         </div>
-                      )}
+                        
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">Agência</span>
+                          <p className="text-xs font-black text-slate-800">
+                            {activeBenefit.banco_pagador?.agencia || "Não Informada"}
+                          </p>
+                        </div>
+
+                        {/* Exibir conta somente se NÃO for cartão magnético */}
+                        {!isCartaoMagnetico(activeBenefit) && (
+                          <div>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">Conta Corrente</span>
+                            <p className="text-xs font-black text-slate-800">
+                              {activeBenefit.banco_pagador?.conta || "Não Informada"}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Resumo Financeiro (Margens Inteligentes) */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 relative overflow-hidden print-no-break">
+            {/* Resumo Financeiro, Empréstimos e Cartões (Ocultar para GOVERNO e CLT PRIVADO) */}
+            {!(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
+              <>
+                {/* Resumo Financeiro (Margens Inteligentes) */}
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 relative overflow-hidden print-no-break">
               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -mr-20 -mt-20 opacity-50 pointer-events-none print:hidden"></div>
 
               <div className="flex items-center gap-3 mb-8 relative z-10">
@@ -1706,6 +1711,9 @@ export default function ConsultaCPFPage() {
                 )}
               </div>
             </div>
+            )}
+            
+            </>
             )}
 
           </div>
