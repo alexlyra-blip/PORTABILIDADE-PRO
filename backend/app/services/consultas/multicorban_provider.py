@@ -192,9 +192,12 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         emprestimos_list = raw.get("Emprestimos", []) or []
         rmc_raw = raw.get("Rmc", {}) or {}
         rcc_raw = raw.get("RCC", {}) or {}
-        telefones_list = raw.get("Telefone", []) or []
+        
+        telefones_list = raw.get("Telefone") or raw.get("TELEFONE") or raw.get("Telefones") or raw.get("TELEFONES") or []
+        if not isinstance(telefones_list, list):
+            telefones_list = [telefones_list]
 
-        salario = safe_float(resumo_fin.get("ValorBeneficio") or beneficiario.get("ValorBeneficio") or 0.0)
+        salario = safe_float(resumo_fin.get("ValorBeneficio") or beneficiario.get("ValorBeneficio") or raw.get("RENDA") or raw.get("Renda") or beneficiario.get("Renda") or 0.0)
 
         especie = str(beneficiario.get("Especie") or "")
         is_loas = especie in ["87", "88"]
@@ -330,7 +333,17 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         total_parcelas = sum(c["parcela"] for c in emprestimos)
         maior_parcela = max([c["parcela"] for c in emprestimos], default=0.0)
 
-        telefones = [safe_str(t) for t in telefones_list if t]
+        telefones = []
+        for t in telefones_list:
+            if not t:
+                continue
+            if isinstance(t, dict):
+                # Extrai o valor do telefone caso venha como dicionário ex: {"Numero": "..."}
+                val = safe_str(t.get("Numero") or t.get("numero") or t.get("Telefone") or t.get("telefone") or list(t.values())[0])
+                if val:
+                    telefones.append(val)
+            else:
+                telefones.append(safe_str(t))
 
         idade = 0
         birth_str = beneficiario.get("DataNascimento")
@@ -345,15 +358,15 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         original_query = safe_str(raw.get("_original_query", ""))
         total_count = raw.get("_total_count", 0)
         
-        razao_social = safe_str(raw.get("RAZAO_SOCIAL") or beneficiario.get("RazaoSocial") or raw.get("Razao Social") or "")
+        razao_social = safe_str(raw.get("RAZAO_SOCIAL") or beneficiario.get("RazaoSocial") or raw.get("Razao Social") or beneficiario.get("RAZAO_SOCIAL") or "")
         
-        cnpj_empresa = safe_str(raw.get("CNPJ_EMPRESA") or raw.get("CNPJ") or raw.get("Cnpj") or "")
+        cnpj_empresa = safe_str(raw.get("CNPJ_EMPRESA") or raw.get("CNPJ") or raw.get("Cnpj") or beneficiario.get("CNPJ") or beneficiario.get("Cnpj") or "")
         if not cnpj_empresa and len(original_query) > 11:
             cnpj_empresa = original_query
             
         quantidade_funcionarios = total_count
         if not quantidade_funcionarios:
-            qnt_str = safe_str(raw.get("TOTAL_REGISTROS") or raw.get("Total Registros") or raw.get("Total de Registros") or "")
+            qnt_str = safe_str(raw.get("TOTAL_REGISTROS") or raw.get("Total Registros") or raw.get("Total de Registros") or beneficiario.get("TOTAL_REGISTROS") or beneficiario.get("TotalRegistros") or beneficiario.get("Total Registros") or "")
             if qnt_str and qnt_str.isdigit():
                 quantidade_funcionarios = int(qnt_str)
         

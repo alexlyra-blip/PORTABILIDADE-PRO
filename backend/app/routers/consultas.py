@@ -87,13 +87,9 @@ async def _execute_cpf_query_flow(
         else "***"
     )
 
-    # A tabela consulta_cpf_cache possui CPF único e não
-    # diferencia convênio. Para impedir mistura entre INSS
-    # e SIAPE, somente o INSS utiliza esse cache persistente.
-    use_persistent_cache = (
-        convenio == "INSS"
-        and provider_type == "promosys"
-    )
+    # A tabela consulta_cpf_cache possui CPF único e não diferencia convênio.
+    # Usaremos o cache para todos os provedores/convênios para economizar créditos.
+    use_persistent_cache = True
 
     cache_json = None
     cache_updated_at = None
@@ -127,7 +123,6 @@ async def _execute_cpf_query_flow(
     # externa ao provedor.
     await db.close()
 
-    # Cache persistente exclusivo do INSS.
     if (
         use_persistent_cache
         and cache_json
@@ -166,10 +161,7 @@ async def _execute_cpf_query_flow(
                         if not isinstance(item, dict):
                             return
 
-                        item["convenio"] = (
-                            item.get("convenio")
-                            or convenio
-                        )
+                        item["convenio"] = convenio
 
                         margens = (
                             item.get("margens")

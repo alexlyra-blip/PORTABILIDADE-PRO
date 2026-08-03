@@ -1118,12 +1118,12 @@ export default function ConsultaCPFPage() {
                   {activeBenefit.cliente.empresa.cnpj && (
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ</p>
-                      <p className="text-sm font-black text-slate-800">{maskCpfCnpj(activeBenefit.cliente.empresa.cnpj)}</p>
+                      <p className="text-sm font-black text-slate-800">{activeBenefit.cliente.empresa.cnpj}</p>
                     </div>
                   )}
                   {activeBenefit.cliente.empresa.quantidade_funcionarios > 0 && (
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Funcionários</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registros</p>
                       <p className="text-sm font-black text-slate-800">{activeBenefit.cliente.empresa.quantidade_funcionarios}</p>
                     </div>
                   )}
@@ -1305,13 +1305,14 @@ export default function ConsultaCPFPage() {
               </div>
 
               {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden flex flex-col">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
+                <div className="flex flex-col h-full bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center border border-teal-100 print:bg-slate-50 print:text-teal-700 print:border-slate-200">
                       <Icons.Briefcase size={20} />
                     </div>
-                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Informações Trabalhistas</h3>
+                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
+                      {convenio === "GOVERNO" ? "Informações do Servidor" : "Informações Trabalhistas"}
+                    </h3>
                   </div>
 
                   <div className="space-y-4 print:space-y-2 flex-grow">
