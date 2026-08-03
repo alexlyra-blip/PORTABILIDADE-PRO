@@ -1102,34 +1102,38 @@ export default function ConsultaCPFPage() {
             </div>
 
             {/* Dados do Empregador/Convênio */}
-            {activeBenefit?.cliente?.empresa && activeBenefit.cliente.empresa.razao_social && (
-              <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break mb-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
-                    <Icons.Briefcase size={20} className="text-indigo-500" />
-                  </div>
-                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dados do Empregador</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Razão Social</p>
-                    <p className="text-sm font-black text-slate-800">{activeBenefit.cliente.empresa.razao_social}</p>
-                  </div>
-                  {activeBenefit.cliente.empresa.cnpj && (
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ</p>
-                      <p className="text-sm font-black text-slate-800">{activeBenefit.cliente.empresa.cnpj}</p>
+            {(() => {
+              const emp = activeBenefit?.cliente?.empresa || dados?.cliente?.empresa;
+              if (!emp || !emp.razao_social) return null;
+              return (
+                <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break mb-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+                      <Icons.Briefcase size={20} className="text-indigo-500" />
                     </div>
-                  )}
-                  {activeBenefit.cliente.empresa.quantidade_funcionarios > 0 && (
+                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dados do Empregador</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registros</p>
-                      <p className="text-sm font-black text-slate-800">{activeBenefit.cliente.empresa.quantidade_funcionarios}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Razão Social</p>
+                      <p className="text-sm font-black text-slate-800">{emp.razao_social}</p>
                     </div>
-                  )}
+                    {emp.cnpj && (
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ</p>
+                        <p className="text-sm font-black text-slate-800">{emp.cnpj}</p>
+                      </div>
+                    )}
+                    {emp.quantidade_funcionarios > 0 && (
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registros</p>
+                        <p className="text-sm font-black text-slate-800">{emp.quantidade_funcionarios}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Abas de Benefícios ou Navegação de Servidores (CNPJ) */}
             {dados.is_cnpj_query ? (
@@ -1251,22 +1255,24 @@ export default function ConsultaCPFPage() {
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Telefone / Contato</p>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {activeBenefit.telefones && activeBenefit.telefones.length > 0 ? (
-                            activeBenefit.telefones.map((tel, i) => (
-                              <a 
-                                key={i} 
-                                href={`https://wa.me/${tel.replace(/\D/g, '')}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 rounded-lg text-[10px] font-black transition-all border border-emerald-100 print:bg-transparent print:border-none print:shadow-none print:p-0 print:text-slate-800 print:text-xs"
-                              >
-                                <Icons.MessageCircle size={10} className="text-emerald-500 print:hidden" />
-                                <span>{formatPhone(tel)}</span>
-                              </a>
-                            ))
-                          ) : (
-                            <span className="text-xs font-bold text-slate-400">Nenhum</span>
-                          )}
+                          {(() => {
+                            const telefonesList = activeBenefit.telefones?.length ? activeBenefit.telefones : (dados.telefones?.length ? dados.telefones : (activeBenefit.cliente?.telefones?.length ? activeBenefit.cliente.telefones : (dados.cliente?.telefones?.length ? dados.cliente.telefones : [])));
+                            if (telefonesList && telefonesList.length > 0) {
+                              return telefonesList.map((tel, i) => (
+                                <a 
+                                  key={i} 
+                                  href={`https://wa.me/${String(tel).replace(/\D/g, '')}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 rounded-lg text-[10px] font-black transition-all border border-emerald-100 print:bg-transparent print:border-none print:shadow-none print:p-0 print:text-slate-800 print:text-xs"
+                                >
+                                  <Icons.MessageCircle size={10} className="text-emerald-500 print:hidden" />
+                                  <span>{formatPhone(tel)}</span>
+                                </a>
+                              ));
+                            }
+                            return <span className="text-xs font-bold text-slate-400">Nenhum</span>;
+                          })()}
                         </div>
                       </div>
                     </div>
