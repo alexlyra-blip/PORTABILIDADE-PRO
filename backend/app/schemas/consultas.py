@@ -18,7 +18,16 @@ class ConsultaCliente(BaseModel):
     banco_pagador: str = ""
     endereco: Optional[str] = ""
     data_nascimento: Optional[str] = ""
-    filiacao: Optional[str] = ""
+    filiacao: Optional[str] = "" # Nome da mãe
+    rg: Optional[str] = ""
+    titulo_eleitor: Optional[str] = ""
+    sexo: Optional[str] = ""
+    nome_pai: Optional[str] = ""
+    data_admissao: Optional[str] = ""
+    data_desligamento: Optional[str] = ""
+    tempo_contribuicao_meses: Optional[int] = 0
+    situacao_trabalhista: Optional[str] = ""
+    saldo_aproximado: Optional[float] = 0.0
     coeficiente_utilizado: Optional[float] = 0.02270
     empresa: Optional[ConsultaEmpresa] = None
 
