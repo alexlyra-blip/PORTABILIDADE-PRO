@@ -129,6 +129,37 @@ class TestSiapeExtratoParser(unittest.TestCase):
                 "Documento sem conteúdo SIAPE"
             )
 
+    def test_extrato_sem_cartao_e_contrato_minusculo(self):
+        texto = """
+Órgão CPF Matrícula Nome
+22200 - COMPANHIA NACIONAL DE ABASTECIMENTO 409.983.124-87 1788533 JOAQUIM MARQUES DA SILVA JUNIOR
+Bruta Compulsória Líquida Comp. Bruta Facult. Global (*) Líquida Facult. Global (*) Bruta Cartão Líquida Cartão
+Utilizada Facultativa Utilizada Cartão
+R$ 11.356,24 R$ 461,73 R$ 6.489,28 R$ 0,00 R$ 811,16 R$ 0,00
+R$ 6.746,72 R$ 0,00
+Extrato de Consignações Vigentes
+Bruta Cartão Benefício R$ 811,16
+Líquida Cartão Benefício R$ 0,00
+Utilizada Cartão Benefício R$ 0,00
+
+Demonstrativo de uso da margem / Novo Contrato e Renovação
+Número do Contrato Rubrica Sequência Prioridade Transação Data/Hora Parcela Valor da Parcela Inicio Fim
+2219 34459 - EMPREST PREV PRIVADA - CIBRIUS 2 8 20/01/2023 11:26:37 43/72 R$ 484,22 02/2023 01/2029
+00d3d87e97afb5a 34976 - EMPREST BCO PRIVADOS - NUBANK 3 10 25/08/2025 15:14:20 12/96 R$ 1.013,63 09/2025 08/2033
+
+Demonstrativo de uso da margem / Desconto Sindicato
+Número do Contrato Rubrica Sequência Prioridade Transação Data/Hora Parcela Valor da Parcela Inicio Fim
+Y343971-99060Z 34397 - MENSALIDADE SINDICAL - SINDSEP 1 0 09/07/2010 95559 077/999 R$ 162,23 03/2020
+
+Extrato para simples verificação.
+"""
+        resultado = siape_parser.parse_siape_extrato(texto)
+        self.assertEqual(len(resultado["emprestimos_ativos"]), 2)
+        self.assertEqual(resultado["emprestimos_ativos"][0]["contrato"], "2219")
+        self.assertEqual(resultado["emprestimos_ativos"][1]["contrato"], "00d3d87e97afb5a")
+        self.assertEqual(resultado["emprestimos_ativos"][1]["banco"], "NUBANK")
+        self.assertEqual(len(resultado["cartoes_beneficio"]), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

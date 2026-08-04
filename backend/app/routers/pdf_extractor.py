@@ -41,7 +41,7 @@ BANK_NAMES_MAP = {
     "389": "389 - BANCO MERCANTIL", "335": "335 - DIGIO", "753": "753 - NBC BANK",
     "290": "290 - PAGBANK", "752": "752 - BNP PARIBAS", "611": "611 - PAULISTA",
     "380": "380 - PICPAY", "329": "329 - QI SOCIEDADE", "359": "359 - ZEMA",
-    "756": "756 - SICOOB"
+    "756": "756 - SICOOB", "748": "748 - SICREDI", "465": "465 - CAPITAL CONSIG"
 }
 
 def clean_bank_name(banco_str):

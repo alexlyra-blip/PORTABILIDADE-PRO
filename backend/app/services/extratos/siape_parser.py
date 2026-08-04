@@ -8,10 +8,10 @@ DEFAULT_SIAPE_RATE = 1.60
 
 _MONEY_RE = re.compile(r"R\$\s*([\d.]+,\d{2})", re.IGNORECASE)
 _ROW_RE = re.compile(
-    r"(?m)^\s*(?P<contrato>[A-Z0-9-]+)\s+"
+    r"(?m)^\s*(?P<contrato>[a-zA-Z0-9-]+)\s+"
     r"(?P<rubrica>\d{5})\s*-\s*(?P<descricao>.*?)\s+"
     r"(?P<sequencia>\d+)\s+(?P<prioridade>\d+)\s+"
-    r"(?P<data>\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2})\s+"
+    r"(?P<data>\d{2}/\d{2}/\d{4}(?:\s+[\d:]+)?)\s+"
     r"(?P<atual>\d{1,3})/(?P<total>\d{1,3})\s+"
     r"R\$\s*(?P<valor>[\d.]+,\d{2})\s+"
     r"(?P<inicio>\d{2}/\d{4})\s+(?P<fim>\d{2}/\d{4})\s*$"
@@ -38,13 +38,17 @@ def _money(value: str | float | int | None) -> float:
     return round(float(cleaned or 0), 2)
 
 
-def _section(text: str, start: str, end: str) -> str:
-    match = re.search(
-        start + r"(.*?)" + end,
-        text,
-        re.IGNORECASE | re.DOTALL,
-    )
-    return match.group(1) if match else ""
+def _section(text: str, start: str, next_headers: list[str] | None = None) -> str:
+    start_match = re.search(start, text, re.IGNORECASE)
+    if not start_match:
+        return ""
+    rest = text[start_match.end():]
+    if next_headers:
+        pattern = "|".join(next_headers)
+        end_match = re.search(pattern, rest, re.IGNORECASE)
+        if end_match:
+            return rest[:end_match.start()]
+    return rest
 
 
 def detectar_extrato_siape(texto: str) -> bool:
@@ -296,18 +300,22 @@ def parse_siape_extrato(texto: str) -> dict[str, Any]:
     cliente = _extract_header(texto)
     margens = _extract_margins(texto)
 
+    next_section_patterns = [
+        r"Demonstrativo\s+de\s+uso\s+da\s+margem",
+        r"Extrato\s+para\s+simples\s+verifica[cç][aã]o",
+    ]
+
     loan_section = _section(
         texto,
         r"Demonstrativo\s+de\s+uso\s+da\s+margem\s*/\s*"
         r"Novo\s+Contrato\s+e\s+Renova[cç][aã]o",
-        r"Demonstrativo\s+de\s+uso\s+da\s+margem\s*-\s*"
-        r"Cart[aã]o\s+Consignado\s+de\s+Benef[ií]cio",
+        next_section_patterns,
     )
     card_section = _section(
         texto,
         r"Demonstrativo\s+de\s+uso\s+da\s+margem\s*-\s*"
         r"Cart[aã]o\s+Consignado\s+de\s+Benef[ií]cio",
-        r"Extrato\s+para\s+simples\s+verifica[cç][aã]o",
+        next_section_patterns,
     )
 
     loans = _extract_rows(loan_section)
@@ -352,7 +360,7 @@ def parse_siape_extrato(texto: str) -> dict[str, Any]:
         "especie": "SIAPE",
         "margem_maxima": margens["bruta_facultativa_global"],
         "margem_comprometida": margens["utilizada_facultativa"],
-        "margem_disponivel": margens["liquida_facultativa_global"],
+        "margem_disponivel": available,
         "margens": margens,
         "emprestimos_ativos": loans,
         "cartoes_beneficio": cards,
