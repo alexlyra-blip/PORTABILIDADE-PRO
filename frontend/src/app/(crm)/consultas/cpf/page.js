@@ -131,11 +131,14 @@ export default function ConsultaCPFPage() {
     fetchHistory();
   }, [convenio]);
   const maskCpfCnpj = (val) => {
-    let v = val.replace(/\D/g, "");
+    if (!val) return "";
+    let v = String(val).replace(/\D/g, "");
     if (v.length <= 11) {
-      return v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})/, "$1-$2").replace(/(-\d{2})\d+?$/, "$1");
+      v = v.padStart(11, "0");
+      return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
     } else {
-      return v.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2").substring(0, 18);
+      v = v.padStart(14, "0");
+      return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
     }
   };
 
@@ -317,42 +320,45 @@ export default function ConsultaCPFPage() {
     e.preventDefault();
 
     if (!providerConfigLoaded) {
-      toast.warning(
-        "Aguarde o carregamento da configuração."
-      );
+      toast.warning("Aguarde o carregamento da configuração.");
       return;
     }
 
     if (!activeProvider) {
-      toast.warning(
-        "Provedor de consulta CPF não configurado pelo administrador."
-      );
+      toast.warning("Provedor de consulta CPF não configurado pelo administrador.");
       return;
     }
 
-    if (cpf.length < 14) {
-      toast.warning("Por favor, informe um CPF válido.");
+    const cleanDoc = cpf.replace(/\D/g, '');
+    const isCnpj = searchType === "CNPJ" || cleanDoc.length > 11;
+    if (isCnpj && cleanDoc.length < 14) {
+      toast.warning("Por favor, informe um CNPJ válido com 14 dígitos.");
       return;
     }
+    if (!isCnpj && cleanDoc.length < 11) {
+      toast.warning("Por favor, informe um CPF válido com 11 dígitos.");
+      return;
+    }
+
     setLoading(true);
     setDados(null);
     try {
       const res = await api.post('/consultas/cpf', { 
-        cpf: cpf.replace(/\D/g, ''),
-        convenio: activeProvider === "multicorban" ? convenio : "INSS"
+        cpf: cleanDoc,
+        convenio: isCnpj ? "CNPJ" : (activeProvider === "multicorban" ? convenio : "INSS")
       });
       if (res && (res.cliente || res.beneficio_principal || (res.beneficios && res.beneficios.length > 0))) {
         setDados(res);
         setActiveBenefitIndex(0);
         await fetchBalance(activeProvider);
-        toast.success("Consulta de CPF concluída com sucesso!");
+        toast.success(isCnpj ? "Consulta de CNPJ concluída com sucesso!" : "Consulta de CPF concluída com sucesso!");
       } else {
         toast.warning("Consulta não retornou dados.");
       }
     } catch (err) {
       console.error(err);
       const msg = err.response?.data?.detail || err.message || "Erro desconhecido";
-      toast.error(`Erro ao consultar CPF: ${msg}`);
+      toast.error(`Erro ao consultar: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -1103,8 +1109,13 @@ export default function ConsultaCPFPage() {
 
             {/* Dados do Empregador/Convênio */}
             {(() => {
-              const emp = activeBenefit?.cliente?.empresa || dados?.cliente?.empresa;
-              if (!emp || !emp.razao_social) return null;
+              const emp = activeBenefit?.cliente?.empresa || dados?.cliente?.empresa || dados?.empresa_data;
+              const razaoSocial = emp?.razao_social || dados?.razao_social || dados?.cliente?.razao_social;
+              const cnpjEmpresa = emp?.cnpj || dados?.cnpj || dados?.cnpj_empresa || (dados?.is_cnpj_query ? dados?.cpf : "");
+              const totalRegs = emp?.quantidade_funcionarios || dados?.quantidade_funcionarios || dados?.total_beneficios || (dados?.beneficios?.length || 0);
+
+              if (!razaoSocial && !cnpjEmpresa && !totalRegs && !dados?.is_cnpj_query) return null;
+
               return (
                 <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break mb-6">
                   <div className="flex items-center gap-3 mb-4">
@@ -1116,32 +1127,28 @@ export default function ConsultaCPFPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Razão Social</p>
-                      <p className="text-sm font-black text-slate-800">{emp.razao_social}</p>
+                      <p className="text-sm font-black text-slate-800 uppercase">{razaoSocial || "Não Informada"}</p>
                     </div>
-                    {emp.cnpj && (
-                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ</p>
-                        <p className="text-sm font-black text-slate-800">{emp.cnpj}</p>
-                      </div>
-                    )}
-                    {emp.quantidade_funcionarios > 0 && (
-                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registros</p>
-                        <p className="text-sm font-black text-slate-800">{emp.quantidade_funcionarios}</p>
-                      </div>
-                    )}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ do Empregador</p>
+                      <p className="text-sm font-black text-slate-800">{cnpjEmpresa ? maskCpfCnpj(cnpjEmpresa) : "Não Informado"}</p>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registros (Funcionários)</p>
+                      <p className="text-sm font-black text-slate-800">{totalRegs || 0}</p>
+                    </div>
                   </div>
                 </div>
               );
             })()}
 
-            {/* Abas de Benefícios ou Navegação de Servidores (CNPJ) */}
-            {dados.is_cnpj_query ? (
+            {/* Abas de Benefícios ou Navegação de Servidores (CNPJ / Carrossel) */}
+            {(dados.is_cnpj_query || (dados.beneficios && dados.beneficios.length > 1)) ? (
               <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-xl mb-6 print:hidden">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-3">
                   <div className="flex items-center gap-3">
                     <div className="bg-emerald-100 text-emerald-700 font-black px-3 py-1.5 rounded-full text-xs uppercase tracking-widest">
-                      Servidor {filteredBeneficios.length > 0 ? activeBenefitIndex + 1 : 0} de {filteredBeneficios.length}
+                      {dados.is_cnpj_query ? "Servidor" : "Benefício"} {filteredBeneficios.length > 0 ? activeBenefitIndex + 1 : 0} de {filteredBeneficios.length}
                     </div>
                     {searchFilter && <span className="text-[10px] text-slate-400 font-bold uppercase">(Filtro Ativo)</span>}
                   </div>
@@ -1158,31 +1165,31 @@ export default function ConsultaCPFPage() {
                     </button>
                   </div>
                 </div>
-              </div>
-            ) : (
-              dados.beneficios && dados.beneficios.length > 1 && (
-                <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-xl mb-6 print:hidden">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center pl-2 pr-4 border-r border-slate-150">Benefícios ({dados.total_beneficios}):</span>
-                  <div className="flex flex-wrap gap-2">
-                    {dados.beneficios.map((b, idx) => (
+
+                {/* Carrossel de Funcionários / Benefícios */}
+                {filteredBeneficios.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 pt-1 border-t border-slate-100 scrollbar-thin">
+                    {filteredBeneficios.map((b, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => setActiveBenefitIndex(idx)}
-                        className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${
                           activeBenefitIndex === idx 
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' 
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                         }`}
                       >
-                        <Icons.UserCheck size={14} />
-                        NB {b.numero}
+                        <Icons.User size={13} />
+                        <span>{b.cliente?.nome ? b.cliente.nome.split(' ')[0] : (b.numero ? `NB ${b.numero}` : `Registro ${idx + 1}`)}</span>
+                        {b.cliente?.cpf && <span className="text-[10px] opacity-80">({maskCpfCnpj(b.cliente.cpf)})</span>}
                       </button>
                     ))}
                   </div>
-                </div>
-              )
-            )}
+                )}
+              </div>
+            ) : null}
+
 
             {/* Grid 1: Dados Pessoais (Cabeçalho Premium) e Dados do Benefício/Trabalho */}
             <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-4`}>

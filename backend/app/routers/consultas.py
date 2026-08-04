@@ -656,11 +656,12 @@ async def consultar_cpf_unificado(
 
     if provider_type == "multicorban":
         conv_upper = str(request.convenio or "INSS").upper()
-        if conv_upper not in ["INSS", "SIAPE", "GOVERNO", "CLT", "CLT PRIVADO"]:
+        if conv_upper not in ["INSS", "SIAPE", "GOVERNO", "CLT", "CLT PRIVADO", "CNPJ"]:
             raise HTTPException(
                 status_code=400,
                 detail=f"Convênio '{request.convenio}' não é suportado pelo provedor MultiCorban."
             )
+
 
     try:
         response_data = await _execute_cpf_query_flow(request.cpf, db, request.convenio, provider_type)
