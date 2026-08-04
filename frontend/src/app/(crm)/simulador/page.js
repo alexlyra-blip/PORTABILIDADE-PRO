@@ -417,7 +417,7 @@ function SimuladorPageContent() {
   const [consultaConvenio, setConsultaConvenio] = useState("INSS");
 
   useEffect(() => {
-    if (formData.agreement !== "INSS" || !formData.benefit_species) {
+    if (formData.agreement !== "INSS" && formData.agreement !== "SIAPE") {
       setPossuiDoisCartoes("nao");
     }
   }, [formData.agreement, formData.benefit_species]);
@@ -744,12 +744,14 @@ function SimuladorPageContent() {
       if (found) matchedSpecies = found.value;
     }
 
+    const cleanCpf = extractedData.cpf ? maskCPF(extractedData.cpf) : "";
+    if (cleanCpf && validateCPF(cleanCpf)) {
+      setCpfStatus('valid');
+    }
     setFormData(prev => ({
       ...prev,
       nome_cliente: extractedData.cliente || prev.nome_cliente,
-      cpf: extractedData.cpf
-        ? maskCPF(extractedData.cpf)
-        : prev.cpf,
+      cpf: cleanCpf || prev.cpf,
       agreement: activeConvention,
       benefit_species: isSiapeExtract
         ? ""
@@ -819,6 +821,18 @@ function SimuladorPageContent() {
         {
           code: "341",
           aliases: ["ITAU BM", "ITAU", "ITAÚ"],
+        },
+        {
+          code: "386",
+          aliases: ["NUBANK", "NU FINANCEIRA"],
+        },
+        {
+          code: "748",
+          aliases: ["SICREDI", "SICRED"],
+        },
+        {
+          code: "465",
+          aliases: ["CAPITAL CONSIG", "CAPITAL"],
         },
       ];
 
@@ -965,10 +979,7 @@ function SimuladorPageContent() {
       valor_liberado_margem: valorLiberadoExtrato
     }));
 
-    if (
-      !isSiapeExtract &&
-      margemDisponivelExtrato < 0
-    ) {
+    if (margemDisponivelExtrato < 0) {
       setPossuiDoisCartoes("sim");
       setValorMargemNegativa(
         formatCurrency(
@@ -1823,8 +1834,8 @@ function SimuladorPageContent() {
                     </div>
                   )}
 
-                  {/* Novo campo: Cliente possui 2 cartões ativos? (Exclusivo INSS + espécie selecionada) */}
-                  {formData.agreement === "INSS" && formData.benefit_species && (
+                  {/* Novo campo: Cliente possui 2 cartões ativos / Margem Negativa */}
+                  {(formData.agreement === "INSS" || formData.agreement === "SIAPE" || possuiDoisCartoes === "sim") && (
                     <div className="pt-4 border-t border-slate-100 space-y-3 animate-in slide-in-from-top-2 duration-500">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
@@ -2447,6 +2458,11 @@ function SimuladorPageContent() {
                 <div>
                   <h3 className="font-black text-slate-800 text-xl uppercase tracking-tight">{extractedData.cliente || "Cliente Não Identificado"}</h3>
                   <div className="flex flex-col gap-1 mt-1.5">
+                    {extractedData.cpf && (
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        CPF: <span className="text-slate-700 font-black bg-slate-100 px-2 py-0.5 rounded-md ml-1">{maskCPF(extractedData.cpf)}</span>
+                      </p>
+                    )}
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                       {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" ? "MATRÍCULA" : "Nº DO BENEFÍCIO"}: <span className="text-blue-600 font-black bg-blue-50 px-2 py-0.5 rounded-md ml-1">{extractedData.beneficio}</span>
                     </p>

@@ -13,7 +13,7 @@ export const inssBanks = [
   { value: "326", label: "326 - PARATI" }, { value: "611", label: "611 - PAULISTA" }, { value: "380", label: "380 - PICPAY" },
   { value: "329", label: "329 - QI SOCIEDADE" }, { value: "966", label: "966 - SABEMI" }, { value: "422", label: "422 - SAFRA" },
   { value: "033", label: "033 - SANTANDER" }, { value: "359", label: "359 - ZEMA" }, { value: "077", label: "077 - BANCO INTER" },
-  { value: "756", label: "756 - SICOOB" }, { value: "999", label: "OUTROS" }
+  { value: "756", label: "756 - SICOOB" }, { value: "748", label: "748 - SICREDI" }, { value: "465", label: "465 - CAPITAL CONSIG" }, { value: "999", label: "OUTROS" }
 ].sort((a, b) => {
   if (a.value === "999") return 1;
   if (b.value === "999") return -1;
