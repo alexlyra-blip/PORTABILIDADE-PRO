@@ -101,7 +101,7 @@ class TestSiapeExtratoParser(unittest.TestCase):
             50.00,
         )
         self.assertEqual(contrato["contrato"], "C001")
-        self.assertEqual(contrato["banco"], "CEF")
+        self.assertEqual(contrato["banco"], "104 - CAIXA")
         self.assertEqual(contrato["parcela"], 550.00)
         self.assertEqual(contrato["parcela_atual"], 2)
         self.assertEqual(contrato["prazo_total"], 96)

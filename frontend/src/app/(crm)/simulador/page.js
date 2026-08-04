@@ -180,9 +180,14 @@ function SimuladorPageContent() {
         .replace(/\s+/g, " ")
         .trim();
 
-    const cleanCode =
+    let cleanCode =
       extractBankCode(code) ||
       extractBankCode(name);
+
+    const normUpperName = String(name || "").toUpperCase().trim();
+    if (!cleanCode && (normUpperName === "CEF" || normUpperName.includes("CEF"))) {
+      cleanCode = "104";
+    }
 
     const availableLogos = [
       ...(Array.isArray(subLogos)
@@ -233,15 +238,18 @@ function SimuladorPageContent() {
     const aliasesByCode = {
       "001": ["BANCO DO BRASIL", "BRASIL"],
       "033": ["SANTANDER"],
-      "104": ["CAIXA"],
+      "104": ["CAIXA", "CEF", "CAIXA ECONOMICA", "CAIXA ECONÂMICA"],
       "121": ["AGIBANK"],
       "237": ["BRADESCO"],
       "318": ["BMG"],
       "341": ["ITAU"],
+      "386": ["NUBANK", "NU FINANCEIRA"],
       "389": ["MERCANTIL"],
       "623": ["PAN"],
       "626": ["C6"],
-      "707": ["DAYCOVAL"]
+      "707": ["DAYCOVAL"],
+      "748": ["SICREDI", "SICRED"],
+      "465": ["CAPITAL CONSIG", "CAPITAL"]
     };
 
     const normalizedNames = [
@@ -748,11 +756,19 @@ function SimuladorPageContent() {
     if (cleanCpf && validateCPF(cleanCpf)) {
       setCpfStatus('valid');
     }
+    const formattedOrgao = extractedData.orgao
+      ? (extractedData.orgao.codigo && extractedData.orgao.nome
+          ? `${extractedData.orgao.codigo} - ${extractedData.orgao.nome}`
+          : (extractedData.orgao.descricao || extractedData.orgao.nome || ""))
+      : "";
+
     setFormData(prev => ({
       ...prev,
       nome_cliente: extractedData.cliente || prev.nome_cliente,
       cpf: cleanCpf || prev.cpf,
       agreement: activeConvention,
+      orgao: isSiapeExtract && formattedOrgao ? formattedOrgao : (prev.orgao || ""),
+      sub_agreement: isSiapeExtract && formattedOrgao ? formattedOrgao : prev.sub_agreement,
       benefit_species: isSiapeExtract
         ? ""
         : (matchedSpecies || prev.benefit_species)
@@ -2467,7 +2483,11 @@ function SimuladorPageContent() {
                       {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" ? "MATRÍCULA" : "Nº DO BENEFÍCIO"}: <span className="text-blue-600 font-black bg-blue-50 px-2 py-0.5 rounded-md ml-1">{extractedData.beneficio}</span>
                     </p>
                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-md inline-block w-fit mt-0.5">
-                      {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE" ? (extractedData.orgao?.nome || "SERVIDOR FEDERAL — SIAPE") : getMatchedSpecies(extractedData.especie)}
+                      {String(extractedData.convenio || "INSS").toUpperCase() === "SIAPE"
+                        ? (extractedData.orgao?.codigo && extractedData.orgao?.nome
+                            ? `${extractedData.orgao.codigo} - ${extractedData.orgao.nome}`
+                            : (extractedData.orgao?.descricao || extractedData.orgao?.nome || "SERVIDOR FEDERAL — SIAPE"))
+                        : getMatchedSpecies(extractedData.especie)}
                     </p>
                     {extractedData.bloqueado_emprestimo !== undefined && extractedData.bloqueado_emprestimo !== null && (
                       <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md w-fit mt-0.5 ${extractedData.bloqueado_emprestimo ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>

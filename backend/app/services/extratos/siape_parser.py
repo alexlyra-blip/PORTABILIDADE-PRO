@@ -235,9 +235,11 @@ def _institution(description: str, card: bool = False) -> str:
             _plain(description),
         ).strip()
 
-    if " - " in description:
-        return description.rsplit(" - ", 1)[-1].strip()
-    return description.strip()
+    name = description.rsplit(" - ", 1)[-1].strip() if " - " in description else description.strip()
+    upper_name = name.upper()
+    if upper_name in ("CEF", "CAIXA", "CAIXA ECONOMICA", "CAIXA ECONOMICA FEDERAL"):
+        return "104 - CAIXA"
+    return name
 
 
 def _extract_rows(
@@ -355,6 +357,7 @@ def parse_siape_extrato(texto: str) -> dict[str, Any]:
         "orgao": {
             "codigo": cliente["orgao_codigo"],
             "nome": cliente["orgao_nome"],
+            "descricao": f"{cliente['orgao_codigo']} - {cliente['orgao_nome']}" if cliente["orgao_codigo"] else cliente["orgao_nome"],
         },
         "beneficio": cliente["matricula"],
         "especie": "SIAPE",
