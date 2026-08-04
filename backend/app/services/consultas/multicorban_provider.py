@@ -55,13 +55,13 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
 
         if convenio == "SIAPE":
             data = await self.service.consultar_siape(clean_cpf)
-        elif convenio in ["GOVERNO", "CLT", "CLT PRIVADO"]:
+        elif convenio in ["GOVERNO", "CLT", "CLT PRIVADO", "CNPJ"] or len(clean_cpf) > 11:
             data = await self.service.consultar_geral(clean_cpf)
         else:
             data = await self.service.consultar_cpf(clean_cpf)
 
         if not data:
-            raise ValueError("Nenhum benefício encontrado para este CPF.")
+            raise ValueError("Nenhum benefício encontrado para este CPF/CNPJ.")
 
         count = 1
         if isinstance(data, dict):
@@ -77,6 +77,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 item["_total_count"] = count
 
         self._cache[f"{convenio}:{clean_cpf}"] = data
+        self._cache[clean_cpf] = data
         return await self._normalize_response(data[0], convenio=convenio)
 
     async def consultar_beneficios(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
@@ -85,13 +86,13 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
 
         if convenio == "SIAPE":
             data = await self.service.consultar_siape(clean_cpf)
-        elif convenio in ["GOVERNO", "CLT", "CLT PRIVADO"]:
+        elif convenio in ["GOVERNO", "CLT", "CLT PRIVADO", "CNPJ"] or len(clean_cpf) > 11:
             data = await self.service.consultar_geral(clean_cpf)
         else:
             data = await self.service.consultar_cpf(clean_cpf)
 
         if not data:
-            raise ValueError("Nenhum benefício encontrado para este CPF.")
+            raise ValueError("Nenhum benefício encontrado para este CPF/CNPJ.")
 
         count = 1
         if isinstance(data, dict):
@@ -107,6 +108,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 item["_total_count"] = count
 
         self._cache[f"{convenio}:{clean_cpf}"] = data
+        self._cache[clean_cpf] = data
 
         beneficios = []
         for item in data:
@@ -115,7 +117,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 beneficios.append(nb)
 
         if not beneficios:
-            raise ValueError("Nenhum benefício encontrado para este CPF.")
+            raise ValueError("Nenhum benefício encontrado para este CPF/CNPJ.")
 
         return {
             "success": True,
@@ -130,14 +132,23 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         convenio: str = "INSS",
     ) -> Dict[str, Any]:
         convenio = str(convenio or "INSS").strip().upper()
+        clean_target = ''.join(filter(str.isdigit, str(beneficio)))
         target_item = None
-        for cache_key, items in list(self._cache.items()):
-            if not str(cache_key).startswith(f"{convenio}:"):
-                continue
 
+        for cache_key, items in list(self._cache.items()):
+            if not isinstance(items, list):
+                continue
             for item in items:
+                if not isinstance(item, dict):
+                    continue
                 nb = self._extract_identifier(item)
-                if nb == beneficio:
+                clean_nb = ''.join(filter(str.isdigit, str(nb)))
+                item_cpf = ''.join(filter(str.isdigit, str(
+                    item.get("CPF") or item.get("Cpf") or
+                    (item.get("Beneficiario") or {}).get("CPF") or ""
+                )))
+                
+                if (nb and nb == beneficio) or (clean_nb and clean_target and clean_nb == clean_target) or (item_cpf and clean_target and item_cpf == clean_target):
                     target_item = item
                     break
             if target_item:
@@ -152,9 +163,10 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 target_item = data
 
         if not target_item:
-            raise ValueError(f"Benefício {beneficio} não encontrado.")
+            raise ValueError(f"Benefício/Servidor {beneficio} não encontrado.")
 
         return await self._normalize_response(target_item, convenio=convenio)
+
 
     async def consultar_creditos(self) -> Dict[str, Any]:
         try:
