@@ -45,3 +45,14 @@ Thumbs.db
 
 # Uploads
 backend/uploads/
+# Python cache
+*.py[cod]
+*.class
+# Arquivos temporários locais
+contexto_*.txt
+pacote-ajuste-*.zip
+pacote-ajuste-*/
+test_multicorban*.py
+test_multicorban*.json
+
+.venv/

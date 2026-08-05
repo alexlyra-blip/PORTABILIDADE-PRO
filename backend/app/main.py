@@ -168,8 +168,14 @@ app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(contracts.router, prefix="/api", tags=["Contracts"])
 app.include_router(pdf_extractor.router, prefix="/api/pdf-extractor", tags=["Extractor"])
 from app.routers import consultas
+from app.routers import presenca_clt
+from app.routers import clt
 app.include_router(consultas.router, prefix="/api", tags=["Consultas"])
 app.include_router(consultas.internal_router, prefix="/api", tags=["Internal Consultas"])
+app.include_router(presenca_clt.router, prefix="/api", tags=["Presença CLT"])
+app.include_router(presenca_clt.internal_router, prefix="/api", tags=["Internal Presença CLT"])
+app.include_router(clt.router, prefix="/api", tags=["CLT Multibancos"])
+app.include_router(clt.internal_router, prefix="/api", tags=["Internal CLT Multibancos"])
 
 @app.get("/health")
 def health_check():
