@@ -42,8 +42,16 @@ class PresencaBankService:
             "https://presenca-bank-api.azurewebsites.net",
         ).rstrip("/")
 
-        self.login = os.getenv("PRESENA_BANK_LOGIN")
-        self.password = os.getenv("PRESENA_BANK_PASSWORD")
+        self.login = (
+            os.getenv("PRESENA_BANK_LOGIN")
+            or os.getenv("PRESENCA_BANK_LOGIN")
+            or "03739475420_9EOx"
+        ).strip()
+        self.password = (
+            os.getenv("PRESENA_BANK_PASSWORD")
+            or os.getenv("PRESENCA_BANK_PASSWORD")
+            or "Xandy@01"
+        ).strip()
 
         self.product_id = int(
             os.getenv("PRESENA_BANK_PRODUCT_ID", "28")
@@ -82,6 +90,8 @@ class PresencaBankService:
             return response.text[:300] or "Erro não detalhado."
 
         if isinstance(data, dict):
+            if "errors" in data and isinstance(data["errors"], list) and data["errors"]:
+                return " ".join(str(e) for e in data["errors"])
             return str(
                 data.get("message")
                 or data.get("detail")
