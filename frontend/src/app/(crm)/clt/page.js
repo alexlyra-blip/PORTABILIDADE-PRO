@@ -555,6 +555,8 @@ const STATUS_LABELS = {
   sem_vinculo_elegivel: "Cliente não elegível",
   sem_margem: "Cliente sem margem",
   sem_ofertas: "Sem ofertas disponíveis",
+  banco_indisponivel: "Consulta pendente no banco",
+  erro_presenca: "Aviso na consulta",
 };
 
 const NEGATIVE_STATUS_CONTENT = {
@@ -592,6 +594,20 @@ const NEGATIVE_STATUS_CONTENT = {
       "A análise foi concluída, mas nenhuma condição comercial foi retornada.",
     reason: "Nenhuma oferta disponível para o cliente.",
     code: "SEM_OFERTAS",
+  },
+  banco_indisponivel: {
+    title: "Consulta pendente no banco",
+    description:
+      "A consulta está em fila de processamento no banco ou aguardando liberação da esteira.",
+    reason: "Já existe uma consulta em andamento para este cliente ou o banco está temporariamente indisponível.",
+    code: "BANCO_INDISPONIVEL",
+  },
+  erro_presenca: {
+    title: "Aviso da instituição",
+    description:
+      "A instituição financeira retornou um comunicado sobre a consulta deste CPF.",
+    reason: "Verifique a mensagem retornada pela esteira bancária.",
+    code: "AVISO_BANCO",
   },
 };
 
@@ -804,13 +820,26 @@ export default function CltMultibancosPage() {
     status === "ajuste_simulacao";
 
   const isNegativeStatus = Boolean(
-    NEGATIVE_STATUS_CONTENT[status]
+    NEGATIVE_STATUS_CONTENT[status] ||
+    (status !== "completed" &&
+      status !== "idle" &&
+      status !== "awaiting_authorization" &&
+      status !== "requires_selection" &&
+      status !== "dados_incompletos" &&
+      status !== "ajuste_simulacao")
   );
 
   const negativeResult =
     businessError ||
     NEGATIVE_STATUS_CONTENT[status] ||
-    null;
+    (isNegativeStatus
+      ? {
+          title: STATUS_LABELS[status] || "Aviso na consulta",
+          description: "A instituição financeira retornou um status para esta consulta.",
+          reason: bankResult?.mensagem || result?.mensagem || "Aguardando retorno do banco.",
+          code: status ? status.toUpperCase() : "AVISO_BANCO",
+        }
+      : null);
 
   const statusTitle =
     businessError?.title ||
