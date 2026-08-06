@@ -396,18 +396,30 @@ class CltOrchestrator:
                 "bancos": [],
             }
 
-        resultado_presenca = (
-            await self.presenca.processar_consulta(
-                cpf=cpf_clean,
-                nome=nome,
-                telefone=telefone,
-                email=email,
-                vinculo_index=vinculo_index,
-                valor_parcela=valor_parcela,
-                valor_solicitado=valor_solicitado,
-                quantidade_parcelas=quantidade_parcelas,
+        try:
+            resultado_presenca = (
+                await self.presenca.processar_consulta(
+                    cpf=cpf_clean,
+                    nome=nome,
+                    telefone=telefone,
+                    email=email,
+                    vinculo_index=vinculo_index,
+                    valor_parcela=valor_parcela,
+                    valor_solicitado=valor_solicitado,
+                    quantidade_parcelas=quantidade_parcelas,
+                )
             )
-        )
+        except Exception as exc:
+            err_msg = str(exc)
+            status_code = "empresa_nao_elegivel" if "empresa" in err_msg.lower() else "banco_indisponivel"
+            resultado_presenca = {
+                "success": False,
+                "status": status_code,
+                "mensagem": err_msg,
+                "errors": [err_msg],
+                "vinculos": [],
+                "ofertas": [],
+            }
 
         banco_presenca = {
             **resultado_presenca,
