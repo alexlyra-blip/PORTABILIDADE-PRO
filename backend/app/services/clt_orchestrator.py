@@ -180,10 +180,45 @@ class CltOrchestrator:
             if email:
                 break
 
+        empresa_obj = (
+            cls._to_dict(cliente.get("empresa"))
+            or cls._to_dict(data.get("empresa"))
+            or cls._to_dict(data.get("empresa_data"))
+            or {}
+        )
+        razao_social = (
+            empresa_obj.get("razao_social")
+            or empresa_obj.get("Razão Social")
+            or empresa_obj.get("Razao Social")
+            or data.get("razao_social")
+            or cliente.get("razao_social")
+            or ""
+        )
+        cnpj_empresa = (
+            empresa_obj.get("cnpj")
+            or empresa_obj.get("CNPJ")
+            or data.get("cnpj")
+            or data.get("cnpj_empresa")
+            or cliente.get("cnpj")
+            or ""
+        )
+        quantidade_funcionarios = (
+            empresa_obj.get("quantidade_funcionarios")
+            or empresa_obj.get("Total de Registros")
+            or data.get("quantidade_funcionarios")
+            or data.get("total_registros")
+            or 0
+        )
+
         return {
             "nome": nome,
             "telefone": telefone,
             "email": email,
+            "empresa": {
+                "razao_social": razao_social,
+                "cnpj": cnpj_empresa,
+                "quantidade_funcionarios": quantidade_funcionarios,
+            },
         }
 
     @staticmethod
@@ -221,6 +256,7 @@ class CltOrchestrator:
             "nome": "",
             "telefone": "",
             "email": "",
+            "empresa": {},
         }
 
         multicorban_error = None
@@ -396,6 +432,17 @@ class CltOrchestrator:
                 ),
             }
 
+        empresa_dict = dict(dados_multicorban.get("empresa") or {})
+        vinculos_presenca = resultado_presenca.get("vinculos") or []
+        cnpj_presenca = (
+            resultado_presenca.get("cnpj_empregador")
+            or (vinculos_presenca[0].get("cnpj_empregador") if vinculos_presenca else "")
+        )
+        if not empresa_dict.get("cnpj") and cnpj_presenca:
+            empresa_dict["cnpj"] = cnpj_presenca
+        if not empresa_dict.get("quantidade_funcionarios") and len(vinculos_presenca) > 0:
+            empresa_dict["quantidade_funcionarios"] = len(vinculos_presenca)
+
         return {
             "success": True,
             "status": resultado_presenca.get(
@@ -408,6 +455,7 @@ class CltOrchestrator:
                 "telefone": telefone,
                 "email": email,
             },
+            "empresa": empresa_dict,
             "fontes_dados": {
                 "nome": fonte_nome,
                 "telefone": fonte_telefone,

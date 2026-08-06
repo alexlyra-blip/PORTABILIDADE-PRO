@@ -134,11 +134,17 @@ export default function ConsultaCPFPage() {
     if (!val) return "";
     let v = String(val).replace(/\D/g, "");
     if (v.length <= 11) {
-      v = v.padStart(11, "0");
-      return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      return v
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
     } else {
-      v = v.padStart(14, "0");
-      return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+      v = v.slice(0, 14);
+      return v
+        .replace(/^(\d{2})(\d)/, "$1.$2")
+        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+        .replace(/\.(\d{3})(\d)/, ".$1/$2")
+        .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
     }
   };
 
@@ -163,10 +169,11 @@ export default function ConsultaCPFPage() {
 
         const user = JSON.parse(userStr);
         const adminUser = user.role === "admin";
+        const isAllowed = adminUser || user.role === "promotora" || user.can_consult_cpf;
 
         setIsAdmin(adminUser);
 
-        if (!adminUser && !user.can_consult_cpf) {
+        if (!isAllowed) {
           window.location.href = "/simulador";
           return;
         }
@@ -1110,9 +1117,22 @@ export default function ConsultaCPFPage() {
             {/* Dados do Empregador/Convênio */}
             {(() => {
               const emp = activeBenefit?.cliente?.empresa || dados?.cliente?.empresa || dados?.empresa_data;
-              const razaoSocial = emp?.razao_social || dados?.razao_social || dados?.cliente?.razao_social;
-              const cnpjEmpresa = emp?.cnpj || dados?.cnpj || dados?.cnpj_empresa || (dados?.is_cnpj_query ? dados?.cpf : "");
+              let razaoSocial = emp?.razao_social || dados?.razao_social || dados?.cliente?.razao_social;
+              let cnpjEmpresa = emp?.cnpj || dados?.cnpj || dados?.cnpj_empresa || (dados?.is_cnpj_query ? dados?.cpf : "");
               const totalRegs = emp?.quantidade_funcionarios || dados?.quantidade_funcionarios || dados?.total_beneficios || (dados?.beneficios?.length || 0);
+
+              if (isSiape) {
+                if (!razaoSocial || razaoSocial === "Não Informada") {
+                  razaoSocial = "GOVERNO FEDERAL";
+                }
+              } else if (!dados?.is_cnpj_query) {
+                if (!razaoSocial || razaoSocial === "Não Informada") {
+                  razaoSocial = "INSTITUTO NACIONAL DO SEGURO SOCIAL (INSS)";
+                }
+                if (!cnpjEmpresa || cnpjEmpresa === "Não Informado") {
+                  cnpjEmpresa = "29.979.036/0001-40";
+                }
+              }
 
               if (!razaoSocial && !cnpjEmpresa && !totalRegs && !dados?.is_cnpj_query) return null;
 
