@@ -240,6 +240,16 @@ const maskCPF = (value) => {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 };
 
+const maskCNPJ = (value) => {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 14);
+  if (digits.length <= 11) return maskCPF(digits);
+  return digits
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+};
+
 const maskPhone = (value) => {
   let digits = String(value || "")
     .replace(/\D/g, "")
@@ -1621,6 +1631,41 @@ export default function CltMultibancosPage() {
                     </div>
                   </div>
                 </GlassCard>
+
+                {/* Dados do Empregador */}
+                {(() => {
+                  const emp = result?.empresa || bankResult?.empresa || dadosMulticorban?.empresa;
+                  const razaoSocial = emp?.razao_social || result?.razao_social || "Não Informada";
+                  const cnpjEmpresa = emp?.cnpj || bankResult?.cnpj_empregador || (eligibleLinks.length > 0 ? eligibleLinks[0]?.cnpj_empregador : "") || "Não Informado";
+                  const totalRegs = emp?.quantidade_funcionarios || eligibleLinks.length || 0;
+
+                  return (
+                    <GlassCard className="p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-500/20">
+                          <Icon.Building className="h-5 w-5 text-indigo-500" />
+                        </div>
+                        <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">
+                          Dados do Empregador
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-white/10">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Razão Social</p>
+                          <p className="text-sm font-black text-slate-800 dark:text-white uppercase">{razaoSocial}</p>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-white/10">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ do Empregador</p>
+                          <p className="text-sm font-black text-slate-800 dark:text-white">{cnpjEmpresa ? maskCNPJ(cnpjEmpresa) : "Não Informado"}</p>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-white/10">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registros (Funcionários)</p>
+                          <p className="text-sm font-black text-slate-800 dark:text-white">{totalRegs}</p>
+                        </div>
+                      </div>
+                    </GlassCard>
+                  );
+                })()}
 
                 {status === "dados_incompletos" && (
                   <GlassCard className="border-amber-300/40 p-6">

@@ -518,7 +518,7 @@ class AdminService:
             if "role" in user_data and user_data["role"] not in ["vendedor", "corretor"]:
                 user_data.pop("role")
                 
-            restricted_fields = ["brand_color", "sidebar_color", "sidebar_color_secondary", "logo_url", "broker_id", "seller_limit", "can_consult_cpf"]
+            restricted_fields = ["brand_color", "sidebar_color", "sidebar_color_secondary", "logo_url", "broker_id", "seller_limit"]
             for field in restricted_fields:
                 if field in user_data:
                     user_data.pop(field)

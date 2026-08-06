@@ -77,7 +77,7 @@ class CltSimulacaoRequest(BaseModel):
 
 def validar_permissao(current_user) -> None:
     if (
-        current_user.role != "admin"
+        current_user.role not in ["admin", "promotora"]
         and not getattr(
             current_user,
             "can_consult_cpf",
