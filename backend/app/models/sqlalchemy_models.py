@@ -447,3 +447,66 @@ class Payment(Base):
     )
 
     created_by = relationship("User")
+
+
+class PaymentFreeLink(Base):
+    __tablename__ = "payment_free_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    token = Column(
+        String(120),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    created_by_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    title = Column(
+        String(150),
+        nullable=False,
+        default="Pagamento Portabilidade PRO",
+    )
+
+    description = Column(String(250), nullable=True)
+    package_name = Column(String(120), nullable=True)
+    consultation_quantity = Column(Integer, nullable=True)
+
+    max_installments = Column(
+        Integer,
+        nullable=False,
+        default=12,
+    )
+
+    default_installments = Column(Integer, nullable=True)
+
+    installment_mode = Column(
+        String(20),
+        nullable=False,
+        default="customer",
+    )
+
+    active = Column(Boolean, nullable=False, default=True)
+
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    created_by = relationship("User")
