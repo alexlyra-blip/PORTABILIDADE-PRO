@@ -2,9 +2,10 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, desc
 
 from app.database import get_db
-from app.models.sqlalchemy_models import User
+from app.models.sqlalchemy_models import User, Payment
 from app.routers.deps import get_admin_user
 from app.schemas.payment_schema import (
     CreatePaymentLinkRequest,
@@ -157,4 +158,173 @@ async def mercado_pago_webhook(
             if payment
             else None
         ),
+    }
+
+
+@router.get("/admin")
+async def list_admin_payments(
+    status: Optional[str] = None,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    limit = max(1, min(limit, 500))
+
+    query = select(Payment)
+
+    if status:
+        query = query.where(Payment.status == status)
+
+    query = query.order_by(desc(Payment.created_at)).limit(limit)
+
+    result = await db.execute(query)
+    payments = result.scalars().all()
+
+    return {
+        "success": True,
+        "payments": [
+            {
+                "id": p.id,
+                "external_reference": p.external_reference,
+                "preference_id": p.preference_id,
+                "payment_id": p.mercado_pago_payment_id,
+                "customer_name": p.customer_name,
+                "customer_email": p.customer_email,
+                "customer_document": p.customer_document,
+                "customer_phone": p.customer_phone,
+                "description": p.description,
+                "package_name": p.package_name,
+                "consultation_quantity": p.consultation_quantity,
+                "amount": float(p.amount or 0),
+                "status": p.status,
+                "status_detail": p.status_detail,
+                "payment_method_id": p.payment_method_id,
+                "payment_type_id": p.payment_type_id,
+                "checkout_url": p.checkout_url,
+                "expires_at": (
+                    p.expires_at.isoformat()
+                    if p.expires_at
+                    else None
+                ),
+                "paid_at": (
+                    p.paid_at.isoformat()
+                    if p.paid_at
+                    else None
+                ),
+                "created_at": (
+                    p.created_at.isoformat()
+                    if p.created_at
+                    else None
+                ),
+            }
+            for p in payments
+        ],
+    }
+
+
+@router.get("/admin/stats")
+async def payment_admin_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+
+    approved_result = await db.execute(
+        select(
+            func.count(Payment.id),
+            func.coalesce(func.sum(Payment.amount), 0),
+        ).where(Payment.status == "approved")
+    )
+    approved_count, approved_amount = approved_result.one()
+
+    pending_result = await db.execute(
+        select(
+            func.count(Payment.id),
+            func.coalesce(func.sum(Payment.amount), 0),
+        ).where(
+            Payment.status.in_(["created", "pending"])
+        )
+    )
+    pending_count, pending_amount = pending_result.one()
+
+    total_result = await db.execute(
+        select(func.count(Payment.id))
+    )
+    total_count = total_result.scalar() or 0
+
+    ticket_medio = (
+        float(approved_amount) / approved_count
+        if approved_count
+        else 0
+    )
+
+    return {
+        "success": True,
+        "total_cobrancas": total_count,
+        "pagamentos_aprovados": approved_count,
+        "valor_recebido": float(approved_amount),
+        "cobrancas_pendentes": pending_count,
+        "valor_pendente": float(pending_amount),
+        "ticket_medio": round(ticket_medio, 2),
+    }
+
+
+@router.get("/admin/{payment_id}")
+async def get_admin_payment(
+    payment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    from fastapi import HTTPException
+
+    result = await db.execute(
+        select(Payment).where(
+            Payment.id == payment_id
+        )
+    )
+
+    payment = result.scalar_one_or_none()
+
+    if not payment:
+        raise HTTPException(
+            status_code=404,
+            detail="Cobranca nao encontrada.",
+        )
+
+    return {
+        "success": True,
+        "payment": {
+            "id": payment.id,
+            "external_reference": payment.external_reference,
+            "preference_id": payment.preference_id,
+            "payment_id": payment.mercado_pago_payment_id,
+            "customer_name": payment.customer_name,
+            "customer_email": payment.customer_email,
+            "customer_document": payment.customer_document,
+            "customer_phone": payment.customer_phone,
+            "description": payment.description,
+            "package_name": payment.package_name,
+            "consultation_quantity": payment.consultation_quantity,
+            "amount": float(payment.amount or 0),
+            "status": payment.status,
+            "status_detail": payment.status_detail,
+            "payment_method_id": payment.payment_method_id,
+            "payment_type_id": payment.payment_type_id,
+            "checkout_url": payment.checkout_url,
+            "internal_note": payment.internal_note,
+            "expires_at": (
+                payment.expires_at.isoformat()
+                if payment.expires_at
+                else None
+            ),
+            "paid_at": (
+                payment.paid_at.isoformat()
+                if payment.paid_at
+                else None
+            ),
+            "created_at": (
+                payment.created_at.isoformat()
+                if payment.created_at
+                else None
+            ),
+        },
     }
