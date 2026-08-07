@@ -379,3 +379,71 @@ class DailyMarginCoefficient(Base):
     )
 
     bank = relationship("Bank", back_populates="daily_margin_coefficients")
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    created_by_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
+        index=True,
+    )
+
+    external_reference = Column(
+        String(80),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    preference_id = Column(String(150), nullable=True, index=True)
+    mercado_pago_payment_id = Column(String(100), nullable=True, index=True)
+
+    customer_name = Column(String(150), nullable=False)
+    customer_email = Column(String(255), nullable=True)
+    customer_document = Column(String(20), nullable=True)
+    customer_phone = Column(String(30), nullable=True)
+
+    description = Column(String(250), nullable=False)
+    package_name = Column(String(120), nullable=True)
+    consultation_quantity = Column(Integer, nullable=True)
+
+    amount = Column(Numeric(15, 2), nullable=False)
+
+    status = Column(
+        String(40),
+        nullable=False,
+        default="created",
+        index=True,
+    )
+    status_detail = Column(String(120), nullable=True)
+
+    payment_method_id = Column(String(80), nullable=True)
+    payment_type_id = Column(String(80), nullable=True)
+
+    checkout_url = Column(Text, nullable=True)
+    internal_note = Column(Text, nullable=True)
+
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+
+    mercado_pago_payload = Column(JSONB, nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    created_by = relationship("User")
