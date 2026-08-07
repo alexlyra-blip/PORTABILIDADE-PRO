@@ -134,6 +134,7 @@ export default function FinanceiroPage() {
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [copiedLink, setCopiedLink] = useState(null);
 
   const [freeLinks, setFreeLinks] = useState([]);
   const [creatingFreeLink, setCreatingFreeLink] = useState(false);
@@ -290,8 +291,20 @@ export default function FinanceiroPage() {
 
     try {
       await navigator.clipboard.writeText(url);
-    } catch {
-      window.prompt("Copie o link:", url);
+
+      setCopiedLink(url);
+
+      window.setTimeout(() => {
+        setCopiedLink((current) =>
+          current === url ? null : current
+        );
+      }, 2200);
+    } catch (error) {
+      console.error("Erro ao copiar link:", error);
+
+      setError(
+        "Não foi possível copiar o link."
+      );
     }
   };
 
@@ -1108,9 +1121,15 @@ export default function FinanceiroPage() {
                                 onClick={() =>
                                   copyLink(link.url)
                                 }
-                                className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-bold text-violet-700 hover:bg-violet-50"
+                                className={`rounded-lg border px-3 py-2 text-xs font-bold transition-all duration-200 ${
+                                  copiedLink === link.url
+                                    ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
+                                    : "border-violet-200 text-violet-700 hover:bg-violet-50"
+                                }`}
                               >
-                                Copiar
+                                {copiedLink === link.url
+                                  ? "✓ Copiado"
+                                  : "Copiar"}
                               </button>
 
                               <button
@@ -1487,9 +1506,15 @@ export default function FinanceiroPage() {
                     onClick={() =>
                       copyLink(success.payment_url)
                     }
-                    className="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm"
+                    className={`rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm transition-all ${
+                      copiedLink === success.payment_url
+                        ? "bg-emerald-500 text-white"
+                        : "bg-white text-slate-700"
+                    }`}
                   >
-                    Copiar link
+                    {copiedLink === success.payment_url
+                      ? "✓ Copiado"
+                      : "Copiar link"}
                   </button>
 
                   <button
@@ -1664,9 +1689,15 @@ export default function FinanceiroPage() {
                                       payment.checkout_url
                                     )
                                   }
-                                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition-all ${
+                                    copiedLink === payment.checkout_url
+                                      ? "border-emerald-500 bg-emerald-500 text-white"
+                                      : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                                  }`}
                                 >
-                                  Copiar
+                                  {copiedLink === payment.checkout_url
+                                    ? "✓ Copiado"
+                                    : "Copiar"}
                                 </button>
 
                                 <button
