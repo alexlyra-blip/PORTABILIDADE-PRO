@@ -737,10 +737,41 @@ async def delete_admin_payment(
             detail="Cobrança com pagamento registrado não pode ser excluída.",
         )
 
+    mercado_pago_cleanup = "not_required"
+
     if payment.preference_id:
-        await MercadoPagoService.cancel_preference(
-            payment.preference_id
-        )
+        try:
+            await MercadoPagoService.cancel_preference(
+                payment.preference_id
+            )
+            mercado_pago_cleanup = "cancelled"
+
+        except HTTPException as exc:
+            detail = exc.detail
+
+            mercado_pago_status = None
+
+            if isinstance(detail, dict):
+                mercado_pago_status = detail.get(
+                    "mercado_pago_status"
+                )
+
+            if mercado_pago_status in (401, 403, 404):
+                mercado_pago_cleanup = (
+                    "preference_not_accessible"
+                )
+
+                print(
+                    "[PAYMENTS] Preferencia antiga nao "
+                    "acessivel com a credencial atual. "
+                    f"payment_id={payment.id} "
+                    f"preference_id={payment.preference_id} "
+                    f"mercado_pago_status={mercado_pago_status}. "
+                    "Prosseguindo com exclusao local."
+                )
+
+            else:
+                raise
 
     await db.delete(payment)
     await db.commit()
@@ -749,6 +780,7 @@ async def delete_admin_payment(
         "success": True,
         "deleted": True,
         "id": payment_id,
+        "mercado_pago_cleanup": mercado_pago_cleanup,
     }
 
 
