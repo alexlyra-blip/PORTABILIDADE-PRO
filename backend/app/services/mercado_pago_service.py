@@ -221,8 +221,8 @@ class MercadoPagoService:
         )
         environment = os.getenv(
             "MERCADO_PAGO_ENVIRONMENT",
-            "test",
-        ).lower()
+            "production",
+        ).strip().lower()
 
         if environment == "test" and sandbox_url:
             selected_url = sandbox_url
