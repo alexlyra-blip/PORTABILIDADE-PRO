@@ -108,535 +108,7 @@ function StatCard({ title, value, subtitle, icon: Icon }) {
         )}
       </div>
 
-      {editingFreeLink && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  Editar Link Livre
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  O cliente continuará informando o valor.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeEditFreeLink}
-                disabled={savingFreeLinkEdit}
-                className="rounded-lg px-3 py-2 text-xl text-slate-400 hover:bg-slate-100"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="space-y-4 p-6">
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Título
-                </label>
-
-                <input
-                  value={editingFreeLink.title || ""}
-                  onChange={(event) =>
-                    setEditingFreeLink((current) => ({
-                      ...current,
-                      title: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-violet-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Descrição
-                </label>
-
-                <input
-                  value={editingFreeLink.description || ""}
-                  onChange={(event) =>
-                    setEditingFreeLink((current) => ({
-                      ...current,
-                      description: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Pacote
-                </label>
-
-                <input
-                  value={editingFreeLink.package_name || ""}
-                  onChange={(event) =>
-                    setEditingFreeLink((current) => ({
-                      ...current,
-                      package_name: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none"
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Consultas
-                  </label>
-
-                  <input
-                    type="number"
-                    min="0"
-                    value={
-                      editingFreeLink.consultation_quantity ??
-                      ""
-                    }
-                    onChange={(event) =>
-                      setEditingFreeLink((current) => ({
-                        ...current,
-                        consultation_quantity:
-                          event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none"
-                  />
                 </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Máximo de parcelas
-                  </label>
-
-                  <select
-                    value={
-                      editingFreeLink.max_installments || 12
-                    }
-                    onChange={(event) =>
-                      setEditingFreeLink((current) => ({
-                        ...current,
-                        max_installments:
-                          event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  >
-                    {Array.from(
-                      { length: 12 },
-                      (_, index) => index + 1
-                    ).map((number) => (
-                      <option key={number} value={number}>
-                        Até {number}x
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Parcela sugerida
-                  </label>
-
-                  <select
-                    value={
-                      editingFreeLink.default_installments ??
-                      ""
-                    }
-                    onChange={(event) =>
-                      setEditingFreeLink((current) => ({
-                        ...current,
-                        default_installments:
-                          event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  >
-                    <option value="">
-                      Automático
-                    </option>
-
-                    {Array.from(
-                      {
-                        length:
-                          Number(
-                            editingFreeLink.max_installments
-                          ) || 12,
-                      },
-                      (_, index) => index + 1
-                    ).map((number) => (
-                      <option key={number} value={number}>
-                        {number}x
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Encargos
-                  </label>
-
-                  <select
-                    value={
-                      editingFreeLink.installment_mode ||
-                      "customer"
-                    }
-                    onChange={(event) =>
-                      setEditingFreeLink((current) => ({
-                        ...current,
-                        installment_mode:
-                          event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  >
-                    <option value="customer">
-                      Cliente
-                    </option>
-                    <option value="seller">
-                      Vendedor
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Nova validade
-                  </label>
-
-                  <select
-                    value={
-                      editingFreeLink.expiration_days || 30
-                    }
-                    onChange={(event) =>
-                      setEditingFreeLink((current) => ({
-                        ...current,
-                        expiration_days:
-                          event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  >
-                    <option value="7">7 dias</option>
-                    <option value="15">15 dias</option>
-                    <option value="30">30 dias</option>
-                    <option value="60">60 dias</option>
-                    <option value="90">90 dias</option>
-                    <option value="180">180 dias</option>
-                    <option value="365">1 ano</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={closeEditFreeLink}
-                disabled={savingFreeLinkEdit}
-                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={saveFreeLinkEdit}
-                disabled={savingFreeLinkEdit}
-                className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50"
-              >
-                {savingFreeLinkEdit
-                  ? "Salvando..."
-                  : "Salvar alterações"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editingPayment && editForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  Editar cobrança
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  {editingPayment.external_reference}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeEdit}
-                disabled={savingEdit}
-                className="rounded-lg px-3 py-2 text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="space-y-6 p-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Cliente
-                  </label>
-
-                  <input
-                    name="customer_name"
-                    value={editForm.customer_name}
-                    onChange={handleEditChange}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    E-mail
-                  </label>
-
-                  <input
-                    name="customer_email"
-                    type="email"
-                    value={editForm.customer_email}
-                    onChange={handleEditChange}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    CPF / CNPJ
-                  </label>
-
-                  <input
-                    name="customer_document"
-                    value={editForm.customer_document}
-                    onChange={handleEditChange}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    WhatsApp
-                  </label>
-
-                  <input
-                    name="customer_phone"
-                    value={editForm.customer_phone}
-                    onChange={handleEditChange}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Descrição
-                </label>
-
-                <input
-                  name="description"
-                  value={editForm.description}
-                  onChange={handleEditChange}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Valor
-                  </label>
-
-                  <input
-                    name="amount"
-                    value={editForm.amount}
-                    onChange={handleEditChange}
-                    inputMode="decimal"
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Quantidade de consultas
-                  </label>
-
-                  <input
-                    name="consultation_quantity"
-                    type="number"
-                    min="0"
-                    value={editForm.consultation_quantity}
-                    onChange={handleEditChange}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Validade
-                  </label>
-
-                  <select
-                    name="expiration_days"
-                    value={editForm.expiration_days}
-                    onChange={handleEditChange}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
-                  >
-                    <option value="1">1 dia</option>
-                    <option value="3">3 dias</option>
-                    <option value="7">7 dias</option>
-                    <option value="15">15 dias</option>
-                    <option value="30">30 dias</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
-                <div className="mb-4">
-                  <h3 className="font-bold text-slate-900">
-                    Parcelamento
-                  </h3>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    Configure novamente as condições do link.
-                  </p>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                      Máximo
-                    </label>
-
-                    <select
-                      name="max_installments"
-                      value={editForm.max_installments}
-                      onChange={handleEditChange}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
-                    >
-                      {Array.from(
-                        { length: 12 },
-                        (_, index) => index + 1
-                      ).map((number) => (
-                        <option
-                          key={number}
-                          value={number}
-                        >
-                          {number}x
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                      Parcela sugerida
-                    </label>
-
-                    <select
-                      name="default_installments"
-                      value={editForm.default_installments}
-                      onChange={handleEditChange}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
-                    >
-                      <option value="">
-                        Cliente escolhe
-                      </option>
-
-                      {Array.from(
-                        {
-                          length:
-                            Number(
-                              editForm.max_installments
-                            ) || 12,
-                        },
-                        (_, index) => index + 1
-                      ).map((number) => (
-                        <option
-                          key={number}
-                          value={number}
-                        >
-                          {number}x
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                      Encargos
-                    </label>
-
-                    <select
-                      name="installment_mode"
-                      value={editForm.installment_mode}
-                      onChange={handleEditChange}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
-                    >
-                      <option value="customer">
-                        Cliente
-                      </option>
-
-                      <option value="seller">
-                        Vendedor
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Observação interna
-                </label>
-
-                <textarea
-                  name="internal_note"
-                  value={editForm.internal_note}
-                  onChange={handleEditChange}
-                  rows={3}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={closeEdit}
-                disabled={savingEdit}
-                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                onClick={saveEdit}
-                disabled={savingEdit}
-                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {savingEdit
-                  ? "Salvando..."
-                  : "Salvar alterações"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -2224,6 +1696,535 @@ export default function FinanceiroPage() {
           </div>
         </div>
       </div>
+    
+      {editingFreeLink && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Editar Link Livre
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  O cliente continuará informando o valor.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditFreeLink}
+                disabled={savingFreeLinkEdit}
+                className="rounded-lg px-3 py-2 text-xl text-slate-400 hover:bg-slate-100"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Título
+                </label>
+
+                <input
+                  value={editingFreeLink.title || ""}
+                  onChange={(event) =>
+                    setEditingFreeLink((current) => ({
+                      ...current,
+                      title: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Descrição
+                </label>
+
+                <input
+                  value={editingFreeLink.description || ""}
+                  onChange={(event) =>
+                    setEditingFreeLink((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Pacote
+                </label>
+
+                <input
+                  value={editingFreeLink.package_name || ""}
+                  onChange={(event) =>
+                    setEditingFreeLink((current) => ({
+                      ...current,
+                      package_name: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Consultas
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={
+                      editingFreeLink.consultation_quantity ??
+                      ""
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        consultation_quantity:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Máximo de parcelas
+                  </label>
+
+                  <select
+                    value={
+                      editingFreeLink.max_installments || 12
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        max_installments:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    {Array.from(
+                      { length: 12 },
+                      (_, index) => index + 1
+                    ).map((number) => (
+                      <option key={number} value={number}>
+                        Até {number}x
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Parcela sugerida
+                  </label>
+
+                  <select
+                    value={
+                      editingFreeLink.default_installments ??
+                      ""
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        default_installments:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    <option value="">
+                      Automático
+                    </option>
+
+                    {Array.from(
+                      {
+                        length:
+                          Number(
+                            editingFreeLink.max_installments
+                          ) || 12,
+                      },
+                      (_, index) => index + 1
+                    ).map((number) => (
+                      <option key={number} value={number}>
+                        {number}x
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Encargos
+                  </label>
+
+                  <select
+                    value={
+                      editingFreeLink.installment_mode ||
+                      "customer"
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        installment_mode:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    <option value="customer">
+                      Cliente
+                    </option>
+                    <option value="seller">
+                      Vendedor
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Nova validade
+                  </label>
+
+                  <select
+                    value={
+                      editingFreeLink.expiration_days || 30
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        expiration_days:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    <option value="7">7 dias</option>
+                    <option value="15">15 dias</option>
+                    <option value="30">30 dias</option>
+                    <option value="60">60 dias</option>
+                    <option value="90">90 dias</option>
+                    <option value="180">180 dias</option>
+                    <option value="365">1 ano</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeEditFreeLink}
+                disabled={savingFreeLinkEdit}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={saveFreeLinkEdit}
+                disabled={savingFreeLinkEdit}
+                className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50"
+              >
+                {savingFreeLinkEdit
+                  ? "Salvando..."
+                  : "Salvar alterações"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingPayment && editForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Editar cobrança
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  {editingPayment.external_reference}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={savingEdit}
+                className="rounded-lg px-3 py-2 text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-6 p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Cliente
+                  </label>
+
+                  <input
+                    name="customer_name"
+                    value={editForm.customer_name}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    E-mail
+                  </label>
+
+                  <input
+                    name="customer_email"
+                    type="email"
+                    value={editForm.customer_email}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    CPF / CNPJ
+                  </label>
+
+                  <input
+                    name="customer_document"
+                    value={editForm.customer_document}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    WhatsApp
+                  </label>
+
+                  <input
+                    name="customer_phone"
+                    value={editForm.customer_phone}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Descrição
+                </label>
+
+                <input
+                  name="description"
+                  value={editForm.description}
+                  onChange={handleEditChange}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Valor
+                  </label>
+
+                  <input
+                    name="amount"
+                    value={editForm.amount}
+                    onChange={handleEditChange}
+                    inputMode="decimal"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Quantidade de consultas
+                  </label>
+
+                  <input
+                    name="consultation_quantity"
+                    type="number"
+                    min="0"
+                    value={editForm.consultation_quantity}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Validade
+                  </label>
+
+                  <select
+                    name="expiration_days"
+                    value={editForm.expiration_days}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  >
+                    <option value="1">1 dia</option>
+                    <option value="3">3 dias</option>
+                    <option value="7">7 dias</option>
+                    <option value="15">15 dias</option>
+                    <option value="30">30 dias</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
+                <div className="mb-4">
+                  <h3 className="font-bold text-slate-900">
+                    Parcelamento
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Configure novamente as condições do link.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Máximo
+                    </label>
+
+                    <select
+                      name="max_installments"
+                      value={editForm.max_installments}
+                      onChange={handleEditChange}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
+                    >
+                      {Array.from(
+                        { length: 12 },
+                        (_, index) => index + 1
+                      ).map((number) => (
+                        <option
+                          key={number}
+                          value={number}
+                        >
+                          {number}x
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Parcela sugerida
+                    </label>
+
+                    <select
+                      name="default_installments"
+                      value={editForm.default_installments}
+                      onChange={handleEditChange}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
+                    >
+                      <option value="">
+                        Cliente escolhe
+                      </option>
+
+                      {Array.from(
+                        {
+                          length:
+                            Number(
+                              editForm.max_installments
+                            ) || 12,
+                        },
+                        (_, index) => index + 1
+                      ).map((number) => (
+                        <option
+                          key={number}
+                          value={number}
+                        >
+                          {number}x
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Encargos
+                    </label>
+
+                    <select
+                      name="installment_mode"
+                      value={editForm.installment_mode}
+                      onChange={handleEditChange}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
+                    >
+                      <option value="customer">
+                        Cliente
+                      </option>
+
+                      <option value="seller">
+                        Vendedor
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Observação interna
+                </label>
+
+                <textarea
+                  name="internal_note"
+                  value={editForm.internal_note}
+                  onChange={handleEditChange}
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={savingEdit}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={savingEdit}
+                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingEdit
+                  ? "Salvando..."
+                  : "Salvar alterações"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
