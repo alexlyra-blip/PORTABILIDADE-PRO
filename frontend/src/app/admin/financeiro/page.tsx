@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/utils/api";
 import { Icons } from "@/components/Icons";
+import MercadoPagoFeeSimulator from "@/components/admin/MercadoPagoFeeSimulator";
 
 const initialForm = {
   customer_name: "",
@@ -740,6 +741,12 @@ export default function FinanceiroPage() {
             subtitle="Pagamentos aprovados"
             icon={Icons.CreditCard}
           />
+        </div>
+
+
+
+        <div className="mb-6">
+          <MercadoPagoFeeSimulator />
         </div>
 
 
@@ -1611,6 +1618,7 @@ export default function FinanceiroPage() {
                         <td className="px-5 py-4">
                           <div className="flex flex-wrap justify-end gap-2">
                             {payment.status !== "approved" &&
+                              !payment.paid_at &&
                               payment.status !== "cancelled" && (
                                 <button
                                   type="button"
@@ -1623,6 +1631,7 @@ export default function FinanceiroPage() {
                               )}
 
                             {payment.status !== "approved" &&
+                              !payment.paid_at &&
                               payment.status !== "cancelled" && (
                                 <button
                                   type="button"
@@ -1635,7 +1644,7 @@ export default function FinanceiroPage() {
                               )}
 
                             {payment.status !== "approved" &&
-                              !payment.payment_id && (
+                              !payment.paid_at && (
                                 <button
                                   type="button"
                                   onClick={() => deletePayment(payment)}

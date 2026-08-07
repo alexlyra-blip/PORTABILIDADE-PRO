@@ -731,7 +731,6 @@ async def delete_admin_payment(
     if (
         payment.status == "approved"
         or payment.paid_at is not None
-        or payment.mercado_pago_payment_id
     ):
         raise HTTPException(
             status_code=409,
