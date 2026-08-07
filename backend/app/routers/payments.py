@@ -1,14 +1,21 @@
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 
 from app.database import get_db
-from app.models.sqlalchemy_models import User, Payment
+from app.models.sqlalchemy_models import User, Payment, PaymentFreeLink
 from app.routers.deps import get_admin_user
 from app.schemas.payment_schema import (
     CreatePaymentLinkRequest,
+    UpdatePaymentLinkRequest,
+    CancelPaymentRequest,
+    CreateFreePaymentLinkRequest,
+    UpdateFreePaymentLinkRequest,
+    CreatePaymentFromFreeLinkRequest,
 )
 from app.services.mercado_pago_service import (
     MercadoPagoService,
@@ -268,6 +275,219 @@ async def payment_admin_stats(
     }
 
 
+@router.post("/admin/free-links")
+async def create_free_payment_link(
+    data: CreateFreePaymentLinkRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    token = secrets.token_urlsafe(24)
+
+    expires_at = None
+
+    if data.expiration_days:
+        expires_at = (
+            datetime.now(timezone.utc)
+            + timedelta(days=data.expiration_days)
+        )
+
+    free_link = PaymentFreeLink(
+        token=token,
+        created_by_user_id=current_user.id,
+        title=data.title,
+        description=data.description,
+        package_name=data.package_name,
+        consultation_quantity=data.consultation_quantity,
+        max_installments=data.max_installments,
+        default_installments=data.default_installments,
+        installment_mode=data.installment_mode,
+        active=True,
+        expires_at=expires_at,
+    )
+
+    db.add(free_link)
+    await db.commit()
+    await db.refresh(free_link)
+
+    frontend_url = MercadoPagoService.get_frontend_url()
+
+    return {
+        "success": True,
+        "id": free_link.id,
+        "token": free_link.token,
+        "url": (
+            f"{frontend_url}/pagar/"
+            f"{free_link.token}"
+        ),
+        "title": free_link.title,
+        "active": free_link.active,
+        "max_installments": free_link.max_installments,
+        "default_installments": (
+            free_link.default_installments
+        ),
+        "installment_mode": free_link.installment_mode,
+        "expires_at": (
+            free_link.expires_at.isoformat()
+            if free_link.expires_at
+            else None
+        ),
+    }
+
+
+@router.get("/admin/free-links")
+async def list_free_payment_links(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    result = await db.execute(
+        select(PaymentFreeLink)
+        .order_by(desc(PaymentFreeLink.created_at))
+    )
+
+    links = result.scalars().all()
+    frontend_url = MercadoPagoService.get_frontend_url()
+
+    return {
+        "success": True,
+        "links": [
+            {
+                "id": link.id,
+                "token": link.token,
+                "url": (
+                    f"{frontend_url}/pagar/{link.token}"
+                ),
+                "title": link.title,
+                "description": link.description,
+                "package_name": link.package_name,
+                "consultation_quantity": (
+                    link.consultation_quantity
+                ),
+                "max_installments": link.max_installments,
+                "default_installments": (
+                    link.default_installments
+                ),
+                "installment_mode": (
+                    link.installment_mode
+                ),
+                "active": link.active,
+                "expires_at": (
+                    link.expires_at.isoformat()
+                    if link.expires_at
+                    else None
+                ),
+                "created_at": (
+                    link.created_at.isoformat()
+                    if link.created_at
+                    else None
+                ),
+            }
+            for link in links
+        ],
+    }
+
+
+@router.patch("/admin/free-links/{link_id}")
+async def update_free_payment_link(
+    link_id: int,
+    data: UpdateFreePaymentLinkRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    result = await db.execute(
+        select(PaymentFreeLink).where(
+            PaymentFreeLink.id == link_id
+        )
+    )
+
+    link = result.scalar_one_or_none()
+
+    if not link:
+        raise HTTPException(
+            status_code=404,
+            detail="Link livre não encontrado.",
+        )
+
+    if data.title is not None:
+        link.title = data.title
+
+    if data.description is not None:
+        link.description = data.description
+
+    if data.package_name is not None:
+        link.package_name = data.package_name
+
+    if data.consultation_quantity is not None:
+        link.consultation_quantity = (
+            data.consultation_quantity
+        )
+
+    if data.max_installments is not None:
+        link.max_installments = data.max_installments
+
+    if data.default_installments is not None:
+        link.default_installments = (
+            data.default_installments
+        )
+
+    if data.installment_mode is not None:
+        link.installment_mode = data.installment_mode
+
+    if data.active is not None:
+        link.active = data.active
+
+    if data.expiration_days is not None:
+        link.expires_at = (
+            datetime.now(timezone.utc)
+            + timedelta(days=data.expiration_days)
+        )
+
+    link.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(link)
+
+    return {
+        "success": True,
+        "id": link.id,
+        "active": link.active,
+        "expires_at": (
+            link.expires_at.isoformat()
+            if link.expires_at
+            else None
+        ),
+    }
+
+
+@router.delete("/admin/free-links/{link_id}")
+async def delete_free_payment_link(
+    link_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    result = await db.execute(
+        select(PaymentFreeLink).where(
+            PaymentFreeLink.id == link_id
+        )
+    )
+
+    link = result.scalar_one_or_none()
+
+    if not link:
+        raise HTTPException(
+            status_code=404,
+            detail="Link livre não encontrado.",
+        )
+
+    await db.delete(link)
+    await db.commit()
+
+    return {
+        "success": True,
+        "deleted": True,
+        "id": link_id,
+    }
+
+
 @router.get("/admin/{payment_id}")
 async def get_admin_payment(
     payment_id: int,
@@ -327,4 +547,358 @@ async def get_admin_payment(
                 else None
             ),
         },
+    }
+
+
+@router.patch("/admin/{payment_id}")
+async def update_admin_payment(
+    payment_id: int,
+    data: UpdatePaymentLinkRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    result = await db.execute(
+        select(Payment).where(Payment.id == payment_id)
+    )
+    payment = result.scalar_one_or_none()
+
+    if not payment:
+        raise HTTPException(
+            status_code=404,
+            detail="Cobrança não encontrada.",
+        )
+
+    if payment.status == "approved":
+        raise HTTPException(
+            status_code=409,
+            detail="Cobrança aprovada não pode ser editada.",
+        )
+
+    update_payload: Dict[str, Any] = {}
+
+    description = data.description or payment.description
+    amount = data.amount if data.amount is not None else payment.amount
+
+    if data.amount is not None or data.description is not None:
+        update_payload["items"] = [
+            {
+                "id": payment.external_reference,
+                "title": description,
+                "description": description,
+                "category_id": "services",
+                "quantity": 1,
+                "currency_id": "BRL",
+                "unit_price": float(amount),
+            }
+        ]
+
+    payment_methods: Dict[str, Any] = {}
+
+    if data.max_installments is not None:
+        payment_methods["installments"] = data.max_installments
+
+    if data.default_installments is not None:
+        payment_methods["default_installments"] = (
+            data.default_installments
+        )
+
+    if payment_methods:
+        update_payload["payment_methods"] = payment_methods
+
+    if data.expiration_days is not None:
+        expiration_date = (
+            datetime.now(timezone.utc)
+            + timedelta(days=data.expiration_days)
+        )
+
+        update_payload["expires"] = True
+        update_payload["expiration_date_to"] = (
+            expiration_date.isoformat()
+        )
+
+    if update_payload and payment.preference_id:
+        await MercadoPagoService.update_preference(
+            preference_id=payment.preference_id,
+            payload=update_payload,
+        )
+
+    if data.customer_name is not None:
+        payment.customer_name = data.customer_name
+
+    if data.customer_email is not None:
+        payment.customer_email = str(data.customer_email)
+
+    if data.customer_document is not None:
+        payment.customer_document = data.customer_document
+
+    if data.customer_phone is not None:
+        payment.customer_phone = data.customer_phone
+
+    if data.description is not None:
+        payment.description = data.description
+
+    if data.amount is not None:
+        payment.amount = data.amount
+
+    if data.package_name is not None:
+        payment.package_name = data.package_name
+
+    if data.consultation_quantity is not None:
+        payment.consultation_quantity = data.consultation_quantity
+
+    if data.internal_note is not None:
+        payment.internal_note = data.internal_note
+
+    payment.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(payment)
+
+    return {
+        "success": True,
+        "id": payment.id,
+        "reference": payment.external_reference,
+        "amount": float(payment.amount),
+        "status": payment.status,
+    }
+
+
+@router.post("/admin/{payment_id}/cancel")
+async def cancel_admin_payment(
+    payment_id: int,
+    data: CancelPaymentRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    result = await db.execute(
+        select(Payment).where(Payment.id == payment_id)
+    )
+    payment = result.scalar_one_or_none()
+
+    if not payment:
+        raise HTTPException(
+            status_code=404,
+            detail="Cobrança não encontrada.",
+        )
+
+    if payment.status == "approved":
+        raise HTTPException(
+            status_code=409,
+            detail="Pagamento aprovado não pode ser cancelado por esta rotina.",
+        )
+
+    if payment.preference_id:
+        await MercadoPagoService.cancel_preference(
+            payment.preference_id
+        )
+
+    payment.status = "cancelled"
+
+    if data.reason:
+        payment.internal_note = (
+            f"{payment.internal_note or ''}\n"
+            f"Cancelamento: {data.reason}"
+        ).strip()
+
+    payment.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "id": payment.id,
+        "status": payment.status,
+    }
+
+
+@router.delete("/admin/{payment_id}")
+async def delete_admin_payment(
+    payment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    result = await db.execute(
+        select(Payment).where(Payment.id == payment_id)
+    )
+    payment = result.scalar_one_or_none()
+
+    if not payment:
+        raise HTTPException(
+            status_code=404,
+            detail="Cobrança não encontrada.",
+        )
+
+    if (
+        payment.status == "approved"
+        or payment.paid_at is not None
+        or payment.mercado_pago_payment_id
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Cobrança com pagamento registrado não pode ser excluída.",
+        )
+
+    if payment.preference_id:
+        await MercadoPagoService.cancel_preference(
+            payment.preference_id
+        )
+
+    await db.delete(payment)
+    await db.commit()
+
+    return {
+        "success": True,
+        "deleted": True,
+        "id": payment_id,
+    }
+
+
+@router.get("/free/{token}")
+async def get_public_free_payment_link(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    result = await db.execute(
+        select(PaymentFreeLink).where(
+            PaymentFreeLink.token == token
+        )
+    )
+
+    link = result.scalar_one_or_none()
+
+    if not link:
+        raise HTTPException(
+            status_code=404,
+            detail="Link de pagamento não encontrado.",
+        )
+
+    if not link.active:
+        raise HTTPException(
+            status_code=410,
+            detail="Este link de pagamento está desativado.",
+        )
+
+    now = datetime.now(timezone.utc)
+
+    if link.expires_at and link.expires_at < now:
+        raise HTTPException(
+            status_code=410,
+            detail="Este link de pagamento expirou.",
+        )
+
+    return {
+        "success": True,
+        "title": link.title,
+        "description": link.description,
+        "package_name": link.package_name,
+        "consultation_quantity": (
+            link.consultation_quantity
+        ),
+        "max_installments": link.max_installments,
+        "default_installments": (
+            link.default_installments
+        ),
+        "installment_mode": link.installment_mode,
+        "expires_at": (
+            link.expires_at.isoformat()
+            if link.expires_at
+            else None
+        ),
+    }
+
+
+@router.post("/free/{token}/checkout")
+async def create_checkout_from_free_link(
+    token: str,
+    data: CreatePaymentFromFreeLinkRequest,
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    result = await db.execute(
+        select(PaymentFreeLink).where(
+            PaymentFreeLink.token == token
+        )
+    )
+
+    link = result.scalar_one_or_none()
+
+    if not link:
+        raise HTTPException(
+            status_code=404,
+            detail="Link de pagamento não encontrado.",
+        )
+
+    if not link.active:
+        raise HTTPException(
+            status_code=410,
+            detail="Este link de pagamento está desativado.",
+        )
+
+    now = datetime.now(timezone.utc)
+
+    if link.expires_at and link.expires_at < now:
+        raise HTTPException(
+            status_code=410,
+            detail="Este link de pagamento expirou.",
+        )
+
+    payment_request = CreatePaymentLinkRequest(
+        customer_name=data.customer_name,
+        customer_email=data.customer_email,
+        customer_document=data.customer_document,
+        customer_phone=data.customer_phone,
+        description=(
+            link.description
+            or link.title
+            or "Pagamento Portabilidade PRO"
+        ),
+        amount=data.amount,
+        package_name=link.package_name,
+        consultation_quantity=(
+            link.consultation_quantity
+        ),
+        expiration_days=7,
+        internal_note=(
+            f"Pagamento originado do link livre "
+            f"#{link.id}"
+        ),
+        max_installments=link.max_installments,
+        default_installments=(
+            link.default_installments
+        ),
+        installment_mode=link.installment_mode,
+    )
+
+    mercado_pago_result = (
+        await MercadoPagoService.create_payment_link(
+            data=payment_request,
+            created_by_user_id=(
+                link.created_by_user_id
+            ),
+        )
+    )
+
+    payment = (
+        await PaymentPersistenceService.save_created_payment(
+            db=db,
+            data=payment_request,
+            created_by_user_id=(
+                link.created_by_user_id
+            ),
+            mercado_pago_result=(
+                mercado_pago_result
+            ),
+        )
+    )
+
+    return {
+        "success": True,
+        "payment_id": payment.id,
+        "reference": (
+            mercado_pago_result["reference"]
+        ),
+        "payment_url": (
+            mercado_pago_result["payment_url"]
+        ),
+        "amount": str(payment.amount),
+        "status": payment.status,
     }

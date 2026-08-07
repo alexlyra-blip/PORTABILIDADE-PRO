@@ -15,6 +15,9 @@ const initialForm = {
   amount: "",
   expiration_days: 7,
   internal_note: "",
+  max_installments: 12,
+  default_installments: "",
+  installment_mode: "customer",
 };
 
 const money = (value) =>
@@ -104,6 +107,535 @@ function StatCard({ title, value, subtitle, icon: Icon }) {
           </div>
         )}
       </div>
+
+      {editingFreeLink && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Editar Link Livre
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  O cliente continuará informando o valor.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditFreeLink}
+                disabled={savingFreeLinkEdit}
+                className="rounded-lg px-3 py-2 text-xl text-slate-400 hover:bg-slate-100"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Título
+                </label>
+
+                <input
+                  value={editingFreeLink.title || ""}
+                  onChange={(event) =>
+                    setEditingFreeLink((current) => ({
+                      ...current,
+                      title: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Descrição
+                </label>
+
+                <input
+                  value={editingFreeLink.description || ""}
+                  onChange={(event) =>
+                    setEditingFreeLink((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Pacote
+                </label>
+
+                <input
+                  value={editingFreeLink.package_name || ""}
+                  onChange={(event) =>
+                    setEditingFreeLink((current) => ({
+                      ...current,
+                      package_name: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Consultas
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={
+                      editingFreeLink.consultation_quantity ??
+                      ""
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        consultation_quantity:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Máximo de parcelas
+                  </label>
+
+                  <select
+                    value={
+                      editingFreeLink.max_installments || 12
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        max_installments:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    {Array.from(
+                      { length: 12 },
+                      (_, index) => index + 1
+                    ).map((number) => (
+                      <option key={number} value={number}>
+                        Até {number}x
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Parcela sugerida
+                  </label>
+
+                  <select
+                    value={
+                      editingFreeLink.default_installments ??
+                      ""
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        default_installments:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    <option value="">
+                      Automático
+                    </option>
+
+                    {Array.from(
+                      {
+                        length:
+                          Number(
+                            editingFreeLink.max_installments
+                          ) || 12,
+                      },
+                      (_, index) => index + 1
+                    ).map((number) => (
+                      <option key={number} value={number}>
+                        {number}x
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Encargos
+                  </label>
+
+                  <select
+                    value={
+                      editingFreeLink.installment_mode ||
+                      "customer"
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        installment_mode:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    <option value="customer">
+                      Cliente
+                    </option>
+                    <option value="seller">
+                      Vendedor
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Nova validade
+                  </label>
+
+                  <select
+                    value={
+                      editingFreeLink.expiration_days || 30
+                    }
+                    onChange={(event) =>
+                      setEditingFreeLink((current) => ({
+                        ...current,
+                        expiration_days:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    <option value="7">7 dias</option>
+                    <option value="15">15 dias</option>
+                    <option value="30">30 dias</option>
+                    <option value="60">60 dias</option>
+                    <option value="90">90 dias</option>
+                    <option value="180">180 dias</option>
+                    <option value="365">1 ano</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeEditFreeLink}
+                disabled={savingFreeLinkEdit}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={saveFreeLinkEdit}
+                disabled={savingFreeLinkEdit}
+                className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50"
+              >
+                {savingFreeLinkEdit
+                  ? "Salvando..."
+                  : "Salvar alterações"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingPayment && editForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Editar cobrança
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  {editingPayment.external_reference}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={savingEdit}
+                className="rounded-lg px-3 py-2 text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-6 p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Cliente
+                  </label>
+
+                  <input
+                    name="customer_name"
+                    value={editForm.customer_name}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    E-mail
+                  </label>
+
+                  <input
+                    name="customer_email"
+                    type="email"
+                    value={editForm.customer_email}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    CPF / CNPJ
+                  </label>
+
+                  <input
+                    name="customer_document"
+                    value={editForm.customer_document}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    WhatsApp
+                  </label>
+
+                  <input
+                    name="customer_phone"
+                    value={editForm.customer_phone}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Descrição
+                </label>
+
+                <input
+                  name="description"
+                  value={editForm.description}
+                  onChange={handleEditChange}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Valor
+                  </label>
+
+                  <input
+                    name="amount"
+                    value={editForm.amount}
+                    onChange={handleEditChange}
+                    inputMode="decimal"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Quantidade de consultas
+                  </label>
+
+                  <input
+                    name="consultation_quantity"
+                    type="number"
+                    min="0"
+                    value={editForm.consultation_quantity}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Validade
+                  </label>
+
+                  <select
+                    name="expiration_days"
+                    value={editForm.expiration_days}
+                    onChange={handleEditChange}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                  >
+                    <option value="1">1 dia</option>
+                    <option value="3">3 dias</option>
+                    <option value="7">7 dias</option>
+                    <option value="15">15 dias</option>
+                    <option value="30">30 dias</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
+                <div className="mb-4">
+                  <h3 className="font-bold text-slate-900">
+                    Parcelamento
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Configure novamente as condições do link.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Máximo
+                    </label>
+
+                    <select
+                      name="max_installments"
+                      value={editForm.max_installments}
+                      onChange={handleEditChange}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
+                    >
+                      {Array.from(
+                        { length: 12 },
+                        (_, index) => index + 1
+                      ).map((number) => (
+                        <option
+                          key={number}
+                          value={number}
+                        >
+                          {number}x
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Parcela sugerida
+                    </label>
+
+                    <select
+                      name="default_installments"
+                      value={editForm.default_installments}
+                      onChange={handleEditChange}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
+                    >
+                      <option value="">
+                        Cliente escolhe
+                      </option>
+
+                      {Array.from(
+                        {
+                          length:
+                            Number(
+                              editForm.max_installments
+                            ) || 12,
+                        },
+                        (_, index) => index + 1
+                      ).map((number) => (
+                        <option
+                          key={number}
+                          value={number}
+                        >
+                          {number}x
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Encargos
+                    </label>
+
+                    <select
+                      name="installment_mode"
+                      value={editForm.installment_mode}
+                      onChange={handleEditChange}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
+                    >
+                      <option value="customer">
+                        Cliente
+                      </option>
+
+                      <option value="seller">
+                        Vendedor
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Observação interna
+                </label>
+
+                <textarea
+                  name="internal_note"
+                  value={editForm.internal_note}
+                  onChange={handleEditChange}
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={savingEdit}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={savingEdit}
+                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingEdit
+                  ? "Salvando..."
+                  : "Salvar alterações"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -125,19 +657,45 @@ export default function FinanceiroPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
+
+  const [freeLinks, setFreeLinks] = useState([]);
+  const [creatingFreeLink, setCreatingFreeLink] = useState(false);
+  const [freeLinkResult, setFreeLinkResult] = useState(null);
+  const [editingFreeLink, setEditingFreeLink] = useState(null);
+  const [savingFreeLinkEdit, setSavingFreeLinkEdit] = useState(false);
+
+  const [freeLinkForm, setFreeLinkForm] = useState({
+    title: "Pagamento Portabilidade PRO",
+    description: "",
+    package_name: "",
+    consultation_quantity: "",
+    expiration_days: 30,
+    max_installments: 12,
+    default_installments: "",
+    installment_mode: "customer",
+  });
 
   const loadData = useCallback(async () => {
     try {
       setError("");
 
-      const [paymentsResponse, statsResponse] =
-        await Promise.all([
-          api.get("/payments/admin"),
-          api.get("/payments/admin/stats"),
-        ]);
+      const [
+        paymentsResponse,
+        statsResponse,
+        freeLinksResponse,
+      ] = await Promise.all([
+        api.get("/payments/admin"),
+        api.get("/payments/admin/stats"),
+        api.get("/payments/admin/free-links"),
+      ]);
 
       setPayments(paymentsResponse?.payments || []);
       setStats(statsResponse || {});
+      setFreeLinks(freeLinksResponse?.links || []);
     } catch (err) {
       console.error(err);
       setError(
@@ -224,6 +782,14 @@ export default function FinanceiroPage() {
           Number(form.expiration_days) || 7,
         internal_note:
           form.internal_note.trim() || null,
+        max_installments:
+          Number(form.max_installments) || 12,
+        default_installments:
+          form.default_installments !== ""
+            ? Number(form.default_installments)
+            : null,
+        installment_mode:
+          form.installment_mode || "customer",
       };
 
       const response = await api.post(
@@ -253,6 +819,359 @@ export default function FinanceiroPage() {
       await navigator.clipboard.writeText(url);
     } catch {
       window.prompt("Copie o link:", url);
+    }
+  };
+
+  const startEdit = (payment) => {
+    setEditingPayment(payment);
+
+    setEditForm({
+      customer_name: payment.customer_name || "",
+      customer_email: payment.customer_email || "",
+      customer_document: payment.customer_document || "",
+      customer_phone: payment.customer_phone || "",
+      description:
+        payment.description || "Pacote Portabilidade PRO",
+      package_name: payment.package_name || "",
+      consultation_quantity:
+        payment.consultation_quantity ?? "",
+      amount: String(payment.amount || "").replace(".", ","),
+      expiration_days: 7,
+      internal_note: payment.internal_note || "",
+      max_installments: 12,
+      default_installments: "",
+      installment_mode: "customer",
+    });
+  };
+
+  const closeEdit = () => {
+    if (savingEdit) return;
+
+    setEditingPayment(null);
+    setEditForm(null);
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+
+    setEditForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const saveEdit = async () => {
+    if (!editingPayment || !editForm) return;
+
+    const amount = Number(
+      String(editForm.amount).replace(",", ".")
+    );
+
+    if (!amount || amount < 1) {
+      setError("Informe um valor válido para a cobrança.");
+      return;
+    }
+
+    setSavingEdit(true);
+    setError("");
+
+    try {
+      await api.patch(
+        `/payments/admin/${editingPayment.id}`,
+        {
+          customer_name:
+            editForm.customer_name.trim(),
+          customer_email:
+            editForm.customer_email.trim() || null,
+          customer_document:
+            editForm.customer_document.trim() || null,
+          customer_phone:
+            editForm.customer_phone.trim() || null,
+          description:
+            editForm.description.trim() ||
+            "Pacote Portabilidade PRO",
+          amount,
+          package_name:
+            editForm.package_name.trim() || null,
+          consultation_quantity:
+            editForm.consultation_quantity !== ""
+              ? Number(editForm.consultation_quantity)
+              : null,
+          expiration_days:
+            Number(editForm.expiration_days) || 7,
+          internal_note:
+            editForm.internal_note.trim() || null,
+          max_installments:
+            Number(editForm.max_installments) || 12,
+          default_installments:
+            editForm.default_installments !== ""
+              ? Number(editForm.default_installments)
+              : null,
+          installment_mode:
+            editForm.installment_mode || "customer",
+        }
+      );
+
+      setEditingPayment(null);
+      setEditForm(null);
+
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setError(
+        err?.message ||
+          "Não foi possível editar a cobrança."
+      );
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const cancelPayment = async (payment) => {
+    const confirmed = window.confirm(
+      `Cancelar a cobrança de ${money(payment.amount)} para ${payment.customer_name}?`
+    );
+
+    if (!confirmed) return;
+
+    const reason = window.prompt(
+      "Motivo do cancelamento (opcional):",
+      ""
+    );
+
+    setActionLoading(payment.id);
+    setError("");
+
+    try {
+      await api.post(
+        `/payments/admin/${payment.id}/cancel`,
+        {
+          reason: reason || null,
+        }
+      );
+
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setError(
+        err?.message ||
+          "Não foi possível cancelar a cobrança."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const deletePayment = async (payment) => {
+    const confirmed = window.confirm(
+      [
+        "Excluir esta cobrança permanentemente?",
+        "",
+        `Cliente: ${payment.customer_name}`,
+        `Valor: ${money(payment.amount)}`,
+        "",
+        "Esta opção só funciona para cobranças sem pagamento registrado.",
+      ].join("\n")
+    );
+
+    if (!confirmed) return;
+
+    setActionLoading(payment.id);
+    setError("");
+
+    try {
+      await api.delete(
+        `/payments/admin/${payment.id}`
+      );
+
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setError(
+        err?.message ||
+          "Não foi possível excluir a cobrança."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleFreeLinkChange = (event) => {
+    const { name, value } = event.target;
+
+    setFreeLinkForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const createFreeLink = async () => {
+    setCreatingFreeLink(true);
+    setError("");
+    setFreeLinkResult(null);
+
+    try {
+      const response = await api.post(
+        "/payments/admin/free-links",
+        {
+          title:
+            freeLinkForm.title.trim() ||
+            "Pagamento Portabilidade PRO",
+          description:
+            freeLinkForm.description.trim() || null,
+          package_name:
+            freeLinkForm.package_name.trim() || null,
+          consultation_quantity:
+            freeLinkForm.consultation_quantity !== ""
+              ? Number(
+                  freeLinkForm.consultation_quantity
+                )
+              : null,
+          expiration_days:
+            Number(freeLinkForm.expiration_days) || 30,
+          max_installments:
+            Number(freeLinkForm.max_installments) || 12,
+          default_installments:
+            freeLinkForm.default_installments !== ""
+              ? Number(
+                  freeLinkForm.default_installments
+                )
+              : null,
+          installment_mode:
+            freeLinkForm.installment_mode ||
+            "customer",
+        }
+      );
+
+      setFreeLinkResult(response);
+
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setError(
+        err?.message ||
+          "Não foi possível criar o Link Livre."
+      );
+    } finally {
+      setCreatingFreeLink(false);
+    }
+  };
+
+  const startEditFreeLink = (link) => {
+    setEditingFreeLink({
+      ...link,
+      expiration_days: 30,
+      default_installments:
+        link.default_installments ?? "",
+    });
+  };
+
+  const closeEditFreeLink = () => {
+    if (savingFreeLinkEdit) return;
+    setEditingFreeLink(null);
+  };
+
+  const saveFreeLinkEdit = async () => {
+    if (!editingFreeLink) return;
+
+    setSavingFreeLinkEdit(true);
+    setError("");
+
+    try {
+      await api.patch(
+        `/payments/admin/free-links/${editingFreeLink.id}`,
+        {
+          title:
+            editingFreeLink.title?.trim() ||
+            "Pagamento Portabilidade PRO",
+          description:
+            editingFreeLink.description?.trim() || null,
+          package_name:
+            editingFreeLink.package_name?.trim() || null,
+          consultation_quantity:
+            editingFreeLink.consultation_quantity !== ""
+              && editingFreeLink.consultation_quantity != null
+              ? Number(
+                  editingFreeLink.consultation_quantity
+                )
+              : null,
+          expiration_days:
+            Number(
+              editingFreeLink.expiration_days
+            ) || 30,
+          max_installments:
+            Number(
+              editingFreeLink.max_installments
+            ) || 12,
+          default_installments:
+            editingFreeLink.default_installments !== ""
+              && editingFreeLink.default_installments != null
+              ? Number(
+                  editingFreeLink.default_installments
+                )
+              : null,
+          installment_mode:
+            editingFreeLink.installment_mode ||
+            "customer",
+          active: editingFreeLink.active,
+        }
+      );
+
+      setEditingFreeLink(null);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err?.message ||
+          "Não foi possível editar o Link Livre."
+      );
+    } finally {
+      setSavingFreeLinkEdit(false);
+    }
+  };
+
+  const toggleFreeLink = async (link) => {
+    setError("");
+
+    try {
+      await api.patch(
+        `/payments/admin/free-links/${link.id}`,
+        {
+          active: !link.active,
+        }
+      );
+
+      await loadData();
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err?.message ||
+          "Não foi possível alterar o status do Link Livre."
+      );
+    }
+  };
+
+  const deleteFreeLink = async (link) => {
+    const confirmed = window.confirm(
+      `Excluir o Link Livre "${link.title}"?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await api.delete(
+        `/payments/admin/free-links/${link.id}`
+      );
+
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setError(
+        err?.message ||
+          "Não foi possível excluir o Link Livre."
+      );
     }
   };
 
@@ -349,6 +1268,421 @@ export default function FinanceiroPage() {
             subtitle="Pagamentos aprovados"
             icon={Icons.CreditCard}
           />
+        </div>
+
+
+        <div className="mb-6 rounded-2xl border border-violet-200 bg-white shadow-sm">
+          <div className="border-b border-violet-100 bg-gradient-to-r from-violet-50 to-white p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+                    <Icons.Wallet size={20} />
+                  </div>
+
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Links Livres
+                    </h2>
+
+                    <p className="text-sm text-slate-500">
+                      Crie um link sem valor definido. O cliente informa
+                      o valor antes de acessar o Mercado Pago.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <span className="w-fit rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">
+                {freeLinks.length} link{freeLinks.length === 1 ? "" : "s"}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-6 p-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+            <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+              <div>
+                <h3 className="font-bold text-slate-900">
+                  Novo Link Livre
+                </h3>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  O valor será informado pelo cliente.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Título
+                </label>
+
+                <input
+                  value={freeLinkForm.title}
+                  onChange={(event) =>
+                    setFreeLinkForm((current) => ({
+                      ...current,
+                      title: event.target.value,
+                    }))
+                  }
+                  placeholder="Pagamento Portabilidade PRO"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Descrição
+                </label>
+
+                <input
+                  value={freeLinkForm.description}
+                  onChange={(event) =>
+                    setFreeLinkForm((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                  placeholder="Ex.: Pagamento de serviços"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Pacote
+                </label>
+
+                <input
+                  value={freeLinkForm.package_name}
+                  onChange={(event) =>
+                    setFreeLinkForm((current) => ({
+                      ...current,
+                      package_name: event.target.value,
+                    }))
+                  }
+                  placeholder="Opcional"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Consultas
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={freeLinkForm.consultation_quantity}
+                    onChange={(event) =>
+                      setFreeLinkForm((current) => ({
+                        ...current,
+                        consultation_quantity:
+                          event.target.value,
+                      }))
+                    }
+                    placeholder="Opcional"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Validade
+                  </label>
+
+                  <select
+                    value={freeLinkForm.expiration_days}
+                    onChange={(event) =>
+                      setFreeLinkForm((current) => ({
+                        ...current,
+                        expiration_days:
+                          event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 outline-none"
+                  >
+                    <option value="7">7 dias</option>
+                    <option value="15">15 dias</option>
+                    <option value="30">30 dias</option>
+                    <option value="60">60 dias</option>
+                    <option value="90">90 dias</option>
+                    <option value="180">180 dias</option>
+                    <option value="365">1 ano</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-violet-100 bg-white p-3">
+                <p className="mb-3 text-sm font-bold text-slate-800">
+                  Parcelamento
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Máximo
+                    </label>
+
+                    <select
+                      value={freeLinkForm.max_installments}
+                      onChange={(event) =>
+                        setFreeLinkForm((current) => ({
+                          ...current,
+                          max_installments:
+                            event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    >
+                      {Array.from(
+                        { length: 12 },
+                        (_, index) => index + 1
+                      ).map((number) => (
+                        <option key={number} value={number}>
+                          Até {number}x
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Sugerida
+                    </label>
+
+                    <select
+                      value={freeLinkForm.default_installments}
+                      onChange={(event) =>
+                        setFreeLinkForm((current) => ({
+                          ...current,
+                          default_installments:
+                            event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    >
+                      <option value="">Automático</option>
+
+                      {Array.from(
+                        {
+                          length:
+                            Number(
+                              freeLinkForm.max_installments
+                            ) || 12,
+                        },
+                        (_, index) => index + 1
+                      ).map((number) => (
+                        <option key={number} value={number}>
+                          {number}x
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFreeLinkForm((current) => ({
+                        ...current,
+                        installment_mode: "customer",
+                      }))
+                    }
+                    className={`rounded-lg border px-3 py-2 text-xs font-bold ${
+                      freeLinkForm.installment_mode ===
+                      "customer"
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    Cliente
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFreeLinkForm((current) => ({
+                        ...current,
+                        installment_mode: "seller",
+                      }))
+                    }
+                    className={`rounded-lg border px-3 py-2 text-xs font-bold ${
+                      freeLinkForm.installment_mode ===
+                      "seller"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    Vendedor
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={createFreeLink}
+                disabled={creatingFreeLink}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
+              >
+                <Icons.Wallet size={19} />
+
+                {creatingFreeLink
+                  ? "Criando..."
+                  : "Criar Link Livre"}
+              </button>
+            </div>
+
+            <div className="min-w-0">
+              <div className="mb-4">
+                <h3 className="font-bold text-slate-900">
+                  Links disponíveis
+                </h3>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Compartilhe o link para o cliente informar
+                  o valor e realizar o pagamento.
+                </p>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full min-w-[700px]">
+                  <thead className="bg-slate-50">
+                    <tr className="text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <th className="px-4 py-3">Link</th>
+                      <th className="px-4 py-3">
+                        Parcelamento
+                      </th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {freeLinks.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="px-4 py-10 text-center text-sm text-slate-500"
+                        >
+                          Nenhum Link Livre criado.
+                        </td>
+                      </tr>
+                    ) : (
+                      freeLinks.map((link) => (
+                        <tr
+                          key={link.id}
+                          className="hover:bg-slate-50"
+                        >
+                          <td className="px-4 py-4">
+                            <p className="font-bold text-slate-900">
+                              {link.title}
+                            </p>
+
+                            <p className="mt-1 max-w-[280px] truncate text-xs text-slate-500">
+                              {link.url}
+                            </p>
+                          </td>
+
+                          <td className="px-4 py-4 text-sm text-slate-600">
+                            Até {link.max_installments || 12}x
+                            <p className="text-xs text-slate-400">
+                              {link.installment_mode ===
+                              "seller"
+                                ? "Vendedor"
+                                : "Cliente"}
+                            </p>
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                                link.active
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {link.active
+                                ? "Ativo"
+                                : "Inativo"}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  startEditFreeLink(link)
+                                }
+                                className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+                              >
+                                Editar
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  copyLink(link.url)
+                                }
+                                className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-bold text-violet-700 hover:bg-violet-50"
+                              >
+                                Copiar
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  window.open(
+                                    link.url,
+                                    "_blank",
+                                    "noopener,noreferrer"
+                                  )
+                                }
+                                className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+                              >
+                                Abrir
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  toggleFreeLink(link)
+                                }
+                                className={`rounded-lg border px-3 py-2 text-xs font-bold ${
+                                  link.active
+                                    ? "border-amber-200 text-amber-700 hover:bg-amber-50"
+                                    : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                }`}
+                              >
+                                {link.active
+                                  ? "Desativar"
+                                  : "Ativar"}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  deleteFreeLink(link)
+                                }
+                                className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
@@ -474,6 +1808,121 @@ export default function FinanceiroPage() {
                     <option value={15}>15 dias</option>
                     <option value={30}>30 dias</option>
                   </select>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Parcelamento
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Configure quantas parcelas o Checkout Pro poderá oferecer.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Máximo de parcelas
+                    </label>
+
+                    <select
+                      name="max_installments"
+                      value={form.max_installments}
+                      onChange={handleChange}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 outline-none"
+                    >
+                      {Array.from({ length: 12 }, (_, index) => index + 1).map(
+                        (number) => (
+                          <option key={number} value={number}>
+                            Até {number}x
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Parcela sugerida
+                    </label>
+
+                    <select
+                      name="default_installments"
+                      value={form.default_installments}
+                      onChange={handleChange}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 outline-none"
+                    >
+                      <option value="">Automático</option>
+                      {Array.from(
+                        { length: Number(form.max_installments) || 12 },
+                        (_, index) => index + 1
+                      ).map((number) => (
+                        <option key={number} value={number}>
+                          {number}x
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Regra de parcelamento
+                  </label>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className={`cursor-pointer rounded-xl border p-3 transition ${
+                      form.installment_mode === "customer"
+                        ? "border-blue-500 bg-white ring-2 ring-blue-100"
+                        : "border-slate-200 bg-white"
+                    }`}>
+                      <input
+                        type="radio"
+                        name="installment_mode"
+                        value="customer"
+                        checked={form.installment_mode === "customer"}
+                        onChange={handleChange}
+                        className="mr-2"
+                      />
+                      <span className="text-sm font-bold text-slate-800">
+                        Parcelado cliente
+                      </span>
+                      <p className="mt-1 text-xs text-slate-500">
+                        O comprador poderá ver acréscimos conforme as condições do Mercado Pago.
+                      </p>
+                    </label>
+
+                    <label className={`cursor-pointer rounded-xl border p-3 transition ${
+                      form.installment_mode === "seller"
+                        ? "border-emerald-500 bg-white ring-2 ring-emerald-100"
+                        : "border-slate-200 bg-white"
+                    }`}>
+                      <input
+                        type="radio"
+                        name="installment_mode"
+                        value="seller"
+                        checked={form.installment_mode === "seller"}
+                        onChange={handleChange}
+                        className="mr-2"
+                      />
+                      <span className="text-sm font-bold text-slate-800">
+                        Parcelado vendedor
+                      </span>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Usa a condição sem acréscimo configurada na sua conta Mercado Pago.
+                      </p>
+                    </label>
+                  </div>
+
+                  {form.installment_mode === "seller" && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                      O custo do parcelamento vendedor é definido pelo Mercado Pago
+                      na configuração da sua conta. O Portabilidade PRO não altera
+                      essas taxas.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -688,7 +2137,43 @@ export default function FinanceiroPage() {
                         </td>
 
                         <td className="px-5 py-4">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {payment.status !== "approved" &&
+                              payment.status !== "cancelled" && (
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(payment)}
+                                  disabled={actionLoading === payment.id}
+                                  className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                                >
+                                  Editar
+                                </button>
+                              )}
+
+                            {payment.status !== "approved" &&
+                              payment.status !== "cancelled" && (
+                                <button
+                                  type="button"
+                                  onClick={() => cancelPayment(payment)}
+                                  disabled={actionLoading === payment.id}
+                                  className="rounded-lg border border-amber-200 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                                >
+                                  Cancelar
+                                </button>
+                              )}
+
+                            {payment.status !== "approved" &&
+                              !payment.payment_id && (
+                                <button
+                                  type="button"
+                                  onClick={() => deletePayment(payment)}
+                                  disabled={actionLoading === payment.id}
+                                  className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  Excluir
+                                </button>
+                              )}
+
                             {payment.checkout_url && (
                               <>
                                 <button

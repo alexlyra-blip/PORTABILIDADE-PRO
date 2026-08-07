@@ -123,6 +123,9 @@ class MercadoPagoService:
             ],
             "payer": payer,
             "external_reference": reference,
+        "payment_methods": {
+            "installments": data.max_installments,
+        },
             "statement_descriptor": "PORTABILIDADEPRO",
             "back_urls": {
                 "success": (
@@ -152,8 +155,18 @@ class MercadoPagoService:
                     data.consultation_quantity
                 ),
                 "internal_note": data.internal_note,
+            "max_installments": data.max_installments,
+            "default_installments": (
+                data.default_installments
+            ),
+            "installment_mode": data.installment_mode,
             },
         }
+
+        if data.default_installments:
+            payload["payment_methods"]["default_installments"] = (
+                data.default_installments
+            )
 
         headers = {
             "Authorization": f"Bearer {token}",
@@ -273,3 +286,133 @@ class MercadoPagoService:
             )
 
         return response.json()
+
+
+    @classmethod
+    async def update_preference(
+        cls,
+        preference_id: str,
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        token = cls.get_access_token()
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.put(
+                    (
+                        f"{MERCADO_PAGO_API_URL}"
+                        f"/checkout/preferences/{preference_id}"
+                    ),
+                    json=payload,
+                    headers=headers,
+                )
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="Falha ao atualizar a preferência no Mercado Pago.",
+            ) from exc
+
+        try:
+            response_data = response.json()
+        except ValueError:
+            response_data = {"message": response.text}
+
+        if response.status_code not in (200, 201):
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "message": "Mercado Pago não conseguiu atualizar a preferência.",
+                    "mercado_pago_status": response.status_code,
+                    "mercado_pago_response": response_data,
+                },
+            )
+
+        return response_data
+
+
+    @classmethod
+    async def cancel_preference(
+        cls,
+        preference_id: str,
+    ) -> Dict[str, Any]:
+        expiration_date = (
+            datetime.now(timezone.utc) + timedelta(minutes=1)
+        ).isoformat()
+
+        return await cls.update_preference(
+            preference_id=preference_id,
+            payload={
+                "expires": True,
+                "expiration_date_to": expiration_date,
+            },
+        )
+
+
+    @classmethod
+    async def update_preference(
+        cls,
+        preference_id: str,
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        token = cls.get_access_token()
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.put(
+                    (
+                        f"{MERCADO_PAGO_API_URL}"
+                        f"/checkout/preferences/{preference_id}"
+                    ),
+                    json=payload,
+                    headers=headers,
+                )
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="Falha ao atualizar a preferência no Mercado Pago.",
+            ) from exc
+
+        try:
+            response_data = response.json()
+        except ValueError:
+            response_data = {"message": response.text}
+
+        if response.status_code not in (200, 201):
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "message": "Mercado Pago não conseguiu atualizar a preferência.",
+                    "mercado_pago_status": response.status_code,
+                    "mercado_pago_response": response_data,
+                },
+            )
+
+        return response_data
+
+
+    @classmethod
+    async def cancel_preference(
+        cls,
+        preference_id: str,
+    ) -> Dict[str, Any]:
+        expiration_date = (
+            datetime.now(timezone.utc) + timedelta(minutes=1)
+        ).isoformat()
+
+        return await cls.update_preference(
+            preference_id=preference_id,
+            payload={
+                "expires": True,
+                "expiration_date_to": expiration_date,
+            },
+        )
