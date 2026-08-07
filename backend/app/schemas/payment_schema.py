@@ -213,3 +213,65 @@ class CreatePaymentFromFreeLinkRequest(BaseModel):
             )
 
         return normalized
+
+
+class UpdateFreePaymentLinkRequest(BaseModel):
+    title: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=150,
+    )
+
+    description: Optional[str] = Field(
+        default=None,
+        max_length=250,
+    )
+
+    package_name: Optional[str] = Field(
+        default=None,
+        max_length=120,
+    )
+
+    consultation_quantity: Optional[int] = Field(
+        default=None,
+        ge=0,
+    )
+
+    expiration_days: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=365,
+    )
+
+    max_installments: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=12,
+    )
+
+    default_installments: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=12,
+    )
+
+    installment_mode: Optional[str] = None
+    active: Optional[bool] = None
+
+    @field_validator("installment_mode")
+    @classmethod
+    def validate_update_free_installment_mode(
+        cls,
+        value: Optional[str],
+    ) -> Optional[str]:
+        if value is None:
+            return None
+
+        normalized = value.strip().lower()
+
+        if normalized not in ("customer", "seller"):
+            raise ValueError(
+                "installment_mode deve ser customer ou seller."
+            )
+
+        return normalized
