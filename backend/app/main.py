@@ -157,6 +157,7 @@ from app.routers import auth, banks, users, admin, pdf, simulacao, external, cha
 # ... (restante dos imports e lógica)
 
 from app.routers import payments
+from app.routers import seller_calculator
 
 # Include Routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
@@ -170,6 +171,11 @@ app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(contracts.router, prefix="/api", tags=["Contracts"])
 app.include_router(pdf_extractor.router, prefix="/api/pdf-extractor", tags=["Extractor"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
+app.include_router(
+    seller_calculator.router,
+    prefix="/api/seller-calculator",
+    tags=["Seller Calculator"],
+)
 from app.routers import consultas
 from app.routers import presenca_clt
 from app.routers import clt
