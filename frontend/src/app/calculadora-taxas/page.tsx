@@ -11,6 +11,10 @@ type Channel =
   | "payment_link"
   | "point";
 
+type SimulationType =
+  | "receive"
+  | "charge";
+
 type FeeChannelMeta = {
   label: string;
   maxInstallments: number;
@@ -44,6 +48,10 @@ const CHANNEL_ORDER: Channel[] = [
 
 type SimulationResult = {
   success: boolean;
+  simulation_type: SimulationType;
+  input_amount: number;
+  amount_to_receive: number;
+  amount_to_charge: number;
   channel: Channel;
   channel_label: string;
   max_installments: number;
@@ -149,6 +157,13 @@ function LockIcon() {
 
 export default function SellerFeeCalculatorPage() {
   const [amount, setAmount] = useState("");
+
+  const [
+    simulationType,
+    setSimulationType,
+  ] = useState<SimulationType>(
+    "receive"
+  );
 
   const [channel, setChannel] =
     useState<Channel>("checkout");
@@ -319,6 +334,8 @@ export default function SellerFeeCalculatorPage() {
               commissionTable,
             installments,
             channel,
+            simulation_type:
+              simulationType,
           }),
         }
       );
@@ -368,8 +385,11 @@ export default function SellerFeeCalculatorPage() {
       "💳 Simulação de Pagamento",
       "",
       `Forma: ${result.channel_label}`,
-      `Valor total: ${money(
-        result.customer_total
+      `Pra cobrar: ${money(
+        result.amount_to_charge
+      )}`,
+      `Pra receber: ${money(
+        result.amount_to_receive
       )}`,
       `Parcelamento: ${parcelText}`,
       "",
@@ -436,6 +456,61 @@ export default function SellerFeeCalculatorPage() {
           >
             <div>
               <p className="mb-3 text-sm font-bold text-slate-300">
+                Tipo de cálculo
+              </p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSimulationType(
+                      "receive"
+                    );
+                    setResult(null);
+                    setError("");
+                    setCopied(false);
+                  }}
+                  className={
+                    simulationType ===
+                    "receive"
+                      ? "rounded-2xl border border-blue-400 bg-blue-500 px-3 py-4 text-center text-sm font-black text-white shadow-lg shadow-blue-500/20"
+                      : "rounded-2xl border border-slate-700 bg-slate-950 px-3 py-4 text-center text-sm font-bold text-slate-400 transition hover:border-slate-600 hover:text-white"
+                  }
+                >
+                  Pra receber
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSimulationType(
+                      "charge"
+                    );
+                    setResult(null);
+                    setError("");
+                    setCopied(false);
+                  }}
+                  className={
+                    simulationType ===
+                    "charge"
+                      ? "rounded-2xl border border-blue-400 bg-blue-500 px-3 py-4 text-center text-sm font-black text-white shadow-lg shadow-blue-500/20"
+                      : "rounded-2xl border border-slate-700 bg-slate-950 px-3 py-4 text-center text-sm font-bold text-slate-400 transition hover:border-slate-600 hover:text-white"
+                  }
+                >
+                  Pra cobrar
+                </button>
+              </div>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {simulationType ===
+                "receive"
+                  ? "Informe quanto deseja receber e calcularemos quanto cobrar."
+                  : "Informe quanto deseja cobrar e calcularemos o valor correspondente."}
+              </p>
+            </div>
+
+            <div className="mt-7">
+              <p className="mb-3 text-sm font-bold text-slate-300">
                 Forma de pagamento
               </p>
 
@@ -477,7 +552,10 @@ export default function SellerFeeCalculatorPage() {
 
             <div className="mt-7">
               <label className="mb-2 block text-sm font-bold text-slate-300">
-                Valor da proposta
+                {simulationType ===
+                "receive"
+                  ? "Pra receber"
+                  : "Pra cobrar"}
               </label>
 
               <div className="relative">
@@ -544,36 +622,64 @@ export default function SellerFeeCalculatorPage() {
                 Parcelamento
               </label>
 
-              <select
-                value={installments}
-                onChange={(event) =>
-                  setInstallments(
-                    Number(
-                      event.target.value
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  aria-label="Diminuir parcelas"
+                  disabled={
+                    installments <= 1
+                  }
+                  onClick={() =>
+                    setInstallments(
+                      (current) =>
+                        Math.max(
+                          1,
+                          current - 1
+                        )
                     )
-                  )
-                }
-                className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-4 font-bold text-white outline-none transition focus:border-blue-500"
-              >
-                {Array.from(
-                  {
-                    length:
-                      currentChannel
-                        .maxInstallments,
-                  },
-                  (_, index) =>
-                    index + 1
-                ).map((value) => (
-                  <option
-                    key={value}
-                    value={value}
-                  >
-                    {value === 1
-                      ? "1x - à vista"
-                      : `${value}x`}
-                  </option>
-                ))}
-              </select>
+                  }
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-700 bg-slate-950 text-2xl font-black text-white transition hover:border-blue-500 hover:text-blue-400 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  −
+                </button>
+
+                <div className="flex h-14 flex-1 items-center justify-center rounded-2xl border border-slate-700 bg-slate-950 px-4">
+                  <div className="text-center">
+                    <p className="text-lg font-black text-white">
+                      {installments}x
+                    </p>
+
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      {installments === 1
+                        ? "À vista"
+                        : `Máx. ${currentChannel.maxInstallments}x`}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label="Aumentar parcelas"
+                  disabled={
+                    installments >=
+                    currentChannel
+                      .maxInstallments
+                  }
+                  onClick={() =>
+                    setInstallments(
+                      (current) =>
+                        Math.min(
+                          currentChannel
+                            .maxInstallments,
+                          current + 1
+                        )
+                    )
+                  }
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-700 bg-slate-950 text-2xl font-black text-white transition hover:border-blue-500 hover:text-blue-400 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -630,16 +736,29 @@ export default function SellerFeeCalculatorPage() {
                   </div>
 
                   <p className="mt-4 text-sm font-bold text-blue-100">
-                    Valor para o cliente
+                    Pra cobrar
                   </p>
 
                   <p className="mt-1 text-4xl font-black tracking-tight sm:text-5xl">
                     {money(
-                      result.customer_total
+                      result.amount_to_charge
                     )}
                   </p>
 
-                  <div className="mt-5 inline-flex rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-100">
+                        Pra receber
+                      </p>
+
+                      <p className="mt-1 text-lg font-black text-white">
+                        {money(
+                          result.amount_to_receive
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="inline-flex items-center rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
                     <span className="font-black">
                       {result.installments ===
                       1
@@ -651,6 +770,7 @@ export default function SellerFeeCalculatorPage() {
                             )
                           )}
                     </span>
+                    </div>
                   </div>
                 </div>
 
@@ -711,7 +831,7 @@ export default function SellerFeeCalculatorPage() {
 
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-sm text-slate-500">
-                        Valor da proposta
+                        Pra receber
                       </span>
 
                       <span className="font-black text-slate-900">
