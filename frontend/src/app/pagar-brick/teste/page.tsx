@@ -28,33 +28,48 @@ export default function MercadoPagoBrickTestPage() {
   const [error, setError] = useState("");
   const [validated, setValidated] = useState(false);
 
-  const publicKey =
-    process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || "";
-
   useEffect(() => {
-    if (initializedRef.current) {
-      return;
-    }
+    const initializeMercadoPago = async () => {
+      if (initializedRef.current) {
+        return;
+      }
 
-    initializedRef.current = true;
+      initializedRef.current = true;
 
-    if (!publicKey) {
-      setError(
-        "NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY não configurada."
-      );
-      return;
-    }
+      try {
+        const response = await fetch(
+          "/mercado-pago-config",
+          {
+            cache: "no-store",
+          }
+        );
 
-    try {
-      initMercadoPago(publicKey);
-      setSdkReady(true);
-    } catch (err) {
-      console.error(err);
-      setError(
-        "Não foi possível inicializar o Mercado Pago."
-      );
-    }
-  }, [publicKey]);
+        const data = await response.json();
+
+        if (!response.ok || !data?.publicKey) {
+          throw new Error(
+            data?.detail ||
+              "Public Key do Mercado Pago não disponível."
+          );
+        }
+
+        initMercadoPago(data.publicKey);
+        setSdkReady(true);
+      } catch (err: any) {
+        console.error(
+          "Erro ao inicializar Mercado Pago:",
+          err
+        );
+
+        setError(
+          err?.message ||
+            "Não foi possível inicializar o Mercado Pago."
+        );
+      }
+    };
+
+    initializeMercadoPago();
+  }, []);
 
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-10">
