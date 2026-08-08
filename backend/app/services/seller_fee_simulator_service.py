@@ -2,31 +2,24 @@ from decimal import (
     Decimal,
     ROUND_HALF_UP,
 )
-from typing import Any, Dict
+
+from typing import (
+    Any,
+    Dict,
+)
 
 
 class SellerFeeSimulatorService:
-    SALE_FEE = Decimal("0.0299")
-
     COMMISSION_TABLES = {
         1: Decimal("0.05"),
         2: Decimal("0.04"),
         3: Decimal("0.03"),
     }
 
-    INSTALLMENT_FEES = {
-        1: Decimal("0.0000"),
-        2: Decimal("0.0227"),
-        3: Decimal("0.0285"),
-        4: Decimal("0.0347"),
-        5: Decimal("0.0406"),
-        6: Decimal("0.0464"),
-        7: Decimal("0.0478"),
-        8: Decimal("0.0540"),
-        9: Decimal("0.0602"),
-        10: Decimal("0.0647"),
-        11: Decimal("0.0709"),
-        12: Decimal("0.0772"),
+    VALID_CHANNELS = {
+        "checkout",
+        "payment_link",
+        "point",
     }
 
     @staticmethod
@@ -44,25 +37,92 @@ class SellerFeeSimulatorService:
         amount: Decimal,
         commission_table: int,
         installments: int,
+        channel: str,
+        fee_config: Dict[str, Any],
     ) -> Dict[str, Any]:
         if amount <= 0:
             raise ValueError(
                 "O valor deve ser maior que zero."
             )
 
-        if commission_table not in (
-            cls.COMMISSION_TABLES
+        if (
+            commission_table
+            not in cls.COMMISSION_TABLES
         ):
             raise ValueError(
                 "Tabela de comissão inválida."
             )
 
-        if installments not in (
-            cls.INSTALLMENT_FEES
+        channel = (
+            str(channel)
+            .strip()
+            .lower()
+        )
+
+        if channel not in cls.VALID_CHANNELS:
+            raise ValueError(
+                "Forma de pagamento inválida."
+            )
+
+        channel_config = (
+            fee_config.get(channel)
+            or {}
+        )
+
+        max_installments = int(
+            channel_config.get(
+                "maxInstallments",
+                12,
+            )
+        )
+
+        if (
+            installments < 1
+            or installments
+            > max_installments
         ):
             raise ValueError(
-                "Parcelamento inválido."
+                "Parcelamento inválido para "
+                "a forma de pagamento selecionada."
             )
+
+        installment_fees = (
+            channel_config.get(
+                "installments"
+            )
+            or {}
+        )
+
+        sale_fee_percent = Decimal(
+            str(
+                channel_config.get(
+                    "saleFee",
+                    0,
+                )
+            )
+        )
+
+        installment_fee_percent = Decimal(
+            str(
+                installment_fees.get(
+                    str(installments),
+                    installment_fees.get(
+                        installments,
+                        0,
+                    ),
+                )
+            )
+        )
+
+        sale_fee = (
+            sale_fee_percent
+            / Decimal("100")
+        )
+
+        installment_fee = (
+            installment_fee_percent
+            / Decimal("100")
+        )
 
         amount = cls.money(amount)
 
@@ -72,14 +132,8 @@ class SellerFeeSimulatorService:
             ]
         )
 
-        installment_fee = (
-            cls.INSTALLMENT_FEES[
-                installments
-            ]
-        )
-
         total_mp_rate = (
-            cls.SALE_FEE
+            sale_fee
             + installment_fee
         )
 
@@ -102,7 +156,8 @@ class SellerFeeSimulatorService:
             )
 
         customer_total = cls.money(
-            commercial_target / divisor
+            commercial_target
+            / divisor
         )
 
         installment_value = cls.money(
@@ -112,7 +167,7 @@ class SellerFeeSimulatorService:
 
         sale_fee_amount = cls.money(
             customer_total
-            * cls.SALE_FEE
+            * sale_fee
         )
 
         installment_fee_amount = cls.money(
@@ -128,11 +183,21 @@ class SellerFeeSimulatorService:
         return {
             "success": True,
 
-            # Somente nome público da tabela.
-            # A taxa de comissão NÃO é retornada.
+            "channel": channel,
+
+            "channel_label": (
+                channel_config.get("label")
+                or channel
+            ),
+
+            "max_installments": (
+                max_installments
+            ),
+
             "commission_table": (
                 commission_table
             ),
+
             "commission_table_label": (
                 f"Tabela de Comissão "
                 f"{commission_table}"
@@ -145,15 +210,16 @@ class SellerFeeSimulatorService:
             "installments": installments,
 
             "sale_fee_percent": float(
-                cls.SALE_FEE * 100
+                sale_fee_percent
             ),
 
             "installment_fee_percent": float(
-                installment_fee * 100
+                installment_fee_percent
             ),
 
             "mp_total_fee_percent": float(
-                total_mp_rate * 100
+                sale_fee_percent
+                + installment_fee_percent
             ),
 
             "sale_fee_amount": float(

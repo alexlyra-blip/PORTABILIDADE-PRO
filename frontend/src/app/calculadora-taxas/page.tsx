@@ -2,11 +2,51 @@
 
 import {
   FormEvent,
+  useEffect,
   useState,
 } from "react";
 
+type Channel =
+  | "checkout"
+  | "payment_link"
+  | "point";
+
+type FeeChannelMeta = {
+  label: string;
+  maxInstallments: number;
+};
+
+type FeeMeta = Record<
+  Channel,
+  FeeChannelMeta
+>;
+
+const DEFAULT_FEE_META: FeeMeta = {
+  checkout: {
+    label: "Checkout",
+    maxInstallments: 12,
+  },
+  payment_link: {
+    label: "Link de Pagamento",
+    maxInstallments: 12,
+  },
+  point: {
+    label: "Maquininha",
+    maxInstallments: 18,
+  },
+};
+
+const CHANNEL_ORDER: Channel[] = [
+  "point",
+  "payment_link",
+  "checkout",
+];
+
 type SimulationResult = {
   success: boolean;
+  channel: Channel;
+  channel_label: string;
+  max_installments: number;
   commission_table: number;
   commission_table_label: string;
   reference_amount: number;
@@ -109,6 +149,14 @@ function LockIcon() {
 
 export default function SellerFeeCalculatorPage() {
   const [amount, setAmount] = useState("");
+
+  const [channel, setChannel] =
+    useState<Channel>("checkout");
+
+  const [feeMeta, setFeeMeta] =
+    useState<FeeMeta>(
+      DEFAULT_FEE_META
+    );
   const [commissionTable, setCommissionTable] =
     useState(1);
   const [installments, setInstallments] =
@@ -125,6 +173,113 @@ export default function SellerFeeCalculatorPage() {
 
   const [copied, setCopied] =
     useState(false);
+
+  const currentChannel =
+    feeMeta[channel];
+
+  /*
+   * Carrega apenas metadados públicos:
+   * nome do canal e limite de parcelas.
+   *
+   * As taxas e as comissões continuam
+   * sendo calculadas exclusivamente
+   * no backend.
+   */
+  useEffect(() => {
+    const loadFeeMeta = async () => {
+      try {
+        const response = await fetch(
+          "/api/payment-fees/public",
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data =
+          await response.json();
+
+        if (!data?.fees) {
+          return;
+        }
+
+        setFeeMeta((current) => ({
+          checkout: {
+            label:
+              data.fees.checkout?.label ||
+              current.checkout.label,
+            maxInstallments:
+              Number(
+                data.fees.checkout
+                  ?.maxInstallments
+              ) ||
+              current.checkout
+                .maxInstallments,
+          },
+
+          payment_link: {
+            label:
+              data.fees.payment_link
+                ?.label ||
+              current.payment_link.label,
+            maxInstallments:
+              Number(
+                data.fees.payment_link
+                  ?.maxInstallments
+              ) ||
+              current.payment_link
+                .maxInstallments,
+          },
+
+          point: {
+            label:
+              data.fees.point?.label ||
+              current.point.label,
+            maxInstallments:
+              Number(
+                data.fees.point
+                  ?.maxInstallments
+              ) ||
+              current.point
+                .maxInstallments,
+          },
+        }));
+      } catch (err) {
+        console.error(
+          "Erro ao carregar configuração "
+          + "das taxas:",
+          err
+        );
+      }
+    };
+
+    loadFeeMeta();
+  }, []);
+
+  /*
+   * Se mudar para um canal com limite
+   * menor de parcelas, ajusta
+   * automaticamente.
+   */
+  useEffect(() => {
+    if (
+      installments >
+      currentChannel.maxInstallments
+    ) {
+      setInstallments(
+        currentChannel.maxInstallments
+      );
+    }
+
+    setResult(null);
+    setCopied(false);
+  }, [
+    channel,
+    currentChannel.maxInstallments,
+  ]);
 
   const simulate = async (
     event?: FormEvent
@@ -163,6 +318,7 @@ export default function SellerFeeCalculatorPage() {
             commission_table:
               commissionTable,
             installments,
+            channel,
           }),
         }
       );
@@ -211,14 +367,18 @@ export default function SellerFeeCalculatorPage() {
     const message = [
       "💳 Simulação de Pagamento",
       "",
+      `Forma: ${result.channel_label}`,
       `Valor total: ${money(
         result.customer_total
       )}`,
       `Parcelamento: ${parcelText}`,
       "",
-      "Parcelamento sem acréscimo no checkout.",
+      "Valores calculados conforme as "
+      + "taxas vigentes da forma de "
+      + "pagamento selecionada.",
       "",
-      "🔒 Pagamento seguro processado pelo Mercado Pago.",
+      "🔒 Pagamento processado com "
+      + "segurança pelo Mercado Pago.",
     ].join("\n");
 
     try {
@@ -275,6 +435,47 @@ export default function SellerFeeCalculatorPage() {
             className="rounded-[28px] border border-slate-800 bg-slate-900 p-5 shadow-2xl sm:p-7"
           >
             <div>
+              <p className="mb-3 text-sm font-bold text-slate-300">
+                Forma de pagamento
+              </p>
+
+              <div className="grid grid-cols-3 gap-2">
+                {CHANNEL_ORDER.map(
+                  (option) => {
+                    const active =
+                      channel === option;
+
+                    const label =
+                      feeMeta[option].label;
+
+                    return (
+                      <button
+                        type="button"
+                        key={option}
+                        onClick={() => {
+                          setChannel(option);
+                          setError("");
+                        }}
+                        className={
+                          active
+                            ? "rounded-2xl border border-blue-400 bg-blue-500 px-2 py-4 text-center text-xs font-black text-white shadow-lg shadow-blue-500/20 sm:text-sm"
+                            : "rounded-2xl border border-slate-700 bg-slate-950 px-2 py-4 text-center text-xs font-bold text-slate-400 transition hover:border-slate-600 hover:text-white sm:text-sm"
+                        }
+                      >
+                        {label}
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Taxas sincronizadas com as
+                configurações do Financeiro.
+              </p>
+            </div>
+
+            <div className="mt-7">
               <label className="mb-2 block text-sm font-bold text-slate-300">
                 Valor da proposta
               </label>
@@ -355,7 +556,11 @@ export default function SellerFeeCalculatorPage() {
                 className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-4 font-bold text-white outline-none transition focus:border-blue-500"
               >
                 {Array.from(
-                  { length: 12 },
+                  {
+                    length:
+                      currentChannel
+                        .maxInstallments,
+                  },
                   (_, index) =>
                     index + 1
                 ).map((value) => (
@@ -405,7 +610,8 @@ export default function SellerFeeCalculatorPage() {
                 </h2>
 
                 <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-                  Informe o valor, selecione a
+                  Escolha a forma de pagamento,
+                  informe o valor, selecione a
                   tabela e o número de parcelas
                   para visualizar as condições
                   para o cliente.
@@ -419,7 +625,11 @@ export default function SellerFeeCalculatorPage() {
                     Resultado da simulação
                   </div>
 
-                  <p className="mt-6 text-sm font-bold text-blue-100">
+                  <div className="mt-6 inline-flex rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-black uppercase tracking-wider text-blue-50">
+                    {result.channel_label}
+                  </div>
+
+                  <p className="mt-4 text-sm font-bold text-blue-100">
                     Valor para o cliente
                   </p>
 
@@ -489,6 +699,18 @@ export default function SellerFeeCalculatorPage() {
                   <div className="mt-6 rounded-2xl border border-slate-200 p-5">
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-sm text-slate-500">
+                        Forma de pagamento
+                      </span>
+
+                      <span className="font-black text-slate-900">
+                        {result.channel_label}
+                      </span>
+                    </div>
+
+                    <div className="my-4 border-t border-dashed border-slate-200" />
+
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-sm text-slate-500">
                         Valor da proposta
                       </span>
 
@@ -541,10 +763,11 @@ export default function SellerFeeCalculatorPage() {
                         </p>
 
                         <p className="mt-1 text-sm leading-6 text-emerald-700">
-                          O cliente poderá pagar
-                          no Checkout Transparente
-                          do Portabilidade PRO com
-                          processamento seguro pelo
+                          A condição foi calculada
+                          conforme a forma de pagamento
+                          selecionada e as taxas atuais
+                          configuradas no Financeiro,
+                          com processamento pelo
                           Mercado Pago.
                         </p>
                       </div>

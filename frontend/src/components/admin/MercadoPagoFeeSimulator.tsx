@@ -134,19 +134,54 @@ export default function MercadoPagoFeeSimulator() {
     useState(true);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+    const loadFees = async () => {
+      try {
+        const token = localStorage.getItem("token");
 
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setFees(parsed);
+        const response = await fetch(
+          "/api/payment-fees/admin",
+          {
+            cache: "no-store",
+            headers: {
+              ...(token
+                ? {
+                    Authorization:
+                      `Bearer ${token}`,
+                  }
+                : {}),
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.detail ||
+              "Não foi possível carregar as taxas."
+          );
+        }
+
+        if (data?.fees) {
+          setFees(data.fees);
+        }
+      } catch (error) {
+        console.error(
+          "Erro ao carregar taxas do Mercado Pago:",
+          error
+        );
+
+        /*
+         * Em caso de indisponibilidade da API,
+         * mantém os defaults apenas como fallback
+         * visual. A fonte oficial continua sendo
+         * o backend.
+         */
+        setFees(cloneDefaults());
       }
-    } catch (error) {
-      console.error(
-        "Erro ao carregar taxas do Mercado Pago:",
-        error
-      );
-    }
+    };
+
+    loadFees();
   }, []);
 
   const current = fees[channel];
@@ -307,24 +342,79 @@ export default function MercadoPagoFeeSimulator() {
     simulationType,
   ]);
 
-  const saveFees = () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(fees)
-    );
+  const saveFees = async () => {
+    try {
+      const token = localStorage.getItem("token");
 
-    setShowSettings(false);
+      const response = await fetch(
+        "/api/payment-fees/admin",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token
+              ? {
+                  Authorization:
+                    `Bearer ${token}`,
+                }
+              : {}),
+          },
+          body: JSON.stringify({
+            fees,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.detail ||
+            "Não foi possível salvar as taxas."
+        );
+      }
+
+      if (data?.fees) {
+        setFees(data.fees);
+      }
+
+      /*
+       * Remove a configuração antiga local.
+       * A fonte oficial agora é o backend.
+       */
+      localStorage.removeItem(STORAGE_KEY);
+
+      setShowSettings(false);
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "mercado-pago-fees-updated",
+          {
+            detail: data,
+          }
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Erro ao salvar taxas do Mercado Pago:",
+        error
+      );
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível salvar as taxas."
+      );
+    }
   };
 
   const restoreDefaults = () => {
-    const defaults = cloneDefaults();
-
-    setFees(defaults);
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(defaults)
-    );
+    /*
+     * Apenas restaura os valores na tela.
+     * Para persistir no banco, o administrador
+     * confirma em "Salvar taxas".
+     */
+    setFees(cloneDefaults());
   };
 
   const updateSaleFee = (
