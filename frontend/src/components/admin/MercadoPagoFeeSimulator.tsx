@@ -59,7 +59,7 @@ const DEFAULT_FEES: FeeConfig = {
   },
 
   point: {
-    label: "Maquininha Point",
+    label: "Maquininha",
     saleFee: 2.99,
     maxInstallments: 18,
     installments: {
@@ -116,7 +116,7 @@ export default function MercadoPagoFeeSimulator() {
     useState<SimulationType>("receive");
 
   const [channel, setChannel] =
-    useState<Channel>("checkout");
+    useState<Channel>("point");
 
   const [installmentMode, setInstallmentMode] =
     useState<InstallmentMode>("seller");
@@ -336,6 +336,7 @@ export default function MercadoPagoFeeSimulator() {
     };
   }, [
     amount,
+    channel,
     current,
     installmentMode,
     installments,

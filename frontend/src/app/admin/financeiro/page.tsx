@@ -759,6 +759,20 @@ export default function FinanceiroPage() {
 
 
         <div className="mb-6">
+          <div className="mb-4 flex justify-end">
+            <a
+              href="/calculadora-taxas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+            >
+              Abrir Calculadora do Vendedor
+              <span aria-hidden="true">
+                ↗
+              </span>
+            </a>
+          </div>
+
           <MercadoPagoFeeSimulator />
         </div>
 
