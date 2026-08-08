@@ -184,6 +184,21 @@ export default function SellerFeeCalculatorPage() {
   const [result, setResult] =
     useState<SimulationResult | null>(null);
 
+  const [
+    simulationGrid,
+    setSimulationGrid,
+  ] = useState<
+    Record<string, SimulationResult> | null
+  >(null);
+
+  const [
+    gridAmount,
+    setGridAmount,
+  ] = useState<number | null>(null);
+
+  const gridRequestRef =
+    useRef(0);
+
   const [loading, setLoading] =
     useState(false);
 
@@ -193,8 +208,6 @@ export default function SellerFeeCalculatorPage() {
   const [copied, setCopied] =
     useState(false);
 
-  const calculatedOnceRef =
-    useRef(false);
 
   const currentChannel =
     feeMeta[channel];
@@ -303,6 +316,114 @@ export default function SellerFeeCalculatorPage() {
     currentChannel.maxInstallments,
   ]);
 
+  const resultKey = (
+    targetSimulationType: SimulationType,
+    targetChannel: Channel,
+    targetCommissionTable: number,
+    targetInstallments: number
+  ) =>
+    [
+      targetSimulationType,
+      targetChannel,
+      targetCommissionTable,
+      targetInstallments,
+    ].join("|");
+
+
+  const loadSimulationGrid = async (
+    numericAmount: number,
+    showMainLoading = false
+  ) => {
+    const requestId =
+      ++gridRequestRef.current;
+
+    if (showMainLoading) {
+      setLoading(true);
+    }
+
+    setError("");
+    setCopied(false);
+
+    try {
+      const response = await fetch(
+        "/api/seller-calculator/simulate-grid",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            amount: numericAmount,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.detail ||
+            "Não foi possível realizar a simulação."
+        );
+      }
+
+      // Ignora resposta antiga caso exista
+      // uma requisição mais recente.
+      if (
+        requestId !==
+        gridRequestRef.current
+      ) {
+        return;
+      }
+
+      const results =
+        (data?.results || {}) as Record<
+          string,
+          SimulationResult
+        >;
+
+      setSimulationGrid(results);
+      setGridAmount(
+        Number(data?.input_amount || numericAmount)
+      );
+
+      const key = resultKey(
+        simulationType,
+        channel,
+        commissionTable,
+        installments
+      );
+
+      setResult(
+        results[key] || null
+      );
+    } catch (err: any) {
+      if (
+        requestId !==
+        gridRequestRef.current
+      ) {
+        return;
+      }
+
+      console.error(err);
+
+      setError(
+        err?.message ||
+          "Não foi possível realizar a simulação."
+      );
+    } finally {
+      if (
+        requestId ===
+          gridRequestRef.current &&
+        showMainLoading
+      ) {
+        setLoading(false);
+      }
+    }
+  };
+
+
   const simulate = async (
     event?: FormEvent
   ) => {
@@ -318,75 +439,116 @@ export default function SellerFeeCalculatorPage() {
       setError(
         "Informe um valor válido para a proposta."
       );
+
       setResult(null);
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setCopied(false);
-
-    try {
-      const response = await fetch(
-        "/api/seller-calculator/simulate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            amount: numericAmount,
-            commission_table:
-              commissionTable,
-            installments,
-            channel,
-            simulation_type:
-              simulationType,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.detail ||
-            "Não foi possível realizar a simulação."
-        );
-      }
-
-      setResult(data);
-      calculatedOnceRef.current = true;
-    } catch (err: any) {
-      console.error(err);
-
-      setError(
-        err?.message ||
-          "Não foi possível realizar a simulação."
-      );
-
-      setResult(null);
-    } finally {
-      setLoading(false);
-    }
+    await loadSimulationGrid(
+      numericAmount,
+      true
+    );
   };
 
-  // AUTO RECALCULO VENDEDOR
+
+  // ========================================
+  // TROCAS INSTANTÂNEAS
   //
-  // Após o primeiro cálculo, qualquer
-  // alteração refaz automaticamente
-  // a simulação.
+  // Não existe chamada à API aqui.
+  //
+  // Depois do primeiro cálculo, qualquer
+  // clique apenas seleciona um resultado
+  // que já está em memória.
+  // ========================================
   useEffect(() => {
-    if (!calculatedOnceRef.current) {
+    if (!simulationGrid) {
+      return;
+    }
+
+    const numericAmount =
+      parseBrazilianMoney(amount);
+
+    // Se o valor foi alterado, aguardamos
+    // o novo grid daquele valor.
+    if (
+      !numericAmount ||
+      gridAmount === null ||
+      Math.abs(
+        numericAmount - gridAmount
+      ) > 0.005
+    ) {
+      return;
+    }
+
+    const key = resultKey(
+      simulationType,
+      channel,
+      commissionTable,
+      installments
+    );
+
+    const cachedResult =
+      simulationGrid[key];
+
+    if (cachedResult) {
+      setResult(cachedResult);
+      setError("");
+      setCopied(false);
+    }
+  }, [
+    simulationGrid,
+    gridAmount,
+    amount,
+    simulationType,
+    channel,
+    commissionTable,
+    installments,
+  ]);
+
+
+  // ========================================
+  // ALTERAÇÃO DO VALOR
+  //
+  // Somente mudar o valor exige consultar
+  // novamente o backend, porque queremos
+  // preservar as regras comerciais fora
+  // do frontend.
+  //
+  // O debounce evita uma requisição para
+  // cada tecla digitada.
+  // ========================================
+  useEffect(() => {
+    if (!simulationGrid) {
+      return;
+    }
+
+    const numericAmount =
+      parseBrazilianMoney(amount);
+
+    if (
+      !numericAmount ||
+      numericAmount <= 0
+    ) {
+      return;
+    }
+
+    if (
+      gridAmount !== null &&
+      Math.abs(
+        numericAmount - gridAmount
+      ) <= 0.005
+    ) {
       return;
     }
 
     const timer = window.setTimeout(
       () => {
-        void simulate();
+        void loadSimulationGrid(
+          numericAmount,
+          false
+        );
       },
-      180
+      300
     );
 
     return () => {
@@ -394,11 +556,10 @@ export default function SellerFeeCalculatorPage() {
     };
   }, [
     amount,
-    simulationType,
-    channel,
-    commissionTable,
-    installments,
+    simulationGrid,
+    gridAmount,
   ]);
+
 
   const copySimulation = async () => {
     if (!result) {

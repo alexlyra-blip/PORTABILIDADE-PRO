@@ -100,3 +100,39 @@ async def simulate_seller_payment(
             status_code=400,
             detail=str(exc),
         ) from exc
+
+
+class SellerSimulationGridRequest(BaseModel):
+    amount: Decimal = Field(
+        gt=0,
+        le=1000000,
+        decimal_places=2,
+    )
+
+
+@router.post("/simulate-grid")
+async def simulate_seller_payment_grid(
+    data: SellerSimulationGridRequest,
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    try:
+        config_result = await (
+            PaymentFeeConfigService
+            .get_config(db)
+        )
+
+        return (
+            SellerFeeSimulatorService
+            .simulate_grid(
+                amount=data.amount,
+                fee_config=(
+                    config_result["fees"]
+                ),
+            )
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc

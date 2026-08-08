@@ -387,3 +387,92 @@ class SellerFeeSimulatorService:
                 installment_value
             ),
         }
+
+    @classmethod
+    def simulate_grid(
+        cls,
+        amount: Decimal,
+        fee_config: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Pré-calcula todos os cenários utilizados
+        pela Calculadora do Vendedor.
+
+        Depois do primeiro carregamento o frontend
+        pode alternar instantaneamente entre:
+
+        - Pra receber / Pra cobrar
+        - Maquininha / Link / Checkout
+        - Tabelas 1, 2 e 3
+        - Todas as parcelas permitidas
+
+        As taxas comerciais internas continuam
+        exclusivamente no backend.
+        """
+
+        results: Dict[str, Any] = {}
+
+        channels = (
+            "point",
+            "payment_link",
+            "checkout",
+        )
+
+        simulation_types = (
+            "receive",
+            "charge",
+        )
+
+        for simulation_type in simulation_types:
+            for channel in channels:
+                channel_config = (
+                    fee_config.get(channel)
+                    or {}
+                )
+
+                if not channel_config:
+                    continue
+
+                max_installments = int(
+                    channel_config.get(
+                        "maxInstallments",
+                        12,
+                    )
+                )
+
+                for commission_table in (1, 2, 3):
+                    for installments in range(
+                        1,
+                        max_installments + 1,
+                    ):
+                        result = cls.simulate(
+                            amount=amount,
+                            commission_table=(
+                                commission_table
+                            ),
+                            installments=(
+                                installments
+                            ),
+                            channel=channel,
+                            fee_config=fee_config,
+                            simulation_type=(
+                                simulation_type
+                            ),
+                        )
+
+                        key = (
+                            f"{simulation_type}|"
+                            f"{channel}|"
+                            f"{commission_table}|"
+                            f"{installments}"
+                        )
+
+                        results[key] = result
+
+        return {
+            "success": True,
+            "input_amount": float(
+                cls.money(amount)
+            ),
+            "results": results,
+        }
