@@ -1,5 +1,10 @@
 from decimal import Decimal
-from typing import Any, Dict
+
+from typing import (
+    Any,
+    Dict,
+    Literal,
+)
 
 from fastapi import (
     APIRouter,
@@ -53,6 +58,11 @@ class SellerSimulationRequest(BaseModel):
         max_length=30,
     )
 
+    simulation_type: Literal[
+        "receive",
+        "charge",
+    ] = "receive"
+
 
 @router.post("/simulate")
 async def simulate_seller_payment(
@@ -78,6 +88,9 @@ async def simulate_seller_payment(
                 channel=data.channel,
                 fee_config=(
                     config_result["fees"]
+                ),
+                simulation_type=(
+                    data.simulation_type
                 ),
             )
         )

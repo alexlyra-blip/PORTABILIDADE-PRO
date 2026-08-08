@@ -22,6 +22,11 @@ class SellerFeeSimulatorService:
         "point",
     }
 
+    VALID_SIMULATION_TYPES = {
+        "receive",
+        "charge",
+    }
+
     @staticmethod
     def money(
         value: Decimal,
@@ -39,6 +44,7 @@ class SellerFeeSimulatorService:
         installments: int,
         channel: str,
         fee_config: Dict[str, Any],
+        simulation_type: str = "receive",
     ) -> Dict[str, Any]:
         if amount <= 0:
             raise ValueError(
@@ -62,6 +68,20 @@ class SellerFeeSimulatorService:
         if channel not in cls.VALID_CHANNELS:
             raise ValueError(
                 "Forma de pagamento inválida."
+            )
+
+        simulation_type = (
+            str(simulation_type)
+            .strip()
+            .lower()
+        )
+
+        if (
+            simulation_type
+            not in cls.VALID_SIMULATION_TYPES
+        ):
+            raise ValueError(
+                "Tipo de simulação inválido."
             )
 
         channel_config = (
@@ -124,8 +144,6 @@ class SellerFeeSimulatorService:
             / Decimal("100")
         )
 
-        amount = cls.money(amount)
-
         commission_rate = (
             cls.COMMISSION_TABLES[
                 commission_table
@@ -135,14 +153,6 @@ class SellerFeeSimulatorService:
         total_mp_rate = (
             sale_fee
             + installment_fee
-        )
-
-        commercial_target = (
-            amount
-            * (
-                Decimal("1")
-                + commission_rate
-            )
         )
 
         divisor = (
@@ -155,10 +165,59 @@ class SellerFeeSimulatorService:
                 "Configuração de taxas inválida."
             )
 
-        customer_total = cls.money(
-            commercial_target
-            / divisor
-        )
+        input_amount = cls.money(amount)
+
+        # ==========================================
+        # PRA RECEBER
+        #
+        # O valor informado é o valor base que
+        # queremos preservar.
+        #
+        # Calculamos quanto precisa ser cobrado
+        # para absorver comissão + taxas MP.
+        # ==========================================
+
+        if simulation_type == "receive":
+            reference_amount = input_amount
+
+            commercial_target = (
+                reference_amount
+                * (
+                    Decimal("1")
+                    + commission_rate
+                )
+            )
+
+            customer_total = cls.money(
+                commercial_target
+                / divisor
+            )
+
+        # ==========================================
+        # PRA COBRAR
+        #
+        # O usuário informa o valor final que
+        # será cobrado do cliente.
+        #
+        # Fazemos o cálculo inverso para descobrir
+        # quanto corresponde ao valor base.
+        # ==========================================
+
+        else:
+            customer_total = input_amount
+
+            commercial_target = (
+                customer_total
+                * divisor
+            )
+
+            reference_amount = cls.money(
+                commercial_target
+                / (
+                    Decimal("1")
+                    + commission_rate
+                )
+            )
 
         installment_value = cls.money(
             customer_total
@@ -183,6 +242,10 @@ class SellerFeeSimulatorService:
         return {
             "success": True,
 
+            "simulation_type": (
+                simulation_type
+            ),
+
             "channel": channel,
 
             "channel_label": (
@@ -203,8 +266,20 @@ class SellerFeeSimulatorService:
                 f"{commission_table}"
             ),
 
+            "input_amount": float(
+                input_amount
+            ),
+
             "reference_amount": float(
-                amount
+                reference_amount
+            ),
+
+            "amount_to_receive": float(
+                reference_amount
+            ),
+
+            "amount_to_charge": float(
+                customer_total
             ),
 
             "installments": installments,
