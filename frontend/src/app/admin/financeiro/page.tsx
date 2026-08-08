@@ -267,7 +267,7 @@ export default function FinanceiroPage() {
       };
 
       const response = await api.post(
-        "/payments/admin/create-link",
+        "/payment-orders/admin/create-link",
         payload
       );
 
