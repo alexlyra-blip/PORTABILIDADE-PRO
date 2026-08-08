@@ -158,6 +158,7 @@ from app.routers import auth, banks, users, admin, pdf, simulacao, external, cha
 
 from app.routers import payments
 from app.routers import payment_orders
+from app.routers import payment_fees
 from app.routers import seller_calculator
 
 # Include Routers
@@ -176,6 +177,11 @@ app.include_router(
     payment_orders.router,
     prefix="/api/payment-orders",
     tags=["Payment Orders"],
+)
+app.include_router(
+    payment_fees.router,
+    prefix="/api/payment-fees",
+    tags=["Payment Fees"],
 )
 app.include_router(
     seller_calculator.router,

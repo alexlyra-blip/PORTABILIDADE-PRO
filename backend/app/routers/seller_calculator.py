@@ -3,9 +3,24 @@ from typing import Any, Dict
 
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
 )
-from pydantic import BaseModel, Field
+
+from pydantic import (
+    BaseModel,
+    Field,
+)
+
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+)
+
+from app.database import get_db
+
+from app.services.payment_fee_config_service import (
+    PaymentFeeConfigService,
+)
 
 from app.services.seller_fee_simulator_service import (
     SellerFeeSimulatorService,
@@ -29,15 +44,27 @@ class SellerSimulationRequest(BaseModel):
 
     installments: int = Field(
         ge=1,
-        le=12,
+        le=18,
+    )
+
+    channel: str = Field(
+        default="checkout",
+        min_length=2,
+        max_length=30,
     )
 
 
 @router.post("/simulate")
 async def simulate_seller_payment(
     data: SellerSimulationRequest,
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     try:
+        config_result = await (
+            PaymentFeeConfigService
+            .get_config(db)
+        )
+
         return (
             SellerFeeSimulatorService
             .simulate(
@@ -47,6 +74,10 @@ async def simulate_seller_payment(
                 ),
                 installments=(
                     data.installments
+                ),
+                channel=data.channel,
+                fee_config=(
+                    config_result["fees"]
                 ),
             )
         )
