@@ -16,6 +16,14 @@ class SellerFeeSimulatorService:
         3: Decimal("0.03"),
     }
 
+    # Comissão do vendedor.
+    # Cálculo separado da tabela comercial.
+    SELLER_COMMISSION_TABLES = {
+        1: Decimal("0.03"),
+        2: Decimal("0.02"),
+        3: Decimal("0.01"),
+    }
+
     VALID_CHANNELS = {
         "checkout",
         "payment_link",
@@ -224,6 +232,53 @@ class SellerFeeSimulatorService:
             / Decimal(installments)
         )
 
+        # Comissão do vendedor calculada sobre
+        # o valor "Pra receber".
+        seller_commission_rate = (
+            cls.SELLER_COMMISSION_TABLES[
+                commission_table
+            ]
+        )
+
+        seller_commission_amount = cls.money(
+            reference_amount
+            * seller_commission_rate
+        )
+
+        seller_commission_percent = (
+            seller_commission_rate
+            * Decimal("100")
+        )
+
+        # Taxa final efetiva da operação.
+        #
+        # Inclui a composição total da operação,
+        # inclusive a tabela comercial, sem
+        # expor sua taxa interna separadamente.
+        #
+        # Taxa a.m. =
+        # ((Pra cobrar / Pra receber - 1) * 100)
+        # / quantidade de parcelas
+        if (
+            reference_amount > 0
+            and installments > 0
+        ):
+            final_rate_percent = (
+                (
+                    customer_total
+                    / reference_amount
+                )
+                - Decimal("1")
+            ) * Decimal("100")
+
+            monthly_rate_percent = (
+                final_rate_percent
+                / Decimal(installments)
+            )
+        else:
+            final_rate_percent = Decimal("0")
+            monthly_rate_percent = Decimal("0")
+
         sale_fee_amount = cls.money(
             customer_total
             * sale_fee
@@ -266,6 +321,14 @@ class SellerFeeSimulatorService:
                 f"{commission_table}"
             ),
 
+            "seller_commission_percent": float(
+                seller_commission_percent
+            ),
+
+            "seller_commission_amount": float(
+                seller_commission_amount
+            ),
+
             "input_amount": float(
                 input_amount
             ),
@@ -295,6 +358,13 @@ class SellerFeeSimulatorService:
             "mp_total_fee_percent": float(
                 sale_fee_percent
                 + installment_fee_percent
+            ),
+
+            "monthly_rate_percent": float(
+                monthly_rate_percent.quantize(
+                    Decimal("0.0001"),
+                    rounding=ROUND_HALF_UP,
+                )
             ),
 
             "sale_fee_amount": float(

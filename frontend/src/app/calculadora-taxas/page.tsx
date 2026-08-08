@@ -3,6 +3,7 @@
 import {
   FormEvent,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -57,11 +58,14 @@ type SimulationResult = {
   max_installments: number;
   commission_table: number;
   commission_table_label: string;
+  seller_commission_percent: number;
+  seller_commission_amount: number;
   reference_amount: number;
   installments: number;
   sale_fee_percent: number;
   installment_fee_percent: number;
   mp_total_fee_percent: number;
+  monthly_rate_percent: number;
   sale_fee_amount: number;
   installment_fee_amount: number;
   mp_total_fee_amount: number;
@@ -166,7 +170,7 @@ export default function SellerFeeCalculatorPage() {
   );
 
   const [channel, setChannel] =
-    useState<Channel>("checkout");
+    useState<Channel>("point");
 
   const [feeMeta, setFeeMeta] =
     useState<FeeMeta>(
@@ -188,6 +192,9 @@ export default function SellerFeeCalculatorPage() {
 
   const [copied, setCopied] =
     useState(false);
+
+  const calculatedOnceRef =
+    useRef(false);
 
   const currentChannel =
     feeMeta[channel];
@@ -350,6 +357,7 @@ export default function SellerFeeCalculatorPage() {
       }
 
       setResult(data);
+      calculatedOnceRef.current = true;
     } catch (err: any) {
       console.error(err);
 
@@ -363,6 +371,34 @@ export default function SellerFeeCalculatorPage() {
       setLoading(false);
     }
   };
+
+  // AUTO RECALCULO VENDEDOR
+  //
+  // Após o primeiro cálculo, qualquer
+  // alteração refaz automaticamente
+  // a simulação.
+  useEffect(() => {
+    if (!calculatedOnceRef.current) {
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => {
+        void simulate();
+      },
+      180
+    );
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    amount,
+    simulationType,
+    channel,
+    commissionTable,
+    installments,
+  ]);
 
   const copySimulation = async () => {
     if (!result) {
@@ -758,6 +794,19 @@ export default function SellerFeeCalculatorPage() {
                       </p>
                     </div>
 
+                    <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-100">
+                        Taxa a.m.
+                      </p>
+
+                      <p className="mt-1 text-lg font-black text-white">
+                        {percent(
+                          result.monthly_rate_percent
+                        )}
+                        %
+                      </p>
+                    </div>
+
                     <div className="inline-flex items-center rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
                     <span className="font-black">
                       {result.installments ===
@@ -853,6 +902,30 @@ export default function SellerFeeCalculatorPage() {
                           result.commission_table_label
                         }
                       </span>
+                    </div>
+
+                    <div className="my-4 border-t border-dashed border-slate-200" />
+
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-sm text-slate-500">
+                        Comissão do vendedor
+                      </span>
+
+                      <div className="text-right">
+                        <span className="font-black text-emerald-700">
+                          {money(
+                            result.seller_commission_amount
+                          )}
+                        </span>
+
+                        <span className="ml-2 text-xs font-bold text-slate-400">
+                          (
+                          {percent(
+                            result.seller_commission_percent
+                          )}
+                          %)
+                        </span>
+                      </div>
                     </div>
 
                     <div className="my-4 border-t border-dashed border-slate-200" />
