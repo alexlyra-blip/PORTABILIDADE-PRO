@@ -38,6 +38,27 @@ class MercadoPagoOrdersService:
         return token
 
     @staticmethod
+    def get_statement_descriptor() -> str:
+        """
+        Nome enviado ao Mercado Pago para
+        identificação da compra na fatura
+        do cartão do cliente.
+        """
+
+        value = os.getenv(
+            "MERCADO_PAGO_STATEMENT_DESCRIPTOR",
+            "PORTAPRO",
+        ).strip().upper()
+
+        if not value:
+            value = "PORTAPRO"
+
+        # O Mercado Pago documenta até
+        # 13 caracteres para o descriptor.
+        return value[:13]
+
+
+    @staticmethod
     def get_frontend_url() -> str:
         return os.getenv(
             "FRONTEND_URL",
@@ -151,6 +172,9 @@ class MercadoPagoOrdersService:
             expires_at=expires_at,
             mercado_pago_payload={
                 "checkout_type": "orders",
+                "statement_descriptor": (
+                    cls.get_statement_descriptor()
+                ),
                 "max_installments": (
                     data.max_installments
                 ),
@@ -218,6 +242,22 @@ class MercadoPagoOrdersService:
                 ),
             }
 
+        mp_payload = (
+            payment.mercado_pago_payload
+            if isinstance(
+                payment.mercado_pago_payload,
+                dict,
+            )
+            else {}
+        )
+
+        statement_descriptor = str(
+            mp_payload.get(
+                "statement_descriptor"
+            )
+            or cls.get_statement_descriptor()
+        )[:13]
+
         payload = {
             "type": "online",
             "processing_mode": "automatic",
@@ -240,6 +280,9 @@ class MercadoPagoOrdersService:
                             "token": card_token,
                             "installments": (
                                 installments
+                            ),
+                            "statement_descriptor": (
+                                statement_descriptor
                             ),
                         },
                     }
@@ -386,6 +429,215 @@ class MercadoPagoOrdersService:
 
         return result
 
+    @staticmethod
+    def create_cancel_idempotency_key(
+        order_id: str,
+    ) -> str:
+        raw = (
+            f"{order_id}:cancel"
+        ).encode("utf-8")
+
+        return hashlib.sha256(
+            raw
+        ).hexdigest()
+
+
+    @classmethod
+    async def cancel_order(
+        cls,
+        order_id: str,
+    ) -> Dict[str, Any]:
+        access_token = cls.get_access_token()
+
+        headers = {
+            "Authorization": (
+                f"Bearer {access_token}"
+            ),
+            "Content-Type": "application/json",
+            "X-Idempotency-Key": (
+                cls.create_cancel_idempotency_key(
+                    order_id
+                )
+            ),
+        }
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=40.0
+            ) as client:
+                response = await client.post(
+                    (
+                        f"{MERCADO_PAGO_API_URL}"
+                        f"/v1/orders/{order_id}/cancel"
+                    ),
+                    headers=headers,
+                )
+
+        except httpx.TimeoutException as exc:
+            raise HTTPException(
+                status_code=504,
+                detail=(
+                    "O Mercado Pago demorou "
+                    "para cancelar a cobrança."
+                ),
+            ) from exc
+
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    "Não foi possível conectar "
+                    "ao Mercado Pago."
+                ),
+            ) from exc
+
+        try:
+            result = response.json()
+        except ValueError:
+            result = {
+                "message": response.text
+            }
+
+        if response.status_code not in (
+            200,
+            201,
+            202,
+        ):
+            raise HTTPException(
+                status_code=(
+                    response.status_code
+                    if 400 <= response.status_code < 500
+                    else 502
+                ),
+                detail={
+                    "message": (
+                        "O Mercado Pago não "
+                        "cancelou a Order."
+                    ),
+                    "mercado_pago_response": (
+                        cls.sanitize_payload(
+                            result
+                        )
+                    ),
+                },
+            )
+
+        return result
+
+
+    @staticmethod
+    def create_refund_idempotency_key(
+        order_id: str,
+    ) -> str:
+        """
+        Uma Order só pode ter um estorno
+        total nesta rotina.
+
+        A chave determinística protege contra
+        clique duplo e repetição da requisição.
+        """
+
+        raw = (
+            f"{order_id}:full-refund"
+        ).encode("utf-8")
+
+        return hashlib.sha256(
+            raw
+        ).hexdigest()
+
+
+    @classmethod
+    async def refund_order(
+        cls,
+        order_id: str,
+    ) -> Dict[str, Any]:
+        access_token = (
+            cls.get_access_token()
+        )
+
+        headers = {
+            "Authorization": (
+                f"Bearer {access_token}"
+            ),
+            "Content-Type": (
+                "application/json"
+            ),
+            "X-Idempotency-Key": (
+                cls.create_refund_idempotency_key(
+                    order_id
+                )
+            ),
+        }
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=40.0
+            ) as client:
+                # Estorno TOTAL:
+                # a Orders API exige body vazio.
+                response = await client.post(
+                    (
+                        f"{MERCADO_PAGO_API_URL}"
+                        f"/v1/orders/{order_id}/refund"
+                    ),
+                    headers=headers,
+                )
+
+        except httpx.TimeoutException as exc:
+            raise HTTPException(
+                status_code=504,
+                detail=(
+                    "O Mercado Pago demorou "
+                    "para processar o estorno."
+                ),
+            ) from exc
+
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    "Não foi possível conectar "
+                    "ao Mercado Pago para estornar."
+                ),
+            ) from exc
+
+        try:
+            result = response.json()
+        except ValueError:
+            result = {
+                "message": response.text
+            }
+
+        if response.status_code not in (
+            200,
+            201,
+            202,
+        ):
+            raise HTTPException(
+                status_code=(
+                    response.status_code
+                    if 400 <= response.status_code < 500
+                    else 502
+                ),
+                detail={
+                    "message": (
+                        "O Mercado Pago não "
+                        "concluiu o estorno."
+                    ),
+                    "mercado_pago_status": (
+                        response.status_code
+                    ),
+                    "mercado_pago_response": (
+                        cls.sanitize_payload(
+                            result
+                        )
+                    ),
+                },
+            )
+
+        return result
+
+
     @classmethod
     async def apply_order_to_payment(
         cls,
@@ -448,6 +700,14 @@ class MercadoPagoOrdersService:
 
         payment.status = local_status
 
+        if (
+            local_status == "approved"
+            and not payment.paid_at
+        ):
+            payment.paid_at = datetime.now(
+                timezone.utc
+            )
+
         payment.status_detail = str(
             mp_payment.get(
                 "status_detail"
@@ -495,7 +755,55 @@ class MercadoPagoOrdersService:
         payment.mercado_pago_payload = {
             **previous_payload,
             "checkout_type": "orders",
+
+            # Identificadores
             "order_id": order.get("id"),
+            "transaction_id": (
+                str(mp_payment.get("id"))
+                if mp_payment.get("id")
+                else None
+            ),
+
+            # Dados não sensíveis necessários
+            # ao histórico e ao comprovante.
+            "card_brand": (
+                payment_method.get("id")
+                if isinstance(
+                    payment_method,
+                    dict,
+                )
+                and payment_method.get("id")
+                else previous_payload.get(
+                    "selected_card_brand"
+                )
+            ),
+
+            "installments": int(
+                mp_payment.get("installments")
+                or (
+                    payment_method.get(
+                        "installments"
+                    )
+                    if isinstance(
+                        payment_method,
+                        dict,
+                    )
+                    else None
+                )
+                or previous_payload.get(
+                    "selected_installments"
+                )
+                or 1
+            ),
+
+            "statement_descriptor": (
+                previous_payload.get(
+                    "statement_descriptor"
+                )
+                or cls.get_statement_descriptor()
+            ),
+
+            # Resposta completa sanitizada.
             "order": cls.sanitize_payload(
                 order
             ),

@@ -28,6 +28,11 @@ from app.services.mercado_pago_webhook_service import (
 )
 
 
+from app.services.mercado_pago_orders_service import (
+    MercadoPagoOrdersService,
+)
+
+
 router = APIRouter()
 
 
@@ -207,6 +212,74 @@ async def list_admin_payments(
                 "status_detail": p.status_detail,
                 "payment_method_id": p.payment_method_id,
                 "payment_type_id": p.payment_type_id,
+                "order_id": (
+                    (
+                        p.mercado_pago_payload
+                        or {}
+                    ).get("order_id")
+                    if isinstance(
+                        p.mercado_pago_payload,
+                        dict,
+                    )
+                    else None
+                ),
+                "transaction_id": (
+                    (
+                        p.mercado_pago_payload
+                        or {}
+                    ).get("transaction_id")
+                    if isinstance(
+                        p.mercado_pago_payload,
+                        dict,
+                    )
+                    else None
+                ),
+                "card_brand": (
+                    (
+                        p.mercado_pago_payload
+                        or {}
+                    ).get("card_brand")
+                    if isinstance(
+                        p.mercado_pago_payload,
+                        dict,
+                    )
+                    else None
+                ),
+                "installments": (
+                    (
+                        p.mercado_pago_payload
+                        or {}
+                    ).get("installments")
+                    if isinstance(
+                        p.mercado_pago_payload,
+                        dict,
+                    )
+                    else None
+                ),
+                "statement_descriptor": (
+                    (
+                        p.mercado_pago_payload
+                        or {}
+                    ).get(
+                        "statement_descriptor"
+                    )
+                    if isinstance(
+                        p.mercado_pago_payload,
+                        dict,
+                    )
+                    else None
+                ),
+                "last_refund": (
+                    (
+                        p.mercado_pago_payload
+                        or {}
+                    ).get("last_refund")
+                    if isinstance(
+                        p.mercado_pago_payload,
+                        dict,
+                    )
+                    else None
+                ),
                 "checkout_url": p.checkout_url,
                 "expires_at": (
                     p.expires_at.isoformat()
@@ -253,6 +326,47 @@ async def payment_admin_stats(
     )
     pending_count, pending_amount = pending_result.one()
 
+    rejected_result = await db.execute(
+        select(
+            func.count(Payment.id),
+            func.coalesce(
+                func.sum(Payment.amount),
+                0,
+            ),
+        ).where(
+            Payment.status == "rejected"
+        )
+    )
+    rejected_count, rejected_amount = (
+        rejected_result.one()
+    )
+
+    refunded_result = await db.execute(
+        select(
+            func.count(Payment.id),
+            func.coalesce(
+                func.sum(Payment.amount),
+                0,
+            ),
+        ).where(
+            Payment.status == "refunded"
+        )
+    )
+    refunded_count, refunded_amount = (
+        refunded_result.one()
+    )
+
+    cancelled_result = await db.execute(
+        select(
+            func.count(Payment.id)
+        ).where(
+            Payment.status == "cancelled"
+        )
+    )
+    cancelled_count = (
+        cancelled_result.scalar() or 0
+    )
+
     total_result = await db.execute(
         select(func.count(Payment.id))
     )
@@ -271,6 +385,11 @@ async def payment_admin_stats(
         "valor_recebido": float(approved_amount),
         "cobrancas_pendentes": pending_count,
         "valor_pendente": float(pending_amount),
+        "pagamentos_rejeitados": rejected_count,
+        "valor_rejeitado": float(rejected_amount),
+        "pagamentos_estornados": refunded_count,
+        "valor_estornado": float(refunded_amount),
+        "pagamentos_cancelados": cancelled_count,
         "ticket_medio": round(ticket_medio, 2),
     }
 
@@ -687,7 +806,88 @@ async def cancel_admin_payment(
             detail="Pagamento aprovado não pode ser cancelado por esta rotina.",
         )
 
-    if payment.preference_id:
+    mp_payload = (
+        payment.mercado_pago_payload
+        if isinstance(
+            payment.mercado_pago_payload,
+            dict,
+        )
+        else {}
+    )
+
+    if (
+        mp_payload.get("checkout_type")
+        == "orders"
+    ):
+        order_id = str(
+            mp_payload.get("order_id") or ""
+        ).strip()
+
+        if not order_id:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Order ID não encontrado "
+                    "nesta cobrança."
+                ),
+            )
+
+        order = (
+            await MercadoPagoOrdersService
+            .get_order(order_id)
+        )
+
+        mercado_pago_status = str(
+            order.get("status") or ""
+        ).lower()
+
+        if mercado_pago_status not in (
+            "created",
+            "action_required",
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Esta Order não pode mais "
+                    "ser cancelada. Status atual "
+                    f"no Mercado Pago: "
+                    f"{mercado_pago_status or '-'}."
+                ),
+            )
+
+        cancelled_order = (
+            await MercadoPagoOrdersService
+            .cancel_order(order_id)
+        )
+
+        now = datetime.now(timezone.utc)
+
+        cancel_record = {
+            "order_id": order_id,
+            "reason": data.reason,
+            "cancelled_by_user_id": (
+                current_user.id
+            ),
+            "cancelled_by_name": (
+                current_user.name
+            ),
+            "cancelled_at": (
+                now.isoformat()
+            ),
+        }
+
+        payment.mercado_pago_payload = {
+            **mp_payload,
+            "last_cancel": cancel_record,
+            "cancel_order_response": (
+                MercadoPagoOrdersService
+                .sanitize_payload(
+                    cancelled_order
+                )
+            ),
+        }
+
+    elif payment.preference_id:
         await MercadoPagoService.cancel_preference(
             payment.preference_id
         )
