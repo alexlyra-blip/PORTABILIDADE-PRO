@@ -17,3 +17,4 @@ python-dateutil
 pdfplumber
 aiohttp
 google-generativeai
+supabase
