@@ -7,6 +7,9 @@ import {
   useState,
 } from "react";
 
+import { useRouter } from "next/navigation";
+import { Icons } from "@/components/Icons";
+
 type Channel =
   | "checkout"
   | "payment_link"
@@ -160,6 +163,8 @@ function LockIcon() {
 }
 
 export default function SellerFeeCalculatorPage() {
+  const router = useRouter();
+
   const [amount, setAmount] = useState("");
 
   const [
@@ -615,10 +620,35 @@ export default function SellerFeeCalculatorPage() {
     }
   };
 
+  const handleBack = () => {
+    if (
+      typeof window !== "undefined"
+      && window.history.length > 1
+    ) {
+      router.back();
+      return;
+    }
+
+    router.push(
+      "/admin/cartao-credito"
+    );
+  };
+
+
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 sm:py-12">
       <div className="mx-auto max-w-6xl">
         <header className="mb-7">
+
+          <button
+            type="button"
+            onClick={handleBack}
+            className="mb-7 inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-300 shadow-lg transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-slate-800 hover:text-white"
+          >
+            <Icons.ChevronLeft size={17} />
+            Voltar
+          </button>
+
           <div className="flex items-center gap-3 text-blue-400">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-500/30 bg-blue-500/10">
               <ShieldIcon />

@@ -107,8 +107,13 @@ export const api = {
         );
       }
 
-      if (err.message.includes('Erro na API')) throw err;
       console.error("POST Error:", err);
+
+      // Preserva a mensagem real retornada pelo backend.
+      if (err instanceof Error) {
+        throw err;
+      }
+
       throw new Error(`Erro ao enviar dados para ${endpoint}.`);
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
@@ -127,8 +132,12 @@ export const api = {
 
       return await handleResponse(response, endpoint, 'POST');
     } catch (err) {
-      if (err.message.includes('Erro na API')) throw err;
       console.error("POST FormData Error:", err);
+
+      if (err instanceof Error) {
+        throw err;
+      }
+
       throw new Error(`Erro ao enviar arquivo para ${endpoint}.`);
     }
   },
@@ -171,8 +180,12 @@ export const api = {
       });
       return await handleResponse(response, endpoint, 'UPLOAD');
     } catch (err) {
-      if (err.message.includes('Erro na API')) throw err;
       console.error("UPLOAD Error:", err);
+
+      if (err instanceof Error) {
+        throw err;
+      }
+
       throw new Error(`Erro ao enviar arquivo para ${endpoint}.`);
     }
   },
