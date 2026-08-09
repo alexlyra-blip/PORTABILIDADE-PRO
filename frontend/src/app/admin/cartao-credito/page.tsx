@@ -11,6 +11,8 @@ import {
 } from "react";
 
 import { api } from "@/utils/api";
+import PageHeader from "@/components/PageHeader";
+import { Icons } from "@/components/Icons";
 
 
 type ViewMode =
@@ -198,7 +200,7 @@ export default function CreditCardPage() {
       try {
         const response =
           await api.get(
-            "/card-sales/"
+            "/card-sales"
           );
 
         setSales(
@@ -333,7 +335,7 @@ export default function CreditCardPage() {
       try {
         const response =
           await api.post(
-            "/card-sales/",
+            "/card-sales",
             {
               customer_name:
                 form.customer_name,
@@ -552,7 +554,7 @@ export default function CreditCardPage() {
         <div className="mx-auto max-w-xl rounded-[2rem] border border-red-100 bg-white p-8 text-center shadow-xl">
 
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-3xl">
-            🔒
+            <Icons.ShieldLock size={34} />
           </div>
 
           <h1 className="mt-5 text-2xl font-black text-slate-900">
@@ -589,61 +591,46 @@ export default function CreditCardPage() {
 
 
   return (
-    <div className="space-y-7 p-4 pb-28 md:p-8 lg:p-10">
+    <div className="space-y-6 animate-in fade-in duration-700 max-w-7xl mx-auto pb-10">
 
-      <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-slate-950 via-blue-950 to-violet-950 p-7 text-white shadow-2xl md:p-10">
-
-        <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
-
-        <div className="absolute -bottom-24 left-32 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
-
-        <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
-
-          <div>
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-3xl shadow-xl backdrop-blur">
-              💳
-            </div>
-
-            <p className="mt-6 text-[10px] font-black uppercase tracking-[0.3em] text-blue-300">
-              Portabilidade PRO
-            </p>
-
-            <h1 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">
-              CARTÃO DE CRÉDITO
-            </h1>
-
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-              Propostas, documentação e acompanhamento das vendas em um único ambiente seguro.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-
-            <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-300">
-              ✓ ACESSO AUTORIZADO
-            </span>
-
-            <span
-              className={`rounded-full border px-4 py-2 text-xs font-black ${
-                storageReady
-                  ? "border-sky-400/20 bg-sky-400/10 text-sky-300"
-                  : "border-amber-400/20 bg-amber-400/10 text-amber-300"
-              }`}
-            >
-              {storageReady
-                ? "✓ STORAGE PRIVADO"
-                : "● STORAGE PENDENTE"}
-            </span>
-
-            {userRole && (
-              <span className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-black">
-                {userRole.toUpperCase()}
-              </span>
-            )}
-
-          </div>
+      <PageHeader
+        title="Cartão de"
+        highlight="Crédito"
+        subtitle="Vendas • Segurança • Documentação • Pagamentos"
+      >
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700 shadow-sm">
+          <Icons.ShieldCheck size={18} />
+          <span className="text-[10px] font-black uppercase tracking-widest">
+            Acesso autorizado
+          </span>
         </div>
-      </section>
+
+        <div
+          className={`flex items-center gap-2 rounded-2xl border px-4 py-3 shadow-sm ${
+            storageReady
+              ? "border-blue-200 bg-blue-50 text-blue-700"
+              : "border-amber-200 bg-amber-50 text-amber-700"
+          }`}
+        >
+          {storageReady ? (
+            <Icons.CheckCircle size={18} />
+          ) : (
+            <Icons.AlertCircle size={18} />
+          )}
+
+          <span className="text-[10px] font-black uppercase tracking-widest">
+            {storageReady
+              ? "Storage privado"
+              : "Storage pendente"}
+          </span>
+        </div>
+
+        {userRole && (
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm">
+            {userRole}
+          </div>
+        )}
+      </PageHeader>
 
 
       <nav className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
@@ -658,7 +645,10 @@ export default function CreditCardPage() {
               : "text-slate-500 hover:bg-slate-50"
           }`}
         >
-          Visão Geral
+          <span className="flex items-center gap-2">
+            <Icons.LayoutDashboard size={16} />
+            Visão Geral
+          </span>
         </button>
 
         <button
@@ -669,7 +659,10 @@ export default function CreditCardPage() {
               : "text-slate-500 hover:bg-slate-50"
           }`}
         >
-          + Nova Venda
+          <span className="flex items-center gap-2">
+            <Icons.Plus size={16} />
+            Nova Venda
+          </span>
         </button>
 
         <button
@@ -682,16 +675,22 @@ export default function CreditCardPage() {
               : "text-slate-500 hover:bg-slate-50"
           }`}
         >
-          {userRole === "admin"
-            ? "Todas as Vendas"
-            : "Minhas Vendas"}
+          <span className="flex items-center gap-2">
+            <Icons.Briefcase size={16} />
+            {userRole === "admin"
+              ? "Todas as Vendas"
+              : "Minhas Vendas"}
+          </span>
         </button>
 
         <Link
           href="/calculadora-taxas"
           className="rounded-xl px-5 py-3 text-sm font-black text-slate-500 transition hover:bg-slate-50"
         >
-          🧮 Calculadora
+          <span className="flex items-center gap-2">
+            <Icons.Calculator size={16} />
+            Calculadora
+          </span>
         </Link>
 
       </nav>
@@ -723,19 +722,19 @@ export default function CreditCardPage() {
                   : "Minhas vendas"
               }
               value={sales.length}
-              icon="💳"
+              icon={<Icons.CreditCard size={25} />}
             />
 
             <MetricCard
               label="Documentação completa"
               value={completedSales}
-              icon="✅"
+              icon={<Icons.CheckCircle size={25} />}
             />
 
             <MetricCard
               label="Aguardando documentos"
               value={pendingSales}
-              icon="🪪"
+              icon={<Icons.FileText size={25} />}
             />
 
           </section>
@@ -748,7 +747,7 @@ export default function CreditCardPage() {
               className="group rounded-[2rem] border border-violet-100 bg-white p-7 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
             >
               <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-violet-100 text-2xl">
-                ➕
+                <Icons.Plus size={26} />
               </div>
 
               <h2 className="mt-5 text-xl font-black text-slate-950">
@@ -770,7 +769,7 @@ export default function CreditCardPage() {
               className="group rounded-[2rem] border border-blue-100 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
             >
               <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-blue-100 text-2xl">
-                🧮
+                <Icons.Calculator size={26} />
               </div>
 
               <h2 className="mt-5 text-xl font-black text-slate-950">
@@ -794,7 +793,7 @@ export default function CreditCardPage() {
               className="group rounded-[2rem] border border-sky-100 bg-white p-7 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
             >
               <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-sky-100 text-2xl">
-                💼
+                <Icons.Briefcase size={26} />
               </div>
 
               <h2 className="mt-5 text-xl font-black text-slate-950">
@@ -818,7 +817,7 @@ export default function CreditCardPage() {
           <section className="rounded-[2rem] border border-blue-100 bg-blue-50/60 p-6">
             <div className="flex gap-4">
               <div className="text-2xl">
-                🛡️
+                <Icons.ShieldCheck size={26} />
               </div>
 
               <div>
@@ -840,7 +839,7 @@ export default function CreditCardPage() {
       {view === "new-sale" && (
         <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-xl md:p-8">
 
             <div className="flex items-start justify-between gap-4">
 
@@ -1107,7 +1106,7 @@ export default function CreditCardPage() {
           </div>
 
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-xl md:p-8">
 
             <div className="flex items-start justify-between gap-4">
 
@@ -1152,7 +1151,7 @@ export default function CreditCardPage() {
               <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
 
                 <div className="text-4xl">
-                  🪪
+                  <Icons.FileText size={34} />
                 </div>
 
                 <h3 className="mt-4 font-black text-slate-900">
@@ -1172,7 +1171,7 @@ export default function CreditCardPage() {
                 <DocumentUpload
                   title="Frente do documento"
                   description="RG ou CIN — lado da frente"
-                  icon="🪪"
+                  icon={<Icons.FileText size={25} />}
                   complete={activeSale.document_front}
                   loading={
                     uploading ===
@@ -1191,7 +1190,7 @@ export default function CreditCardPage() {
                 <DocumentUpload
                   title="Verso do documento"
                   description="RG ou CIN — lado do verso"
-                  icon="📄"
+                  icon={<Icons.FileText size={23} />}
                   complete={activeSale.document_back}
                   loading={
                     uploading ===
@@ -1210,7 +1209,7 @@ export default function CreditCardPage() {
                 <DocumentUpload
                   title="Selfie de confirmação"
                   description="Foto atual do cliente para confirmação"
-                  icon="🤳"
+                  icon={<Icons.UserCheck size={23} />}
                   complete={activeSale.selfie}
                   loading={
                     uploading ===
@@ -1233,7 +1232,7 @@ export default function CreditCardPage() {
 
                     <div className="flex gap-3">
                       <div className="text-2xl">
-                        ✅
+                        <Icons.CheckCircle size={24} />
                       </div>
 
                       <div>
@@ -1255,7 +1254,7 @@ export default function CreditCardPage() {
 
                     <div className="flex gap-3">
                       <div className="text-2xl">
-                        🔒
+                        <Icons.Lock size={24} />
                       </div>
 
                       <div>
@@ -1285,7 +1284,7 @@ export default function CreditCardPage() {
 
       {view === "sales" && (
 
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+        <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-xl md:p-8">
 
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
@@ -1486,13 +1485,13 @@ function MetricCard({
 }: {
   label: string;
   value: number;
-  icon: string;
+  icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-[1.75rem] border border-slate-100 bg-white p-6 shadow-xl">
 
       <div className="flex items-center justify-between">
-        <div className="text-3xl">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
           {icon}
         </div>
 
@@ -1521,7 +1520,7 @@ function DocumentUpload({
 }: {
   title: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
   complete: boolean;
   loading: boolean;
   capture: "user" | "environment";
@@ -1542,7 +1541,7 @@ function DocumentUpload({
 
         <div className="flex items-center gap-4">
 
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-100">
             {icon}
           </div>
 

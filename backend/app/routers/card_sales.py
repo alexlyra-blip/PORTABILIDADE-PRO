@@ -246,7 +246,7 @@ async def storage_check(
     }
 
 
-@router.post("/")
+@router.post("")
 async def create_card_sale(
     data: CreateCardSaleRequest,
     db: AsyncSession = Depends(get_db),
@@ -305,7 +305,7 @@ async def create_card_sale(
     }
 
 
-@router.get("/")
+@router.get("")
 async def list_card_sales(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(
