@@ -448,6 +448,14 @@ class AdminService:
 
     @staticmethod
     async def create_user(db: AsyncSession, user_data: dict, current_user: User):
+        # Somente ADMIN pode conceder acesso ao
+        # módulo de cartão de crédito.
+        if current_user.role != "admin":
+            user_data.pop(
+                "can_use_credit_card",
+                None,
+            )
+
         if current_user.role == "vendedor":
             raise HTTPException(status_code=403, detail="Vendedores não podem criar usuários")
             
@@ -503,6 +511,14 @@ class AdminService:
 
     @staticmethod
     async def update_user(db: AsyncSession, user_id: int, user_data: dict, current_user: User):
+        # Somente ADMIN pode conceder acesso ao
+        # módulo de cartão de crédito.
+        if current_user.role != "admin":
+            user_data.pop(
+                "can_use_credit_card",
+                None,
+            )
+
         result = await db.execute(select(User).where(User.id == user_id))
         db_user = result.scalar_one_or_none()
         

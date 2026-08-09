@@ -53,6 +53,7 @@ class User(Base):
     last_access = Column(DateTime(timezone=True), nullable=True)
     current_token = Column(Text, nullable=True)
     can_consult_cpf = Column(Boolean, default=False)
+    can_use_credit_card = Column(Boolean, default=False)
     monthly_goal = Column(Float, default=110000.0)
     daily_goal = Column(Float, default=5000.0)
     monthly_goal_type = Column(String(20), default="mensal")
