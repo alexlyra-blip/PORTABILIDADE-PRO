@@ -5,7 +5,8 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, select
 from jose import jwt
 
-DB_URL = "postgresql+asyncpg://postgres.dnuftfvuzggwyidghfgk:alexandrelyra2013@aws-1-us-east-2.pooler.supabase.com:5432/postgres?prepared_statement_cache_size=0"
+from backend.db_env import get_database_url
+DB_URL = get_database_url(async_driver=True)
 
 Base = declarative_base()
 

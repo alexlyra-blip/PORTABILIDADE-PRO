@@ -1,4 +1,5 @@
 import os
+from db_env import get_database_url
 import sqlite3
 import psycopg2
 from urllib.parse import urlparse
@@ -57,7 +58,7 @@ def main():
     
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
-        db_url = "postgresql+asyncpg://postgres.dnuftfvuzggwyidghfgk:alexandrelyra2013@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+        db_url = get_database_url(async_driver=False)
         print(f"[INFO] DATABASE_URL not set in environment. Using default Supabase URL.")
         
     migrate_postgres(db_url)

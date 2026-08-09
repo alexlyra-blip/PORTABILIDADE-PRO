@@ -1,7 +1,8 @@
 import os
 import psycopg2
 
-db_url = "postgresql://postgres.dnuftfvuzggwyidghfgk:alexandrelyra2013@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+from db_env import get_database_url
+db_url = get_database_url(async_driver=False)
 
 print("Conectando para limpar locks...")
 conn = psycopg2.connect(db_url)

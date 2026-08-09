@@ -1,5 +1,6 @@
 import sys
 import os
+from db_env import get_database_url
 sys.stdout.reconfigure(encoding='utf-8')
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -9,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
 from app.models.sqlalchemy_models import User
 
-DB_URL = "postgresql+asyncpg://postgres.dnuftfvuzggwyidghfgk:alexandrelyra2013@aws-1-us-east-2.pooler.supabase.com:5432/postgres?prepared_statement_cache_size=0"
+DB_URL = get_database_url(async_driver=True)
 
 async def run_query():
     engine = create_async_engine(DB_URL)
