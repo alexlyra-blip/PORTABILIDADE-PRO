@@ -43,6 +43,9 @@ async def login(req: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
                 "logo_url": user.logo_url,
                 "avatar_url": user.avatar_url,
                 "seller_limit": user.seller_limit,
+                "can_use_credit_card": bool(
+                    getattr(user, "can_use_credit_card", False)
+                ),
                 "is_temporary_password": user.is_temporary_password,
                 "monthly_goal": user.monthly_goal,
                 "daily_goal": user.daily_goal,

@@ -3,7 +3,8 @@ import sys
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 
-DB_URL = "postgresql+asyncpg://postgres.dnuftfvuzggwyidghfgk:alexandrelyra2013@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+from backend.db_env import get_database_url
+DB_URL = get_database_url(async_driver=True)
 
 async def fix_remote_db():
     print("Conectando ao banco...")

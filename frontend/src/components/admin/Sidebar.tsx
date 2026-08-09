@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 
 import { Icons } from "@/components/Icons";
+import { api } from "@/utils/api";
 
 
 export default function Sidebar() {
@@ -21,6 +22,7 @@ export default function Sidebar() {
     avatar_url: '' 
   });
   const [imgError, setImgError] = useState(false);
+  const [creditCardAccess, setCreditCardAccess] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +49,30 @@ export default function Sidebar() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkCreditCardAccess = async () => {
+      try {
+        await api.get("/card-sales/access");
+
+        if (!cancelled) {
+          setCreditCardAccess(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setCreditCardAccess(false);
+        }
+      }
+    };
+
+    checkCreditCardAccess();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.role]);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -64,6 +90,7 @@ export default function Sidebar() {
   const menuItems = [
     { name: "Painel Geral", href: "/admin", icon: <Icons.LayoutDashboard />, roles: ['admin'] },
     { name: "Financeiro", href: "/admin/financeiro", icon: <Icons.Wallet />, roles: ['admin'] },
+    { name: "Cartão de Crédito", href: "/admin/cartao-credito", icon: <Icons.Wallet />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Bancos", href: "/admin/banks", icon: <Icons.Landmark />, roles: ['admin'] },
     { name: "Regras", href: "/admin/rules", icon: <Icons.Scale />, roles: ['admin'] },
     { name: "Tabelas", href: "/admin/tables", icon: <Icons.ClipboardList />, roles: ['admin'] },
@@ -73,7 +100,13 @@ export default function Sidebar() {
     { name: "Usuários", href: "/admin/users", icon: <Icons.Users />, roles: ['admin', 'promotora'] },
     { name: "Regra Bancos", href: "/admin/promotora-rules", icon: <Icons.Settings />, roles: ['admin', 'promotora'] },
     { name: "Whatsapp", href: "/admin/whatsapp", icon: <Icons.MessageCircle />, roles: ['admin', 'promotora'] },
-  ].filter(item => item.roles.includes(user.role));
+  ]
+    .filter(item => item.roles.includes(user.role))
+    .filter(
+      item =>
+        item.name !== "Cartão de Crédito"
+        || creditCardAccess
+    );
 
   const profileImageUrl = getStaticUrl(user.logo_url || user.avatar_url);
 

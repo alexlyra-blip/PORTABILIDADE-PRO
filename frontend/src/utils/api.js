@@ -24,13 +24,17 @@ const getHeaders = () => {
 };
 
 const handleResponse = async (response, endpoint, method) => {
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    throw new Error(`Acesso negado (${response.status}): Sua sessão expirou ou você não tem permissão.`);
+    throw new Error(`Sessão expirada (${response.status}). Faça login novamente.`);
+  }
+
+  if (response.status === 403) {
+    throw new Error(`Acesso negado (${response.status}): Você não tem permissão para esta operação.`);
   }
 
   if (!response.ok) {

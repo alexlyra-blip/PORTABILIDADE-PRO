@@ -5,8 +5,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.future import select
 from app.models.sqlalchemy_models import WhatsappChatLog, User
 
+from db_env import get_database_url
 async def main():
-    DATABASE_URL = "postgresql+asyncpg://postgres.dnuftfvuzggwyidghfgk:alexandrelyra2013@aws-1-us-east-2.pooler.supabase.com:5432/postgres?prepared_statement_cache_size=0"
+    DATABASE_URL = get_database_url(async_driver=True)
     engine = create_async_engine(DATABASE_URL)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     

@@ -53,6 +53,7 @@ class User(Base):
     last_access = Column(DateTime(timezone=True), nullable=True)
     current_token = Column(Text, nullable=True)
     can_consult_cpf = Column(Boolean, default=False)
+    can_use_credit_card = Column(Boolean, default=False)
     monthly_goal = Column(Float, default=110000.0)
     daily_goal = Column(Float, default=5000.0)
     monthly_goal_type = Column(String(20), default="mensal")
@@ -510,3 +511,259 @@ class PaymentFreeLink(Base):
     )
 
     created_by = relationship("User")
+
+
+
+# ============================================================
+# CARTÃO DE CRÉDITO - VENDAS SEGURAS
+# ============================================================
+
+class CardSale(Base):
+    __tablename__ = "card_sales"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    created_by_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    customer_name = Column(
+        String(150),
+        nullable=False,
+    )
+
+    customer_cpf = Column(
+        String(14),
+        nullable=False,
+        index=True,
+    )
+
+    customer_phone = Column(
+        String(30),
+        nullable=False,
+    )
+
+    customer_email = Column(
+        String(255),
+        nullable=True,
+    )
+
+    description = Column(
+        String(250),
+        nullable=False,
+    )
+
+    amount = Column(
+        Numeric(15, 2),
+        nullable=False,
+    )
+
+    installments = Column(
+        Integer,
+        nullable=False,
+        default=1,
+    )
+
+    status = Column(
+        String(50),
+        nullable=False,
+        default="documentation_pending",
+        index=True,
+    )
+
+    documentation_completed_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    payment_id = Column(
+        Integer,
+        ForeignKey("payments.id"),
+        nullable=True,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    created_by = relationship(
+        "User",
+        foreign_keys=[created_by_user_id],
+    )
+
+    payment = relationship(
+        "Payment",
+        foreign_keys=[payment_id],
+    )
+
+    documents = relationship(
+        "CardSaleDocument",
+        back_populates="sale",
+        cascade="all, delete-orphan",
+    )
+
+    audit_entries = relationship(
+        "CardSaleAudit",
+        back_populates="sale",
+        cascade="all, delete-orphan",
+    )
+
+
+class CardSaleDocument(Base):
+    __tablename__ = "card_sale_documents"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    sale_id = Column(
+        Integer,
+        ForeignKey(
+            "card_sales.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    document_type = Column(
+        String(30),
+        nullable=False,
+    )
+
+    storage_key = Column(
+        Text,
+        nullable=False,
+    )
+
+    original_filename = Column(
+        String(255),
+        nullable=True,
+    )
+
+    mime_type = Column(
+        String(100),
+        nullable=False,
+    )
+
+    file_size = Column(
+        Integer,
+        nullable=False,
+    )
+
+    sha256 = Column(
+        String(64),
+        nullable=False,
+    )
+
+    uploaded_by_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+
+    uploaded_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    deleted_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    sale = relationship(
+        "CardSale",
+        back_populates="documents",
+    )
+
+    uploaded_by = relationship(
+        "User",
+        foreign_keys=[uploaded_by_user_id],
+    )
+
+
+class CardSaleAudit(Base):
+    __tablename__ = "card_sale_audit"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    sale_id = Column(
+        Integer,
+        ForeignKey(
+            "card_sales.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    actor_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
+    )
+
+    event = Column(
+        String(80),
+        nullable=False,
+    )
+
+    old_status = Column(
+        String(50),
+        nullable=True,
+    )
+
+    new_status = Column(
+        String(50),
+        nullable=True,
+    )
+
+    # "metadata" é reservado pelo SQLAlchemy,
+    # por isso usamos metadata_json no Python,
+    # apontando para a coluna metadata do Postgres.
+    metadata_json = Column(
+        "metadata",
+        JSONB,
+        nullable=True,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True,
+    )
+
+    sale = relationship(
+        "CardSale",
+        back_populates="audit_entries",
+    )
+
+    actor = relationship(
+        "User",
+        foreign_keys=[actor_user_id],
+    )

@@ -48,6 +48,46 @@ async def get_manager_user(user: User = Depends(get_current_user)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito a administradores ou promotoras")
     return user
 
+async def get_credit_card_user(
+    user: User = Depends(get_current_user),
+):
+    """
+    Autoriza o módulo CARTÃO DE CRÉDITO.
+
+    - Admin possui acesso automático.
+    - Promotora, corretor e vendedor precisam
+      ter can_use_credit_card habilitado.
+    """
+    if user.role == "admin":
+        return user
+
+    allowed_roles = {
+        "promotora",
+        "corretor",
+        "vendedor",
+    }
+
+    if (
+        user.role not in allowed_roles
+        or not bool(
+            getattr(
+                user,
+                "can_use_credit_card",
+                False,
+            )
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Acesso ao módulo Cartão de Crédito "
+                "não autorizado para este usuário."
+            ),
+        )
+
+    return user
+
+
 async def verify_n8n_internal_key(x_api_key: str = Header(None)):
     internal_key = os.getenv("N8N_INTERNAL_API_KEY", "portabilidade_pro_secret_key_2024")
     if not x_api_key or not secrets.compare_digest(x_api_key, internal_key):

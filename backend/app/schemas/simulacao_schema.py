@@ -51,6 +51,7 @@ class UserBase(BaseModel):
     active: Optional[bool] = True
     phone: Optional[str] = None
     can_consult_cpf: Optional[bool] = False
+    can_use_credit_card: Optional[bool] = False
     monthly_goal: Optional[float] = 110000.0
     daily_goal: Optional[float] = 5000.0
     monthly_goal_type: Optional[str] = "mensal"

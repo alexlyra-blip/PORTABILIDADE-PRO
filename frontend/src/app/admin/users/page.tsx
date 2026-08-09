@@ -13,6 +13,7 @@ interface User {
   avatar_url: string; is_temporary_password: boolean;
   sidebar_color?: string; sidebar_color_secondary?: string; highlight_color?: string;
   active?: boolean; phone?: string; can_consult_cpf?: boolean;
+  can_use_credit_card?: boolean;
   subscription_expires_at?: string; users_count?: number;
   promotora_id?: number; broker_id?: number;
   simulations_count?: number;
@@ -45,7 +46,8 @@ export default function UsersPage() {
     name: "", email: "", role: "corretor", password: "",
     seller_limit: 0, brand_color: "#2563eb", sidebar_color: "#0f172a",
     sidebar_color_secondary: "#1e293b", highlight_color: "#2563eb", logo_url: "", avatar_url: "",
-    is_temporary_password: true, active: true, phone: "", can_consult_cpf: false
+    is_temporary_password: true, active: true, phone: "",
+    can_consult_cpf: false, can_use_credit_card: false
   });
 
 
@@ -88,7 +90,10 @@ export default function UsersPage() {
         highlight_color: user.highlight_color || user.brand_color || "#2563eb",
         logo_url: user.logo_url || "", avatar_url: user.avatar_url || "",
         is_temporary_password: user.is_temporary_password ?? true,
-        active: user.active ?? true, phone: user.phone || "", can_consult_cpf: user.can_consult_cpf ?? false });
+        active: user.active ?? true,
+        phone: user.phone || "",
+        can_consult_cpf: user.can_consult_cpf ?? false,
+        can_use_credit_card: user.can_use_credit_card ?? false });
     } else {
       setEditingUser(null);
       const isPromo = loggedUser?.role === 'promotora';
@@ -100,7 +105,8 @@ export default function UsersPage() {
         highlight_color: isPromo && (loggedUser.highlight_color || loggedUser.brand_color) ? (loggedUser.highlight_color || loggedUser.brand_color) : "#2563eb",
         logo_url: isPromo && loggedUser.logo_url ? loggedUser.logo_url : "", 
         avatar_url: isPromo && loggedUser.avatar_url ? loggedUser.avatar_url : "", 
-        is_temporary_password: true, active: true, phone: "", can_consult_cpf: false
+        is_temporary_password: true, active: true, phone: "",
+        can_consult_cpf: false, can_use_credit_card: false
       });
     }
     setModalOpen(true);
@@ -467,6 +473,41 @@ export default function UsersPage() {
                     className={`w-full py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest border flex items-center justify-center gap-3 ${formData.can_consult_cpf ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                     {formData.can_consult_cpf ? '✅ CONSULTA CPF LIBERADA' : '❌ CONSULTA CPF BLOQUEADA'}
                   </button>
+
+                  {loggedUser?.role === 'admin' && formData.role !== 'admin' && (
+                    <div className="rounded-[1.75rem] border border-violet-100 bg-gradient-to-br from-violet-50 to-blue-50 p-4">
+                      <div className="mb-3">
+                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-violet-600">
+                          💳 Cartão de Crédito
+                        </p>
+                        <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+                          Autoriza este usuário a acessar calculadora,
+                          propostas e vendas com cartão.
+                          Estornos continuam exclusivos do administrador.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            can_use_credit_card:
+                              !formData.can_use_credit_card
+                          })
+                        }
+                        className={`w-full py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest border flex items-center justify-center gap-3 transition-all ${
+                          formData.can_use_credit_card
+                            ? 'bg-violet-600 text-white border-violet-500 shadow-lg shadow-violet-500/20'
+                            : 'bg-white text-slate-500 border-slate-200'
+                        }`}
+                      >
+                        {formData.can_use_credit_card
+                          ? '✅ CARTÃO DE CRÉDITO LIBERADO'
+                          : '🔒 CARTÃO DE CRÉDITO BLOQUEADO'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-4 pt-8">
