@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/utils/api";
 import { Icons } from "@/components/Icons";
 import MercadoPagoFeeSimulator from "@/components/admin/MercadoPagoFeeSimulator";
+import PaymentManagementPanel from "@/components/admin/PaymentManagementPanel";
 
 const initialForm = {
   customer_name: "",
@@ -121,6 +122,9 @@ export default function FinanceiroPage() {
     valor_recebido: 0,
     cobrancas_pendentes: 0,
     valor_pendente: 0,
+    pagamentos_rejeitados: 0,
+    pagamentos_estornados: 0,
+    pagamentos_cancelados: 0,
     ticket_medio: 0,
   });
 
@@ -162,7 +166,7 @@ export default function FinanceiroPage() {
         statsResponse,
         freeLinksResponse,
       ] = await Promise.all([
-        api.get("/payments/admin"),
+        api.get("/payments/admin?limit=500"),
         api.get("/payments/admin/stats"),
         api.get("/payments/admin/free-links"),
       ]);
@@ -757,6 +761,12 @@ export default function FinanceiroPage() {
         </div>
 
 
+
+        <PaymentManagementPanel
+          payments={payments}
+          stats={stats}
+          onRefresh={loadData}
+        />
 
         <div className="mb-6">
           <div className="mb-4 flex justify-end">

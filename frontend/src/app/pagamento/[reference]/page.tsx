@@ -310,6 +310,29 @@ export default function PaymentPage() {
               </p>
             )}
 
+            <div className="mt-5 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+                  <ShieldIcon />
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-400">
+                    Como aparecerá na fatura
+                  </p>
+
+                  <p className="mt-1 text-lg font-black tracking-wide text-white">
+                    {payment.statement_descriptor || "PORTAPRO"}
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Este é o nome que normalmente será exibido
+                    na fatura do seu cartão.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="my-6 border-t border-slate-800" />
 
             <div className="space-y-4">
