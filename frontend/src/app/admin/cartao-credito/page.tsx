@@ -13,6 +13,7 @@ import {
 import { api } from "@/utils/api";
 import PageHeader from "@/components/PageHeader";
 import { Icons } from "@/components/Icons";
+import CardSaleAuthorizationPanel from "@/components/CardSaleAuthorizationPanel";
 
 
 type ViewMode =
@@ -147,6 +148,15 @@ function statusLabel(status: string) {
 
     case "documentation_pending":
       return "Aguardando documentação";
+
+    case "authorization_pending":
+      return "Aguardando autorização";
+
+    case "authorized":
+      return "Autorização concluída";
+
+    case "payment_created":
+      return "Aguardando pagamento";
 
     default:
       return status
@@ -1225,8 +1235,8 @@ export default function CreditCardPage() {
                 />
 
 
-                {activeSale.status ===
-                "documentation_complete" ? (
+                {activeSale.status !==
+                  "documentation_pending" ? (
 
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
 
@@ -1241,7 +1251,7 @@ export default function CreditCardPage() {
                         </h3>
 
                         <p className="mt-1 text-sm leading-6 text-emerald-700">
-                          Os três documentos foram armazenados. A próxima etapa será gerar o termo e coletar a assinatura eletrônica do cliente.
+                          Frente, verso e selfie foram armazenados com segurança.
                         </p>
                       </div>
                     </div>
@@ -1271,6 +1281,38 @@ export default function CreditCardPage() {
                   </div>
 
                 )}
+
+
+                  {activeSale.status !==
+                    "documentation_pending" && (
+
+                    <CardSaleAuthorizationPanel
+                      saleId={activeSale.id}
+                      saleStatus={
+                        activeSale.status
+                      }
+                      onStateChange={(
+                        status,
+                        paymentId
+                      ) => {
+                        setActiveSale(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  status,
+                                  payment_id:
+                                    paymentId
+                                    ?? current.payment_id,
+                                }
+                              : current
+                        );
+
+                        void loadSales();
+                      }}
+                    />
+
+                  )}
 
               </div>
 

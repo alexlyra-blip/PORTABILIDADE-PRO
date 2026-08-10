@@ -146,3 +146,36 @@ class CreateCardSaleRequest(BaseModel):
             )
 
         return normalized
+
+
+
+
+class CompleteCardSaleAuthorizationRequest(BaseModel):
+    accepted: bool
+
+    signer_name: str = Field(
+        min_length=2,
+        max_length=150,
+    )
+
+    signature_data_url: str = Field(
+        min_length=50,
+        max_length=2_000_000,
+    )
+
+    @field_validator("signer_name")
+    @classmethod
+    def normalize_signer_name(
+        cls,
+        value: str,
+    ) -> str:
+        value = " ".join(
+            value.strip().split()
+        )
+
+        if len(value) < 2:
+            raise ValueError(
+                "Informe o nome do titular."
+            )
+
+        return value

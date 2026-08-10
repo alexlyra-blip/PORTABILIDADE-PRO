@@ -625,6 +625,142 @@ class CardSale(Base):
     )
 
 
+
+class CardSaleAuthorization(Base):
+    __tablename__ = "card_sale_authorizations"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    sale_id = Column(
+        Integer,
+        ForeignKey(
+            "card_sales.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    token = Column(
+        String(160),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    status = Column(
+        String(40),
+        nullable=False,
+        default="pending",
+        index=True,
+    )
+
+    term_version = Column(
+        String(40),
+        nullable=False,
+        default="v1",
+    )
+
+    term_text = Column(
+        Text,
+        nullable=False,
+    )
+
+    term_sha256 = Column(
+        String(64),
+        nullable=False,
+    )
+
+    expires_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        index=True,
+    )
+
+    accepted_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    accepted_ip = Column(
+        String(64),
+        nullable=True,
+    )
+
+    accepted_user_agent = Column(
+        Text,
+        nullable=True,
+    )
+
+    otp_hash = Column(
+        String(64),
+        nullable=True,
+    )
+
+    otp_sent_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    otp_expires_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    otp_verified_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    otp_attempts = Column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    signer_name = Column(
+        String(150),
+        nullable=True,
+    )
+
+    signature_storage_key = Column(
+        Text,
+        nullable=True,
+    )
+
+    signature_sha256 = Column(
+        String(64),
+        nullable=True,
+    )
+
+    authorized_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    sale = relationship(
+        "CardSale",
+        foreign_keys=[sale_id],
+    )
+
 class CardSaleDocument(Base):
     __tablename__ = "card_sale_documents"
 
