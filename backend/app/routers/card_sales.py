@@ -451,6 +451,20 @@ async def upload_card_sale_document(
         current_user=current_user,
     )
 
+    if sale.status not in (
+        "documentation_pending",
+        "documentation_complete",
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Os documentos estão bloqueados "
+                "durante ou após a autorização. "
+                "Revogue a autorização antes "
+                "de substituir documentos."
+            ),
+        )
+
     content = await file.read(
         MAX_FILE_SIZE + 1
     )

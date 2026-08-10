@@ -13,6 +13,7 @@ import {
 import { api } from "@/utils/api";
 import PageHeader from "@/components/PageHeader";
 import { Icons } from "@/components/Icons";
+import CardSaleAuthorizationPanel from "@/components/CardSaleAuthorizationPanel";
 
 
 type ViewMode =
@@ -147,6 +148,15 @@ function statusLabel(status: string) {
 
     case "documentation_pending":
       return "Aguardando documentação";
+
+    case "authorization_pending":
+      return "Aguardando autorização";
+
+    case "authorized":
+      return "Autorização concluída";
+
+    case "payment_created":
+      return "Aguardando pagamento";
 
     default:
       return status
@@ -1225,8 +1235,8 @@ export default function CreditCardPage() {
                 />
 
 
-                {activeSale.status ===
-                "documentation_complete" ? (
+                {activeSale.status !==
+                  "documentation_pending" ? (
 
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
 
@@ -1241,7 +1251,7 @@ export default function CreditCardPage() {
                         </h3>
 
                         <p className="mt-1 text-sm leading-6 text-emerald-700">
-                          Os três documentos foram armazenados. A próxima etapa será gerar o termo e coletar a assinatura eletrônica do cliente.
+                          Frente, verso e selfie foram armazenados com segurança.
                         </p>
                       </div>
                     </div>
@@ -1271,6 +1281,38 @@ export default function CreditCardPage() {
                   </div>
 
                 )}
+
+
+                  {activeSale.status !==
+                    "documentation_pending" && (
+
+                    <CardSaleAuthorizationPanel
+                      saleId={activeSale.id}
+                      saleStatus={
+                        activeSale.status
+                      }
+                      onStateChange={(
+                        status,
+                        paymentId
+                      ) => {
+                        setActiveSale(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  status,
+                                  payment_id:
+                                    paymentId
+                                    ?? current.payment_id,
+                                }
+                              : current
+                        );
+
+                        void loadSales();
+                      }}
+                    />
+
+                  )}
 
               </div>
 
@@ -1528,70 +1570,318 @@ function DocumentUpload({
     event: ChangeEvent<HTMLInputElement>
   ) => void;
 }) {
+  const [previewUrl, setPreviewUrl] =
+    useState<string | null>(null);
+
+  const [selectedFileName, setSelectedFileName] =
+    useState("");
+
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(
+          previewUrl
+        );
+      }
+    };
+  }, [previewUrl]);
+
+
+  const handleSelectedFile = (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const file =
+      event.currentTarget.files?.[0];
+
+    if (file) {
+      if (previewUrl) {
+        URL.revokeObjectURL(
+          previewUrl
+        );
+      }
+
+      setPreviewUrl(
+        URL.createObjectURL(file)
+      );
+
+      setSelectedFileName(
+        file.name
+      );
+    }
+
+    onChange(event);
+  };
+
+
   return (
     <div
-      className={`rounded-2xl border p-5 transition ${
+      className={`relative overflow-hidden rounded-[1.4rem] border transition-all duration-300 ${
         complete
-          ? "border-emerald-200 bg-emerald-50/60"
-          : "border-slate-200 bg-slate-50"
+          ? "border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white shadow-sm"
+          : loading
+            ? "border-blue-300 bg-white shadow-lg shadow-blue-100/60"
+            : "border-slate-200 bg-gradient-to-br from-slate-50 to-white hover:border-blue-200 hover:shadow-md"
       }`}
     >
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* ==================================================
+          CARREGAMENTO PREMIUM
+      ================================================== */}
 
-        <div className="flex items-center gap-4">
+      {loading && (
+        <div className="absolute inset-0 z-30 flex items-center bg-white/95 px-5 backdrop-blur-sm">
 
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-100">
-            {icon}
+          <div className="flex w-full items-center gap-4">
+
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 to-violet-50 ring-1 ring-blue-100">
+
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="Imagem selecionada"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Icons.Image
+                  size={25}
+                  className="text-blue-600"
+                />
+              )}
+
+              <div className="absolute inset-0 bg-slate-950/25" />
+
+              <Icons.Loader2
+                size={26}
+                className="absolute animate-spin text-white drop-shadow"
+              />
+
+            </div>
+
+
+            <div className="min-w-0 flex-1">
+
+              <div className="flex items-center justify-between gap-3">
+
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">
+                    Upload seguro
+                  </p>
+
+                  <h4 className="mt-1 text-sm font-black text-slate-950">
+                    Enviando e protegendo imagem...
+                  </h4>
+                </div>
+
+
+                <div className="hidden rounded-full bg-blue-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-blue-600 sm:block">
+                  Processando
+                </div>
+
+              </div>
+
+
+              {selectedFileName && (
+                <p className="mt-1 truncate text-[11px] font-medium text-slate-400">
+                  {selectedFileName}
+                </p>
+              )}
+
+
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+
+                <div className="h-full w-full animate-pulse rounded-full bg-gradient-to-r from-blue-600 via-violet-500 to-cyan-400" />
+
+              </div>
+
+
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">
+                Validando formato, integridade e armazenamento privado.
+              </p>
+
+            </div>
+
           </div>
 
-          <div>
-            <h3 className="font-black text-slate-900">
-              {title}
-            </h3>
+        </div>
+      )}
 
-            <p className="mt-1 text-xs leading-5 text-slate-500">
-              {description}
-            </p>
+
+      {/* ==================================================
+          CONTEÚDO NORMAL
+      ================================================== */}
+
+      <div className="p-5">
+
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+
+          <div className="flex min-w-0 items-center gap-4">
+
+            <div
+              className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ${
+                complete
+                  ? "bg-emerald-50 text-emerald-600 ring-emerald-100"
+                  : "bg-white text-blue-600 ring-slate-100"
+              }`}
+            >
+              {complete ? (
+                <Icons.CheckCircle
+                  size={24}
+                />
+              ) : (
+                icon
+              )}
+            </div>
+
+
+            <div className="min-w-0">
+
+              <div className="flex flex-wrap items-center gap-2">
+
+                <h3 className="font-black text-slate-950">
+                  {title}
+                </h3>
+
+
+                {complete && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-700">
+
+                    <Icons.Check
+                      size={11}
+                    />
+
+                    Recebido
+
+                  </span>
+                )}
+
+              </div>
+
+
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                {description}
+              </p>
+
+
+              <p className="mt-1.5 text-[10px] font-semibold text-slate-400 sm:hidden">
+                Escolha uma foto da galeria ou capture agora usando a câmera.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          {/* ==================================================
+              AÇÕES
+          ================================================== */}
+
+          <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:items-center">
+
+            {/* GALERIA / ARQUIVO */}
+
+            <label
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 py-3 text-[11px] font-black transition-all ${
+                loading
+                  ? "pointer-events-none border-slate-200 bg-slate-100 text-slate-400"
+                  : complete
+                    ? "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-600"
+                    : "border-slate-200 bg-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-600 hover:shadow-md"
+              }`}
+            >
+
+              <Icons.Image
+                size={16}
+              />
+
+              <span className="sm:hidden">
+                Galeria
+              </span>
+
+              <span className="hidden sm:inline">
+                {complete
+                  ? "Trocar arquivo"
+                  : "Selecionar arquivo"}
+              </span>
+
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={loading}
+                onChange={handleSelectedFile}
+                className="hidden"
+              />
+
+            </label>
+
+
+            {/* CÂMERA */}
+
+            <label
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-[11px] font-black text-white shadow-md transition-all ${
+                loading
+                  ? "pointer-events-none bg-slate-300"
+                  : complete
+                    ? "bg-slate-950 hover:-translate-y-0.5 hover:bg-slate-800"
+                    : "bg-gradient-to-r from-blue-600 to-violet-600 hover:-translate-y-0.5 hover:shadow-lg"
+              }`}
+            >
+
+              <Icons.Camera
+                size={17}
+              />
+
+              <span>
+                {complete
+                  ? "Refazer foto"
+                  : "Capturar foto"}
+              </span>
+
+              <input
+                type="file"
+                accept="image/*"
+                capture={capture}
+                disabled={loading}
+                onChange={handleSelectedFile}
+                className="hidden"
+              />
+
+            </label>
+
           </div>
 
         </div>
 
 
-        <div className="flex items-center gap-3">
+        {/* ==================================================
+            RODAPÉ DE SEGURANÇA
+        ================================================== */}
 
-          {complete && (
-            <span className="text-xs font-black text-emerald-600">
-              ✓ RECEBIDO
-            </span>
-          )}
+        {!complete && !loading && (
+          <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3 text-[10px] font-semibold text-slate-400">
 
-          <label
-            className={`cursor-pointer rounded-xl px-4 py-3 text-xs font-black transition ${
-              loading
-                ? "cursor-wait bg-slate-200 text-slate-400"
-                : complete
-                  ? "border border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50"
-                  : "bg-slate-950 text-white hover:bg-slate-800"
-            }`}
-          >
-            {loading
-              ? "Enviando..."
-              : complete
-                ? "Substituir"
-                : "Enviar"}
-
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              capture={capture}
-              disabled={loading}
-              onChange={onChange}
-              className="hidden"
+            <Icons.ShieldCheck
+              size={13}
+              className="text-blue-500"
             />
-          </label>
 
-        </div>
+            JPG, PNG ou WEBP • máximo 5 MB • armazenamento privado
+
+          </div>
+        )}
+
+
+        {complete && !loading && (
+          <div className="mt-4 flex items-center gap-2 border-t border-emerald-100 pt-3 text-[10px] font-bold text-emerald-600">
+
+            <Icons.ShieldCheck
+              size={13}
+            />
+
+            Documento recebido e protegido com sucesso
+
+          </div>
+        )}
 
       </div>
 
