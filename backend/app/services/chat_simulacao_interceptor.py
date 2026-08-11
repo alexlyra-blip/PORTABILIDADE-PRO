@@ -73,6 +73,27 @@ def format_taxa(value):
     return f"{safe_float(value):.2f}".replace(".", ",")
 
 
+def format_brl(value):
+    """
+    Formata valor monetario no padrao brasileiro.
+
+    Exemplos:
+    494 -> 494,00
+    7605.19 -> 7.605,19
+    14650.42 -> 14.650,42
+    """
+    value = safe_float(value)
+
+    formatted = f"{value:,.2f}"
+
+    return (
+        formatted
+        .replace(",", "__MILHAR__")
+        .replace(".", ",")
+        .replace("__MILHAR__", ".")
+    )
+
+
 def get_troco(o):
     return safe_float(first_value(o, "troco", "troco_normalizado", "valor_troco", "valor_liberado"))
 
@@ -250,15 +271,15 @@ def _build_multi_contract_bank_reply(
             "📋 *DETALHES DA OPERAÇÃO:*\n"
             f"• 🏷️ *Tabela:* {table_name}\n"
             f"• 💵 *Valor da Parcela:* "
-            f"R$ {installment:.2f}\n"
+            f"R$ {format_brl(installment)}\n"
             f"• 📅 *Prazo:* {term} meses\n"
             f"• ✍️ *Novo Contrato:* "
-            f"R$ {new_contract:.2f}\n"
+            f"R$ {format_brl(new_contract)}\n"
             f"• 🏦 *Saldo Devedor:* "
-            f"R$ {outstanding_balance:.2f}\n"
+            f"R$ {format_brl(outstanding_balance)}\n"
             f"• 📈 *Taxa do Refin:* {format_taxa(rate)}% a.m.\n\n"
             f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: "
-            f"R$ {change_value:.2f}* 🤑"
+            f"R$ {format_brl(change_value)}* 🤑"
         )
 
     if not offer_blocks:
@@ -641,12 +662,12 @@ def processar_comando_simulacao(session, msg_lower, message):
             reply += (
                 f"🏦 *Banco:* {_banco}\n"
                 f"🏷️ *Tabela:* {_tabela}\n"
-                f"💵 *Nova Parcela:* R$ {_parcela:.2f}\n"
+                f"💵 *Nova Parcela:* R$ {format_brl(_parcela)}\n"
                 f"📅 *Prazo:* {_prazo}x\n"
-                f"✍️ *Novo Contrato:* R$ {_novo_contrato:.2f}\n"
-                f"🏦 *Saldo Devedor:* R$ {_saldo_devedor:.2f}\n"
+                f"✍️ *Novo Contrato:* R$ {format_brl(_novo_contrato)}\n"
+                f"🏦 *Saldo Devedor:* R$ {format_brl(_saldo_devedor)}\n"
                 f"📈 *Taxa:* {format_taxa(_taxa)}%\n"
-                f"💰 *Troco:* R$ {_troco:.2f}\n\n"
+                f"💰 *Troco:* R$ {format_brl(_troco)}\n\n"
             )
         if qty_total > limite:
             reply += f"Existem mais {qty_total - limite} tabela(s) disponíveis."
@@ -674,11 +695,11 @@ def processar_comando_simulacao(session, msg_lower, message):
             f"⭐ *OFERTA SELECIONADA: {_banco}*\n\n"
             "📋 *DETALHES DA OPERAÇÃO:*\n"
             f"• 🏷️ *Tabela:* {_tabela}\n"
-            f"• 💵 *Valor da Parcela:* R$ {_parcela:.2f}\n"
+            f"• 💵 *Valor da Parcela:* R$ {format_brl(_parcela)}\n"
             f"• 📅 *Prazo:* {_prazo} meses\n"
-            f"• ✍️ *Novo Contrato:* R$ {_novo_contrato:.2f}\n"
+            f"• ✍️ *Novo Contrato:* R$ {format_brl(_novo_contrato)}\n"
             f"• 📈 *Taxa do Refin:* {format_taxa(_taxa)}% a.m.\n\n"
-            f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: R$ {_troco:.2f}* 🤑\n\n"
+            f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: R$ {format_brl(_troco)}* 🤑\n\n"
             "Deseja ver *outras tabelas* para este banco? Ou digite 'encerrar'."
         )
         return reply
@@ -769,8 +790,8 @@ def _processar_comando_simulacao_antigo(simulations, msg_lower, message):
             reply += (
                 f"{idx}️⃣ *{o.get('tabela')}*\n"
                 f"• Prazo: {o.get('prazo')}x\n"
-                f"• Parcela: R$ {o.get('valor_parcela', 0):.2f}\n"
-                f"• Troco: R$ {o.get('valor_liberado', 0):.2f}\n"
+                f"• Parcela: R$ {format_brl(o.get('valor_parcela', 0))}\n"
+                f"• Troco: R$ {format_brl(o.get('valor_liberado', 0))}\n"
                 f"• Taxa: {format_taxa(o.get('taxa_juros', 0))}%\n\n"
             )
         if len(bank_offers) > 5:
@@ -785,11 +806,11 @@ def _processar_comando_simulacao_antigo(simulations, msg_lower, message):
             f"📊 {qty_tabelas} tabela(s) de {best_offer.get('prazo')} meses da {best_offer.get('banco')} disponível(is)\n\n"
             "📋 *DETALHES DA OPERAÇÃO:*\n"
             f"• 🏷️ *Tabela:* {best_offer.get('tabela')}\n"
-            f"• 💵 *Valor da Parcela:* R$ {best_offer.get('valor_parcela', 0):.2f}\n"
+            f"• 💵 *Valor da Parcela:* R$ {format_brl(best_offer.get('valor_parcela', 0))}\n"
             f"• 📅 *Prazo:* {best_offer.get('prazo')} meses\n"
-            f"• ✍️ *Novo Contrato:* R$ {best_offer.get('valor_total_contrato', 0):.2f}\n"
+            f"• ✍️ *Novo Contrato:* R$ {format_brl(best_offer.get('valor_total_contrato', 0))}\n"
             f"• 📈 *Taxa do Refin:* {format_taxa(best_offer.get('taxa_juros', 0))}% a.m.\n\n"
-            f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: R$ {best_offer.get('valor_liberado', 0):.2f}* 🤑\n\n"
+            f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: R$ {format_brl(best_offer.get('valor_liberado', 0))}* 🤑\n\n"
             "Deseja ver *outras tabelas* para este banco? Ou digite 'encerrar'."
         )
         return reply
