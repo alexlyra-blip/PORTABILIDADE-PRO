@@ -63,6 +63,16 @@ def get_saldo_devedor(o, c_obj=None):
 def get_taxa(o):
     return safe_float(first_value(o, "taxa", "taxa_normalizada", "taxa_refin", "taxa_refinanciamento", "taxa_juros"))
 
+def format_taxa(value):
+    """
+    Formata a taxa somente para exibicao ao usuario.
+
+    Exemplo:
+    1.8299999999999998 -> 1,83
+    """
+    return f"{safe_float(value):.2f}".replace(".", ",")
+
+
 def get_troco(o):
     return safe_float(first_value(o, "troco", "troco_normalizado", "valor_troco", "valor_liberado"))
 
@@ -246,7 +256,7 @@ def _build_multi_contract_bank_reply(
             f"R$ {new_contract:.2f}\n"
             f"• 🏦 *Saldo Devedor:* "
             f"R$ {outstanding_balance:.2f}\n"
-            f"• 📈 *Taxa do Refin:* {rate}% a.m.\n\n"
+            f"• 📈 *Taxa do Refin:* {format_taxa(rate)}% a.m.\n\n"
             f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: "
             f"R$ {change_value:.2f}* 🤑"
         )
@@ -411,6 +421,28 @@ def processar_comando_simulacao(session, msg_lower, message):
             b_idx = int(b_match.group(1))
             c_idx = int(c_match.group(1))
 
+    # Mantem o ultimo banco escolhido pelo usuario.
+    #
+    # Exemplo:
+    # BRB -> FACTA -> "TABELAS"
+    # O comando TABELAS deve continuar no FACTA.
+    selecao_atual = (
+        session.get("simulacao_selecao_atual")
+        or {}
+    )
+
+    if wants_tables and not requested_bank:
+        banco_atual = selecao_atual.get("banco")
+
+        if banco_atual:
+            requested_bank = banco_atual
+
+            if b_idx is None:
+                b_idx = selecao_atual.get("beneficio")
+
+            if c_idx is None:
+                c_idx = selecao_atual.get("contrato")
+
     if not wants_tables and not requested_bank and not requested_term and not resolved_contract and not structured_input:
         return None
 
@@ -434,6 +466,13 @@ def processar_comando_simulacao(session, msg_lower, message):
                 "pending_intent",
                 None,
             )
+
+        # Guarda o banco solicitado como banco ativo.
+        session["simulacao_selecao_atual"] = {
+            "banco": requested_bank,
+            "beneficio": None,
+            "contrato": None,
+        }
 
         return _build_multi_contract_bank_reply(
             all_contracts,
@@ -532,6 +571,13 @@ def processar_comando_simulacao(session, msg_lower, message):
     if not ofertas_brutas:
         return f"Nenhuma tabela encontrada para {target_bank} neste contrato."
 
+    # Este passa a ser o banco ativo da conversa.
+    session["simulacao_selecao_atual"] = {
+        "banco": target_bank,
+        "beneficio": b_obj.get("indice_beneficio"),
+        "contrato": c_obj.get("indice_contrato"),
+    }
+
     oferta_apresentada = c_obj.get("melhor_oferta")
     nome_apresentada = c_obj.get("tabela_apresentada")
     
@@ -599,7 +645,7 @@ def processar_comando_simulacao(session, msg_lower, message):
                 f"📅 *Prazo:* {_prazo}x\n"
                 f"✍️ *Novo Contrato:* R$ {_novo_contrato:.2f}\n"
                 f"🏦 *Saldo Devedor:* R$ {_saldo_devedor:.2f}\n"
-                f"📈 *Taxa:* {_taxa}%\n"
+                f"📈 *Taxa:* {format_taxa(_taxa)}%\n"
                 f"💰 *Troco:* R$ {_troco:.2f}\n\n"
             )
         if qty_total > limite:
@@ -631,7 +677,7 @@ def processar_comando_simulacao(session, msg_lower, message):
             f"• 💵 *Valor da Parcela:* R$ {_parcela:.2f}\n"
             f"• 📅 *Prazo:* {_prazo} meses\n"
             f"• ✍️ *Novo Contrato:* R$ {_novo_contrato:.2f}\n"
-            f"• 📈 *Taxa do Refin:* {_taxa}% a.m.\n\n"
+            f"• 📈 *Taxa do Refin:* {format_taxa(_taxa)}% a.m.\n\n"
             f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: R$ {_troco:.2f}* 🤑\n\n"
             "Deseja ver *outras tabelas* para este banco? Ou digite 'encerrar'."
         )
@@ -725,7 +771,7 @@ def _processar_comando_simulacao_antigo(simulations, msg_lower, message):
                 f"• Prazo: {o.get('prazo')}x\n"
                 f"• Parcela: R$ {o.get('valor_parcela', 0):.2f}\n"
                 f"• Troco: R$ {o.get('valor_liberado', 0):.2f}\n"
-                f"• Taxa: {o.get('taxa_juros', 0)}%\n\n"
+                f"• Taxa: {format_taxa(o.get('taxa_juros', 0))}%\n\n"
             )
         if len(bank_offers) > 5:
             reply += f"Existem mais {len(bank_offers)-5} tabela(s) disponíveis."
@@ -742,7 +788,7 @@ def _processar_comando_simulacao_antigo(simulations, msg_lower, message):
             f"• 💵 *Valor da Parcela:* R$ {best_offer.get('valor_parcela', 0):.2f}\n"
             f"• 📅 *Prazo:* {best_offer.get('prazo')} meses\n"
             f"• ✍️ *Novo Contrato:* R$ {best_offer.get('valor_total_contrato', 0):.2f}\n"
-            f"• 📈 *Taxa do Refin:* {best_offer.get('taxa_juros', 0)}% a.m.\n\n"
+            f"• 📈 *Taxa do Refin:* {format_taxa(best_offer.get('taxa_juros', 0))}% a.m.\n\n"
             f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: R$ {best_offer.get('valor_liberado', 0):.2f}* 🤑\n\n"
             "Deseja ver *outras tabelas* para este banco? Ou digite 'encerrar'."
         )
