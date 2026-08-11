@@ -1310,7 +1310,7 @@ async def chat_interaction(
         # ----------------------------------------------------------------------
 
         # Priority 1: Encerramento
-        if msg_lower in ["encerrar", "obrigado", "obrigada", "valeu", "tchau", "agradeço", "obg"]:
+        if re.match(r"^(encerrar|finalizar|obrigado|obrigada|obg|obgd|valeu|vlw|tchau|agrade\u00e7o|agradeco)\b", msg_lower.strip(), flags=re.IGNORECASE):
             protocol = session.get('protocol', 'N/A')
             reply_text = (
                 "🙏 *Muito obrigada pelo seu contato!*\n"
@@ -1393,6 +1393,7 @@ async def chat_interaction(
             if is_illiterate:
                 session["analfabeto"] = "sim"
                 
+            session.pop("simulacao_selecao_atual", None)
             reply = await simulate_for_cpf(clean_cpf, is_illiterate, db, user_id=matched_user.id, session=session)
             session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
             session["messages"].append({"role": "bot", "text": reply, "timestamp": datetime.now().isoformat()})
@@ -1437,6 +1438,7 @@ async def chat_interaction(
 
         # Início de simulação
         if msg_lower in ["1", "simular", "simula", "simulacao", "simulação"]:
+            session.pop("simulacao_selecao_atual", None)
             session["state"] = "aguardando_convenio"
             reply_text = (
                 "🚀 Iniciando Simulação de Portabilidade!\n\n"
@@ -1455,18 +1457,7 @@ async def chat_interaction(
         # Consulta de regras por menu
         if session.get("state") in ["idle", "waiting_initial_choice", None]:
             # Reconhece saudações comuns e apresenta o menu inicial
-            if msg_lower in [
-                "oi",
-                "olá",
-                "ola",
-                "bom dia",
-                "boa tarde",
-                "boa noite",
-                "e aí",
-                "e ai",
-                "olá clara",
-                "ola clara"
-            ]:
+            if re.match(r"^(oi+|ola|ol\u00e1|bom dia|boa tarde|boa noite|opa|e ai|e a\u00ed|fala|hello|hey)\b", msg_lower.strip(), flags=re.IGNORECASE):
                 session["state"] = "waiting_initial_choice"
 
                 reply_text = get_welcome_menu(

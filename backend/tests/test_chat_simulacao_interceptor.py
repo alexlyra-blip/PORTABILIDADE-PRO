@@ -168,3 +168,135 @@ def test_consulta_de_tabelas_mantem_fluxo_atual():
 
     assert "Qual opção deseja consultar?" in reply
     assert session.get("pending_intent")
+
+
+def build_single_contract_session():
+    session = build_session()
+
+    contracts = (
+        session["ultima_simulacao"]
+        ["beneficios"][0]
+        ["contratos"]
+    )
+
+    session["ultima_simulacao"]["beneficios"][0][
+        "contratos"
+    ] = [contracts[0]]
+
+    return session
+
+
+def test_tabelas_usam_ultimo_banco_selecionado():
+    session = build_single_contract_session()
+
+    reply_facta = interceptor.processar_comando_simulacao(
+        session,
+        "facta",
+        "FACTA",
+    )
+
+    assert "FACTA" in reply_facta
+
+    assert (
+        session["simulacao_selecao_atual"]["banco"]
+        == "FACTA"
+    )
+
+    tabelas_facta = interceptor.processar_comando_simulacao(
+        session,
+        "tabelas",
+        "Tabelas",
+    )
+
+    assert "Outras Tabelas para FACTA" in tabelas_facta
+    assert "Outras Tabelas para BRB" not in tabelas_facta
+
+    reply_c6 = interceptor.processar_comando_simulacao(
+        session,
+        "c6 consig",
+        "C6 CONSIG",
+    )
+
+    assert "C6" in reply_c6
+
+    assert (
+        session["simulacao_selecao_atual"]["banco"]
+        == "C6 CONSIG"
+    )
+
+    tabelas_c6 = interceptor.processar_comando_simulacao(
+        session,
+        "tabelas",
+        "Tabelas",
+    )
+
+    assert "Outras Tabelas para C6 CONSIG" in tabelas_c6
+    assert "Outras Tabelas para BRB" not in tabelas_c6
+
+
+def test_tabelas_sem_troca_de_banco_usam_recomendado():
+    session = build_single_contract_session()
+
+    reply = interceptor.processar_comando_simulacao(
+        session,
+        "tabelas",
+        "Tabelas",
+    )
+
+    assert "Outras Tabelas para BRB" in reply
+
+
+def test_taxa_e_formatada_com_duas_casas():
+    session = build_single_contract_session()
+
+    c6_offers = (
+        session["ultima_simulacao"]
+        ["beneficios"][0]
+        ["contratos"][0]
+        ["ofertas_por_banco"]
+        ["C6 CONSIG"]
+    )
+
+    c6_offers[1]["taxa_juros"] = 1.8299999999999998
+
+    reply = interceptor.processar_comando_simulacao(
+        session,
+        "c6 consig",
+        "C6 CONSIG",
+    )
+
+    assert "1,83% a.m." in reply
+    assert "1.8299999999999998" not in reply
+
+
+def test_multicontrato_mantem_banco_para_tabelas():
+    session = build_session()
+
+    interceptor.processar_comando_simulacao(
+        session,
+        "c6 consig",
+        "C6 CONSIG",
+    )
+
+    assert (
+        session["simulacao_selecao_atual"]["banco"]
+        == "C6 CONSIG"
+    )
+
+    reply = interceptor.processar_comando_simulacao(
+        session,
+        "tabelas",
+        "Tabelas",
+    )
+
+    assert "C6 CONSIG" in reply
+    assert "BRB" not in reply
+
+
+def test_format_taxa_remove_ruido_de_float():
+    assert (
+        interceptor.format_taxa(
+            1.8299999999999998
+        )
+        == "1,83"
+    )
