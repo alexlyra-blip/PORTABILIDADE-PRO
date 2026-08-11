@@ -98,6 +98,51 @@ class CardSaleStorageService:
             operation
         )
 
+    # CARD_SALE_STORAGE_PRIVATE_DOWNLOAD_V1
+    @classmethod
+    async def download(
+        cls,
+        storage_key: str,
+    ) -> bytes:
+        bucket = _get_bucket_name()
+
+        def operation():
+            client = _get_supabase_client()
+
+            return (
+                client.storage
+                .from_(bucket)
+                .download(storage_key)
+            )
+
+        content = await asyncio.to_thread(
+            operation
+        )
+
+        if isinstance(
+            content,
+            bytes,
+        ):
+            return content
+
+        if isinstance(
+            content,
+            bytearray,
+        ):
+            return bytes(content)
+
+        if isinstance(
+            content,
+            memoryview,
+        ):
+            return content.tobytes()
+
+        raise RuntimeError(
+            "O Storage não retornou "
+            "conteúdo binário válido."
+        )
+
+
     @classmethod
     async def remove(
         cls,

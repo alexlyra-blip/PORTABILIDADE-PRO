@@ -5,6 +5,7 @@ import { api } from "@/utils/api";
 import { Icons } from "@/components/Icons";
 import MercadoPagoFeeSimulator from "@/components/admin/MercadoPagoFeeSimulator";
 import PaymentManagementPanel from "@/components/admin/PaymentManagementPanel";
+import CardSaleFinancePanel from "@/components/admin/CardSaleFinancePanel";
 
 const initialForm = {
   customer_name: "",
@@ -116,6 +117,10 @@ function StatCard({ title, value, subtitle, icon: Icon }) {
 
 export default function FinanceiroPage() {
   const [payments, setPayments] = useState([]);
+
+  // CARD_SALE_FINANCE_PANEL_V1
+  const [cardSalesFinance, setCardSalesFinance] = useState([]);
+  const [cardSalesFinanceStats, setCardSalesFinanceStats] = useState({});
   const [stats, setStats] = useState({
     total_cobrancas: 0,
     pagamentos_aprovados: 0,
@@ -165,15 +170,23 @@ export default function FinanceiroPage() {
         paymentsResponse,
         statsResponse,
         freeLinksResponse,
+        cardSalesFinanceResponse,
       ] = await Promise.all([
         api.get("/payments/admin?limit=500"),
         api.get("/payments/admin/stats"),
         api.get("/payments/admin/free-links"),
+        api.get("/card-sales/admin/finance?limit=500"),
       ]);
 
       setPayments(paymentsResponse?.payments || []);
       setStats(statsResponse || {});
       setFreeLinks(freeLinksResponse?.links || []);
+      setCardSalesFinance(
+        cardSalesFinanceResponse?.sales || []
+      );
+      setCardSalesFinanceStats(
+        cardSalesFinanceResponse?.stats || {}
+      );
     } catch (err) {
       console.error(err);
       setError(
@@ -761,6 +774,12 @@ export default function FinanceiroPage() {
         </div>
 
 
+
+        <CardSaleFinancePanel
+          sales={cardSalesFinance}
+          stats={cardSalesFinanceStats}
+          onRefresh={loadData}
+        />
 
         <PaymentManagementPanel
           payments={payments}
