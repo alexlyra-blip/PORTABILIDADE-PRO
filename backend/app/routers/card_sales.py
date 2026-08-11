@@ -937,9 +937,8 @@ async def list_card_sale_finance(
                             authorization.status
                         ),
                         "url": (
-                            _authorization_url(
-                                authorization.token
-                            )
+                            f"{MercadoPagoService.get_frontend_url()}"
+                            f"/autorizar-venda/{authorization.token}"
                         ),
                         "expires_at": (
                             authorization

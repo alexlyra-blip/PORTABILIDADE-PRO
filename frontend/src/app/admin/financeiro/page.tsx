@@ -1,5 +1,7 @@
 ﻿"use client";
 
+// CARD_SALE_CALCULATOR_POPUP_V2
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/utils/api";
 import { Icons } from "@/components/Icons";
@@ -791,6 +793,18 @@ export default function FinanceiroPage() {
           <div className="mb-4 flex justify-end">
             <a
               href="/calculadora-taxas"
+              data-calculator-popup="true"
+              onClick={(event) => {
+                event.preventDefault();
+
+                const popup = window.open(
+                  "/calculadora-taxas",
+                  "portabilidade-pro-calculadora",
+                  "popup=yes,width=1180,height=820,resizable=yes,scrollbars=yes"
+                );
+
+                popup?.focus();
+              }}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
