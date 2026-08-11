@@ -288,6 +288,158 @@ class MercadoPagoService:
         return response.json()
 
 
+    # ==================================================
+    # MERCADO_PAGO_PAYMENT_REFUND_V1
+    # Estorno integral via Payments API
+    # Checkout Pro / Preference
+    # ==================================================
+
+    @classmethod
+    async def refund_payment(
+        cls,
+        payment_id: str,
+        *,
+        idempotency_key: str,
+    ) -> Dict[str, Any]:
+
+        payment_id = str(
+            payment_id or ""
+        ).strip()
+
+        if not payment_id:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Payment ID do Mercado Pago "
+                    "não informado."
+                ),
+            )
+
+        idempotency_key = str(
+            idempotency_key or ""
+        ).strip()
+
+        if not idempotency_key:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Chave de idempotência "
+                    "do estorno não informada."
+                ),
+            )
+
+        token = cls.get_access_token()
+
+        headers = {
+            "Authorization":
+                f"Bearer {token}",
+            "Content-Type":
+                "application/json",
+            "X-Idempotency-Key":
+                idempotency_key,
+        }
+
+        try:
+
+            async with httpx.AsyncClient(
+                timeout=30.0
+            ) as client:
+
+                response = (
+                    await client.post(
+                        (
+                            f"{MERCADO_PAGO_API_URL}"
+                            f"/v1/payments/"
+                            f"{payment_id}/refunds"
+                        ),
+                        headers=headers,
+                    )
+                )
+
+        except httpx.TimeoutException as exc:
+
+            raise HTTPException(
+                status_code=504,
+                detail=(
+                    "O Mercado Pago demorou "
+                    "para responder ao estorno."
+                ),
+            ) from exc
+
+        except httpx.RequestError as exc:
+
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    "Não foi possível conectar "
+                    "ao Mercado Pago para "
+                    "realizar o estorno."
+                ),
+            ) from exc
+
+        try:
+
+            response_data = (
+                response.json()
+            )
+
+        except ValueError:
+
+            response_data = {
+                "message":
+                    response.text
+            }
+
+        if response.status_code not in (
+            200,
+            201,
+        ):
+
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "message": (
+                        "O Mercado Pago não "
+                        "conseguiu realizar "
+                        "o estorno."
+                    ),
+                    "mercado_pago_status":
+                        response.status_code,
+                    "mercado_pago_response":
+                        response_data,
+                },
+            )
+
+        refund_status = str(
+            response_data.get(
+                "status"
+            )
+            or ""
+        ).lower()
+
+        if refund_status not in (
+            "approved",
+            "refunded",
+        ):
+
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "message": (
+                        "O Mercado Pago respondeu "
+                        "ao estorno com status "
+                        "inesperado."
+                    ),
+                    "refund_status":
+                        refund_status,
+                    "mercado_pago_response":
+                        response_data,
+                },
+            )
+
+        return response_data
+
+
     @classmethod
     async def update_preference(
         cls,

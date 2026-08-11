@@ -61,7 +61,18 @@ class CreateCardSaleRequest(BaseModel):
     installments: int = Field(
         default=1,
         ge=1,
-        le=18,
+        le=12,
+    )
+
+    simulation_type: str = Field(
+        default="receive",
+        pattern="^(receive|charge)$",
+    )
+
+    commission_table: int = Field(
+        default=1,
+        ge=1,
+        le=3,
     )
 
     @field_validator(

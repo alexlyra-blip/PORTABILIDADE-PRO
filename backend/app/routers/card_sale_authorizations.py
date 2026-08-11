@@ -5,6 +5,7 @@ import os
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Any, Dict
 
 from fastapi import (
@@ -391,6 +392,254 @@ async def _get_payment(
     return result.scalar_one_or_none()
 
 
+def _money_decimal(
+    value,
+) -> Decimal:
+    try:
+        return Decimal(
+            str(value)
+        ).quantize(
+            Decimal("0.01")
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Venda com valor financeiro "
+                "inválido."
+            ),
+        ) from exc
+
+
+def _validate_financial_snapshot(
+    sale: CardSale,
+) -> Decimal:
+
+    if sale.reference_amount is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Venda sem valor de referência."
+            ),
+        )
+
+    if sale.customer_total is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Venda sem valor final "
+                "calculado."
+            ),
+        )
+
+    if sale.installment_value is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Venda sem valor de parcela "
+                "calculado."
+            ),
+        )
+
+    reference_amount = _money_decimal(
+        sale.reference_amount
+    )
+
+    customer_total = _money_decimal(
+        sale.customer_total
+    )
+
+    installment_value = _money_decimal(
+        sale.installment_value
+    )
+
+    amount = _money_decimal(
+        sale.amount
+    )
+
+    if reference_amount <= 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Valor de referência inválido."
+            ),
+        )
+
+    if customer_total <= 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Valor final da venda inválido."
+            ),
+        )
+
+    if installment_value <= 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Valor da parcela inválido."
+            ),
+        )
+
+    if amount != customer_total:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Valor da venda divergente do "
+                "snapshot financeiro."
+            ),
+        )
+
+    if sale.payment_channel != "checkout":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Canal financeiro da venda "
+                "inválido."
+            ),
+        )
+
+    if sale.installment_mode != "seller":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Modalidade de parcelamento "
+                "inválida."
+            ),
+        )
+
+    if sale.simulation_type not in {
+        "receive",
+        "charge",
+    }:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Tipo de simulação inválido."
+            ),
+        )
+
+    if sale.commission_table not in {
+        1,
+        2,
+        3,
+    }:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Tabela de comissão inválida."
+            ),
+        )
+
+    if (
+        sale.installments is None
+        or sale.installments < 1
+        or sale.installments > 12
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Quantidade de parcelas "
+                "inválida."
+            ),
+        )
+
+    snapshot = (
+        sale.pricing_snapshot
+        if isinstance(
+            sale.pricing_snapshot,
+            dict,
+        )
+        else {}
+    )
+
+    if not snapshot:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Venda sem snapshot "
+                "financeiro."
+            ),
+        )
+
+    snapshot_total = snapshot.get(
+        "customer_total"
+    )
+
+    snapshot_installment = snapshot.get(
+        "installment_value"
+    )
+
+    snapshot_reference = snapshot.get(
+        "reference_amount"
+    )
+
+    if snapshot_total is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Snapshot sem valor final."
+            ),
+        )
+
+    if snapshot_installment is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Snapshot sem valor de parcela."
+            ),
+        )
+
+    if snapshot_reference is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Snapshot sem valor de "
+                "referência."
+            ),
+        )
+
+    if (
+        _money_decimal(snapshot_total)
+        != customer_total
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Snapshot financeiro divergente "
+                "do valor final da venda."
+            ),
+        )
+
+    if (
+        _money_decimal(
+            snapshot_installment
+        )
+        != installment_value
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Snapshot financeiro divergente "
+                "do valor da parcela."
+            ),
+        )
+
+    if (
+        _money_decimal(snapshot_reference)
+        != reference_amount
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Snapshot financeiro divergente "
+                "do valor de referência."
+            ),
+        )
+
+    return customer_total
+
+
 async def _ensure_payment(
     *,
     sale: CardSale,
@@ -402,6 +651,12 @@ async def _ensure_payment(
             sale=sale,
             db=db,
         )
+
+    locked_customer_total = (
+        _validate_financial_snapshot(
+            sale
+        )
+    )
 
     if (
         authorization.status
@@ -467,7 +722,7 @@ async def _ensure_payment(
             description=(
                 sale.description
             ),
-            amount=sale.amount,
+            amount=locked_customer_total,
             package_name=(
                 "Venda Cartão de Crédito"
             ),
@@ -480,7 +735,9 @@ async def _ensure_payment(
             default_installments=(
                 sale.installments
             ),
-            installment_mode="seller",
+            installment_mode=(
+                sale.installment_mode
+            ),
         )
     )
 

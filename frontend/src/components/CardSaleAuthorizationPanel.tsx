@@ -203,6 +203,46 @@ export default function CardSaleAuthorizationPanel({
     };
 
 
+  /*
+   * AUTO_AUTHORIZATION_ON_DOCUMENTATION_COMPLETE
+   *
+   * Assim que os 3 documentos estiverem
+   * completos, gera automaticamente o link
+   * de autorização.
+   *
+   * Em caso de falha, não fica tentando em
+   * loop. O botão manual permanece disponível
+   * como contingência.
+   */
+  useEffect(() => {
+    if (
+      saleStatus !==
+        "documentation_complete"
+      || loading
+      || authorization
+      || actionLoading
+    ) {
+      return;
+    }
+
+    void createAuthorization();
+
+    // A tentativa automática ocorre quando
+    // loading muda para false ou quando a
+    // venda entra em documentation_complete.
+    //
+    // actionLoading propositalmente não entra
+    // nas dependências para não criar retry
+    // infinito em caso de erro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    saleId,
+    saleStatus,
+    loading,
+    authorization,
+  ]);
+
+
   const revokeAuthorization =
     async () => {
       const confirmed =

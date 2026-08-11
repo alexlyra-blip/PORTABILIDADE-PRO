@@ -571,6 +571,51 @@ class CardSale(Base):
         default=1,
     )
 
+    payment_channel = Column(
+        String(30),
+        nullable=False,
+        default="checkout",
+    )
+
+    simulation_type = Column(
+        String(20),
+        nullable=False,
+        default="receive",
+    )
+
+    installment_mode = Column(
+        String(20),
+        nullable=False,
+        default="seller",
+    )
+
+    commission_table = Column(
+        Integer,
+        nullable=False,
+        default=1,
+    )
+
+    reference_amount = Column(
+        Numeric(15, 2),
+        nullable=False,
+    )
+
+    customer_total = Column(
+        Numeric(15, 2),
+        nullable=False,
+    )
+
+    installment_value = Column(
+        Numeric(15, 2),
+        nullable=False,
+    )
+
+    pricing_snapshot = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+    )
+
     status = Column(
         String(50),
         nullable=False,
