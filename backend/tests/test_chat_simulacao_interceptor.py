@@ -300,3 +300,38 @@ def test_format_taxa_remove_ruido_de_float():
         )
         == "1,83"
     )
+
+
+def test_format_brl_padrao_brasileiro():
+    assert interceptor.format_brl(494) == "494,00"
+    assert interceptor.format_brl(7605.19) == "7.605,19"
+    assert interceptor.format_brl(14650.42) == "14.650,42"
+    assert interceptor.format_brl(21194.44) == "21.194,44"
+
+
+def test_resposta_usa_moeda_brasileira():
+    session = build_session()
+
+    contracts = (
+        session["ultima_simulacao"]
+        ["beneficios"][0]
+        ["contratos"]
+    )
+
+    session["ultima_simulacao"]["beneficios"][0][
+        "contratos"
+    ] = [contracts[0]]
+
+    reply = interceptor.processar_comando_simulacao(
+        session,
+        "c6 consig",
+        "C6 CONSIG",
+    )
+
+    assert "R$ 200,00" in reply
+    assert "R$ 9.000,00" in reply
+    assert "R$ 2.000,00" in reply
+
+    assert "R$ 200.00" not in reply
+    assert "R$ 9000.00" not in reply
+    assert "R$ 2000.00" not in reply
