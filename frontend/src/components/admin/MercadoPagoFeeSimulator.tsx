@@ -866,8 +866,9 @@ export default function MercadoPagoFeeSimulator() {
         </div>
       </section>
 
+      {/* MP_SETTINGS_FRONT_LAYER_V2 */}
       {showSettings && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
           <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
               <div>
