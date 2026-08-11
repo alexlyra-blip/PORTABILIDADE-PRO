@@ -284,6 +284,15 @@ export default function CardSaleFinancePanel({
   >(null);
 
 
+  // CARD_SALE_SALE_CENTER_STATE_V1
+  const [
+    saleCenter,
+    setSaleCenter,
+  ] = useState<
+    CardSaleFinanceItem | null
+  >(null);
+
+
   // CARD_SALE_FINANCE_ACTIONS_V1
   const [
     financialAction,
@@ -1616,7 +1625,43 @@ export default function CardSaleFinancePanel({
                           "
                         >
 
-                          {sale.authorization
+                          {/* CARD_SALE_SALE_CENTER_BUTTON_V1 */}
+                          {(
+                            sale.authorization
+                            || sale.payment
+                            || sale.receipt_available
+                          ) && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSaleCenter(
+                                  sale
+                                )
+                              }
+                              className="
+                                rounded-xl
+                                bg-indigo-600
+                                px-3 py-2
+                                text-xs
+                                font-black
+                                text-white
+                                shadow-sm
+                                transition
+                                hover:-translate-y-0.5
+                                hover:bg-indigo-700
+                                hover:shadow-md
+                              "
+                            >
+                              {sale.receipt_available
+                                ? "Links / Comprovante"
+                                : "Links da venda"}
+                            </button>
+                          )}
+
+
+                          {/* CARD_SALE_OLD_LINK_ACTIONS_HIDDEN_V1 */}
+                          {false
+                            && sale.authorization
                             ?.url && (
                             <>
                               <button
@@ -1677,7 +1722,8 @@ export default function CardSaleFinancePanel({
 
 
                           {/* CARD_SALE_HIDE_CLOSED_CHECKOUT_V1 */}
-                          {sale.payment
+                          {/* CARD_SALE_HIDE_OLD_CHECKOUT_V2 */}
+                          {false && sale.payment
                             ?.checkout_url
                             && ![
                               "approved",
@@ -1713,8 +1759,10 @@ export default function CardSaleFinancePanel({
                           )}
 
 
-                          {sale.receipt_available &&
-                            sale.receipt && (
+                          {/* CARD_SALE_HIDE_OLD_RECEIPT_V1 */}
+                          {false
+                            && sale.receipt_available
+                            && sale.receipt && (
                             <button
                               type="button"
                               onClick={() =>
@@ -1785,7 +1833,7 @@ export default function CardSaleFinancePanel({
                                 hover:bg-red-50
                               "
                             >
-                              Cancelar venda
+                              Cancelar
                             </button>
                           )}
 
@@ -1813,7 +1861,7 @@ export default function CardSaleFinancePanel({
                                 hover:bg-red-700
                               "
                             >
-                              Estornar pagamento
+                              Estornar
                             </button>
                           )}
 
@@ -1924,6 +1972,710 @@ export default function CardSaleFinancePanel({
         {stats.total
           ?? sales.length}
       </div>
+
+
+      {/* CARD_SALE_SALE_CENTER_MODAL_V1 */}
+      {saleCenter && (
+        <div
+          className="
+            fixed inset-0 z-[130]
+            flex items-center
+            justify-center
+            bg-slate-950/75
+            p-4
+            backdrop-blur-sm
+          "
+          onClick={() =>
+            setSaleCenter(null)
+          }
+        >
+          <div
+            className="
+              w-full max-w-3xl
+              overflow-hidden
+              rounded-[2rem]
+              bg-white
+              shadow-2xl
+            "
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            {/* HEADER */}
+            <div
+              className="
+                flex items-start
+                justify-between
+                gap-5
+                bg-gradient-to-r
+                from-slate-950
+                to-indigo-950
+                px-6 py-5
+                text-white
+              "
+            >
+              <div>
+                <p
+                  className="
+                    text-[10px]
+                    font-black
+                    uppercase
+                    tracking-[0.25em]
+                    text-indigo-300
+                  "
+                >
+                  Financeiro ? Venda #
+                  {saleCenter.sale_id}
+                </p>
+
+                <h3
+                  className="
+                    mt-2 text-2xl
+                    font-black
+                  "
+                >
+                  Central da Venda
+                </h3>
+
+                <p
+                  className="
+                    mt-1 text-sm
+                    text-slate-300
+                  "
+                >
+                  {
+                    saleCenter.customer
+                      ?.name
+                    || "-"
+                  }
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSaleCenter(null)
+                }
+                className="
+                  rounded-xl
+                  bg-white/10
+                  px-4 py-2
+                  text-sm font-black
+                  hover:bg-white/20
+                "
+              >
+                Fechar
+              </button>
+            </div>
+
+
+            <div
+              className="
+                max-h-[75vh]
+                space-y-5
+                overflow-y-auto
+                p-6
+              "
+            >
+
+              {/* RESUMO */}
+              <div
+                className="
+                  grid gap-3
+                  md:grid-cols-3
+                "
+              >
+                <div
+                  className="
+                    rounded-2xl
+                    bg-slate-50
+                    p-4
+                  "
+                >
+                  <p
+                    className="
+                      text-[10px]
+                      font-black
+                      uppercase
+                      tracking-wider
+                      text-slate-400
+                    "
+                  >
+                    Valor
+                  </p>
+
+                  <p
+                    className="
+                      mt-1 text-lg
+                      font-black
+                      text-slate-950
+                    "
+                  >
+                    {money(
+                      saleCenter.pricing
+                        ?.customer_total
+                      ?? saleCenter.payment
+                        ?.amount
+                    )}
+                  </p>
+                </div>
+
+                <div
+                  className="
+                    rounded-2xl
+                    bg-slate-50
+                    p-4
+                  "
+                >
+                  <p
+                    className="
+                      text-[10px]
+                      font-black
+                      uppercase
+                      tracking-wider
+                      text-slate-400
+                    "
+                  >
+                    Parcelamento
+                  </p>
+
+                  <p
+                    className="
+                      mt-1 text-lg
+                      font-black
+                      text-slate-950
+                    "
+                  >
+                    {
+                      saleCenter.pricing
+                        ?.installments
+                      ?? saleCenter.payment
+                        ?.installments
+                      ?? "-"
+                    }x
+                  </p>
+                </div>
+
+                <div
+                  className="
+                    rounded-2xl
+                    bg-slate-50
+                    p-4
+                  "
+                >
+                  <p
+                    className="
+                      text-[10px]
+                      font-black
+                      uppercase
+                      tracking-wider
+                      text-slate-400
+                    "
+                  >
+                    Status
+                  </p>
+
+                  <p
+                    className="
+                      mt-1 text-sm
+                      font-black
+                      text-slate-950
+                    "
+                  >
+                    {
+                      STATUS_META[
+                        saleCenter
+                          .finance_status
+                      ]?.label
+                      || saleCenter
+                        .finance_status
+                    }
+                  </p>
+                </div>
+              </div>
+
+
+              {/* AUTORIZACAO */}
+              <section
+                className="
+                  overflow-hidden
+                  rounded-2xl
+                  border
+                  border-violet-200
+                  bg-violet-50
+                "
+              >
+                <div
+                  className="
+                    flex items-center
+                    justify-between
+                    border-b
+                    border-violet-100
+                    px-5 py-4
+                  "
+                >
+                  <div>
+                    <p
+                      className="
+                        text-xs font-black
+                        uppercase
+                        tracking-widest
+                        text-violet-700
+                      "
+                    >
+                      Autoriza??o do cliente
+                    </p>
+
+                    <p
+                      className="
+                        mt-1 text-xs
+                        font-bold
+                        text-slate-500
+                      "
+                    >
+                      Status:{" "}
+                      {
+                        saleCenter
+                          .authorization
+                          ?.status
+                        || "Ainda n?o criada"
+                      }
+                    </p>
+                  </div>
+
+                  <span
+                    className="
+                      rounded-full
+                      bg-white
+                      px-3 py-1
+                      text-[10px]
+                      font-black
+                      uppercase
+                      text-violet-700
+                      shadow-sm
+                    "
+                  >
+                    Cliente
+                  </span>
+                </div>
+
+
+                <div className="p-5">
+
+                  {saleCenter
+                    .authorization
+                    ?.url ? (
+                    <>
+                      <div
+                        className="
+                          break-all
+                          rounded-xl
+                          border
+                          border-violet-100
+                          bg-white
+                          px-4 py-3
+                          text-xs
+                          font-medium
+                          text-slate-600
+                        "
+                      >
+                        {
+                          saleCenter
+                            .authorization
+                            ?.url
+                        }
+                      </div>
+
+                      <div
+                        className="
+                          mt-3 flex
+                          flex-wrap gap-2
+                        "
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void copy(
+                              saleCenter
+                                .authorization
+                                ?.url
+                            )
+                          }
+                          className="
+                            rounded-xl
+                            border
+                            border-violet-200
+                            bg-white
+                            px-4 py-2.5
+                            text-xs font-black
+                            text-violet-700
+                            hover:bg-violet-100
+                          "
+                        >
+                          {copied ===
+                          saleCenter
+                            .authorization
+                            ?.url
+                            ? "? Copiado"
+                            : "Copiar link"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            window.open(
+                              saleCenter
+                                .authorization
+                                ?.url
+                                || "",
+                              "_blank",
+                              "noopener,noreferrer"
+                            )
+                          }
+                          className="
+                            rounded-xl
+                            bg-violet-600
+                            px-4 py-2.5
+                            text-xs font-black
+                            text-white
+                            hover:bg-violet-700
+                          "
+                        >
+                          Abrir autoriza??o
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div
+                      className="
+                        rounded-xl
+                        border
+                        border-dashed
+                        border-violet-200
+                        bg-white/60
+                        p-4
+                        text-sm
+                        font-medium
+                        text-slate-500
+                      "
+                    >
+                      O link de autoriza??o
+                      ainda n?o foi criado.
+                    </div>
+                  )}
+
+                </div>
+              </section>
+
+
+              {/* PAGAMENTO */}
+              <section
+                className="
+                  overflow-hidden
+                  rounded-2xl
+                  border
+                  border-blue-200
+                  bg-blue-50
+                "
+              >
+                <div
+                  className="
+                    flex items-center
+                    justify-between
+                    border-b
+                    border-blue-100
+                    px-5 py-4
+                  "
+                >
+                  <div>
+                    <p
+                      className="
+                        text-xs font-black
+                        uppercase
+                        tracking-widest
+                        text-blue-700
+                      "
+                    >
+                      Pagamento
+                    </p>
+
+                    <p
+                      className="
+                        mt-1 text-xs
+                        font-bold
+                        text-slate-500
+                      "
+                    >
+                      Status:{" "}
+                      {
+                        saleCenter.payment
+                          ?.status
+                        || "Ainda n?o criado"
+                      }
+                    </p>
+                  </div>
+
+                  <span
+                    className="
+                      rounded-full
+                      bg-white
+                      px-3 py-1
+                      text-[10px]
+                      font-black
+                      uppercase
+                      text-blue-700
+                      shadow-sm
+                    "
+                  >
+                    Mercado Pago
+                  </span>
+                </div>
+
+
+                <div className="p-5">
+
+                  {saleCenter.payment
+                    ?.checkout_url ? (
+                    <>
+                      <div
+                        className="
+                          break-all
+                          rounded-xl
+                          border
+                          border-blue-100
+                          bg-white
+                          px-4 py-3
+                          text-xs
+                          font-medium
+                          text-slate-600
+                        "
+                      >
+                        {
+                          saleCenter.payment
+                            ?.checkout_url
+                        }
+                      </div>
+
+                      <div
+                        className="
+                          mt-3 flex
+                          flex-wrap gap-2
+                        "
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void copy(
+                              saleCenter.payment
+                                ?.checkout_url
+                            )
+                          }
+                          className="
+                            rounded-xl
+                            border
+                            border-blue-200
+                            bg-white
+                            px-4 py-2.5
+                            text-xs font-black
+                            text-blue-700
+                            hover:bg-blue-100
+                          "
+                        >
+                          {copied ===
+                          saleCenter.payment
+                            ?.checkout_url
+                            ? "? Copiado"
+                            : "Copiar link"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            window.open(
+                              saleCenter.payment
+                                ?.checkout_url
+                                || "",
+                              "_blank",
+                              "noopener,noreferrer"
+                            )
+                          }
+                          className="
+                            rounded-xl
+                            bg-blue-600
+                            px-4 py-2.5
+                            text-xs font-black
+                            text-white
+                            hover:bg-blue-700
+                          "
+                        >
+                          Abrir pagamento
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div
+                      className="
+                        rounded-xl
+                        border
+                        border-dashed
+                        border-blue-200
+                        bg-white/60
+                        p-4
+                        text-sm
+                        font-medium
+                        text-slate-500
+                      "
+                    >
+                      O link de pagamento
+                      ainda n?o foi criado.
+                    </div>
+                  )}
+
+                </div>
+              </section>
+
+
+              {/* COMPROVANTE */}
+              {saleCenter
+                .receipt_available
+                && saleCenter.receipt && (
+                <section
+                  className="
+                    overflow-hidden
+                    rounded-2xl
+                    border
+                    border-emerald-200
+                    bg-emerald-50
+                  "
+                >
+                  <div
+                    className="
+                      flex flex-col
+                      gap-4
+                      p-5
+                      sm:flex-row
+                      sm:items-center
+                      sm:justify-between
+                    "
+                  >
+                    <div>
+                      <p
+                        className="
+                          text-xs
+                          font-black
+                          uppercase
+                          tracking-widest
+                          text-emerald-700
+                        "
+                      >
+                        Comprovante da venda
+                      </p>
+
+                      <p
+                        className="
+                          mt-1 text-sm
+                          font-bold
+                          text-slate-700
+                        "
+                      >
+                        {saleCenter
+                          .finance_status
+                          === "refunded"
+                          ? (
+                            "Pagamento aprovado "
+                            + "e posteriormente estornado"
+                          )
+                          : (
+                            "Pagamento aprovado "
+                            + "pelo Mercado Pago"
+                          )}
+                      </p>
+
+                      {saleCenter.receipt
+                        ?.receipt_number && (
+                        <p
+                          className="
+                            mt-1 text-xs
+                            font-medium
+                            text-slate-500
+                          "
+                        >
+                          N?{" "}
+                          {
+                            saleCenter
+                              .receipt
+                              ?.receipt_number
+                          }
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openReceipt(
+                          saleCenter
+                        )
+                      }
+                      className="
+                        rounded-xl
+                        bg-emerald-600
+                        px-5 py-3
+                        text-xs
+                        font-black
+                        text-white
+                        shadow-sm
+                        hover:bg-emerald-700
+                      "
+                    >
+                      {saleCenter
+                        .finance_status
+                        === "refunded"
+                        ? "Comprovante original"
+                        : "Abrir comprovante"}
+                    </button>
+                  </div>
+                </section>
+              )}
+
+
+              {/* DOCUMENTACAO */}
+              <div
+                className="
+                  flex justify-end
+                  border-t
+                  border-slate-100
+                  pt-1
+                "
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSaleCenter(null);
+                    setDocumentSale(
+                      saleCenter
+                    );
+                  }}
+                  className="
+                    rounded-xl
+                    border
+                    border-slate-200
+                    px-4 py-2.5
+                    text-xs
+                    font-black
+                    text-slate-700
+                    hover:bg-slate-50
+                  "
+                >
+                  Ver documenta??o
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {financialAction && (
