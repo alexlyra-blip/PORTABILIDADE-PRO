@@ -1698,7 +1698,8 @@ export default function FinanceiroPage() {
                         </td>
 
                         <td className="px-5 py-4">
-                          <div className="flex flex-wrap justify-end gap-2">
+                          {/* FINANCE_HISTORY_ACTIONS_V2 */}
+                          <div className="grid min-w-[250px] grid-cols-2 gap-2 [&>button]:min-h-10 [&>button]:w-full [&>button]:whitespace-nowrap [&>button]:rounded-xl [&>button]:transition-all">
                             {payment.status !== "approved" &&
                               !payment.paid_at &&
                               payment.status !== "cancelled" && (
@@ -1793,7 +1794,7 @@ export default function FinanceiroPage() {
           </div>
         </div>
       </div>
-    
+
       {editingFreeLink && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">

@@ -889,6 +889,16 @@ async def list_card_sale_finance(
                     "installment_mode": (
                         sale.installment_mode
                     ),
+
+                    # CARD_SALE_FINANCE_SNAPSHOT_V2
+                    "snapshot": (
+                        sale.pricing_snapshot
+                        if isinstance(
+                            sale.pricing_snapshot,
+                            dict,
+                        )
+                        else {}
+                    ),
                 },
 
                 "sale_status": (

@@ -647,224 +647,880 @@ export default function CardSaleFinancePanel({
     };
 
 
+  // CARD_SALE_RECEIPT_PREMIUM_V2
   const openReceipt = (
     sale: CardSaleFinanceItem
   ) => {
-
-    const receipt =
-      sale.receipt;
-
-    if (
-      !sale.receipt_available
-      || !receipt
-    ) {
+    if (!sale.receipt_available) {
       return;
     }
 
-    const receiptNumber =
-      escapeHtml(
-        receipt.receipt_number
-      );
-
-    const customer =
-      escapeHtml(
-        receipt.customer_name
-      );
-
-    const cpf =
-      escapeHtml(
-        receipt
-          .customer_cpf_masked
-      );
-
-    const mpId =
-      escapeHtml(
-        receipt
-          .mercado_pago_payment_id
-      );
-
-    const transaction =
-      escapeHtml(
-        receipt.transaction_id
-        || receipt.order_id
-        || "-"
-      );
-
-    const reference =
-      escapeHtml(
-        receipt.external_reference
-        || "-"
-      );
-
-    const paymentMethod =
-      escapeHtml(
-        receipt.payment_method_id
-        || receipt.payment_type_id
-        || "-"
-      );
-
-    const brand =
-      escapeHtml(
-        receipt.card_brand
-        || "-"
-      );
-
-    const paidAt =
-      escapeHtml(
-        dateTime(
-          receipt.paid_at
-        )
-      );
-
-    const installments =
-      Number(
-        receipt.installments
-        || sale.pricing
-          ?.installments
-        || 1
-      );
-
-    const installmentValue =
-      receipt.installment_value
-      ?? sale.pricing
-        ?.installment_value
-      ?? null;
-
-    const popup =
-      window.open(
-        "",
-        "_blank",
-        "width=850,height=900"
-      );
+    const popup = window.open(
+      "",
+      "_blank",
+      "noopener,noreferrer,width=1060,height=980"
+    );
 
     if (!popup) {
+      window.alert(
+        "O navegador bloqueou a abertura do comprovante."
+      );
       return;
     }
 
-    popup.document.write(`
+    const item = sale as any;
+    const payment = item.payment || {};
+    const receipt = item.receipt || {};
+    const pricing = item.pricing || {};
+    const snapshot = pricing.snapshot || {};
+    const customer = item.customer || {};
+
+    const brl = (value: any) =>
+      new Intl.NumberFormat(
+        "pt-BR",
+        {
+          style: "currency",
+          currency: "BRL",
+        }
+      ).format(Number(value) || 0);
+
+    const percent = (
+      value: any,
+      digits = 2
+    ) => {
+      if (
+        value === null
+        || value === undefined
+        || value === ""
+      ) {
+        return "?";
+      }
+
+      return (
+        new Intl.NumberFormat(
+          "pt-BR",
+          {
+            minimumFractionDigits: digits,
+            maximumFractionDigits: digits,
+          }
+        ).format(Number(value) || 0)
+        + "%"
+      );
+    };
+
+    const escapeHtml = (value: any) =>
+      String(
+        value === null
+        || value === undefined
+        || value === ""
+          ? "-"
+          : value
+      ).replace(
+        /[&<>"']/g,
+        (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;",
+        }[char] || char)
+      );
+
+    const formatDate = (
+      value: any
+    ) => {
+      if (!value) return "-";
+
+      const parsed = new Date(value);
+
+      if (
+        Number.isNaN(
+          parsed.getTime()
+        )
+      ) {
+        return escapeHtml(value);
+      }
+
+      return parsed.toLocaleString(
+        "pt-BR",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      );
+    };
+
+    const grossAmount = Number(
+      pricing.customer_total
+      ?? payment.amount
+      ?? receipt.amount
+      ?? 0
+    );
+
+    const netAmount = Number(
+      snapshot.net_amount
+      ?? snapshot.seller_net_amount
+      ?? pricing.reference_amount
+      ?? 0
+    );
+
+    const installments = Number(
+      receipt.installments
+      ?? payment.installments
+      ?? pricing.installments
+      ?? 1
+    ) || 1;
+
+    const installmentValue = Number(
+      pricing.installment_value
+      ?? receipt.installment_value
+      ?? (
+        grossAmount
+        / installments
+      )
+    );
+
+    const mpFeePercent =
+      snapshot.mp_total_fee_percent
+      ?? snapshot.total_fee_percent
+      ?? snapshot.mercado_pago_fee_percent
+      ?? null;
+
+    const monthlyRate =
+      snapshot.monthly_rate_percent
+      ?? snapshot.monthly_rate
+      ?? null;
+
+    const rawPaymentType = String(
+      receipt.payment_type_id
+      ?? payment.payment_type_id
+      ?? ""
+    ).toLowerCase();
+
+    const rawMethod = String(
+      receipt.payment_method_id
+      ?? payment.payment_method_id
+      ?? ""
+    ).toLowerCase();
+
+    let paymentMethod = "Pagamento";
+
+    if (
+      rawPaymentType.includes(
+        "credit"
+      )
+      || rawMethod.includes(
+        "credit"
+      )
+    ) {
+      paymentMethod =
+        "Cart?o de cr?dito";
+    }
+    else if (
+      rawPaymentType.includes(
+        "debit"
+      )
+      || rawMethod.includes(
+        "debit"
+      )
+    ) {
+      paymentMethod =
+        "Cart?o de d?bito";
+    }
+    else if (
+      rawPaymentType.includes("pix")
+      || rawMethod.includes("pix")
+    ) {
+      paymentMethod = "PIX";
+    }
+    else if (
+      rawPaymentType
+      || rawMethod
+    ) {
+      paymentMethod = (
+        rawPaymentType
+        || rawMethod
+      )
+        .replace(/_/g, " ")
+        .replace(
+          /\b\w/g,
+          (letter) =>
+            letter.toUpperCase()
+        );
+    }
+
+    const cardBrand = String(
+      receipt.card_brand
+      ?? payment.card_brand
+      ?? (
+        [
+          "visa",
+          "master",
+          "mastercard",
+          "elo",
+          "amex",
+          "hipercard",
+        ].includes(rawMethod)
+          ? rawMethod
+          : ""
+      )
+      ?? ""
+    );
+
+    const orderId =
+      receipt.order_id
+      ?? payment.order_id
+      ?? receipt.mercado_pago_payment_id
+      ?? payment.mercado_pago_payment_id
+      ?? "-";
+
+    const reference =
+      receipt.external_reference
+      ?? payment.external_reference
+      ?? receipt.receipt_number
+      ?? `PP-${sale.sale_id}`;
+
+    const paidAt =
+      receipt.paid_at
+      ?? payment.paid_at
+      ?? null;
+
+    const brandLabel = cardBrand
+      ? cardBrand.toUpperCase()
+      : "-";
+
+    const isRefunded =
+      sale.finance_status === "refunded";
+
+    const refundNote = isRefunded
+      ? `
+        <div class="refund-note">
+          Este ? o comprovante original da
+          transa??o aprovada. A venda possui
+          registro posterior de estorno.
+        </div>
+      `
+      : "";
+
+    const html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Comprovante ${receiptNumber}</title>
+<meta charset="UTF-8" />
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1"
+/>
+
+<title>
+  Comprovante ${escapeHtml(reference)}
+</title>
 
 <style>
   * {
     box-sizing: border-box;
   }
 
+  html,
   body {
+    margin: 0;
+    min-height: 100%;
     font-family:
+      Inter,
       Arial,
       Helvetica,
       sans-serif;
-    margin: 0;
-    background: #f8fafc;
-    color: #0f172a;
+    color: #172554;
   }
 
-  .page {
-    width: 760px;
-    max-width: calc(100% - 32px);
-    margin: 30px auto;
-    background: white;
-    border: 1px solid #e2e8f0;
+  body {
+    background:
+      radial-gradient(
+        circle at 10% 10%,
+        #0478ef 0,
+        transparent 34%
+      ),
+      radial-gradient(
+        circle at 90% 85%,
+        #8b35ff 0,
+        transparent 35%
+      ),
+      linear-gradient(
+        135deg,
+        #003b9f 0%,
+        #081b74 50%,
+        #5220d5 100%
+      );
+
+    padding: 38px 20px;
+  }
+
+  .receipt {
+    width: min(
+      860px,
+      calc(100vw - 32px)
+    );
+
+    margin: 0 auto;
+
+    background: #ffffff;
+
+    border-radius: 30px;
+
+    padding: 38px 44px 34px;
+
+    box-shadow:
+      0 30px 80px
+      rgba(2, 21, 78, 0.38);
+
+    border:
+      1px solid
+      rgba(255,255,255,.7);
+  }
+
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .pp-logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .pp-mark {
+    width: 67px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+
     border-radius: 18px;
-    padding: 36px;
+
+    background:
+      linear-gradient(
+        145deg,
+        #0478ef,
+        #5030db 65%,
+        #a229ed
+      );
+
+    color: white;
+    font-size: 28px;
+    font-weight: 950;
+    font-style: italic;
+    letter-spacing: -5px;
+
+    box-shadow:
+      0 8px 22px
+      rgba(50, 65, 210, .22);
   }
 
-  .brand {
-    font-size: 24px;
+  .pp-name {
+    font-size: 22px;
+    font-weight: 950;
+    line-height: .95;
+    letter-spacing: -.6px;
+    color: #101b56;
+  }
+
+  .pp-pro {
+    display: block;
+    margin-top: 7px;
+    color: #8f29e9;
+    font-size: 19px;
+    font-style: italic;
+  }
+
+  .mp-logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
     font-weight: 900;
+    font-size: 22px;
+    color: #173b91;
+    line-height: .9;
   }
 
-  .title {
-    margin-top: 5px;
-    color: #475569;
+  .mp-icon {
+    width: 54px;
+    height: 38px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #57c4ff;
+    border: 3px solid #153a96;
+    font-size: 21px;
+  }
+
+  .mp-second {
+    display: block;
+    color: #22a8eb;
+  }
+
+  .secure {
+    margin: 28px 0 30px;
+
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    color: #70809e;
     font-size: 14px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .08em;
+  }
+
+  .secure::before,
+  .secure::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #dfe5ef;
+  }
+
+  h1 {
+    margin: 0 0 26px;
+    text-align: center;
+    color: #131f58;
+    font-size: 31px;
+    letter-spacing: -.8px;
   }
 
   .approved {
-    display: inline-block;
-    margin-top: 22px;
-    background: #dcfce7;
-    color: #166534;
-    font-size: 12px;
-    font-weight: 900;
-    padding: 8px 14px;
-    border-radius: 999px;
+    display: grid;
+    grid-template-columns:
+      120px 1fr;
+    align-items: center;
+    gap: 25px;
+
+    min-height: 155px;
+
+    border:
+      1.5px solid #a7e7bd;
+
+    border-radius: 19px;
+
+    background:
+      linear-gradient(
+        90deg,
+        #f8fffa,
+        #f4fff7
+      );
+
+    padding: 25px 34px;
+
+    margin-bottom: 27px;
   }
 
-  .section {
-    margin-top: 28px;
-    border-top: 1px solid #e2e8f0;
-    padding-top: 18px;
+  .shield {
+    width: 92px;
+    height: 102px;
+
+    margin: 0 auto;
+
+    display: grid;
+    place-items: center;
+
+    color: white;
+    font-size: 48px;
+    font-weight: 950;
+
+    background:
+      linear-gradient(
+        145deg,
+        #08c451,
+        #00852e
+      );
+
+    clip-path:
+      polygon(
+        50% 0,
+        96% 19%,
+        91% 70%,
+        50% 100%,
+        9% 70%,
+        4% 19%
+      );
+
+    filter:
+      drop-shadow(
+        0 10px 8px
+        rgba(2, 136, 51, .18)
+      );
+  }
+
+  .approved-label {
+    color: #07933b;
+    font-size: 23px;
+    font-weight: 900;
+  }
+
+  .check-round {
+    display: inline-grid;
+    place-items: center;
+
+    width: 25px;
+    height: 25px;
+
+    margin-left: 7px;
+
+    border-radius: 50%;
+
+    background: #07933b;
+    color: white;
+
+    font-size: 16px;
+  }
+
+  .approved-value {
+    margin-top: 7px;
+
+    color: #078b35;
+
+    font-size: 50px;
+    line-height: 1;
+    font-weight: 950;
+    letter-spacing: -1.6px;
+  }
+
+  .details {
+    padding: 2px 7px;
   }
 
   .row {
-    display: flex;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 7px 0;
-    font-size: 14px;
+    display: grid;
+    grid-template-columns:
+      31px
+      auto
+      minmax(50px, 1fr)
+      auto;
+
+    align-items: center;
+
+    min-height: 49px;
+
+    color: #465a7b;
+    font-size: 17px;
   }
 
-  .label {
-    color: #64748b;
+  .row-icon {
+    color: #536685;
+    font-size: 19px;
+    text-align: center;
   }
 
-  .value {
+  .row-label {
+    white-space: nowrap;
+  }
+
+  .dots {
+    margin: 0 14px;
+    border-bottom:
+      1px dotted #c8d1df;
+    height: 1px;
+  }
+
+  .row-value {
+    color: #111b4f;
     text-align: right;
     font-weight: 700;
   }
 
-  .amount {
-    font-size: 26px;
+  .row.receive .row-icon,
+  .row.receive .row-label,
+  .row.receive .row-value {
+    color: #07933b;
     font-weight: 900;
   }
 
-  .footer {
-    margin-top: 30px;
-    color: #94a3b8;
-    font-size: 11px;
-    line-height: 1.6;
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .brand-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 55px;
+    height: 31px;
+
+    padding: 0 9px;
+
+    border:
+      1px solid #d6dce6;
+
+    border-radius: 6px;
+
+    background: white;
+
+    color: #153c9d;
+    font-style: italic;
+    font-weight: 950;
+    font-size: 15px;
+  }
+
+  .security-note {
+    margin-top: 24px;
+
+    display: grid;
+    grid-template-columns:
+      78px 1fr;
+    gap: 18px;
+
+    align-items: center;
+
+    border:
+      1.5px solid #efc35d;
+
+    border-radius: 16px;
+
+    padding: 17px 22px;
+
+    background:
+      linear-gradient(
+        90deg,
+        #fffdf7,
+        #fffaf0
+      );
+  }
+
+  .lock-circle {
+    width: 58px;
+    height: 58px;
+
+    display: grid;
+    place-items: center;
+
+    margin: auto;
+
+    border-radius: 50%;
+
+    background: #fff1c7;
+
+    font-size: 28px;
+  }
+
+  .security-title {
+    color: #29231f;
+    font-weight: 900;
+    font-size: 16px;
+  }
+
+  .security-text {
+    margin-top: 4px;
+
+    color: #465a7b;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .refund-note {
+    margin-top: 14px;
+
+    border-radius: 13px;
+
+    padding: 12px 16px;
+
+    background: #faf5ff;
+
+    border: 1px solid #e9d5ff;
+
+    color: #7e22ce;
+
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .divider {
+    height: 1px;
+    background: #dfe4ed;
+    margin: 25px 0 18px;
   }
 
   .actions {
-    margin: 20px auto;
-    width: 760px;
-    max-width: calc(100% - 32px);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .action {
+    border-radius: 13px;
+
+    min-height: 59px;
+
     display: flex;
-    justify-content: flex-end;
-  }
+    align-items: center;
+    justify-content: center;
+    gap: 11px;
 
-  button {
-    border: 0;
-    background: #0f172a;
-    color: white;
-    padding: 11px 18px;
-    border-radius: 10px;
-    font-weight: 700;
+    border: 2px solid #0759d4;
+
+    font-size: 17px;
+    font-weight: 900;
+
     cursor: pointer;
+
+    transition:
+      transform .15s ease,
+      box-shadow .15s ease;
   }
 
-  @media print {
+  .action:hover {
+    transform: translateY(-1px);
+  }
+
+  .print-button {
+    background: white;
+    color: #0759d4;
+  }
+
+  .pdf-button {
+    background:
+      linear-gradient(
+        135deg,
+        #0757cf,
+        #063bb0
+      );
+
+    color: white;
+
+    box-shadow:
+      0 9px 24px
+      rgba(0, 70, 190, .2);
+  }
+
+  .small-id {
+    margin-top: 17px;
+    text-align: center;
+    color: #9aa6b8;
+    font-size: 10px;
+  }
+
+  @media (
+    max-width: 700px
+  ) {
     body {
-      background: white;
+      padding: 12px;
     }
 
-    .page {
-      border: 0;
-      margin: 0 auto;
-      width: 100%;
-      max-width: none;
+    .receipt {
+      padding: 24px 18px;
+      border-radius: 22px;
+    }
+
+    .top {
+      gap: 12px;
+    }
+
+    .pp-mark {
+      width: 48px;
+      height: 44px;
+      font-size: 21px;
+    }
+
+    .pp-name,
+    .mp-logo {
+      font-size: 15px;
+    }
+
+    h1 {
+      font-size: 25px;
+    }
+
+    .approved {
+      grid-template-columns:
+        86px 1fr;
+
+      padding: 20px 14px;
+    }
+
+    .shield {
+      width: 70px;
+      height: 78px;
+      font-size: 37px;
+    }
+
+    .approved-label {
+      font-size: 18px;
+    }
+
+    .approved-value {
+      font-size: 36px;
+    }
+
+    .row {
+      font-size: 13px;
+
+      grid-template-columns:
+        24px
+        auto
+        minmax(15px, 1fr)
+        auto;
+    }
+
+    .dots {
+      margin: 0 6px;
+    }
+
+    .security-note {
+      grid-template-columns:
+        52px 1fr;
     }
 
     .actions {
-      display: none;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+  }
+
+  @media print {
+    @page {
+      size: A4 portrait;
+      margin: 8mm;
+    }
+
+    html,
+    body {
+      background: white !important;
+    }
+
+    body {
+      padding: 0;
+    }
+
+    .receipt {
+      width: 100%;
+      max-width: 190mm;
+      padding: 10mm;
+
+      box-shadow: none;
+
+      border:
+        1px solid #e4e8ef;
+
+      border-radius: 12px;
+    }
+
+    .actions,
+    .divider,
+    .small-id {
+      display: none !important;
+    }
+
+    * {
+      -webkit-print-color-adjust:
+        exact !important;
+
+      print-color-adjust:
+        exact !important;
     }
   }
 </style>
@@ -872,210 +1528,479 @@ export default function CardSaleFinancePanel({
 
 <body>
 
-<div class="actions">
-  <button
-    onclick="window.print()"
-  >
-    Imprimir / Salvar PDF
-  </button>
-</div>
+<div
+  id="receipt-document"
+  class="receipt"
+>
 
-<div class="page">
+  <div class="top">
 
-  <div class="brand">
-    PORTABILIDADE PRO
+    <div class="pp-logo">
+      <div class="pp-mark">
+        PP
+      </div>
+
+      <div class="pp-name">
+        PORTABILIDADE
+        <span class="pp-pro">
+          PRO
+        </span>
+      </div>
+    </div>
+
+    <div class="mp-logo">
+      <div class="mp-icon">
+        ??
+      </div>
+
+      <div>
+        mercado
+        <span class="mp-second">
+          pago
+        </span>
+      </div>
+    </div>
+
   </div>
 
-  <div class="title">
-    Comprovante de pagamento
+  <div class="secure">
+    ?? Ambiente seguro
   </div>
+
+  <h1>
+    Comprovante de Pagamento
+  </h1>
 
   <div class="approved">
-    PAGAMENTO APROVADO
-  </div>
 
-  <div class="section">
-
-    <div class="row">
-      <span class="label">
-        Comprovante
-      </span>
-
-      <span class="value">
-        ${receiptNumber}
-      </span>
+    <div class="shield">
+      ?
     </div>
 
-    <div class="row">
-      <span class="label">
-        Venda
-      </span>
+    <div>
+      <div class="approved-label">
+        Pagamento aprovado
+        <span class="check-round">
+          ?
+        </span>
+      </div>
 
-      <span class="value">
-        #${escapeHtml(
-          receipt.sale_id
+      <div class="approved-value">
+        ${escapeHtml(
+          brl(grossAmount)
         )}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="label">
-        Cobrança
-      </span>
-
-      <span class="value">
-        #${escapeHtml(
-          receipt.payment_id
-        )}
-      </span>
+      </div>
     </div>
 
   </div>
 
-
-  <div class="section">
+  <div class="details">
 
     <div class="row">
-      <span class="label">
+      <span class="row-icon">
+        ?
+      </span>
+
+      <span class="row-label">
         Cliente
       </span>
 
-      <span class="value">
-        ${customer}
-      </span>
-    </div>
+      <span class="dots"></span>
 
-    <div class="row">
-      <span class="label">
-        CPF
-      </span>
-
-      <span class="value">
-        ${cpf}
-      </span>
-    </div>
-
-  </div>
-
-
-  <div class="section">
-
-    <div class="row">
-      <span class="label">
-        Valor pago
-      </span>
-
-      <span class="value amount">
+      <span class="row-value">
         ${escapeHtml(
-          money(
-            receipt.amount
+          customer.name
+          ?? receipt.customer_name
+          ?? "-"
+        )}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="row-icon">
+        ?
+      </span>
+
+      <span class="row-label">
+        Data
+      </span>
+
+      <span class="dots"></span>
+
+      <span class="row-value">
+        ${escapeHtml(
+          formatDate(paidAt)
+        )}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="row-icon">
+        #
+      </span>
+
+      <span class="row-label">
+        Order ID
+      </span>
+
+      <span class="dots"></span>
+
+      <span class="row-value">
+        ${escapeHtml(orderId)}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="row-icon">
+        ?
+      </span>
+
+      <span class="row-label">
+        Refer?ncia
+      </span>
+
+      <span class="dots"></span>
+
+      <span class="row-value">
+        ${escapeHtml(reference)}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="row-icon">
+        ?
+      </span>
+
+      <span class="row-label">
+        Forma de pagamento
+      </span>
+
+      <span class="dots"></span>
+
+      <span class="row-value">
+        ${escapeHtml(
+          paymentMethod
+        )}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="row-icon">
+        ?
+      </span>
+
+      <span class="row-label">
+        Bandeira
+      </span>
+
+      <span class="dots"></span>
+
+      <span class="row-value">
+        <span class="brand">
+          ${
+            cardBrand
+              ? `
+                <span
+                  class="brand-badge"
+                >
+                  ${escapeHtml(
+                    brandLabel
+                  )}
+                </span>
+              `
+              : ""
+          }
+
+          ${escapeHtml(
+            cardBrand
+              ? (
+                  cardBrand
+                    .charAt(0)
+                    .toUpperCase()
+                  + cardBrand
+                    .slice(1)
+                )
+              : "-"
+          )}
+        </span>
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="row-icon">
+        ?
+      </span>
+
+      <span class="row-label">
+        Parcelamento
+      </span>
+
+      <span class="dots"></span>
+
+      <span class="row-value">
+        ${escapeHtml(
+          `${installments}x de ${
+            brl(
+              installmentValue
+            )
+          }`
+        )}
+      </span>
+    </div>
+
+    <div class="row receive">
+      <span class="row-icon">
+        ?
+      </span>
+
+      <span class="row-label">
+        Pra receber
+      </span>
+
+      <span class="dots"></span>
+
+      <span class="row-value">
+        ${escapeHtml(
+          brl(netAmount)
+        )}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="row-icon">
+        %
+      </span>
+
+      <span class="row-label">
+        Taxa Mercado Pago
+      </span>
+
+      <span class="dots"></span>
+
+      <span class="row-value">
+        ${escapeHtml(
+          percent(
+            mpFeePercent,
+            2
           )
         )}
       </span>
     </div>
 
     <div class="row">
-      <span class="label">
-        Parcelamento
+      <span class="row-icon">
+        ?
       </span>
 
-      <span class="value">
+      <span class="row-label">
+        Taxa a.m.
+      </span>
+
+      <span class="dots"></span>
+
+      <span class="row-value">
         ${escapeHtml(
-          installments
-        )}x
-        ${
-          installmentValue
-            ? escapeHtml(
-                money(
-                  installmentValue
-                )
-              )
-            : ""
-        }
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="label">
-        Forma
-      </span>
-
-      <span class="value">
-        ${paymentMethod}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="label">
-        Bandeira
-      </span>
-
-      <span class="value">
-        ${brand}
+          percent(
+            monthlyRate,
+            4
+          )
+        )}
       </span>
     </div>
 
   </div>
 
+  <div class="security-note">
 
-  <div class="section">
-
-    <div class="row">
-      <span class="label">
-        ID Mercado Pago
-      </span>
-
-      <span class="value">
-        ${mpId || "-"}
-      </span>
+    <div class="lock-circle">
+      ??
     </div>
 
-    <div class="row">
-      <span class="label">
-        Transação
-      </span>
+    <div>
+      <div class="security-title">
+        Estorno protegido por senha
+        do administrador
+      </div>
 
-      <span class="value">
-        ${transaction}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="label">
-        Referência
-      </span>
-
-      <span class="value">
-        ${reference}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="label">
-        Data da aprovação
-      </span>
-
-      <span class="value">
-        ${paidAt}
-      </span>
+      <div class="security-text">
+        Para solicitar estornos, ?
+        obrigat?ria a autentica??o
+        com a senha do administrador
+        do sistema.
+      </div>
     </div>
 
   </div>
 
+  ${refundNote}
 
-  <div class="footer">
-    Este comprovante foi emitido
-    pelo Portabilidade PRO a partir
-    dos dados registrados para a
-    transação de pagamento aprovada.
+  <div class="divider"></div>
+
+  <div class="actions">
+
+    <button
+      type="button"
+      class="action print-button"
+      onclick="window.print()"
+    >
+      ?? Imprimir
+    </button>
+
+    <button
+      id="download-pdf"
+      type="button"
+      class="action pdf-button"
+      onclick="downloadReceiptPdf()"
+    >
+      ? Baixar PDF
+    </button>
+
+  </div>
+
+  <div class="small-id">
+    Portabilidade PRO ?
+    Venda #${escapeHtml(
+      sale.sale_id
+    )}
   </div>
 
 </div>
 
+<script>
+async function downloadReceiptPdf() {
+  var button =
+    document.getElementById(
+      "download-pdf"
+    );
+
+  var actions =
+    document.querySelector(
+      ".actions"
+    );
+
+  var divider =
+    document.querySelector(
+      ".divider"
+    );
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent =
+        "Gerando PDF...";
+    }
+
+    if (!window.html2pdf) {
+      await new Promise(
+        function(
+          resolve,
+          reject
+        ) {
+          var script =
+            document.createElement(
+              "script"
+            );
+
+          script.src =
+            "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+
+          script.onload =
+            resolve;
+
+          script.onerror =
+            reject;
+
+          document.head
+            .appendChild(
+              script
+            );
+        }
+      );
+    }
+
+    if (actions) {
+      actions.style.display =
+        "none";
+    }
+
+    if (divider) {
+      divider.style.display =
+        "none";
+    }
+
+    var element =
+      document.getElementById(
+        "receipt-document"
+      );
+
+    await window
+      .html2pdf()
+      .set({
+        margin: [
+          5,
+          5,
+          5,
+          5
+        ],
+        filename:
+          "comprovante-venda-${sale.sale_id}.pdf",
+        image: {
+          type: "jpeg",
+          quality: 0.98
+        },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor:
+            "#ffffff"
+        },
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation:
+            "portrait"
+        }
+      })
+      .from(element)
+      .save();
+  }
+  catch (error) {
+    console.error(
+      "Erro ao gerar PDF:",
+      error
+    );
+
+    window.alert(
+      "N?o foi poss?vel gerar o PDF automaticamente. A janela de impress?o ser? aberta para salvar como PDF."
+    );
+
+    window.print();
+  }
+  finally {
+    if (actions) {
+      actions.style.display = "";
+    }
+
+    if (divider) {
+      divider.style.display = "";
+    }
+
+    if (button) {
+      button.disabled = false;
+      button.textContent =
+        "? Baixar PDF";
+    }
+  }
+}
+</script>
+
 </body>
 </html>
-    `);
+    `;
 
+    popup.document.open();
+    popup.document.write(html);
     popup.document.close();
   };
 
