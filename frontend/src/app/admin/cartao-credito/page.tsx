@@ -698,17 +698,7 @@ export default function CreditCardPage() {
         <Link
           href="/calculadora-taxas"
               data-calculator-popup="true"
-              onClick={(event) => {
-                event.preventDefault();
 
-                const popup = window.open(
-                  "/calculadora-taxas",
-                  "portabilidade-pro-calculadora",
-                  "popup=yes,width=1180,height=820,resizable=yes,scrollbars=yes"
-                );
-
-                popup?.focus();
-              }}
           className="rounded-xl px-5 py-3 text-sm font-black text-slate-500 transition hover:bg-slate-50"
         >
           <span className="flex items-center gap-2">
@@ -791,17 +781,7 @@ export default function CreditCardPage() {
             <Link
               href="/calculadora-taxas"
               data-calculator-popup="true"
-              onClick={(event) => {
-                event.preventDefault();
 
-                const popup = window.open(
-                  "/calculadora-taxas",
-                  "portabilidade-pro-calculadora",
-                  "popup=yes,width=1180,height=820,resizable=yes,scrollbars=yes"
-                );
-
-                popup?.focus();
-              }}
               className="group rounded-[2rem] border border-blue-100 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
             >
               <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-blue-100 text-2xl">

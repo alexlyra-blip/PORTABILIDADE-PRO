@@ -79,16 +79,119 @@ function StatusBadge({ status }) {
 
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${config.className}`}
+      className={`inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-wide shadow-sm ring-1 ring-inset ring-black/5 ${config.className}`}
     >
       {config.label}
     </span>
   );
 }
 
+// FINANCE_PREMIUM_ACTIONS_V3
+function PremiumActionIcon({
+  type,
+}: {
+  type:
+    | "edit"
+    | "copy"
+    | "whatsapp"
+    | "open"
+    | "cancel"
+    | "trash"
+    | "refresh";
+}) {
+  const common = {
+    width: 16,
+    height: 16,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  if (type === "edit") {
+    return (
+      <svg {...common}>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </svg>
+    );
+  }
+
+  if (type === "copy") {
+    return (
+      <svg {...common}>
+        <rect
+          x="9"
+          y="9"
+          width="11"
+          height="11"
+          rx="2"
+        />
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      </svg>
+    );
+  }
+
+  if (type === "whatsapp") {
+    return (
+      <svg {...common}>
+        <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.6 9.6 0 0 1-3.8-.8L3 21l1.8-5A8.7 8.7 0 1 1 21 11.5Z" />
+        <path d="M8.5 8.5c.8 3 3 5.2 6 6" />
+      </svg>
+    );
+  }
+
+  if (type === "open") {
+    return (
+      <svg {...common}>
+        <path d="M14 3h7v7" />
+        <path d="m10 14 11-11" />
+        <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+      </svg>
+    );
+  }
+
+  if (type === "cancel") {
+    return (
+      <svg {...common}>
+        <circle
+          cx="12"
+          cy="12"
+          r="9"
+        />
+        <path d="m9 9 6 6" />
+        <path d="m15 9-6 6" />
+      </svg>
+    );
+  }
+
+  if (type === "trash") {
+    return (
+      <svg {...common}>
+        <path d="M3 6h18" />
+        <path d="M8 6V4h8v2" />
+        <path d="m19 6-1 15H6L5 6" />
+        <path d="M10 11v5" />
+        <path d="M14 11v5" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+      <path d="M20 4v7h-7" />
+    </svg>
+  );
+}
+
+
 function StatCard({ title, value, subtitle, icon: Icon }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="group rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50/70 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_18px_42px_rgba(37,99,235,0.10)]">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-slate-500">
@@ -733,8 +836,9 @@ export default function FinanceiroPage() {
           <button
             type="button"
             onClick={loadData}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-black text-slate-700 shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-700 hover:shadow-[0_10px_24px_rgba(37,99,235,0.12)]"
           >
+            <PremiumActionIcon type="refresh" />
             Atualizar
           </button>
         </div>
@@ -794,20 +898,10 @@ export default function FinanceiroPage() {
             <a
               href="/calculadora-taxas"
               data-calculator-popup="true"
-              onClick={(event) => {
-                event.preventDefault();
 
-                const popup = window.open(
-                  "/calculadora-taxas",
-                  "portabilidade-pro-calculadora",
-                  "popup=yes,width=1180,height=820,resizable=yes,scrollbars=yes"
-                );
-
-                popup?.focus();
-              }}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+              className="group inline-flex min-h-11 items-center gap-2 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 px-5 py-2.5 text-sm font-black text-blue-700 shadow-[0_7px_20px_rgba(37,99,235,0.09)] transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-[0_12px_28px_rgba(37,99,235,0.16)]"
             >
               Abrir Calculadora do Vendedor
               <span aria-hidden="true">
@@ -820,7 +914,7 @@ export default function FinanceiroPage() {
         </div>
 
 
-        <div className="mb-6 rounded-2xl border border-violet-200 bg-white shadow-sm">
+        <div className="mb-6 overflow-hidden rounded-3xl border border-violet-200/80 bg-white shadow-[0_16px_42px_rgba(109,40,217,0.08)]">
           <div className="border-b border-violet-100 bg-gradient-to-r from-violet-50 to-white p-5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
@@ -1074,7 +1168,7 @@ export default function FinanceiroPage() {
                 type="button"
                 onClick={createFreeLink}
                 disabled={creatingFreeLink}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 font-bold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 px-4 py-3 font-black text-white shadow-[0_10px_24px_rgba(109,40,217,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(109,40,217,0.32)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Icons.Wallet size={19} />
 
@@ -1125,7 +1219,7 @@ export default function FinanceiroPage() {
                       freeLinks.map((link) => (
                         <tr
                           key={link.id}
-                          className="hover:bg-slate-50"
+                          className="border-b border-slate-100 transition-all duration-200 hover:bg-gradient-to-r hover:from-blue-50/60 hover:to-violet-50/40"
                         >
                           <td className="px-4 py-4">
                             <p className="font-bold text-slate-900">
@@ -1162,14 +1256,15 @@ export default function FinanceiroPage() {
                           </td>
 
                           <td className="px-4 py-4">
-                            <div className="flex flex-wrap justify-end gap-2">
+                            <div className="grid min-w-[300px] grid-cols-2 gap-2.5 [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:whitespace-nowrap [&>button]:rounded-xl [&>button]:font-black [&>button]:shadow-sm [&>button]:transition-all [&>button]:duration-200 [&>button:hover]:-translate-y-0.5">
                               <button
                                 type="button"
                                 onClick={() =>
                                   startEditFreeLink(link)
                                 }
-                                className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+                                className="group inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-gradient-to-b from-white to-blue-50 px-3.5 py-2 text-xs font-black text-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.08)] transition-all duration-200 hover:border-blue-300 hover:shadow-[0_8px_18px_rgba(37,99,235,0.16)]"
                               >
+                                <PremiumActionIcon type="edit" />
                                 Editar
                               </button>
 
@@ -1178,12 +1273,13 @@ export default function FinanceiroPage() {
                                 onClick={() =>
                                   copyLink(link.url)
                                 }
-                                className={`rounded-lg border px-3 py-2 text-xs font-bold transition-all duration-200 ${
+                                className={`group inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-black shadow-sm transition-all duration-200 ${
                                   copiedLink === link.url
                                     ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
                                     : "border-violet-200 text-violet-700 hover:bg-violet-50"
                                 }`}
                               >
+                                <PremiumActionIcon type="copy" />
                                 {copiedLink === link.url
                                   ? "✓ Copiado"
                                   : "Copiar"}
@@ -1198,8 +1294,9 @@ export default function FinanceiroPage() {
                                     "noopener,noreferrer"
                                   )
                                 }
-                                className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50"
+                                className="group inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-gradient-to-b from-white to-blue-50 px-3.5 py-2 text-xs font-black text-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.08)] transition-all duration-200 hover:border-blue-300 hover:shadow-[0_8px_18px_rgba(37,99,235,0.16)]"
                               >
+                                <PremiumActionIcon type="open" />
                                 Abrir
                               </button>
 
@@ -1241,7 +1338,7 @@ export default function FinanceiroPage() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_14px_38px_rgba(15,23,42,0.07)]">
             <div className="border-b border-slate-100 p-5">
               <h2 className="text-lg font-bold text-slate-900">
                 Nova cobrança
@@ -1533,7 +1630,7 @@ export default function FinanceiroPage() {
               <button
                 type="submit"
                 disabled={creating}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 font-black text-white shadow-[0_10px_24px_rgba(5,150,105,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(5,150,105,0.32)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Icons.CreditCard size={20} />
 
@@ -1569,6 +1666,7 @@ export default function FinanceiroPage() {
                         : "bg-white text-slate-700"
                     }`}
                   >
+                    <PremiumActionIcon type="copy" />
                     {copiedLink === success.payment_url
                       ? "✓ Copiado"
                       : "Copiar link"}
@@ -1585,6 +1683,7 @@ export default function FinanceiroPage() {
                     }
                     className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white"
                   >
+                    <PremiumActionIcon type="open" />
                     Abrir Checkout
                   </button>
                 </div>
@@ -1592,8 +1691,8 @@ export default function FinanceiroPage() {
             )}
           </div>
 
-          <div className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-col gap-4 border-b border-slate-100 p-5 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_14px_38px_rgba(15,23,42,0.07)]">
+            <div className="flex flex-col gap-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-blue-50/40 p-5 md:flex-row md:items-center md:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
                   Cobranças
@@ -1657,7 +1756,7 @@ export default function FinanceiroPage() {
                     filteredPayments.map((payment) => (
                       <tr
                         key={payment.id}
-                        className="hover:bg-slate-50"
+                        className="border-b border-slate-100 transition-all duration-200 hover:bg-gradient-to-r hover:from-blue-50/60 hover:to-violet-50/40"
                       >
                         <td className="px-5 py-4">
                           <p className="font-semibold text-slate-900">
@@ -1699,7 +1798,7 @@ export default function FinanceiroPage() {
 
                         <td className="px-5 py-4">
                           {/* FINANCE_HISTORY_ACTIONS_V2 */}
-                          <div className="grid min-w-[250px] grid-cols-2 gap-2 [&>button]:min-h-10 [&>button]:w-full [&>button]:whitespace-nowrap [&>button]:rounded-xl [&>button]:transition-all">
+                          <div className="grid min-w-[300px] grid-cols-2 gap-2.5 [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:whitespace-nowrap [&>button]:rounded-xl [&>button]:font-black [&>button]:shadow-sm [&>button]:transition-all [&>button]:duration-200 [&>button:hover]:-translate-y-0.5">
                             {payment.status !== "approved" &&
                               !payment.paid_at &&
                               payment.status !== "cancelled" && (
@@ -1707,8 +1806,9 @@ export default function FinanceiroPage() {
                                   type="button"
                                   onClick={() => startEdit(payment)}
                                   disabled={actionLoading === payment.id}
-                                  className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                                  className="group inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-gradient-to-b from-white to-blue-50 px-3.5 py-2 text-xs font-black text-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.08)] transition-all duration-200 hover:border-blue-300 hover:shadow-[0_8px_18px_rgba(37,99,235,0.16)] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
+                                  <PremiumActionIcon type="edit" />
                                   Editar
                                 </button>
                               )}
@@ -1720,8 +1820,9 @@ export default function FinanceiroPage() {
                                   type="button"
                                   onClick={() => cancelPayment(payment)}
                                   disabled={actionLoading === payment.id}
-                                  className="rounded-lg border border-amber-200 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                                  className="group inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-gradient-to-b from-white to-amber-50 px-3.5 py-2 text-xs font-black text-amber-700 shadow-[0_4px_12px_rgba(217,119,6,0.08)] transition-all duration-200 hover:border-amber-300 hover:shadow-[0_8px_18px_rgba(217,119,6,0.16)] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
+                                  <PremiumActionIcon type="cancel" />
                                   Cancelar
                                 </button>
                               )}
@@ -1732,8 +1833,9 @@ export default function FinanceiroPage() {
                                   type="button"
                                   onClick={() => deletePayment(payment)}
                                   disabled={actionLoading === payment.id}
-                                  className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                  className="group inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-gradient-to-b from-white to-red-50 px-3.5 py-2 text-xs font-black text-red-700 shadow-[0_4px_12px_rgba(220,38,38,0.08)] transition-all duration-200 hover:border-red-300 hover:shadow-[0_8px_18px_rgba(220,38,38,0.16)] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
+                                  <PremiumActionIcon type="trash" />
                                   Excluir
                                 </button>
                               )}
@@ -1747,12 +1849,13 @@ export default function FinanceiroPage() {
                                       payment.checkout_url
                                     )
                                   }
-                                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition-all ${
+                                  className={`group inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-black shadow-sm transition-all duration-200 ${
                                     copiedLink === payment.checkout_url
                                       ? "border-emerald-500 bg-emerald-500 text-white"
                                       : "border-slate-200 text-slate-700 hover:bg-slate-50"
                                   }`}
                                 >
+                                  <PremiumActionIcon type="copy" />
                                   {copiedLink === payment.checkout_url
                                     ? "✓ Copiado"
                                     : "Copiar"}
@@ -1765,6 +1868,7 @@ export default function FinanceiroPage() {
                                   }
                                   className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
                                 >
+                                  <PremiumActionIcon type="whatsapp" />
                                   WhatsApp
                                 </button>
 
@@ -1779,6 +1883,7 @@ export default function FinanceiroPage() {
                                   }
                                   className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white"
                                 >
+                                  <PremiumActionIcon type="open" />
                                   Abrir
                                 </button>
                               </>

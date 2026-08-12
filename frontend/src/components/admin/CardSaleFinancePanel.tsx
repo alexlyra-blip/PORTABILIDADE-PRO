@@ -796,26 +796,16 @@ export default function CardSaleFinancePanel({
     let paymentMethod = "Pagamento";
 
     if (
-      rawPaymentType.includes(
-        "credit"
-      )
-      || rawMethod.includes(
-        "credit"
-      )
+      rawPaymentType.includes("credit")
+      || rawMethod.includes("credit")
     ) {
-      paymentMethod =
-        "Cart?o de cr?dito";
+      paymentMethod = "Cart?o de cr?dito";
     }
     else if (
-      rawPaymentType.includes(
-        "debit"
-      )
-      || rawMethod.includes(
-        "debit"
-      )
+      rawPaymentType.includes("debit")
+      || rawMethod.includes("debit")
     ) {
-      paymentMethod =
-        "Cart?o de d?bito";
+      paymentMethod = "Cart?o de d?bito";
     }
     else if (
       rawPaymentType.includes("pix")
@@ -824,12 +814,10 @@ export default function CardSaleFinancePanel({
       paymentMethod = "PIX";
     }
     else if (
-      rawPaymentType
-      || rawMethod
+      rawPaymentType || rawMethod
     ) {
       paymentMethod = (
-        rawPaymentType
-        || rawMethod
+        rawPaymentType || rawMethod
       )
         .replace(/_/g, " ")
         .replace(
@@ -876,1117 +864,12 @@ export default function CardSaleFinancePanel({
       ?? null;
 
     const brandLabel = cardBrand
-      ? cardBrand.toUpperCase()
+      ? (
+          cardBrand.charAt(0).toUpperCase()
+          + cardBrand.slice(1)
+        )
       : "-";
 
-    const isRefunded =
-      sale.finance_status === "refunded";
-
-    const refundNote = isRefunded
-      ? `
-        <div class="refund-note">
-          Este ? o comprovante original da
-          transa??o aprovada. A venda possui
-          registro posterior de estorno.
-        </div>
-      `
-      : "";
-
-    const html = `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8" />
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1"
-/>
-
-<title>
-  Comprovante ${escapeHtml(reference)}
-</title>
-
-<style>
-  * {
-    box-sizing: border-box;
-  }
-
-  html,
-  body {
-    margin: 0;
-    min-height: 100%;
-    font-family:
-      Inter,
-      Arial,
-      Helvetica,
-      sans-serif;
-    color: #172554;
-  }
-
-  body {
-    background:
-      radial-gradient(
-        circle at 10% 10%,
-        #0478ef 0,
-        transparent 34%
-      ),
-      radial-gradient(
-        circle at 90% 85%,
-        #8b35ff 0,
-        transparent 35%
-      ),
-      linear-gradient(
-        135deg,
-        #003b9f 0%,
-        #081b74 50%,
-        #5220d5 100%
-      );
-
-    padding: 38px 20px;
-  }
-
-  .receipt {
-    width: min(
-      860px,
-      calc(100vw - 32px)
-    );
-
-    margin: 0 auto;
-
-    background: #ffffff;
-
-    border-radius: 30px;
-
-    padding: 38px 44px 34px;
-
-    box-shadow:
-      0 30px 80px
-      rgba(2, 21, 78, 0.38);
-
-    border:
-      1px solid
-      rgba(255,255,255,.7);
-  }
-
-  .top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-  }
-
-  .pp-logo {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .pp-mark {
-    width: 67px;
-    height: 58px;
-    display: grid;
-    place-items: center;
-
-    border-radius: 18px;
-
-    background:
-      linear-gradient(
-        145deg,
-        #0478ef,
-        #5030db 65%,
-        #a229ed
-      );
-
-    color: white;
-    font-size: 28px;
-    font-weight: 950;
-    font-style: italic;
-    letter-spacing: -5px;
-
-    box-shadow:
-      0 8px 22px
-      rgba(50, 65, 210, .22);
-  }
-
-  .pp-name {
-    font-size: 22px;
-    font-weight: 950;
-    line-height: .95;
-    letter-spacing: -.6px;
-    color: #101b56;
-  }
-
-  .pp-pro {
-    display: block;
-    margin-top: 7px;
-    color: #8f29e9;
-    font-size: 19px;
-    font-style: italic;
-  }
-
-  .mp-logo {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    font-weight: 900;
-    font-size: 22px;
-    color: #173b91;
-    line-height: .9;
-  }
-
-  .mp-icon {
-    width: 54px;
-    height: 38px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: #57c4ff;
-    border: 3px solid #153a96;
-    font-size: 21px;
-  }
-
-  .mp-second {
-    display: block;
-    color: #22a8eb;
-  }
-
-  .secure {
-    margin: 28px 0 30px;
-
-    display: flex;
-    align-items: center;
-    gap: 14px;
-
-    color: #70809e;
-    font-size: 14px;
-  }
-
-  .secure::before,
-  .secure::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: #dfe5ef;
-  }
-
-  h1 {
-    margin: 0 0 26px;
-    text-align: center;
-    color: #131f58;
-    font-size: 31px;
-    letter-spacing: -.8px;
-  }
-
-  .approved {
-    display: grid;
-    grid-template-columns:
-      120px 1fr;
-    align-items: center;
-    gap: 25px;
-
-    min-height: 155px;
-
-    border:
-      1.5px solid #a7e7bd;
-
-    border-radius: 19px;
-
-    background:
-      linear-gradient(
-        90deg,
-        #f8fffa,
-        #f4fff7
-      );
-
-    padding: 25px 34px;
-
-    margin-bottom: 27px;
-  }
-
-  .shield {
-    width: 92px;
-    height: 102px;
-
-    margin: 0 auto;
-
-    display: grid;
-    place-items: center;
-
-    color: white;
-    font-size: 48px;
-    font-weight: 950;
-
-    background:
-      linear-gradient(
-        145deg,
-        #08c451,
-        #00852e
-      );
-
-    clip-path:
-      polygon(
-        50% 0,
-        96% 19%,
-        91% 70%,
-        50% 100%,
-        9% 70%,
-        4% 19%
-      );
-
-    filter:
-      drop-shadow(
-        0 10px 8px
-        rgba(2, 136, 51, .18)
-      );
-  }
-
-  .approved-label {
-    color: #07933b;
-    font-size: 23px;
-    font-weight: 900;
-  }
-
-  .check-round {
-    display: inline-grid;
-    place-items: center;
-
-    width: 25px;
-    height: 25px;
-
-    margin-left: 7px;
-
-    border-radius: 50%;
-
-    background: #07933b;
-    color: white;
-
-    font-size: 16px;
-  }
-
-  .approved-value {
-    margin-top: 7px;
-
-    color: #078b35;
-
-    font-size: 50px;
-    line-height: 1;
-    font-weight: 950;
-    letter-spacing: -1.6px;
-  }
-
-  .details {
-    padding: 2px 7px;
-  }
-
-  .row {
-    display: grid;
-    grid-template-columns:
-      31px
-      auto
-      minmax(50px, 1fr)
-      auto;
-
-    align-items: center;
-
-    min-height: 49px;
-
-    color: #465a7b;
-    font-size: 17px;
-  }
-
-  .row-icon {
-    color: #536685;
-    font-size: 19px;
-    text-align: center;
-  }
-
-  .row-label {
-    white-space: nowrap;
-  }
-
-  .dots {
-    margin: 0 14px;
-    border-bottom:
-      1px dotted #c8d1df;
-    height: 1px;
-  }
-
-  .row-value {
-    color: #111b4f;
-    text-align: right;
-    font-weight: 700;
-  }
-
-  .row.receive .row-icon,
-  .row.receive .row-label,
-  .row.receive .row-value {
-    color: #07933b;
-    font-weight: 900;
-  }
-
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .brand-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    min-width: 55px;
-    height: 31px;
-
-    padding: 0 9px;
-
-    border:
-      1px solid #d6dce6;
-
-    border-radius: 6px;
-
-    background: white;
-
-    color: #153c9d;
-    font-style: italic;
-    font-weight: 950;
-    font-size: 15px;
-  }
-
-  .security-note {
-    margin-top: 24px;
-
-    display: grid;
-    grid-template-columns:
-      78px 1fr;
-    gap: 18px;
-
-    align-items: center;
-
-    border:
-      1.5px solid #efc35d;
-
-    border-radius: 16px;
-
-    padding: 17px 22px;
-
-    background:
-      linear-gradient(
-        90deg,
-        #fffdf7,
-        #fffaf0
-      );
-  }
-
-  .lock-circle {
-    width: 58px;
-    height: 58px;
-
-    display: grid;
-    place-items: center;
-
-    margin: auto;
-
-    border-radius: 50%;
-
-    background: #fff1c7;
-
-    font-size: 28px;
-  }
-
-  .security-title {
-    color: #29231f;
-    font-weight: 900;
-    font-size: 16px;
-  }
-
-  .security-text {
-    margin-top: 4px;
-
-    color: #465a7b;
-    font-size: 14px;
-    line-height: 1.4;
-  }
-
-  .refund-note {
-    margin-top: 14px;
-
-    border-radius: 13px;
-
-    padding: 12px 16px;
-
-    background: #faf5ff;
-
-    border: 1px solid #e9d5ff;
-
-    color: #7e22ce;
-
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  .divider {
-    height: 1px;
-    background: #dfe4ed;
-    margin: 25px 0 18px;
-  }
-
-  .actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-  }
-
-  .action {
-    border-radius: 13px;
-
-    min-height: 59px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 11px;
-
-    border: 2px solid #0759d4;
-
-    font-size: 17px;
-    font-weight: 900;
-
-    cursor: pointer;
-
-    transition:
-      transform .15s ease,
-      box-shadow .15s ease;
-  }
-
-  .action:hover {
-    transform: translateY(-1px);
-  }
-
-  .print-button {
-    background: white;
-    color: #0759d4;
-  }
-
-  .pdf-button {
-    background:
-      linear-gradient(
-        135deg,
-        #0757cf,
-        #063bb0
-      );
-
-    color: white;
-
-    box-shadow:
-      0 9px 24px
-      rgba(0, 70, 190, .2);
-  }
-
-  .small-id {
-    margin-top: 17px;
-    text-align: center;
-    color: #9aa6b8;
-    font-size: 10px;
-  }
-
-  @media (
-    max-width: 700px
-  ) {
-    body {
-      padding: 12px;
-    }
-
-    .receipt {
-      padding: 24px 18px;
-      border-radius: 22px;
-    }
-
-    .top {
-      gap: 12px;
-    }
-
-    .pp-mark {
-      width: 48px;
-      height: 44px;
-      font-size: 21px;
-    }
-
-    .pp-name,
-    .mp-logo {
-      font-size: 15px;
-    }
-
-    h1 {
-      font-size: 25px;
-    }
-
-    .approved {
-      grid-template-columns:
-        86px 1fr;
-
-      padding: 20px 14px;
-    }
-
-    .shield {
-      width: 70px;
-      height: 78px;
-      font-size: 37px;
-    }
-
-    .approved-label {
-      font-size: 18px;
-    }
-
-    .approved-value {
-      font-size: 36px;
-    }
-
-    .row {
-      font-size: 13px;
-
-      grid-template-columns:
-        24px
-        auto
-        minmax(15px, 1fr)
-        auto;
-    }
-
-    .dots {
-      margin: 0 6px;
-    }
-
-    .security-note {
-      grid-template-columns:
-        52px 1fr;
-    }
-
-    .actions {
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
-  }
-
-  @media print {
-    @page {
-      size: A4 portrait;
-      margin: 8mm;
-    }
-
-    html,
-    body {
-      background: white !important;
-    }
-
-    body {
-      padding: 0;
-    }
-
-    .receipt {
-      width: 100%;
-      max-width: 190mm;
-      padding: 10mm;
-
-      box-shadow: none;
-
-      border:
-        1px solid #e4e8ef;
-
-      border-radius: 12px;
-    }
-
-    .actions,
-    .divider,
-    .small-id {
-      display: none !important;
-    }
-
-    * {
-      -webkit-print-color-adjust:
-        exact !important;
-
-      print-color-adjust:
-        exact !important;
-    }
-  }
-</style>
-</head>
-
-<body>
-
-<div
-  id="receipt-document"
-  class="receipt"
->
-
-  <div class="top">
-
-    <div class="pp-logo">
-      <div class="pp-mark">
-        PP
-      </div>
-
-      <div class="pp-name">
-        PORTABILIDADE
-        <span class="pp-pro">
-          PRO
-        </span>
-      </div>
-    </div>
-
-    <div class="mp-logo">
-      <div class="mp-icon">
-        ??
-      </div>
-
-      <div>
-        mercado
-        <span class="mp-second">
-          pago
-        </span>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="secure">
-    ?? Ambiente seguro
-  </div>
-
-  <h1>
-    Comprovante de Pagamento
-  </h1>
-
-  <div class="approved">
-
-    <div class="shield">
-      ?
-    </div>
-
-    <div>
-      <div class="approved-label">
-        Pagamento aprovado
-        <span class="check-round">
-          ?
-        </span>
-      </div>
-
-      <div class="approved-value">
-        ${escapeHtml(
-          brl(grossAmount)
-        )}
-      </div>
-    </div>
-
-  </div>
-
-  <div class="details">
-
-    <div class="row">
-      <span class="row-icon">
-        ?
-      </span>
-
-      <span class="row-label">
-        Cliente
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        ${escapeHtml(
-          customer.name
-          ?? receipt.customer_name
-          ?? "-"
-        )}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="row-icon">
-        ?
-      </span>
-
-      <span class="row-label">
-        Data
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        ${escapeHtml(
-          formatDate(paidAt)
-        )}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="row-icon">
-        #
-      </span>
-
-      <span class="row-label">
-        Order ID
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        ${escapeHtml(orderId)}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="row-icon">
-        ?
-      </span>
-
-      <span class="row-label">
-        Refer?ncia
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        ${escapeHtml(reference)}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="row-icon">
-        ?
-      </span>
-
-      <span class="row-label">
-        Forma de pagamento
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        ${escapeHtml(
-          paymentMethod
-        )}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="row-icon">
-        ?
-      </span>
-
-      <span class="row-label">
-        Bandeira
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        <span class="brand">
-          ${
-            cardBrand
-              ? `
-                <span
-                  class="brand-badge"
-                >
-                  ${escapeHtml(
-                    brandLabel
-                  )}
-                </span>
-              `
-              : ""
-          }
-
-          ${escapeHtml(
-            cardBrand
-              ? (
-                  cardBrand
-                    .charAt(0)
-                    .toUpperCase()
-                  + cardBrand
-                    .slice(1)
-                )
-              : "-"
-          )}
-        </span>
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="row-icon">
-        ?
-      </span>
-
-      <span class="row-label">
-        Parcelamento
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        ${escapeHtml(
-          `${installments}x de ${
-            brl(
-              installmentValue
-            )
-          }`
-        )}
-      </span>
-    </div>
-
-    <div class="row receive">
-      <span class="row-icon">
-        ?
-      </span>
-
-      <span class="row-label">
-        Pra receber
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        ${escapeHtml(
-          brl(netAmount)
-        )}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="row-icon">
-        %
-      </span>
-
-      <span class="row-label">
-        Taxa Mercado Pago
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        ${escapeHtml(
-          percent(
-            mpFeePercent,
-            2
-          )
-        )}
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="row-icon">
-        ?
-      </span>
-
-      <span class="row-label">
-        Taxa a.m.
-      </span>
-
-      <span class="dots"></span>
-
-      <span class="row-value">
-        ${escapeHtml(
-          percent(
-            monthlyRate,
-            4
-          )
-        )}
-      </span>
-    </div>
-
-  </div>
-
-  <div class="security-note">
-
-    <div class="lock-circle">
-      ??
-    </div>
-
-    <div>
-      <div class="security-title">
-        Estorno protegido por senha
-        do administrador
-      </div>
-
-      <div class="security-text">
-        Para solicitar estornos, ?
-        obrigat?ria a autentica??o
-        com a senha do administrador
-        do sistema.
-      </div>
-    </div>
-
-  </div>
-
-  ${refundNote}
-
-  <div class="divider"></div>
-
-  <div class="actions">
-
-    <button
-      type="button"
-      class="action print-button"
-      onclick="window.print()"
-    >
-      ?? Imprimir
-    </button>
-
-    <button
-      id="download-pdf"
-      type="button"
-      class="action pdf-button"
-      onclick="downloadReceiptPdf()"
-    >
-      ? Baixar PDF
-    </button>
-
-  </div>
-
-  <div class="small-id">
-    Portabilidade PRO ?
-    Venda #${escapeHtml(
-      sale.sale_id
-    )}
-  </div>
-
-</div>
-
-<script>
-async function downloadReceiptPdf() {
-  var button =
-    document.getElementById(
-      "download-pdf"
-    );
-
-  var actions =
-    document.querySelector(
-      ".actions"
-    );
-
-  var divider =
-    document.querySelector(
-      ".divider"
-    );
-
-  try {
-    if (button) {
-      button.disabled = true;
-      button.textContent =
-        "Gerando PDF...";
-    }
-
-    if (!window.html2pdf) {
-      await new Promise(
-        function(
-          resolve,
-          reject
-        ) {
-          var script =
-            document.createElement(
-              "script"
-            );
-
-          script.src =
-            "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-
-          script.onload =
-            resolve;
-
-          script.onerror =
-            reject;
-
-          document.head
-            .appendChild(
-              script
-            );
-        }
-      );
-    }
-
-    if (actions) {
-      actions.style.display =
-        "none";
-    }
-
-    if (divider) {
-      divider.style.display =
-        "none";
-    }
-
-    var element =
-      document.getElementById(
-        "receipt-document"
-      );
-
-    await window
-      .html2pdf()
-      .set({
-        margin: [
-          5,
-          5,
-          5,
-          5
-        ],
-        filename:
-          "comprovante-venda-${sale.sale_id}.pdf",
-        image: {
-          type: "jpeg",
-          quality: 0.98
-        },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor:
-            "#ffffff"
-        },
-        jsPDF: {
-          unit: "mm",
-          format: "a4",
-          orientation:
-            "portrait"
-        }
-      })
-      .from(element)
-      .save();
-  }
-  catch (error) {
-    console.error(
-      "Erro ao gerar PDF:",
-      error
-    );
-
-    window.alert(
-      "N?o foi poss?vel gerar o PDF automaticamente. A janela de impress?o ser? aberta para salvar como PDF."
-    );
-
-    window.print();
-  }
-  finally {
-    if (actions) {
-      actions.style.display = "";
-    }
-
-    if (divider) {
-      divider.style.display = "";
-    }
-
-    if (button) {
-      button.disabled = false;
-      button.textContent =
-        "? Baixar PDF";
-    }
-  }
-}
-</script>
-
-</body>
-</html>
-    `;
-
-    // CARD_SALE_RECEIPT_DOM_MODAL_V4
     const existingModal =
       document.getElementById(
         "card-sale-receipt-modal"
@@ -1994,213 +877,616 @@ async function downloadReceiptPdf() {
 
     existingModal?.remove();
 
-
     const previousBodyOverflow =
       document.body.style.overflow;
 
-
     const overlay =
-      document.createElement(
-        "div"
-      );
+      document.createElement("div");
 
     overlay.id =
       "card-sale-receipt-modal";
 
-
-    Object.assign(
-      overlay.style,
-      {
-        position: "fixed",
-        inset: "0",
-        zIndex: "2147483647",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "12px",
-        background:
-          "rgba(2, 6, 23, 0.86)",
-        backdropFilter:
-          "blur(8px)",
-      }
+    overlay.setAttribute(
+      "style",
+      [
+        "position:fixed",
+        "top:0",
+        "left:0",
+        "right:0",
+        "bottom:0",
+        "width:100vw",
+        "height:100vh",
+        "z-index:2147483647",
+        "display:flex",
+        "align-items:center",
+        "justify-content:center",
+        "padding:16px",
+        "margin:0",
+        "background:rgba(2,6,23,0.82)",
+        "backdrop-filter:blur(8px)",
+        "-webkit-backdrop-filter:blur(8px)",
+        "isolation:isolate",
+      ].join(";")
     );
-
 
     const modal =
-      document.createElement(
-        "div"
-      );
+      document.createElement("div");
 
-    Object.assign(
-      modal.style,
-      {
-        width:
-          "min(1120px, 100%)",
-        height: "94vh",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        background: "#ffffff",
-        borderRadius: "24px",
-        boxShadow:
-          "0 30px 90px rgba(0, 0, 0, 0.45)",
-      }
+    modal.setAttribute(
+      "style",
+      [
+        "width:min(1180px,100%)",
+        "height:min(95vh,980px)",
+        "display:flex",
+        "flex-direction:column",
+        "overflow:hidden",
+        "border-radius:28px",
+        "background:#ffffff",
+        "box-shadow:0 30px 90px rgba(0,0,0,.38)",
+      ].join(";")
     );
-
 
     const modalHeader =
-      document.createElement(
-        "div"
-      );
+      document.createElement("div");
 
-    Object.assign(
-      modalHeader.style,
-      {
-        flexShrink: "0",
-        display: "flex",
-        alignItems: "center",
-        justifyContent:
-          "space-between",
-        gap: "16px",
-        padding: "16px 20px",
-        color: "#ffffff",
-        background: "#020617",
-        borderBottom:
-          "1px solid #1e293b",
-      }
+    modalHeader.setAttribute(
+      "style",
+      [
+        "display:flex",
+        "align-items:center",
+        "justify-content:space-between",
+        "gap:16px",
+        "padding:16px 20px",
+        "background:#020617",
+        "border-bottom:1px solid #1e293b",
+        "color:#fff",
+        "flex-shrink:0",
+      ].join(";")
     );
 
+    const titleWrap =
+      document.createElement("div");
 
-    const titleWrapper =
-      document.createElement(
-        "div"
-      );
-
-
-    const brand =
-      document.createElement(
-        "div"
-      );
-
-    brand.textContent =
-      "PORTABILIDADE PRO";
-
-    Object.assign(
-      brand.style,
-      {
-        color: "#93c5fd",
-        fontFamily:
-          "Arial, sans-serif",
-        fontSize: "10px",
-        fontWeight: "900",
-        letterSpacing: "2px",
-      }
-    );
-
-
-    const modalTitle =
-      document.createElement(
-        "div"
-      );
-
-    modalTitle.textContent =
-      "Comprovante de Pagamento";
-
-    Object.assign(
-      modalTitle.style,
-      {
-        marginTop: "4px",
-        color: "#ffffff",
-        fontFamily:
-          "Arial, sans-serif",
-        fontSize: "18px",
-        fontWeight: "800",
-      }
-    );
-
-
-    titleWrapper.appendChild(
-      brand
-    );
-
-    titleWrapper.appendChild(
-      modalTitle
-    );
-
+    titleWrap.innerHTML = `
+      <div style="font:900 10px Arial,sans-serif;letter-spacing:2px;color:#93c5fd;">
+        PORTABILIDADE PRO
+      </div>
+      <div style="margin-top:4px;font:800 18px Arial,sans-serif;color:#fff;">
+        Comprovante de Pagamento
+      </div>
+    `;
 
     const closeButton =
-      document.createElement(
-        "button"
-      );
+      document.createElement("button");
 
-    closeButton.type =
-      "button";
-
-    closeButton.textContent =
-      "?";
-
+    closeButton.type = "button";
+    closeButton.innerHTML = "&times;";
     closeButton.setAttribute(
       "aria-label",
       "Fechar comprovante"
     );
-
-    Object.assign(
-      closeButton.style,
-      {
-        width: "42px",
-        height: "42px",
-        flexShrink: "0",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        border: "0",
-        borderRadius: "12px",
-        color: "#ffffff",
-        background:
-          "rgba(255,255,255,0.10)",
-        cursor: "pointer",
-        fontFamily:
-          "Arial, sans-serif",
-        fontSize: "25px",
-        fontWeight: "700",
-        lineHeight: "1",
-      }
+    closeButton.setAttribute(
+      "style",
+      [
+        "width:42px",
+        "height:42px",
+        "border:0",
+        "border-radius:12px",
+        "background:rgba(255,255,255,.10)",
+        "color:#fff",
+        "font-size:28px",
+        "font-weight:700",
+        "cursor:pointer",
+        "line-height:1",
+        "display:flex",
+        "align-items:center",
+        "justify-content:center",
+        "flex-shrink:0",
+      ].join(";")
     );
 
-
     const frame =
-      document.createElement(
-        "iframe"
-      );
+      document.createElement("iframe");
 
     frame.title =
       "Comprovante de Pagamento";
 
-    frame.srcdoc =
-      html;
-
-    Object.assign(
-      frame.style,
-      {
-        width: "100%",
-        minHeight: "0",
-        flex: "1",
-        border: "0",
-        background: "#ffffff",
-      }
+    frame.setAttribute(
+      "style",
+      [
+        "width:100%",
+        "height:100%",
+        "min-height:0",
+        "flex:1",
+        "border:0",
+        "background:#fff",
+      ].join(";")
     );
 
-
-    function handleKeyDown(
-      event: KeyboardEvent
-    ) {
-      if (
-        event.key === "Escape"
-      ) {
-        closeModal();
-      }
+    const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Comprovante ${escapeHtml(reference)}</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    font-family: Inter, Arial, Helvetica, sans-serif;
+    color: #172554;
+  }
+  body {
+    background:
+      radial-gradient(circle at 12% 12%, #0f6bff 0, transparent 30%),
+      radial-gradient(circle at 88% 88%, #8b3dff 0, transparent 30%),
+      linear-gradient(135deg, #06318c 0%, #071c63 46%, #5524d7 100%);
+    padding: 34px 20px;
+  }
+  .receipt {
+    width: min(870px, calc(100vw - 28px));
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 30px;
+    padding: 38px 42px 34px;
+    box-shadow: 0 30px 80px rgba(2,21,78,.38);
+    border: 1px solid rgba(255,255,255,.76);
+  }
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .brand-left, .brand-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-name {
+    font-size: 22px;
+    font-weight: 950;
+    line-height: .94;
+    color: #0f1b56;
+    letter-spacing: -.5px;
+  }
+  .brand-name .pro {
+    display: block;
+    margin-top: 6px;
+    color: #8f29e9;
+    font-size: 18px;
+    font-style: italic;
+  }
+  .mp-text {
+    font-size: 21px;
+    line-height: .9;
+    font-weight: 900;
+    color: #173b91;
+  }
+  .mp-text span {
+    display: block;
+    color: #22a8eb;
+  }
+  .secure {
+    margin: 28px 0 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: #6b7b96;
+    font-size: 14px;
+  }
+  .secure::before,
+  .secure::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #dfe5ef;
+  }
+  h1 {
+    margin: 0 0 24px;
+    text-align: center;
+    color: #131f58;
+    font-size: 30px;
+    letter-spacing: -.7px;
+  }
+  .approved {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    align-items: center;
+    gap: 26px;
+    min-height: 155px;
+    border: 1.5px solid #a7e7bd;
+    border-radius: 20px;
+    background: linear-gradient(90deg, #f8fffa, #f3fff7);
+    padding: 24px 32px;
+    margin-bottom: 26px;
+  }
+  .shield-wrap {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .shield {
+    width: 92px;
+    height: 102px;
+    display:grid;
+    place-items:center;
+    color:#fff;
+    font-size:48px;
+    font-weight:950;
+    background: linear-gradient(145deg, #08c451, #00852e);
+    clip-path: polygon(50% 0, 96% 19%, 91% 70%, 50% 100%, 9% 70%, 4% 19%);
+    filter: drop-shadow(0 10px 8px rgba(2,136,51,.18));
+  }
+  .approved-label {
+    color: #07933b;
+    font-size: 22px;
+    font-weight: 900;
+  }
+  .check-round {
+    display:inline-grid;
+    place-items:center;
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    margin-left:8px;
+    background:#07933b;
+    color:#fff;
+    font-size:14px;
+  }
+  .approved-value {
+    margin-top: 8px;
+    color: #078b35;
+    font-size: 50px;
+    line-height: 1;
+    font-weight: 950;
+    letter-spacing: -1.6px;
+  }
+  .row {
+    display:grid;
+    grid-template-columns: auto minmax(40px,1fr) auto;
+    align-items:center;
+    min-height: 52px;
+    color:#516784;
+    font-size:17px;
+    border-bottom:1px dotted #d4dbe7;
+  }
+  .label { white-space:nowrap; }
+  .dots { margin:0 16px; }
+  .value {
+    color:#101b4f;
+    text-align:right;
+    font-weight:700;
+  }
+  .receive .label,
+  .receive .value {
+    color:#07933b;
+    font-weight:900;
+  }
+  .brand-badge {
+    display:inline-flex;
+    min-width:58px;
+    height:32px;
+    align-items:center;
+    justify-content:center;
+    padding:0 10px;
+    border:1px solid #d6dce6;
+    border-radius:7px;
+    background:#fff;
+    color:#153c9d;
+    font-style:italic;
+    font-weight:950;
+    font-size:15px;
+    margin-right:8px;
+  }
+  .security-note {
+    margin-top: 24px;
+    display:grid;
+    grid-template-columns: 78px 1fr;
+    gap: 18px;
+    align-items:center;
+    border:1.5px solid #efc35d;
+    border-radius:16px;
+    padding:17px 22px;
+    background:linear-gradient(90deg,#fffdf7,#fffaf0);
+  }
+  .lock-circle {
+    width:58px;
+    height:58px;
+    margin:auto;
+    border-radius:50%;
+    display:grid;
+    place-items:center;
+    background:#fff1c7;
+    font-size:28px;
+  }
+  .security-title {
+    color:#29231f;
+    font-weight:900;
+    font-size:16px;
+  }
+  .security-text {
+    margin-top:4px;
+    color:#465a7b;
+    font-size:14px;
+    line-height:1.4;
+  }
+  .invoice-box {
+    margin-top:20px;
+    border:1.5px solid #bdd4ff;
+    border-radius:16px;
+    padding:18px 20px;
+    background:#f6f9ff;
+  }
+  .invoice-small {
+    color:#6b7b96;
+    font-size:14px;
+    font-weight:700;
+  }
+  .invoice-strong {
+    margin-top:8px;
+    color:#1d4ed8;
+    font-size:20px;
+    font-weight:900;
+    word-break:break-word;
+  }
+  .divider {
+    height:1px;
+    background:#dfe4ed;
+    margin:24px 0 18px;
+  }
+  .actions {
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:16px;
+    align-items:center;
+  }
+  .print-button {
+    min-height:58px;
+    border-radius:14px;
+    border:2px solid #0f56d6;
+    background:#fff;
+    color:#0f56d6;
+    font-size:18px;
+    font-weight:900;
+    cursor:pointer;
+  }
+  .close-link {
+    color:#64748b;
+    font-weight:800;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .small-id {
+    margin-top:18px;
+    text-align:center;
+    color:#9aa6b8;
+    font-size:10px;
+  }
+  @media print {
+    @page { size: A4 portrait; margin: 8mm; }
+    html, body { background:#fff !important; }
+    body { padding: 0; }
+    .receipt {
+      width:100%;
+      max-width:190mm;
+      padding:10mm;
+      box-shadow:none;
+      border:1px solid #e4e8ef;
+      border-radius:12px;
     }
+    .actions, .divider, .small-id {
+      display:none !important;
+    }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+  @media (max-width:700px) {
+    body { padding: 12px; }
+    .receipt { padding: 24px 18px; border-radius: 22px; }
+    .brand-name, .mp-text { font-size: 15px; }
+    h1 { font-size: 25px; }
+    .approved {
+      grid-template-columns: 86px 1fr;
+      padding: 18px 14px;
+    }
+    .shield {
+      width: 70px;
+      height: 78px;
+      font-size: 36px;
+    }
+    .approved-label { font-size: 18px; }
+    .approved-value { font-size: 36px; }
+    .row {
+      grid-template-columns: auto minmax(8px,1fr) auto;
+      font-size: 13px;
+    }
+    .actions {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="receipt" id="receipt-document">
+    <div class="top">
+      <div class="brand-left">
+        <svg width="84" height="68" viewBox="0 0 84 68" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Portabilidade PRO">
+          <defs>
+            <linearGradient id="ppGrad" x1="0" y1="0" x2="84" y2="68" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#0EA5FF"/>
+              <stop offset="0.52" stop-color="#3454F5"/>
+              <stop offset="1" stop-color="#A229ED"/>
+            </linearGradient>
+          </defs>
+          <path d="M10 12H39.2C49.8 12 58.4 20.6 58.4 31.2C58.4 41.8 49.8 50.4 39.2 50.4H27.3V59H14.5V37.5H39.2C42.9 37.5 45.9 34.5 45.9 30.8C45.9 27.1 42.9 24.1 39.2 24.1H10V12Z" fill="url(#ppGrad)"/>
+          <path d="M4 12H16.8V59H4V12Z" fill="url(#ppGrad)"/>
+          <path d="M28.3 24.1H41.6V59H28.3V24.1Z" fill="url(#ppGrad)"/>
+        </svg>
+        <div class="brand-name">
+          PORTABILIDADE
+          <span class="pro">PRO</span>
+        </div>
+      </div>
 
+      <div class="brand-right">
+        <svg width="66" height="44" viewBox="0 0 66 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Mercado Pago">
+          <ellipse cx="33" cy="22" rx="31" ry="20" fill="#55C7FF" stroke="#173B91" stroke-width="3"/>
+          <path d="M18 23.5C20.5 19.5 25 17.5 29.8 18.4C31.6 18.7 33.2 19.5 34.6 20.7C36.1 19.5 37.8 18.8 39.7 18.4C44.8 17.4 49.4 19.5 52 23.8" stroke="#173B91" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M23.5 25.6L29.6 22.7C31.3 21.9 33.3 22.2 34.7 23.4C36.1 22.2 38.1 21.9 39.8 22.7L45.8 25.6" stroke="#173B91" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M25.5 27.6C28.7 31.4 31.5 33.2 34.6 33.2C37.8 33.2 40.8 31.4 43.8 27.4" stroke="#173B91" stroke-width="2.6" stroke-linecap="round"/>
+        </svg>
+        <div class="mp-text">
+          mercado
+          <span>pago</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="secure">?? Ambiente seguro</div>
+
+    <h1>Comprovante de Pagamento</h1>
+
+    <div class="approved">
+      <div class="shield-wrap">
+        <div class="shield">?</div>
+      </div>
+      <div>
+        <div class="approved-label">
+          Pagamento aprovado
+          <span class="check-round">?</span>
+        </div>
+        <div class="approved-value">
+          ${escapeHtml(brl(grossAmount))}
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="label">Cliente</span>
+      <span class="dots"></span>
+      <span class="value">${escapeHtml(customer.name ?? receipt.customer_name ?? "-")}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Data</span>
+      <span class="dots"></span>
+      <span class="value">${escapeHtml(formatDate(paidAt))}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Order ID</span>
+      <span class="dots"></span>
+      <span class="value">${escapeHtml(orderId)}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Refer?ncia</span>
+      <span class="dots"></span>
+      <span class="value">${escapeHtml(reference)}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Forma de pagamento</span>
+      <span class="dots"></span>
+      <span class="value">${escapeHtml(paymentMethod)}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Bandeira</span>
+      <span class="dots"></span>
+      <span class="value">
+        ${
+          cardBrand
+            ? `<span class="brand-badge">${escapeHtml(cardBrand.toUpperCase())}</span>`
+            : ""
+        }
+        ${escapeHtml(brandLabel)}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Parcelamento</span>
+      <span class="dots"></span>
+      <span class="value">${escapeHtml(`${installments}x de ${brl(installmentValue)}`)}</span>
+    </div>
+
+    <div class="row receive">
+      <span class="label">Pra receber</span>
+      <span class="dots"></span>
+      <span class="value">${escapeHtml(brl(netAmount))}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Taxa Mercado Pago</span>
+      <span class="dots"></span>
+      <span class="value">${escapeHtml(percent(mpFeePercent, 2))}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Taxa a.m.</span>
+      <span class="dots"></span>
+      <span class="value">${escapeHtml(percent(monthlyRate, 4))}</span>
+    </div>
+
+    <div class="invoice-box">
+      <div class="invoice-small">
+        Nome que normalmente aparecer? na fatura
+      </div>
+      <div class="invoice-strong">
+        ${escapeHtml(
+          receipt.statement_descriptor
+          ?? payment.statement_descriptor
+          ?? "PARC=110MP*PORTABILIDADEP"
+        )}
+      </div>
+    </div>
+
+    <div class="security-note">
+      <div class="lock-circle">??</div>
+      <div>
+        <div class="security-title">
+          Estorno protegido por senha do administrador
+        </div>
+        <div class="security-text">
+          Para solicitar estornos, ? obrigat?ria a autentica??o
+          com a senha do administrador do sistema.
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="actions">
+      <button
+        type="button"
+        class="print-button"
+        onclick="window.print()"
+      >
+        Imprimir / Salvar PDF
+      </button>
+
+      <a
+        class="close-link"
+        onclick="window.parent.postMessage({ type: 'close-card-sale-receipt' }, '*')"
+      >
+        Fechar
+      </a>
+    </div>
+
+    <div class="small-id">
+      Portabilidade PRO ? Venda #${escapeHtml(sale.sale_id)}
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    frame.srcdoc = html;
 
     function closeModal() {
       document.body.style.overflow =
@@ -2211,15 +1497,37 @@ async function downloadReceiptPdf() {
         handleKeyDown
       );
 
+      window.removeEventListener(
+        "message",
+        handleMessage
+      );
+
       overlay.remove();
     }
 
+    function handleKeyDown(
+      event: KeyboardEvent
+    ) {
+      if (event.key === "Escape") {
+        closeModal();
+      }
+    }
+
+    function handleMessage(
+      event: MessageEvent
+    ) {
+      if (
+        event?.data?.type
+        === "close-card-sale-receipt"
+      ) {
+        closeModal();
+      }
+    }
 
     closeButton.addEventListener(
       "click",
       closeModal
     );
-
 
     overlay.addEventListener(
       "mousedown",
@@ -2232,33 +1540,21 @@ async function downloadReceiptPdf() {
       }
     );
 
-
     window.addEventListener(
       "keydown",
       handleKeyDown
     );
 
-
-    modalHeader.appendChild(
-      titleWrapper
+    window.addEventListener(
+      "message",
+      handleMessage
     );
 
-    modalHeader.appendChild(
-      closeButton
-    );
-
-    modal.appendChild(
-      modalHeader
-    );
-
-    modal.appendChild(
-      frame
-    );
-
-    overlay.appendChild(
-      modal
-    );
-
+    modalHeader.appendChild(titleWrap);
+    modalHeader.appendChild(closeButton);
+    modal.appendChild(modalHeader);
+    modal.appendChild(frame);
+    overlay.appendChild(modal);
 
     document.body.style.overflow =
       "hidden";
@@ -2267,7 +1563,6 @@ async function downloadReceiptPdf() {
       overlay
     );
   };
-
 
   return (
     <section
