@@ -56,9 +56,13 @@ class CltConsultaRequest(BaseModel):
         le=120,
     )
 
+    lotus_proposal_id: Optional[str] = None
+
 
 class CltSimulacaoRequest(BaseModel):
     cpf: str
+    banco_id: Optional[str] = "presenca_bank"
+    lotus_proposal_id: Optional[str] = None
     nome: Optional[str] = None
     telefone: Optional[str] = None
     email: Optional[str] = None
@@ -77,7 +81,7 @@ class CltSimulacaoRequest(BaseModel):
 
 def validar_permissao(current_user) -> None:
     if (
-        current_user.role not in ["admin", "promotora"]
+        current_user.role != "admin"
         and not getattr(
             current_user,
             "can_consult_cpf",
@@ -108,6 +112,7 @@ async def consultar_core(
             valor_parcela=request.valor_parcela,
             valor_solicitado=request.valor_solicitado,
             quantidade_parcelas=request.quantidade_parcelas,
+            lotus_proposal_id=request.lotus_proposal_id,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -131,6 +136,54 @@ async def consultar_core(
 
 async def simular_core(request: CltSimulacaoRequest):
     orchestrator = CltOrchestrator()
+
+    if request.banco_id == "lotus_mais":
+        if not request.lotus_proposal_id:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "proposalId da Lotus não informado.",
+                    "code": "LOTUS_PROPOSAL_ID_AUSENTE",
+                },
+            )
+        if not request.valor_solicitado:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Para refazer a simulação da Lotus informe "
+                    "valor_solicitado."
+                ),
+            )
+        try:
+            provider_result = await orchestrator.lotus.consultar_fluxo(
+                cpf=request.cpf,
+                nome=request.nome or "Cliente CLT",
+                telefone=request.telefone or "",
+                proposal_id=request.lotus_proposal_id,
+                valor_solicitado=request.valor_solicitado,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            logger.exception("Erro na simulação Lotus CLT: %s", exc)
+            raise HTTPException(
+                status_code=502,
+                detail="Não foi possível concluir a simulação Lotus.",
+            )
+
+        return {
+            "success": True,
+            "status": provider_result.get("status"),
+            "cliente": {
+                "cpf": request.cpf,
+                "nome": request.nome,
+                "telefone": request.telefone,
+                "email": request.email,
+            },
+            "autorizacao": None,
+            "autorizacoes": [],
+            "bancos": [provider_result],
+        }
 
     cached_context = orchestrator.presenca.obter_contexto_simulacao(
         request.cpf
