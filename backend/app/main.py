@@ -200,9 +200,15 @@ app.include_router(
     prefix="/api/seller-calculator",
     tags=["Seller Calculator"],
 )
+from app.routers import bank_credentials
 from app.routers import consultas
 from app.routers import presenca_clt
 from app.routers import clt
+app.include_router(
+    bank_credentials.router,
+    prefix="/api/bank-credentials",
+    tags=["Bank Credentials"],
+)
 app.include_router(consultas.router, prefix="/api", tags=["Consultas"])
 app.include_router(consultas.internal_router, prefix="/api", tags=["Internal Consultas"])
 app.include_router(presenca_clt.router, prefix="/api", tags=["Presença CLT"])
