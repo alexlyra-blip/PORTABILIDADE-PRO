@@ -655,19 +655,6 @@ export default function CardSaleFinancePanel({
       return;
     }
 
-    const popup = window.open(
-      "",
-      "_blank",
-      "noopener,noreferrer,width=1060,height=980"
-    );
-
-    if (!popup) {
-      window.alert(
-        "O navegador bloqueou a abertura do comprovante."
-      );
-      return;
-    }
-
     const item = sale as any;
     const payment = item.payment || {};
     const receipt = item.receipt || {};
@@ -1999,9 +1986,286 @@ async function downloadReceiptPdf() {
 </html>
     `;
 
-    popup.document.open();
-    popup.document.write(html);
-    popup.document.close();
+    // CARD_SALE_RECEIPT_DOM_MODAL_V4
+    const existingModal =
+      document.getElementById(
+        "card-sale-receipt-modal"
+      );
+
+    existingModal?.remove();
+
+
+    const previousBodyOverflow =
+      document.body.style.overflow;
+
+
+    const overlay =
+      document.createElement(
+        "div"
+      );
+
+    overlay.id =
+      "card-sale-receipt-modal";
+
+
+    Object.assign(
+      overlay.style,
+      {
+        position: "fixed",
+        inset: "0",
+        zIndex: "2147483647",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "12px",
+        background:
+          "rgba(2, 6, 23, 0.86)",
+        backdropFilter:
+          "blur(8px)",
+      }
+    );
+
+
+    const modal =
+      document.createElement(
+        "div"
+      );
+
+    Object.assign(
+      modal.style,
+      {
+        width:
+          "min(1120px, 100%)",
+        height: "94vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        background: "#ffffff",
+        borderRadius: "24px",
+        boxShadow:
+          "0 30px 90px rgba(0, 0, 0, 0.45)",
+      }
+    );
+
+
+    const modalHeader =
+      document.createElement(
+        "div"
+      );
+
+    Object.assign(
+      modalHeader.style,
+      {
+        flexShrink: "0",
+        display: "flex",
+        alignItems: "center",
+        justifyContent:
+          "space-between",
+        gap: "16px",
+        padding: "16px 20px",
+        color: "#ffffff",
+        background: "#020617",
+        borderBottom:
+          "1px solid #1e293b",
+      }
+    );
+
+
+    const titleWrapper =
+      document.createElement(
+        "div"
+      );
+
+
+    const brand =
+      document.createElement(
+        "div"
+      );
+
+    brand.textContent =
+      "PORTABILIDADE PRO";
+
+    Object.assign(
+      brand.style,
+      {
+        color: "#93c5fd",
+        fontFamily:
+          "Arial, sans-serif",
+        fontSize: "10px",
+        fontWeight: "900",
+        letterSpacing: "2px",
+      }
+    );
+
+
+    const modalTitle =
+      document.createElement(
+        "div"
+      );
+
+    modalTitle.textContent =
+      "Comprovante de Pagamento";
+
+    Object.assign(
+      modalTitle.style,
+      {
+        marginTop: "4px",
+        color: "#ffffff",
+        fontFamily:
+          "Arial, sans-serif",
+        fontSize: "18px",
+        fontWeight: "800",
+      }
+    );
+
+
+    titleWrapper.appendChild(
+      brand
+    );
+
+    titleWrapper.appendChild(
+      modalTitle
+    );
+
+
+    const closeButton =
+      document.createElement(
+        "button"
+      );
+
+    closeButton.type =
+      "button";
+
+    closeButton.textContent =
+      "?";
+
+    closeButton.setAttribute(
+      "aria-label",
+      "Fechar comprovante"
+    );
+
+    Object.assign(
+      closeButton.style,
+      {
+        width: "42px",
+        height: "42px",
+        flexShrink: "0",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "0",
+        borderRadius: "12px",
+        color: "#ffffff",
+        background:
+          "rgba(255,255,255,0.10)",
+        cursor: "pointer",
+        fontFamily:
+          "Arial, sans-serif",
+        fontSize: "25px",
+        fontWeight: "700",
+        lineHeight: "1",
+      }
+    );
+
+
+    const frame =
+      document.createElement(
+        "iframe"
+      );
+
+    frame.title =
+      "Comprovante de Pagamento";
+
+    frame.srcdoc =
+      html;
+
+    Object.assign(
+      frame.style,
+      {
+        width: "100%",
+        minHeight: "0",
+        flex: "1",
+        border: "0",
+        background: "#ffffff",
+      }
+    );
+
+
+    function handleKeyDown(
+      event: KeyboardEvent
+    ) {
+      if (
+        event.key === "Escape"
+      ) {
+        closeModal();
+      }
+    }
+
+
+    function closeModal() {
+      document.body.style.overflow =
+        previousBodyOverflow;
+
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+
+      overlay.remove();
+    }
+
+
+    closeButton.addEventListener(
+      "click",
+      closeModal
+    );
+
+
+    overlay.addEventListener(
+      "mousedown",
+      (event) => {
+        if (
+          event.target === overlay
+        ) {
+          closeModal();
+        }
+      }
+    );
+
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+
+    modalHeader.appendChild(
+      titleWrapper
+    );
+
+    modalHeader.appendChild(
+      closeButton
+    );
+
+    modal.appendChild(
+      modalHeader
+    );
+
+    modal.appendChild(
+      frame
+    );
+
+    overlay.appendChild(
+      modal
+    );
+
+
+    document.body.style.overflow =
+      "hidden";
+
+    document.body.appendChild(
+      overlay
+    );
   };
 
 
