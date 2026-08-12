@@ -66,6 +66,11 @@ class User(Base):
     broker = relationship("User", foreign_keys="User.broker_id", remote_side="User.id", back_populates="sellers")
     
     bank_visibilities = relationship("UserBankVisibility", back_populates="user", cascade="all, delete-orphan")
+    bank_credentials = relationship(
+        "UserBankCredential",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     promotora_rules = relationship("PromotoraRule", back_populates="promotora", cascade="all, delete-orphan")
 
 class UserBankVisibility(Base):
@@ -79,6 +84,82 @@ class UserBankVisibility(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="bank_visibilities")
+
+
+class UserBankCredential(Base):
+    __tablename__ = "user_bank_credentials"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "provider",
+            name="uq_user_bank_credentials_user_provider",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    provider = Column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+
+    login_encrypted = Column(
+        Text,
+        nullable=True,
+    )
+
+    password_encrypted = Column(
+        Text,
+        nullable=True,
+    )
+
+    extra_credentials_encrypted = Column(
+        Text,
+        nullable=True,
+    )
+
+    is_active = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+    )
+
+    last_test_status = Column(
+        String(30),
+        nullable=True,
+    )
+
+    last_tested_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user = relationship(
+        "User",
+        back_populates="bank_credentials",
+    )
 
 class PromotoraRule(Base):
     __tablename__ = "promotora_rules"
