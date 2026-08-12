@@ -2,6 +2,7 @@
 
 import Sidebar from "@/components/admin/Sidebar";
 import Header from "@/components/admin/Header";
+import AdminCalculatorPopupController from "@/components/admin/AdminCalculatorPopupController";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -19,13 +20,13 @@ export default function AdminLayout({
       router.push('/login');
       return;
     }
-    
+
     const user = JSON.parse(userStr);
     if (user.role !== 'admin' && user.role !== 'promotora') {
       router.push('/simulador');
       return;
     }
-    
+
     setAuthorized(true);
   }, [router]);
 
@@ -45,6 +46,8 @@ export default function AdminLayout({
       <Sidebar />
       <div className="flex-1 ml-0 md:ml-72 flex flex-col pb-20 md:pb-0 relative">
         <Header />
+        {/* ADMIN_CALCULATOR_POPUP_LAYOUT_V1 */}
+        <AdminCalculatorPopupController />
         <main className="p-4 max-w-[98%] mx-auto w-full relative z-10">
           {children}
         </main>

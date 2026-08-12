@@ -163,6 +163,93 @@ function LockIcon() {
 }
 
 export default function SellerFeeCalculatorPage() {
+
+  // CALCULATOR_VISIBLE_SCROLLBAR_V1
+  useEffect(() => {
+    const html =
+      document.documentElement;
+
+    const body =
+      document.body;
+
+    const oldHtmlOverflow =
+      html.style.overflowY;
+
+    const oldBodyOverflow =
+      body.style.overflowY;
+
+    html.style.overflowY =
+      "scroll";
+
+    body.style.overflowY =
+      "scroll";
+
+
+    const existing =
+      document.getElementById(
+        "calculator-visible-scrollbar"
+      );
+
+    existing?.remove();
+
+
+    const style =
+      document.createElement(
+        "style"
+      );
+
+    style.id =
+      "calculator-visible-scrollbar";
+
+    style.textContent = `
+      html,
+      body {
+        overflow-y: scroll !important;
+        min-height: 100%;
+        scrollbar-gutter: stable;
+      }
+
+      ::-webkit-scrollbar {
+        width: 12px !important;
+        height: 12px !important;
+        display: block !important;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #64748b;
+        border-radius: 999px;
+        border: 3px solid #0f172a;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    `;
+
+    document.head.appendChild(
+      style
+    );
+
+
+    return () => {
+      html.style.overflowY =
+        oldHtmlOverflow;
+
+      body.style.overflowY =
+        oldBodyOverflow;
+
+      document
+        .getElementById(
+          "calculator-visible-scrollbar"
+        )
+        ?.remove();
+    };
+  }, []);
+
   const router = useRouter();
 
   const [amount, setAmount] = useState("");
