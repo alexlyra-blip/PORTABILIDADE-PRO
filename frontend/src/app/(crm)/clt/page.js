@@ -241,13 +241,9 @@ const maskCPF = (value) => {
 };
 
 const maskPhone = (value) => {
-  let digits = String(value || "")
+  const digits = String(value || "")
     .replace(/\D/g, "")
-    .slice(0, 13);
-
-  if (digits.startsWith("55") && digits.length > 11) {
-    digits = digits.slice(2);
-  }
+    .slice(0, 11);
 
   if (digits.length <= 10) {
     return digits
