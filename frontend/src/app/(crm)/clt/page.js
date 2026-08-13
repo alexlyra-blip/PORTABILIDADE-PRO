@@ -240,24 +240,10 @@ const maskCPF = (value) => {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 };
 
-const maskCNPJ = (value) => {
-  const digits = String(value || "").replace(/\D/g, "").slice(0, 14);
-  if (digits.length <= 11) return maskCPF(digits);
-  return digits
-    .replace(/^(\d{2})(\d)/, "$1.$2")
-    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-    .replace(/\.(\d{3})(\d)/, ".$1/$2")
-    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
-};
-
 const maskPhone = (value) => {
-  let digits = String(value || "")
+  const digits = String(value || "")
     .replace(/\D/g, "")
-    .slice(0, 13);
-
-  if (digits.startsWith("55") && digits.length > 11) {
-    digits = digits.slice(2);
-  }
+    .slice(0, 11);
 
   if (digits.length <= 10) {
     return digits
@@ -546,7 +532,9 @@ const getBusinessError = (error) => {
 
 const STATUS_LABELS = {
   completed: "Consulta concluída",
-  awaiting_authorization: "Aguardando autorização",
+  awaiting_authorization: "Aguardando autorizações",
+  processing: "Análise em processamento",
+  erro_bancos: "Bancos indisponíveis",
   dados_incompletos: "Dados incompletos",
   requires_selection: "Selecione o vínculo",
   ajuste_simulacao: "Ajuste necessário",
@@ -555,8 +543,6 @@ const STATUS_LABELS = {
   sem_vinculo_elegivel: "Cliente não elegível",
   sem_margem: "Cliente sem margem",
   sem_ofertas: "Sem ofertas disponíveis",
-  banco_indisponivel: "Consulta pendente no banco",
-  erro_presenca: "Aviso na consulta",
 };
 
 const NEGATIVE_STATUS_CONTENT = {
@@ -594,20 +580,6 @@ const NEGATIVE_STATUS_CONTENT = {
       "A análise foi concluída, mas nenhuma condição comercial foi retornada.",
     reason: "Nenhuma oferta disponível para o cliente.",
     code: "SEM_OFERTAS",
-  },
-  banco_indisponivel: {
-    title: "Consulta pendente no banco",
-    description:
-      "A consulta está em fila de processamento no banco ou aguardando liberação da esteira.",
-    reason: "Já existe uma consulta em andamento para este cliente ou o banco está temporariamente indisponível.",
-    code: "BANCO_INDISPONIVEL",
-  },
-  erro_presenca: {
-    title: "Aviso da instituição",
-    description:
-      "A instituição financeira retornou um comunicado sobre a consulta deste CPF.",
-    reason: "Verifique a mensagem retornada pela esteira bancária.",
-    code: "AVISO_BANCO",
   },
 };
 
@@ -741,43 +713,54 @@ export default function CltMultibancosPage() {
     }
   }, []);
 
+  const bankResults = useMemo(
+    () => (Array.isArray(result?.bancos) ? result.bancos : []),
+    [result]
+  );
+
   const bankResult = useMemo(
     () => getBankResult(result),
     [result]
   );
 
-  const authorization = useMemo(() => {
-    if (result?.autorizacao) {
-      return result.autorizacao;
+  const lotusBank = useMemo(
+    () =>
+      bankResults.find((bank) => bank?.banco_id === "lotus_mais") ||
+      null,
+    [bankResults]
+  );
+
+  const authorizations = useMemo(() => {
+    if (Array.isArray(result?.autorizacoes)) {
+      return result.autorizacoes.filter((item) => item?.url);
     }
 
-    if (
-      bankResult?.authorization_url ||
-      bankResult?.autorizacao_id
-    ) {
-      return {
-        banco: bankResult?.banco || "Presença Bank",
-        banco_id:
-          bankResult?.banco_id || "presenca_bank",
-        url: bankResult?.authorization_url,
-        id: bankResult?.autorizacao_id,
-      };
+    if (result?.autorizacao?.url) {
+      return [result.autorizacao];
     }
 
-    return null;
-  }, [result, bankResult]);
+    return bankResults
+      .filter((bank) => bank?.status === "awaiting_authorization" && bank?.authorization_url)
+      .map((bank) => ({
+        banco: bank?.banco || "Banco CLT",
+        banco_id: bank?.banco_id,
+        url: bank?.authorization_url,
+        id: bank?.autorizacao_id || bank?.proposal_id,
+      }));
+  }, [result, bankResults]);
 
   const offers = useMemo(() => {
-    return Array.isArray(bankResult?.ofertas)
-      ? bankResult.ofertas
-      : [];
-  }, [bankResult]);
+    return bankResults.flatMap((bank) => {
+      const bankOffers = Array.isArray(bank?.ofertas) ? bank.ofertas : [];
+      return bankOffers.map((offer) => ({
+        ...offer,
+        banco: offer?.banco || bank?.banco || "Banco CLT",
+        banco_id: offer?.banco_id || bank?.banco_id,
+      }));
+    });
+  }, [bankResults]);
 
   const bestOffer = useMemo(() => {
-    if (bankResult?.melhor_oferta) {
-      return bankResult.melhor_oferta;
-    }
-
     if (!offers.length) {
       return null;
     }
@@ -788,9 +771,37 @@ export default function CltMultibancosPage() {
         ? current
         : best;
     }, offers[0]);
-  }, [bankResult, offers]);
+  }, [offers]);
 
-  const margins = bankResult?.margens || {};
+  const offerBank = useMemo(() => {
+    if (!bestOffer?.banco_id) {
+      return bankResult;
+    }
+
+    return (
+      bankResults.find(
+        (bank) => bank?.banco_id === bestOffer.banco_id
+      ) ||
+      bankResult
+    );
+  }, [bestOffer, bankResults, bankResult]);
+
+  const offerBankMargins = offerBank?.margens || {};
+
+  const margins = {
+    ...offerBankMargins,
+    disponivel: Number(
+      offerBankMargins?.disponivel ??
+      offerBankMargins?.margem_disponivel ??
+      0
+    ),
+    utilizada: Number(
+      offerBankMargins?.utilizada ??
+      offerBankMargins?.margem_utilizada ??
+      bestOffer?.parcela ??
+      0
+    ),
+  };
 
   const simulationContext =
     bankResult?.contexto_simulacao ||
@@ -820,26 +831,13 @@ export default function CltMultibancosPage() {
     status === "ajuste_simulacao";
 
   const isNegativeStatus = Boolean(
-    NEGATIVE_STATUS_CONTENT[status] ||
-    (status !== "completed" &&
-      status !== "idle" &&
-      status !== "awaiting_authorization" &&
-      status !== "requires_selection" &&
-      status !== "dados_incompletos" &&
-      status !== "ajuste_simulacao")
+    NEGATIVE_STATUS_CONTENT[status]
   );
 
   const negativeResult =
     businessError ||
     NEGATIVE_STATUS_CONTENT[status] ||
-    (isNegativeStatus
-      ? {
-          title: STATUS_LABELS[status] || "Aviso na consulta",
-          description: "A instituição financeira retornou um status para esta consulta.",
-          reason: bankResult?.mensagem || result?.mensagem || "Aguardando retorno do banco.",
-          code: status ? status.toUpperCase() : "AVISO_BANCO",
-        }
-      : null);
+    null;
 
   const statusTitle =
     businessError?.title ||
@@ -923,6 +921,10 @@ export default function CltMultibancosPage() {
         overrides.valor_solicitado ?? null,
       quantidade_parcelas:
         overrides.quantidade_parcelas ?? null,
+      lotus_proposal_id:
+        overrides.lotus_proposal_id ??
+        lotusBank?.proposal_id ??
+        null,
     };
 
     if (payload.cpf.length !== 11) {
@@ -969,6 +971,13 @@ export default function CltMultibancosPage() {
 
         toast.success(
           "Link de autorização gerado com sucesso."
+        );
+      } else if (
+        responseStatus === "processing"
+      ) {
+        setAuthorized(true);
+        toast.success(
+          "Autorização recebida. Um ou mais bancos ainda estão processando a análise."
         );
       } else if (
         responseStatus === "requires_selection"
@@ -1182,36 +1191,25 @@ export default function CltMultibancosPage() {
     }
   };
 
-  const copyAuthorization = async () => {
+  const copyAuthorization = async (authorization) => {
     if (!authorization?.url) {
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(
-        authorization.url
-      );
-
-      toast.success(
-        "Link de autorização copiado."
-      );
+      await navigator.clipboard.writeText(authorization.url);
+      toast.success(`Link ${authorization?.banco || "CLT"} copiado.`);
     } catch {
-      toast.error(
-        "Não foi possível copiar o link."
-      );
+      toast.error("Não foi possível copiar o link.");
     }
   };
 
-  const openAuthorization = () => {
+  const openAuthorization = (authorization) => {
     if (!authorization?.url) {
       return;
     }
 
-    window.open(
-      authorization.url,
-      "_blank",
-      "noopener,noreferrer"
-    );
+    window.open(authorization.url, "_blank", "noopener,noreferrer");
   };
 
   const resetQuery = () => {
@@ -1661,41 +1659,6 @@ export default function CltMultibancosPage() {
                   </div>
                 </GlassCard>
 
-                {/* Dados do Empregador */}
-                {(() => {
-                  const emp = result?.empresa || bankResult?.empresa || dadosMulticorban?.empresa;
-                  const razaoSocial = emp?.razao_social || result?.razao_social || "Não Informada";
-                  const cnpjEmpresa = emp?.cnpj || bankResult?.cnpj_empregador || (eligibleLinks.length > 0 ? eligibleLinks[0]?.cnpj_empregador : "") || "Não Informado";
-                  const totalRegs = emp?.quantidade_funcionarios || eligibleLinks.length || 0;
-
-                  return (
-                    <GlassCard className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-500/20">
-                          <Icon.Building className="h-5 w-5 text-indigo-500" />
-                        </div>
-                        <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">
-                          Dados do Empregador
-                        </h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-white/10">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Razão Social</p>
-                          <p className="text-sm font-black text-slate-800 dark:text-white uppercase">{razaoSocial}</p>
-                        </div>
-                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-white/10">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ do Empregador</p>
-                          <p className="text-sm font-black text-slate-800 dark:text-white">{cnpjEmpresa ? maskCNPJ(cnpjEmpresa) : "Não Informado"}</p>
-                        </div>
-                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-white/10">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registros (Funcionários)</p>
-                          <p className="text-sm font-black text-slate-800 dark:text-white">{totalRegs}</p>
-                        </div>
-                      </div>
-                    </GlassCard>
-                  );
-                })()}
-
                 {status === "dados_incompletos" && (
                   <GlassCard className="border-amber-300/40 p-6">
                     <div className="flex gap-4">
@@ -1735,77 +1698,178 @@ export default function CltMultibancosPage() {
                   </GlassCard>
                 )}
 
-                {authorization?.url &&
-                  !isNegativeStatus &&
-                  !isAdjustmentStatus && (
-                  <GlassCard className="border-blue-400/30">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
-                      <div className="flex items-center gap-4">
-                        <div className="rounded-2xl bg-white/15 p-3">
-                          <Icon.Shield className="h-7 w-7" />
-                        </div>
-
-                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-100">
-                            Autorização necessária
-                          </p>
-
-                          <h3 className="mt-1 text-xl font-black">
-                            Envie o link ao cliente
-                          </h3>
-                        </div>
+                {bankResults.length > 0 && (
+                  <GlassCard className="p-6 md:p-7">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-600">
+                          Bancos consultados
+                        </p>
+                        <h3 className="mt-1 text-xl font-black text-slate-950 dark:text-white">
+                          Status por instituição
+                        </h3>
                       </div>
+                      <span className="w-fit rounded-full bg-blue-500/10 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-blue-600">
+                        {bankResults.length} bancos
+                      </span>
                     </div>
 
-                    <div className="p-6">
-                      <p className="text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
-                        O cliente deve abrir o link
-                        e concluir pessoalmente a
-                        autorização da consulta.
-                      </p>
+                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                      {bankResults.map((bank) => {
+                        const bankStatus = bank?.status || "processing";
+                        const completed = bankStatus === "completed";
+                        const waiting = bankStatus === "awaiting_authorization";
+                        const processing = bankStatus === "processing";
+                        const failed = [
+                          "cliente_nao_elegivel",
+                          "empresa_nao_elegivel",
+                          "sem_vinculo_elegivel",
+                          "sem_margem",
+                          "sem_ofertas",
+                          "erro_banco",
+                        ].includes(bankStatus);
 
-                      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/60">
-                        <div className="flex items-center gap-3">
-                          <Icon.Link className="h-5 w-5 shrink-0 text-blue-500" />
+                        return (
+                          <div
+                            key={bank?.banco_id || bank?.banco}
+                            className={[
+                              "rounded-3xl border p-5",
+                              completed
+                                ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-400/20 dark:bg-emerald-500/5"
+                                : waiting
+                                  ? "border-amber-200 bg-amber-50/70 dark:border-amber-400/20 dark:bg-amber-500/5"
+                                  : processing
+                                    ? "border-blue-200 bg-blue-50/70 dark:border-blue-400/20 dark:bg-blue-500/5"
+                                    : failed
+                                      ? "border-red-200 bg-red-50/70 dark:border-red-400/20 dark:bg-red-500/5"
+                                      : "border-slate-200 bg-slate-50/70 dark:border-white/10 dark:bg-white/5",
+                            ].join(" ")}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-sm font-black text-slate-950 dark:text-white">
+                                  {bank?.banco || "Banco CLT"}
+                                </p>
+                                <p className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                                  {STATUS_LABELS[bankStatus] ||
+                                    (bankStatus === "erro_banco"
+                                      ? "Indisponível"
+                                      : bank?.provider_status || bankStatus)}
+                                </p>
+                              </div>
+                              <span
+                                className={[
+                                  "h-3 w-3 rounded-full",
+                                  completed
+                                    ? "bg-emerald-500"
+                                    : waiting
+                                      ? "bg-amber-500"
+                                      : processing
+                                        ? "bg-blue-500 animate-pulse"
+                                        : failed
+                                          ? "bg-red-500"
+                                          : "bg-slate-400",
+                                ].join(" ")}
+                              />
+                            </div>
 
-                          <p className="min-w-0 flex-1 truncate text-xs font-bold text-slate-700 dark:text-slate-200">
-                            {authorization.url}
-                          </p>
-                        </div>
-                      </div>
+                            {bank?.mensagem && (
+                              <p className="mt-3 text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300">
+                                {bank.mensagem}
+                              </p>
+                            )}
 
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        <button
-                          type="button"
-                          onClick={copyAuthorization}
-                          className="flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-[10px] font-black uppercase tracking-[0.15em] text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-300"
-                        >
-                          <Icon.Copy className="h-4 w-4" />
-                          Copiar link
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={openAuthorization}
-                          className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 py-4 text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5"
-                        >
-                          <Icon.External className="h-4 w-4" />
-                          Abrir autorização
-                        </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        className="mt-4 flex w-full items-center justify-center gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-4 text-[10px] font-black uppercase tracking-[0.15em] text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300"
-                      >
-                        <Icon.Refresh className="h-5 w-5" />
-                        Atualizar consulta após
-                        autorização
-                      </button>
+                            {bank?.banco_id === "lotus_mais" && Number(bank?.max_loan || 0) > 0 && (
+                              <div className="mt-4 rounded-2xl bg-white/80 p-4 dark:bg-slate-950/40">
+                                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                  Limite aprovado
+                                </p>
+                                <p className="mt-1 text-lg font-black text-emerald-600">
+                                  {formatBRL(bank.max_loan)}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </GlassCard>
+                )}
+
+                {authorizations.length > 0 &&
+                  !isNegativeStatus &&
+                  !isAdjustmentStatus && (
+                  <div className="space-y-4">
+                    {authorizations.map((authorization) => (
+                      <GlassCard
+                        key={`${authorization?.banco_id}-${authorization?.id || authorization?.url}`}
+                        className="border-blue-400/30"
+                      >
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
+                          <div className="flex items-center gap-4">
+                            <div className="rounded-2xl bg-white/15 p-3">
+                              <Icon.Shield className="h-7 w-7" />
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-100">
+                                Autorização necessária · {authorization?.banco}
+                              </p>
+
+                              <h3 className="mt-1 text-xl font-black">
+                                Envie o link ao cliente
+                              </h3>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-6">
+                          <p className="text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+                            O cliente deve abrir o link e concluir pessoalmente a autorização desta instituição.
+                          </p>
+
+                          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/60">
+                            <div className="flex items-center gap-3">
+                              <Icon.Link className="h-5 w-5 shrink-0 text-blue-500" />
+                              <p className="min-w-0 flex-1 truncate text-xs font-bold text-slate-700 dark:text-slate-200">
+                                {authorization.url}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              onClick={() => copyAuthorization(authorization)}
+                              className="flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-[10px] font-black uppercase tracking-[0.15em] text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-300"
+                            >
+                              <Icon.Copy className="h-4 w-4" />
+                              Copiar link
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => openAuthorization(authorization)}
+                              className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-5 py-4 text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5"
+                            >
+                              <Icon.External className="h-4 w-4" />
+                              Abrir autorização
+                            </button>
+                          </div>
+                        </div>
+                      </GlassCard>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={handleRefresh}
+                      disabled={loading}
+                      className="flex w-full items-center justify-center gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-4 text-[10px] font-black uppercase tracking-[0.15em] text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                    >
+                      <Icon.Refresh className="h-5 w-5" />
+                      Atualizar todos os bancos após autorização
+                    </button>
+                  </div>
                 )}
 
                 {status === "requires_selection" &&
@@ -1867,7 +1931,7 @@ export default function CltMultibancosPage() {
                     </GlassCard>
                   )}
 
-                {status === "completed" && (
+                {offers.length > 0 && (
                   <>
                     <div className="grid gap-4 md:grid-cols-3">
                       <MetricCard
@@ -1899,7 +1963,7 @@ export default function CltMultibancosPage() {
                         value={String(
                           result?.bancos?.length || 1
                         ).padStart(2, "0")}
-                        description="Motor preparado para novos bancos"
+                        description="Presença Bank + Lotus Mais"
                         accent="violet"
                         icon={
                           <Icon.Building className="h-5 w-5" />
@@ -2069,6 +2133,25 @@ export default function CltMultibancosPage() {
                                         offer?.parcela
                                       )}
                                     </span>
+
+                                    {Number(offer?.taxa_anual || 0) > 0 && (
+                                      <span>
+                                        Taxa anual:{" "}
+                                        {Number(offer.taxa_anual).toFixed(3)}%
+                                      </span>
+                                    )}
+
+                                    {Number(offer?.iof || 0) > 0 && (
+                                      <span>
+                                        IOF: {formatBRL(offer.iof)}
+                                      </span>
+                                    )}
+
+                                    {Number(offer?.custo_total || 0) > 0 && (
+                                      <span>
+                                        Custo total: {formatBRL(offer.custo_total)}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
 
@@ -2398,8 +2481,12 @@ export default function CltMultibancosPage() {
                   Presença Bank ativo
                 </span>
 
+                <span className="rounded-full bg-emerald-500/10 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-emerald-600">
+                  Lotus Mais ativo
+                </span>
+
                 <span className="rounded-full bg-slate-500/10 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-slate-500">
-                  Novos bancos em breve
+                  Mais bancos em breve
                 </span>
               </div>
             </div>

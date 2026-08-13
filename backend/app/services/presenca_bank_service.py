@@ -12,8 +12,6 @@ logger = logging.getLogger("presenca_bank_service")
 
 class PresencaBankService:
     _client: Optional[httpx.AsyncClient] = None
-    _cached_token: Optional[str] = None
-    _token_expires_at: Optional[datetime] = None
     _simulation_context_cache: Dict[str, Dict[str, Any]] = {}
     _simulation_context_ttl = timedelta(minutes=30)
 
@@ -36,22 +34,35 @@ class PresencaBankService:
 
         return cls._client
 
-    def __init__(self):
+    def __init__(
+        self,
+        login: Optional[str] = None,
+        password: Optional[str] = None,
+    ):
         self.base_url = os.getenv(
             "PRESENA_BANK_BASE_URL",
             "https://presenca-bank-api.azurewebsites.net",
         ).rstrip("/")
 
         self.login = (
-            os.getenv("PRESENA_BANK_LOGIN")
+            login
+            if login is not None
+            else os.getenv("PRESENA_BANK_LOGIN")
             or os.getenv("PRESENCA_BANK_LOGIN")
-            or "03739475420_9EOx"
+            or ""
         ).strip()
+
         self.password = (
-            os.getenv("PRESENA_BANK_PASSWORD")
+            password
+            if password is not None
+            else os.getenv("PRESENA_BANK_PASSWORD")
             or os.getenv("PRESENCA_BANK_PASSWORD")
-            or "Xandy@01"
+            or ""
         ).strip()
+
+        # Token isolado por instancia/usuario.
+        self._cached_token: Optional[str] = None
+        self._token_expires_at: Optional[datetime] = None
 
         self.product_id = int(
             os.getenv("PRESENA_BANK_PRODUCT_ID", "28")
@@ -101,14 +112,13 @@ class PresencaBankService:
 
         return str(data)
 
-    @classmethod
-    def _token_valido(cls) -> bool:
-        if not cls._cached_token or not cls._token_expires_at:
+    def _token_valido(self) -> bool:
+        if not self._cached_token or not self._token_expires_at:
             return False
 
         agora = datetime.now(timezone.utc)
 
-        return cls._token_expires_at > (
+        return self._token_expires_at > (
             agora + timedelta(seconds=60)
         )
 
@@ -195,8 +205,8 @@ class PresencaBankService:
                 + timedelta(minutes=45)
             )
 
-        PresencaBankService._cached_token = token
-        PresencaBankService._token_expires_at = (
+        self._cached_token = token
+        self._token_expires_at = (
             parsed_expiration
         )
 

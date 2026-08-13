@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Dict, List, Optional
 
 from app.services.consultas.multicorban_provider import (
@@ -6,6 +7,7 @@ from app.services.consultas.multicorban_provider import (
 from app.services.presenca_bank_service import (
     PresencaBankService,
 )
+from app.services.lotus_clt_service import LotusCltService
 
 
 class CltOrchestrator:
@@ -16,9 +18,25 @@ class CltOrchestrator:
     Cada banco CLT é consultado por um serviço independente.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        lotus_credentials: Optional[Dict[str, Any]] = None,
+        presenca_credentials: Optional[Dict[str, Any]] = None,
+    ):
         self.multicorban = MultiCorbanProvider()
-        self.presenca = PresencaBankService()
+
+        lotus_credentials = lotus_credentials or {}
+        presenca_credentials = presenca_credentials or {}
+
+        self.presenca = PresencaBankService(
+            login=presenca_credentials.get("login"),
+            password=presenca_credentials.get("password"),
+        )
+
+        self.lotus = LotusCltService(
+            email=lotus_credentials.get("login"),
+            password=lotus_credentials.get("password"),
+        )
 
     @staticmethod
     def _to_dict(value: Any) -> Dict[str, Any]:
@@ -180,45 +198,10 @@ class CltOrchestrator:
             if email:
                 break
 
-        empresa_obj = (
-            cls._to_dict(cliente.get("empresa"))
-            or cls._to_dict(data.get("empresa"))
-            or cls._to_dict(data.get("empresa_data"))
-            or {}
-        )
-        razao_social = (
-            empresa_obj.get("razao_social")
-            or empresa_obj.get("Razão Social")
-            or empresa_obj.get("Razao Social")
-            or data.get("razao_social")
-            or cliente.get("razao_social")
-            or ""
-        )
-        cnpj_empresa = (
-            empresa_obj.get("cnpj")
-            or empresa_obj.get("CNPJ")
-            or data.get("cnpj")
-            or data.get("cnpj_empresa")
-            or cliente.get("cnpj")
-            or ""
-        )
-        quantidade_funcionarios = (
-            empresa_obj.get("quantidade_funcionarios")
-            or empresa_obj.get("Total de Registros")
-            or data.get("quantidade_funcionarios")
-            or data.get("total_registros")
-            or 0
-        )
-
         return {
             "nome": nome,
             "telefone": telefone,
             "email": email,
-            "empresa": {
-                "razao_social": razao_social,
-                "cnpj": cnpj_empresa,
-                "quantidade_funcionarios": quantidade_funcionarios,
-            },
         }
 
     @staticmethod
@@ -246,6 +229,7 @@ class CltOrchestrator:
         valor_parcela: Optional[float] = None,
         valor_solicitado: Optional[float] = None,
         quantidade_parcelas: Optional[int] = None,
+        lotus_proposal_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         cpf_clean = self._digits(cpf)
 
@@ -256,7 +240,6 @@ class CltOrchestrator:
             "nome": "",
             "telefone": "",
             "email": "",
-            "empresa": {},
         }
 
         multicorban_error = None
@@ -396,9 +379,9 @@ class CltOrchestrator:
                 "bancos": [],
             }
 
-        try:
-            resultado_presenca = (
-                await self.presenca.processar_consulta(
+        async def executar_presenca():
+            try:
+                result = await self.presenca.processar_consulta(
                     cpf=cpf_clean,
                     nome=nome,
                     telefone=telefone,
@@ -408,58 +391,87 @@ class CltOrchestrator:
                     valor_solicitado=valor_solicitado,
                     quantidade_parcelas=quantidade_parcelas,
                 )
-            )
-        except Exception as exc:
-            err_msg = str(exc)
-            status_code = "empresa_nao_elegivel" if "empresa" in err_msg.lower() else "banco_indisponivel"
-            resultado_presenca = {
-                "success": False,
-                "status": status_code,
-                "mensagem": err_msg,
-                "errors": [err_msg],
-                "vinculos": [],
-                "ofertas": [],
-            }
+                return {
+                    **result,
+                    "banco_id": "presenca_bank",
+                    "banco": "Presença Bank",
+                }
+            except Exception as exc:
+                return {
+                    "banco_id": "presenca_bank",
+                    "banco": "Presença Bank",
+                    "status": "erro_banco",
+                    "mensagem": str(exc),
+                    "ofertas": [],
+                }
 
-        banco_presenca = {
-            **resultado_presenca,
-            "banco_id": "presenca_bank",
-            "banco": "Presença Bank",
-        }
+        async def executar_lotus():
+            try:
+                return await self.lotus.consultar_fluxo(
+                    cpf=cpf_clean,
+                    nome=nome,
+                    telefone=telefone,
+                    proposal_id=lotus_proposal_id,
+                    valor_solicitado=valor_solicitado,
+                )
+            except Exception as exc:
+                return {
+                    "banco_id": "lotus_mais",
+                    "banco": "Lotus Mais",
+                    "status": "erro_banco",
+                    "mensagem": str(exc),
+                    "ofertas": [],
+                }
 
-        autorizacao = None
-
-        if (
-            resultado_presenca.get("status")
-            == "awaiting_authorization"
-        ):
-            autorizacao = {
-                "banco_id": "presenca_bank",
-                "banco": "Presença Bank",
-                "id": resultado_presenca.get(
-                    "autorizacao_id"
-                ),
-                "url": resultado_presenca.get(
-                    "authorization_url"
-                ),
-            }
-
-        empresa_dict = dict(dados_multicorban.get("empresa") or {})
-        vinculos_presenca = resultado_presenca.get("vinculos") or []
-        cnpj_presenca = (
-            resultado_presenca.get("cnpj_empregador")
-            or (vinculos_presenca[0].get("cnpj_empregador") if vinculos_presenca else "")
+        banco_presenca, banco_lotus = await asyncio.gather(
+            executar_presenca(),
+            executar_lotus(),
         )
-        if not empresa_dict.get("cnpj") and cnpj_presenca:
-            empresa_dict["cnpj"] = cnpj_presenca
-        if not empresa_dict.get("quantidade_funcionarios") and len(vinculos_presenca) > 0:
-            empresa_dict["quantidade_funcionarios"] = len(vinculos_presenca)
+
+        bancos = [banco_presenca, banco_lotus]
+        autorizacoes = []
+        for bank in bancos:
+            url = bank.get("authorization_url")
+            if bank.get("status") == "awaiting_authorization" and url:
+                autorizacoes.append(
+                    {
+                        "banco_id": bank.get("banco_id"),
+                        "banco": bank.get("banco"),
+                        "id": bank.get("autorizacao_id") or bank.get("proposal_id"),
+                        "url": url,
+                    }
+                )
+
+        statuses = [str(bank.get("status") or "") for bank in bancos]
+        if "requires_selection" in statuses:
+            overall_status = "requires_selection"
+        elif "awaiting_authorization" in statuses:
+            overall_status = "awaiting_authorization"
+        elif "processing" in statuses:
+            overall_status = "processing"
+        elif "ajuste_simulacao" in statuses:
+            overall_status = "ajuste_simulacao"
+        elif "completed" in statuses:
+            overall_status = "completed"
+        elif all(status == "erro_banco" for status in statuses):
+            overall_status = "erro_bancos"
+        elif any(
+            status in {
+                "cliente_nao_elegivel",
+                "empresa_nao_elegivel",
+                "sem_vinculo_elegivel",
+                "sem_margem",
+                "sem_ofertas",
+            }
+            for status in statuses
+        ):
+            overall_status = "completed"
+        else:
+            overall_status = statuses[0] or "processing"
 
         return {
             "success": True,
-            "status": resultado_presenca.get(
-                "status"
-            ),
+            "status": overall_status,
             "requires_customer_data": False,
             "cliente": {
                 "cpf": cpf_clean,
@@ -467,15 +479,14 @@ class CltOrchestrator:
                 "telefone": telefone,
                 "email": email,
             },
-            "empresa": empresa_dict,
             "fontes_dados": {
                 "nome": fonte_nome,
                 "telefone": fonte_telefone,
                 "email": fonte_email,
             },
             "multicorban_error": multicorban_error,
-            "autorizacao": autorizacao,
-            "bancos": [
-                banco_presenca,
-            ],
+            # Compatibilidade com o frontend antigo.
+            "autorizacao": autorizacoes[0] if autorizacoes else None,
+            "autorizacoes": autorizacoes,
+            "bancos": bancos,
         }

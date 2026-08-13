@@ -3,11 +3,14 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import get_db
 from app.routers.deps import (
     get_current_user,
     verify_n8n_internal_key,
 )
+from app.services.bank_credentials_service import BankCredentialsService
 from app.services.clt_orchestrator import (
     CltOrchestrator,
 )
@@ -56,9 +59,13 @@ class CltConsultaRequest(BaseModel):
         le=120,
     )
 
+    lotus_proposal_id: Optional[str] = None
+
 
 class CltSimulacaoRequest(BaseModel):
     cpf: str
+    banco_id: Optional[str] = "presenca_bank"
+    lotus_proposal_id: Optional[str] = None
     nome: Optional[str] = None
     telefone: Optional[str] = None
     email: Optional[str] = None
@@ -75,9 +82,39 @@ class CltSimulacaoRequest(BaseModel):
     quantidade_parcelas: Optional[int] = Field(default=None, ge=0, le=120)
 
 
+async def carregar_fintech_corban_credentials(
+    db: AsyncSession,
+    user_id: int,
+):
+    return await BankCredentialsService.get_decrypted_credentials(
+        db,
+        user_id=user_id,
+        provider="FINTECH_CORBAN",
+    )
+
+async def carregar_presenca_credentials(
+    db: AsyncSession,
+    user_id: int,
+):
+    return await BankCredentialsService.get_decrypted_credentials(
+        db,
+        user_id=user_id,
+        provider="PRESENCA",
+    )
+
+async def carregar_lotus_credentials(
+    db: AsyncSession,
+    user_id: int,
+):
+    return await BankCredentialsService.get_decrypted_credentials(
+        db,
+        user_id=user_id,
+        provider="LOTUS",
+    )
+
 def validar_permissao(current_user) -> None:
     if (
-        current_user.role not in ["admin", "promotora"]
+        current_user.role != "admin"
         and not getattr(
             current_user,
             "can_consult_cpf",
@@ -95,8 +132,13 @@ def validar_permissao(current_user) -> None:
 
 async def consultar_core(
     request: CltConsultaRequest,
+    lotus_credentials=None,
+    presenca_credentials=None,
 ):
-    orchestrator = CltOrchestrator()
+    orchestrator = CltOrchestrator(
+        lotus_credentials=lotus_credentials,
+        presenca_credentials=presenca_credentials,
+    )
 
     try:
         return await orchestrator.processar(
@@ -108,6 +150,7 @@ async def consultar_core(
             valor_parcela=request.valor_parcela,
             valor_solicitado=request.valor_solicitado,
             quantidade_parcelas=request.quantidade_parcelas,
+            lotus_proposal_id=request.lotus_proposal_id,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -129,8 +172,63 @@ async def consultar_core(
         )
 
 
-async def simular_core(request: CltSimulacaoRequest):
-    orchestrator = CltOrchestrator()
+async def simular_core(
+    request: CltSimulacaoRequest,
+    lotus_credentials=None,
+    presenca_credentials=None,
+):
+    orchestrator = CltOrchestrator(
+        lotus_credentials=lotus_credentials,
+        presenca_credentials=presenca_credentials,
+    )
+
+    if request.banco_id == "lotus_mais":
+        if not request.lotus_proposal_id:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "proposalId da Lotus não informado.",
+                    "code": "LOTUS_PROPOSAL_ID_AUSENTE",
+                },
+            )
+        if not request.valor_solicitado:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Para refazer a simulação da Lotus informe "
+                    "valor_solicitado."
+                ),
+            )
+        try:
+            provider_result = await orchestrator.lotus.consultar_fluxo(
+                cpf=request.cpf,
+                nome=request.nome or "Cliente CLT",
+                telefone=request.telefone or "",
+                proposal_id=request.lotus_proposal_id,
+                valor_solicitado=request.valor_solicitado,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            logger.exception("Erro na simulação Lotus CLT: %s", exc)
+            raise HTTPException(
+                status_code=502,
+                detail="Não foi possível concluir a simulação Lotus.",
+            )
+
+        return {
+            "success": True,
+            "status": provider_result.get("status"),
+            "cliente": {
+                "cpf": request.cpf,
+                "nome": request.nome,
+                "telefone": request.telefone,
+                "email": request.email,
+            },
+            "autorizacao": None,
+            "autorizacoes": [],
+            "bancos": [provider_result],
+        }
 
     cached_context = orchestrator.presenca.obter_contexto_simulacao(
         request.cpf
@@ -225,10 +323,25 @@ async def simular_core(request: CltSimulacaoRequest):
 async def consultar_clt(
     request: CltConsultaRequest,
     current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     validar_permissao(current_user)
 
-    return await consultar_core(request)
+    lotus_credentials = await carregar_lotus_credentials(
+        db,
+        current_user.id,
+    )
+
+    presenca_credentials = await carregar_presenca_credentials(
+        db,
+        current_user.id,
+    )
+
+    return await consultar_core(
+        request,
+        lotus_credentials=lotus_credentials,
+        presenca_credentials=presenca_credentials,
+    )
 
 
 @internal_router.post("/consulta")
@@ -245,9 +358,25 @@ async def consultar_clt_internal(
 async def simular_clt(
     request: CltSimulacaoRequest,
     current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     validar_permissao(current_user)
-    return await simular_core(request)
+
+    lotus_credentials = await carregar_lotus_credentials(
+        db,
+        current_user.id,
+    )
+
+    presenca_credentials = await carregar_presenca_credentials(
+        db,
+        current_user.id,
+    )
+
+    return await simular_core(
+        request,
+        lotus_credentials=lotus_credentials,
+        presenca_credentials=presenca_credentials,
+    )
 
 
 @internal_router.post("/simular")
