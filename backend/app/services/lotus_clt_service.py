@@ -286,10 +286,33 @@ class LotusCltService:
 
         offers.sort(key=lambda item: int(item.get("prazo") or 0), reverse=True)
         best = offers[0] if offers else None
+
+        # A Lotus nao retorna um objeto "margens" explicito.
+        # Para o painel CLT:
+        # - disponivel = maior parcela aprovada entre as ofertas;
+        # - utilizada = parcela da melhor oferta exibida.
+        margem_disponivel = max(
+            (
+                float(item.get("parcela") or 0)
+                for item in offers
+            ),
+            default=0.0,
+        )
+
+        margem_utilizada = (
+            float(best.get("parcela") or 0)
+            if best
+            else 0.0
+        )
+
         return {
             "status": "completed" if offers else "sem_ofertas",
             "ofertas": offers,
             "melhor_oferta": best,
+            "margens": {
+                "disponivel": round(margem_disponivel, 2),
+                "utilizada": round(margem_utilizada, 2),
+            },
             "valor_liberado": self._money_from_cents(
                 simulation.get("totalTransfer")
             ),

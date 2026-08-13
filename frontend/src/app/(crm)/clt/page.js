@@ -777,7 +777,35 @@ export default function CltMultibancosPage() {
     }, offers[0]);
   }, [offers]);
 
-  const margins = bankResult?.margens || {};
+  const offerBank = useMemo(() => {
+    if (!bestOffer?.banco_id) {
+      return bankResult;
+    }
+
+    return (
+      bankResults.find(
+        (bank) => bank?.banco_id === bestOffer.banco_id
+      ) ||
+      bankResult
+    );
+  }, [bestOffer, bankResults, bankResult]);
+
+  const offerBankMargins = offerBank?.margens || {};
+
+  const margins = {
+    ...offerBankMargins,
+    disponivel: Number(
+      offerBankMargins?.disponivel ??
+      offerBankMargins?.margem_disponivel ??
+      0
+    ),
+    utilizada: Number(
+      offerBankMargins?.utilizada ??
+      offerBankMargins?.margem_utilizada ??
+      bestOffer?.parcela ??
+      0
+    ),
+  };
 
   const simulationContext =
     bankResult?.contexto_simulacao ||
