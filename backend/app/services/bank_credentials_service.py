@@ -16,8 +16,7 @@ from app.services.bank_credentials_crypto import (
 SUPPORTED_PROVIDERS = {
     "PRESENCA",
     "LOTUS",
-    "CELCOIN_CORBAN",
-    "QI_CORBAN",
+    "FINTECH_CORBAN",
 }
 
 

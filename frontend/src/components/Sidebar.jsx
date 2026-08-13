@@ -72,6 +72,7 @@ export default function Sidebar() {
     { name: "Ofertas", href: "/ofertas", icon: <Icons.Trophy />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
         { name: "Consulta CPF", href: "/consultas/cpf", icon: <Icons.Search />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "CLT Multibancos", href: "/clt", icon: <Icons.Calculator />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Credenciais Bancárias", href: "/credenciais-bancarias", icon: <Icons.Landmark />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Simulações", href: "/dashboard", icon: <Icons.LayoutDashboard /> },
     { name: "Meus Contratos", href: "/meus-contratos", icon: <Icons.FileText />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Bancos e Regras", href: "/bancos", icon: <Icons.Landmark />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },

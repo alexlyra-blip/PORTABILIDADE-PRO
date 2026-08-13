@@ -18,10 +18,25 @@ class CltOrchestrator:
     Cada banco CLT é consultado por um serviço independente.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        lotus_credentials: Optional[Dict[str, Any]] = None,
+        presenca_credentials: Optional[Dict[str, Any]] = None,
+    ):
         self.multicorban = MultiCorbanProvider()
-        self.presenca = PresencaBankService()
-        self.lotus = LotusCltService()
+
+        lotus_credentials = lotus_credentials or {}
+        presenca_credentials = presenca_credentials or {}
+
+        self.presenca = PresencaBankService(
+            login=presenca_credentials.get("login"),
+            password=presenca_credentials.get("password"),
+        )
+
+        self.lotus = LotusCltService(
+            email=lotus_credentials.get("login"),
+            password=lotus_credentials.get("password"),
+        )
 
     @staticmethod
     def _to_dict(value: Any) -> Dict[str, Any]:

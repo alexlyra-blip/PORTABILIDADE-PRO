@@ -20,8 +20,6 @@ class LotusCltService:
     """
 
     _client: Optional[httpx.AsyncClient] = None
-    _token: Optional[str] = None
-    _token_created_at: float = 0.0
     _proposal_by_cpf: Dict[str, str] = {}
     _simulation_cache: Dict[str, Dict[str, Any]] = {}
 
@@ -36,15 +34,35 @@ class LotusCltService:
         "DISBURSEMENT_FAILED",
     }
 
-    def __init__(self):
+    def __init__(
+        self,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+    ):
         self.base_url = os.getenv(
             "LOTUS_BASE_URL",
             "https://backoffice-prod-dycyrhjbkq-rj.a.run.app",
         ).rstrip("/")
-        self.email = (os.getenv("LOTUS_EMAIL") or "").strip()
-        self.password = (os.getenv("LOTUS_PASSWORD") or "").strip()
+
+        self.email = (
+            email
+            if email is not None
+            else os.getenv("LOTUS_EMAIL")
+            or ""
+        ).strip()
+
+        self.password = (
+            password
+            if password is not None
+            else os.getenv("LOTUS_PASSWORD")
+            or ""
+        ).strip()
+
         self.timeout = float(os.getenv("LOTUS_TIMEOUT", "45"))
         self.callback_url = (os.getenv("LOTUS_CALLBACK_URL") or "").strip()
+
+        self._token: Optional[str] = None
+        self._token_created_at: float = 0.0
 
     @classmethod
     def get_client(cls, timeout: float = 45.0) -> httpx.AsyncClient:
@@ -74,10 +92,10 @@ class LotusCltService:
         # local a cada 8 horas e também fazemos retry automático em 401.
         if (
             not force
-            and self.__class__._token
-            and (time.time() - self.__class__._token_created_at) < 8 * 3600
+            and self._token
+            and (time.time() - self._token_created_at) < 8 * 3600
         ):
-            return self.__class__._token
+            return self._token
 
         if not self.email or not self.password:
             raise ValueError(
@@ -102,8 +120,8 @@ class LotusCltService:
         if not token:
             raise ValueError("Token não retornado pela Lotus.")
 
-        self.__class__._token = token
-        self.__class__._token_created_at = time.time()
+        self._token = token
+        self._token_created_at = time.time()
         return token
 
     async def _request(

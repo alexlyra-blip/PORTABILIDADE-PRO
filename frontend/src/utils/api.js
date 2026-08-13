@@ -141,6 +141,27 @@ export const api = {
       throw new Error(`Erro ao enviar arquivo para ${endpoint}.`);
     }
   },
+  async put(endpoint, data) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+      });
+
+      return await handleResponse(response, endpoint, 'PUT');
+    } catch (err) {
+      if (err.message.includes('Erro na API')) throw err;
+
+      console.error("PUT Error:", err);
+
+      if (err instanceof Error) {
+        throw err;
+      }
+
+      throw new Error(`Erro ao atualizar dados em ${endpoint}.`);
+    }
+  },
   async patch(endpoint, data) {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
