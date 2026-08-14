@@ -113,19 +113,19 @@ async def carregar_lotus_credentials(
     )
 
 def validar_permissao(current_user) -> None:
-    if (
-        current_user.role != "admin"
-        and not getattr(
-            current_user,
-            "can_consult_cpf",
-            False,
-        )
-    ):
+    allowed_roles = {
+        "admin",
+        "promotora",
+        "corretor",
+        "vendedor",
+    }
+
+    if current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=403,
             detail=(
                 "Você não tem permissão "
-                "para realizar consultas de CPF."
+                "para acessar o módulo CLT."
             ),
         )
 
