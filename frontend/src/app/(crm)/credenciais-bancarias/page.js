@@ -31,6 +31,21 @@ const PROVIDERS = [
     accent: "from-emerald-600 to-cyan-500",
     extraField: null,
   },
+
+  {
+    id: "C6",
+    name: "C6 Bank",
+    subtitle: "Credito do Trabalhador e Refin INSS",
+    description:
+      "Conecte suas credenciais do C6 Bank para consultar Credito do Trabalhador e simulacoes de Refinanciamento INSS.",
+    accent: "from-slate-900 via-slate-800 to-amber-500",
+    extraField: {
+      key: "promoter_code",
+      label: "Codigo da Promotora",
+      placeholder: "Informe o codigo da promotora no C6",
+      type: "text",
+    },
+  },
 ];
 
 const Icon = {
@@ -171,6 +186,7 @@ export default function CredenciaisBancariasPage() {
   const [editing, setEditing] = useState({});
   const [saving, setSaving] = useState({});
   const [deleting, setDeleting] = useState({});
+  const [testing, setTesting] = useState({});
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
   const [message, setMessage] = useState(null);
@@ -267,6 +283,18 @@ export default function CredenciaisBancariasPage() {
       }
     }
 
+    if (
+      !currentCredential?.configured &&
+      providerConfig.extraField &&
+      !form.subscription.trim()
+    ) {
+      setMessage({
+        type: "error",
+        text: `Informe o ${providerConfig.extraField.label} para ${providerConfig.name}.`,
+      });
+      return;
+    }
+
     setSaving((current) => ({
       ...current,
       [provider]: true,
@@ -314,6 +342,46 @@ export default function CredenciaisBancariasPage() {
       }));
     }
   };
+
+  const testCredential = async (providerConfig) => {
+    const provider = providerConfig.id;
+
+    setTesting((current) => ({
+      ...current,
+      [provider]: true,
+    }));
+
+    setMessage(null);
+
+    try {
+      const result = await api.post(
+        `/bank-credentials/${provider}/test`,
+        {}
+      );
+
+      await loadCredentials();
+
+      setMessage({
+        type: "success",
+        text:
+          result?.message ||
+          `Conexao com ${providerConfig.name} validada com sucesso.`,
+      });
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text:
+          error?.message ||
+          `Nao foi possivel validar a conexao com ${providerConfig.name}.`,
+      });
+    } finally {
+      setTesting((current) => ({
+        ...current,
+        [provider]: false,
+      }));
+    }
+  };
+
 
   const removeCredential = async (providerConfig) => {
     const provider = providerConfig.id;
@@ -614,7 +682,7 @@ export default function CredenciaisBancariasPage() {
                             {provider.extraField.label}
                           </label>
                           <input
-                            type="password"
+                            type={provider.extraField.type || "password"}
                             autoComplete="off"
                             value={form.subscription}
                             onChange={(event) =>
@@ -675,6 +743,25 @@ export default function CredenciaisBancariasPage() {
                           ? "Atualizar credenciais"
                           : "Configurar credenciais"}
                       </button>
+
+                      {configured && provider.id === "C6" && (
+                        <button
+                          type="button"
+                          disabled={testing[provider.id]}
+                          onClick={() => testCredential(provider)}
+                          className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+                        >
+                          {testing[provider.id] ? (
+                            <Icon.Refresh className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Icon.Check className="h-4 w-4" />
+                          )}
+
+                          {testing[provider.id]
+                            ? "Testando..."
+                            : "Testar conexao"}
+                        </button>
+                      )}
 
                       {configured && (
                         <button

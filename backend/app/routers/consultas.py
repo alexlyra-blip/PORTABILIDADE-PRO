@@ -23,6 +23,8 @@ from app.schemas.consultas import (
 from app.services.consultas.promosys_provider import PromosysProvider
 from app.services.consultas.margin_rules import recalculate_consulta_payload
 from app.services.consultas.multicorban_provider import MultiCorbanProvider
+from app.services.bank_credentials_service import BankCredentialsService
+from app.services.c6_bank_service import C6BankError, C6BankService
 from app.utils.config_helper import get_active_provider
 from app.services.margem_service import calcular_valor_liberado_margem, obter_coeficiente_fator, resolve_margin_convenio
 
@@ -40,6 +42,16 @@ multicorban_saldo_cache = {
 class CpfRequest(BaseModel):
     cpf: str
     convenio: Optional[str] = "INSS"
+
+class C6RefinRequest(BaseModel):
+    cpf: str
+    beneficio: str
+    contrato: str
+    data_nascimento: str
+    renda: float
+    parcela: float
+    prazo: int = 108
+
 
 class MultiCorbanCpfRequest(BaseModel):
     cpf: str
@@ -664,7 +676,12 @@ async def consultar_cpf_unificado(
 
 
     try:
-        response_data = await _execute_cpf_query_flow(request.cpf, db, request.convenio, provider_type)
+        response_data = await _execute_cpf_query_flow(
+            request.cpf,
+            db,
+            request.convenio,
+            provider_type,
+        )
 
         try:
             nome_cliente = "Desconhecido"
@@ -699,6 +716,192 @@ async def consultar_cpf_unificado(
         tb = traceback.format_exc()
         logger.error(f"Erro na rota unificada CPF: {str(e)}\n{tb}")
         raise HTTPException(status_code=500, detail=f"Erro interno de processamento.")
+
+
+
+# ============================================================
+# C6 REFIN INSS - SOB DEMANDA
+# ============================================================
+
+@router.post("/c6/refin")
+async def consultar_c6_refin(
+    request: C6RefinRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Simula Refin INSS no C6 para um contrato que
+    ja foi carregado na Consulta CPF.
+
+    Esta rota NAO realiza nova Consulta CPF.
+    """
+
+    if current_user.role not in [
+        "admin",
+        "promotora",
+        "corretor",
+        "vendedor",
+    ]:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Voce nao tem permissao para "
+                "consultar Refin C6."
+            ),
+        )
+
+    cpf_clean = "".join(
+        filter(
+            str.isdigit,
+            str(request.cpf or ""),
+        )
+    )
+
+    beneficio_clean = "".join(
+        filter(
+            str.isdigit,
+            str(request.beneficio or ""),
+        )
+    )
+
+    contrato = str(
+        request.contrato or ""
+    ).strip()
+
+    if len(cpf_clean) != 11:
+        raise HTTPException(
+            status_code=400,
+            detail="CPF invalido para Refin C6.",
+        )
+
+    if not beneficio_clean:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Numero do beneficio ausente "
+                "para Refin C6."
+            ),
+        )
+
+    if not contrato:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Contrato C6 nao informado."
+            ),
+        )
+
+    credentials = (
+        await BankCredentialsService
+        .get_decrypted_credentials(
+            db,
+            user_id=current_user.id,
+            provider="C6",
+        )
+    )
+
+    if not credentials:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Credenciais C6 nao configuradas "
+                "para este usuario."
+            ),
+        )
+
+    if not credentials.get(
+        "is_active",
+        True,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "As credenciais C6 deste usuario "
+                "estao desativadas."
+            ),
+        )
+
+    service = C6BankService(
+        credentials
+    )
+
+    try:
+        resultado = (
+            await service.simular_refin_inss(
+                cpf=cpf_clean,
+                beneficio=beneficio_clean,
+                contrato=contrato,
+                data_nascimento=(
+                    request.data_nascimento
+                ),
+                renda=request.renda,
+                parcela=request.parcela,
+                prazo=request.prazo or 96,
+            )
+        )
+
+        logger.info(
+            "[C6_REFIN] Simulacao sob demanda "
+            "concluida."
+        )
+
+        return resultado
+
+    except C6BankError as exc:
+
+        logger.warning(
+            "[C6_REFIN] C6 recusou simulacao. "
+            "HTTP=%s CODIGO=%s",
+            exc.status_code,
+            exc.code,
+        )
+
+        external_status = (
+            exc.status_code
+            if exc.status_code
+            in {
+                400,
+                401,
+                403,
+                404,
+                409,
+                422,
+            }
+            else 502
+        )
+
+        # Nao devolver 401 do banco como 401 do
+        # Portabilidade PRO, pois o usuario continua
+        # autenticado no sistema.
+        if external_status in {
+            401,
+            403,
+        }:
+            external_status = 400
+
+        raise HTTPException(
+            status_code=external_status,
+            detail=str(exc),
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+
+        logger.exception(
+            "[C6_REFIN] Erro inesperado: %s",
+            type(exc).__name__,
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Nao foi possivel realizar "
+                "a simulacao Refin C6."
+            ),
+        )
+
 
 # MANTER ROTAS PROMOSYS PARA COMPATIBILIDADE (Clara/n8n)
 @router.post("/promosys/cpf", response_model=ConsultaCpfMultiResponse)

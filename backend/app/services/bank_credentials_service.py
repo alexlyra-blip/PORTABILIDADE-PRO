@@ -17,6 +17,7 @@ SUPPORTED_PROVIDERS = {
     "PRESENCA",
     "LOTUS",
     "FINTECH_CORBAN",
+    "C6",
 }
 
 
@@ -88,10 +89,16 @@ class BankCredentialsService:
             )
             db.add(record)
 
-        if login is not None:
+        if (
+            login is not None
+            and str(login).strip()
+        ):
             record.login_encrypted = encrypt_text(login)
 
-        if password is not None:
+        if (
+            password is not None
+            and str(password) != ""
+        ):
             record.password_encrypted = encrypt_text(password)
 
         if extra_credentials is not None:
