@@ -6,16 +6,36 @@ import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
 import { useToast } from "@/components/ToastProvider";
 
+const BANK_NAME_BY_CODE = {
+  "001": "BANCO DO BRASIL",
+  "104": "CAIXA",
+  "237": "BANCO BRADESCO",
+  "320": "CCB BRASIL",
+  "756": "SICOOB",
+};
+
+const normalizeBankCode = (codigo) => {
+  const digits = String(codigo || "").replace(/\D/g, "");
+
+  if (!digits) return "";
+
+  return digits.padStart(3, "0").slice(0, 3);
+};
+
 const formatBankName = (codigo, banco) => {
-  if (!banco) return '';
-  let codeStr = codigo ? String(codigo).replace(/['"]/g, '').trim() : '';
-  codeStr = codeStr.replace(/\D/g, '');
-  if (codeStr) {
-    codeStr = codeStr.padStart(3, '0').substring(0, 3);
-    const bancoStr = String(banco).replace(/['"]/g, '').trim();
-    return `${codeStr} - ${bancoStr}`;
+  const codeStr = normalizeBankCode(codigo);
+
+  const receivedName = String(banco || "")
+    .replace(/['"]/g, "")
+    .trim();
+
+  const canonicalName = BANK_NAME_BY_CODE[codeStr] || receivedName;
+
+  if (codeStr && canonicalName) {
+    return `${codeStr} - ${canonicalName}`;
   }
-  return String(banco).replace(/['"]/g, '').trim();
+
+  return canonicalName;
 };
 
 // Premium Custom Icons
@@ -166,10 +186,17 @@ export default function ConsultaCPFPage() {
           window.location.href = "/login";
           return;
         }
-
         const user = JSON.parse(userStr);
         const adminUser = user.role === "admin";
-        const isAllowed = adminUser || user.role === "promotora" || user.can_consult_cpf;
+
+        const allowedRoles = [
+          "admin",
+          "promotora",
+          "corretor",
+          "vendedor",
+        ];
+
+        const isAllowed = allowedRoles.includes(user.role);
 
         setIsAdmin(adminUser);
 
@@ -216,7 +243,21 @@ export default function ConsultaCPFPage() {
     setLoadingProvider(true);
     try {
       if (provider === "multicorban") {
+        // Saldo MultiCorban disponivel apenas para administradores.
+        // Usuarios nao-admin podem consultar CPF normalmente,
+        // mas nao devem chamar a rota protegida de saldo.
+        if (!isAdmin) {
+          setCreditos({
+            creditos: 0,
+            creditos_offline: 0,
+            creditos_geracao_leads: 0,
+            isMultiCorban: true
+          });
+          return;
+        }
+
         const res = await api.get("/consultas/multicorban/saldo");
+
         setCreditos({
           creditos: res.creditos_online,
           creditos_offline: res.creditos_offline,
@@ -291,7 +332,7 @@ export default function ConsultaCPFPage() {
   const handleHistoryClick = async (query) => {
     const formattedCpf = maskCpfCnpj(query.documento);
     setCpf(formattedCpf);
-    
+
     // Auto submit
     setLoading(true);
     setDados(null);
@@ -301,18 +342,18 @@ export default function ConsultaCPFPage() {
         convenio: query.convenio,
       };
 
-      const endpoint = activeProvider === "multicorban" 
+      const endpoint = activeProvider === "multicorban"
         ? "/consultas/cpf"
         : "/consultas/promosys/cpf";
-        
+
       const response = await api.post(endpoint, payload);
       setDados(response);
       setActiveBenefitIndex(0);
-      
+
       if (isAdmin && activeProvider) {
         fetchBalance(activeProvider);
       }
-      
+
       toast.success("Consulta recuperada com sucesso!");
     } catch (err) {
       console.error(err);
@@ -350,7 +391,7 @@ export default function ConsultaCPFPage() {
     setLoading(true);
     setDados(null);
     try {
-      const res = await api.post('/consultas/cpf', { 
+      const res = await api.post('/consultas/cpf', {
         cpf: cleanDoc,
         convenio: isCnpj ? "CNPJ" : (activeProvider === "multicorban" ? convenio : "INSS")
       });
@@ -364,8 +405,27 @@ export default function ConsultaCPFPage() {
       }
     } catch (err) {
       console.error(err);
-      const msg = err.response?.data?.detail || err.message || "Erro desconhecido";
-      toast.error(`Erro ao consultar: ${msg}`);
+
+      const rawMsg =
+        err.response?.data?.detail
+        || err.message
+        || "Erro desconhecido";
+
+      const normalizedMsg = String(rawMsg)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+      if (
+        normalizedMsg.includes("licenca da multicorban expirada")
+        || normalizedMsg.includes("licenca multicorban expirada")
+      ) {
+        toast.error(
+          "Licen?a da MultiCorban expirada. Regularize a licen?a para realizar novas consultas."
+        );
+      } else {
+        toast.error(`Erro ao consultar: ${rawMsg}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -382,8 +442,8 @@ export default function ConsultaCPFPage() {
         margin: [10, 10, 10, 10],
         filename: `extrato-${activeBenefit.cliente?.nome || 'cliente'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
+        html2canvas: {
+          scale: 2,
           useCORS: true,
           logging: false
         },
@@ -391,7 +451,7 @@ export default function ConsultaCPFPage() {
       };
 
       const printableElement = document.createElement('div');
-      
+
       // Build a clean, styled HTML string for PDF rendering
       // We avoid complex Tailwind v4 styles, custom colors (oklch), and SVGs to prevent html2canvas crashes.
       printableElement.innerHTML = `
@@ -665,20 +725,88 @@ export default function ConsultaCPFPage() {
   };
 
   const getSubLogo = (code, name) => {
-    const normName = (name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-    const cleanCode = (code || "").replace(/\D/g, "");
+    const cleanCode = normalizeBankCode(code);
+
+    const normalizeName = (value) =>
+      String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const aliasesByCode = {
+      "001": ["BANCO DO BRASIL"],
+      "104": ["CAIXA", "CEF", "CAIXA ECONOMICA", "CAIXA ECONOMICA FEDERAL"],
+      "237": ["BRADESCO", "BRADESCO SA", "BANCO BRADESCO"],
+      "320": ["CCB BRASIL", "BANCO CCB BRASIL", "CCB"],
+    };
+
     if (cleanCode) {
-      const matchByCode = subLogos.find(l => {
-        const logoName = l.name.toUpperCase();
-        return logoName.startsWith(cleanCode) || logoName.includes(` ${cleanCode} `) || logoName.includes(`-${cleanCode}`) || logoName.includes(`${cleanCode}-`);
+      const matchByExactCode = subLogos.find((logo) => {
+        const logoName = String(logo?.name || "").trim();
+
+        const codeMatch = logoName.match(/^(\d{1,3})(?:\s|\-|$)/);
+
+        if (!codeMatch) return false;
+
+        return normalizeBankCode(codeMatch[1]) === cleanCode;
       });
-      if (matchByCode) return matchByCode.logo_url;
+
+      if (matchByExactCode) {
+        return matchByExactCode.logo_url;
+      }
     }
-    const matchByName = subLogos.find(l => {
-      const logoNameNorm = l.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-      return logoNameNorm.includes(normName) || normName.includes(logoNameNorm);
+
+    const requestedNames = [
+      BANK_NAME_BY_CODE[cleanCode],
+      name,
+      ...(aliasesByCode[cleanCode] || []),
+    ]
+      .map(normalizeName)
+      .filter(Boolean);
+
+    const exactMatchByName = subLogos.find((logo) => {
+      const logoName = normalizeName(logo?.name);
+
+      return (
+        logoName &&
+        requestedNames.includes(logoName)
+      );
     });
-    return matchByName ? matchByName.logo_url : null;
+
+    if (exactMatchByName) {
+      return exactMatchByName.logo_url;
+    }
+
+    // Quando temos codigo do banco, nao usamos busca parcial.
+    // Isso evita, por exemplo, BANCO DO BRASIL (001)
+    // casar incorretamente com CCB BRASIL (320).
+    if (cleanCode) {
+      return null;
+    }
+
+    const fallbackName = normalizeName(name);
+
+    if (!fallbackName) {
+      return null;
+    }
+
+    const fallbackMatch = subLogos.find((logo) => {
+      const logoName = normalizeName(logo?.name);
+
+      if (!logoName || logoName.length < 4 || fallbackName.length < 4) {
+        return false;
+      }
+
+      return (
+        logoName.includes(fallbackName) ||
+        fallbackName.includes(logoName)
+      );
+    });
+
+    return fallbackMatch ? fallbackMatch.logo_url : null;
   };
 
   const isSiape = String(
@@ -839,7 +967,7 @@ export default function ConsultaCPFPage() {
 
   return (
     <div className="min-h-screen pb-20 animate-in fade-in duration-700 bg-slate-50 print:bg-white print:pb-0">
-      
+
       <style>{`
         @media print {
           header, footer, aside, nav, .sidebar, .header, .navbar, .print-hidden, .print\\:hidden {
@@ -937,7 +1065,7 @@ export default function ConsultaCPFPage() {
       `}</style>
 
       <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-10 space-y-8">
-        
+
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 print:hidden">
           <div className="space-y-2">
@@ -946,10 +1074,10 @@ export default function ConsultaCPFPage() {
             </h1>
             <p className="text-slate-500 font-bold italic text-sm uppercase tracking-[0.3em]">Consulta Completa INSS & SIAPE</p>
           </div>
-          
+
           {dados && (
-            <button 
-              onClick={handleImprimir} 
+            <button
+              onClick={handleImprimir}
               disabled={downloadState === "loading"}
               className={`flex items-center gap-2 text-white px-6 py-3 rounded-2xl shadow-xl transition-all font-black uppercase text-xs tracking-wider cursor-pointer ${
                 downloadState === "loading"
@@ -976,7 +1104,7 @@ export default function ConsultaCPFPage() {
                 <Icons.Shield size={16} className="text-blue-400" /> Painel de Integração de Consultas
               </h4>
               <p className="text-xs text-blue-200 font-bold">Gerencie o provedor ativo e confira o saldo de consultas da plataforma</p>
-              
+
               {/* Seletor de Provedor Ativo */}
               <div className="flex items-center gap-2 pt-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Provedor Ativo:</span>
@@ -1000,7 +1128,7 @@ export default function ConsultaCPFPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Contadores de Créditos */}
             <div className="flex gap-4 z-10 w-full md:w-auto self-end md:self-auto">
               <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
@@ -1101,7 +1229,7 @@ export default function ConsultaCPFPage() {
         {/* Resultados */}
         {dados && activeBenefit && marginInfo && (
           <div id="extrato-print-container" className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            
+
             {/* Header Impressão */}
             <div className="hidden print:flex justify-between items-center border-b-4 border-blue-600 pb-4 mb-8">
               <div>
@@ -1195,8 +1323,8 @@ export default function ConsultaCPFPage() {
                         type="button"
                         onClick={() => setActiveBenefitIndex(idx)}
                         className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${
-                          activeBenefitIndex === idx 
-                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' 
+                          activeBenefitIndex === idx
+                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
                             : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                         }`}
                       >
@@ -1213,7 +1341,7 @@ export default function ConsultaCPFPage() {
 
             {/* Grid 1: Dados Pessoais (Cabeçalho Premium) e Dados do Benefício/Trabalho */}
             <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-4`}>
-              
+
               {/* Dados do Cliente - Cabeçalho Premium com Ícone Premium Crown */}
               <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
@@ -1226,7 +1354,7 @@ export default function ConsultaCPFPage() {
                   </div>
                   <PremiumBadge />
                 </div>
-                
+
                 <div className="space-y-5 print:space-y-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
@@ -1236,7 +1364,7 @@ export default function ConsultaCPFPage() {
                         <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.nome || "Não Informado"}</p>
                       </div>
                     </div>
-                    
+
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
                       <CpfIcon className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                       <div>
@@ -1252,7 +1380,7 @@ export default function ConsultaCPFPage() {
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">RG</p>
                         <p className="text-xs font-black text-slate-800 uppercase mt-0.5 print:text-[10px]">{activeBenefit.cliente?.rg || "Não Informado"}</p>
                       </div>
-                      
+
                       <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex flex-col">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Título de Eleitor</p>
                         <p className="text-xs font-black text-slate-800 uppercase mt-0.5 print:text-[10px]">{activeBenefit.cliente?.titulo_eleitor || "Não Informado"}</p>
@@ -1286,11 +1414,11 @@ export default function ConsultaCPFPage() {
                             const telefonesList = activeBenefit.telefones?.length ? activeBenefit.telefones : (dados.telefones?.length ? dados.telefones : (activeBenefit.cliente?.telefones?.length ? activeBenefit.cliente.telefones : (dados.cliente?.telefones?.length ? dados.cliente.telefones : [])));
                             if (telefonesList && telefonesList.length > 0) {
                               return telefonesList.map((tel, i) => (
-                                <a 
-                                  key={i} 
-                                  href={`https://wa.me/${String(tel).replace(/\D/g, '')}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
+                                <a
+                                  key={i}
+                                  href={`https://wa.me/${String(tel).replace(/\D/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
                                   className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 rounded-lg text-[10px] font-black transition-all border border-emerald-100 print:bg-transparent print:border-none print:shadow-none print:p-0 print:text-slate-800 print:text-xs"
                                 >
                                   <Icons.MessageCircle size={10} className="text-emerald-500 print:hidden" />
@@ -1406,7 +1534,7 @@ export default function ConsultaCPFPage() {
                             : "Dados do Benefício"}
                         </h3>
                     </div>
-                    
+
                     {/* Cadeado Premium para Empréstimo */}
                     {activeBenefit.beneficio?.bloqueio_emprestimo && (
                       <div>
@@ -1491,7 +1619,7 @@ export default function ConsultaCPFPage() {
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                 Espécie
                               </p>
-                              <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
+                              <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs whitespace-normal break-words leading-snug">
                                 {activeBenefit.cliente?.especie
                                   || "Não Informada"}
                               </p>
@@ -1574,7 +1702,7 @@ export default function ConsultaCPFPage() {
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                         <Icons.Landmark size={14} className="text-slate-500" /> DADOS BANCÁRIOS DE RECEBIMENTO
                       </p>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2.5fr)_minmax(70px,0.6fr)_minmax(110px,1fr)] gap-4">
                         <div>
                           <span className="text-[9px] font-bold text-slate-400 uppercase">Banco</span>
@@ -1582,7 +1710,7 @@ export default function ConsultaCPFPage() {
                             {formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)}
                           </p>
                         </div>
-                        
+
                         <div>
                           <span className="text-[9px] font-bold text-slate-400 uppercase">Agência</span>
                           <p className="text-xs font-black text-slate-800">
@@ -1707,69 +1835,142 @@ export default function ConsultaCPFPage() {
               </div>
             </div>
 
-            {/* Empréstimos Ativos */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100 print:bg-slate-50 print:text-orange-700 print:border-slate-200">
-                  <Icons.Landmark size={20} />
+            {/* Empr?stimos Ativos */}
+            <div className="bg-white p-6 md:p-7 rounded-[2rem] shadow-xl border border-slate-100 print-no-break">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100 print:bg-slate-50 print:text-orange-700 print:border-slate-200">
+                    <Icons.Landmark size={20} />
+                  </div>
+
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
+                    Empréstimos Consignados Ativos
+                  </h3>
                 </div>
-                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Empréstimos Consignados Ativos ({activeBenefit.emprestimos?.length || 0})</h3>
+
+                <div className="inline-flex self-start sm:self-auto items-center gap-2 px-3.5 py-2 rounded-xl bg-orange-50 border border-orange-100">
+                  <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest">
+                    Total Contratos
+                  </span>
+                  <span className="text-sm font-black text-orange-700">
+                    {activeBenefit.emprestimos?.length || 0}
+                  </span>
+                </div>
               </div>
 
-              <div className="space-y-3.5">
+              <div className="space-y-2.5">
                 {activeBenefit.emprestimos && activeBenefit.emprestimos.length > 0 ? (
                   activeBenefit.emprestimos.map((emp, idx) => {
                     const logoUrl = getSubLogo(emp.codigo, emp.banco);
+
                     return (
-                      <div key={idx} className="p-5 rounded-2xl border border-slate-150 bg-slate-50/60 hover:bg-slate-50 hover:shadow-md transition-all flex flex-col md:flex-row gap-4 justify-between items-start md:items-center print-no-break">
-                        <div className="flex items-center gap-3.5 min-w-0 pr-4 w-full md:w-80 print:w-96">
-                          <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
-                            {logoUrl ? (
-                              <img 
-                                src={getStaticUrl(logoUrl)} 
-                                alt={emp.banco} 
-                                className="w-full h-full object-cover absolute inset-0" 
-                                data-html2canvas-ignore="true"
-                              />
-                            ) : (
-                              <span className="text-[10px] font-black text-slate-400">
-                                {(emp.banco || "B").charAt(0)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Banco</p>
-                            <p className="text-sm font-black text-slate-800 uppercase truncate">{formatBankName(emp.codigo, emp.banco)}</p>
-                            <p className="text-xs font-bold text-slate-400 truncate">Contrato: {emp.contrato}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-8 flex-1 w-full text-left print:grid-cols-5">
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor Parcela</p>
-                            <p className="text-sm font-black text-slate-800">{formatBRL(emp.parcela)}</p>
+                      <div
+                        key={idx}
+                        className="rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-white hover:shadow-md transition-all px-4 py-3.5 print-no-break"
+                      >
+                        <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+                          <div className="flex items-center gap-3 min-w-0 xl:w-[245px] xl:flex-shrink-0">
+                            <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
+                              {logoUrl ? (
+                                <img
+                                  src={getStaticUrl(logoUrl)}
+                                  alt={emp.banco}
+                                  className="w-full h-full object-cover absolute inset-0"
+                                  data-html2canvas-ignore="true"
+                                />
+                              ) : (
+                                <span className="text-xs font-black text-slate-400">
+                                  {(emp.banco || "B").charAt(0)}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                Banco
+                              </p>
+
+                              <p className="text-sm font-black text-slate-800 uppercase truncate">
+                                {formatBankName(emp.codigo, emp.banco)}
+                              </p>
+
+                              <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">
+                                Contrato: {emp.contrato}
+                              </p>
+                            </div>
                           </div>
 
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor Contrato</p>
-                            <p className="text-sm font-black text-slate-800">{formatBRL(Math.abs(Number(emp.valor_contrato || 0)))}</p>
-                          </div>
-                          
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo Devedor</p>
-                            <p className="text-sm font-black text-blue-600">{formatBRL(Math.abs(Number(emp.saldo_devedor || emp.quitacao || 0)))}</p>
-                          </div>
-                          
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Prazo Restante</p>
-                            <p className="text-sm text-slate-800 font-bold">
-                              <span className="text-slate-900 font-black">{emp.prazo_restante}</span> <span className="text-slate-400 font-medium">de {emp.prazo}</span>
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Taxa de Juros</p>
-                            <p className="text-sm font-black text-emerald-600">{Number(emp.taxa || 0).toFixed(2)}% <span className="text-slate-400 text-[10px] font-bold">a.m.</span></p>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-x-5 gap-y-3 flex-1 min-w-0">
+                            <div>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                Valor Contrato
+                              </p>
+                              <p className="text-xs font-black text-slate-800 mt-0.5 whitespace-nowrap">
+                                {formatBRL(Math.abs(Number(emp.valor_contrato || 0)))}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                Parcela
+                              </p>
+                              <p className="text-xs font-black text-slate-800 mt-0.5 whitespace-nowrap">
+                                {formatBRL(emp.parcela)}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                Saldo Devedor
+                              </p>
+                              <p className="text-xs font-black text-blue-600 mt-0.5 whitespace-nowrap">
+                                {formatBRL(Math.abs(Number(emp.saldo_devedor || emp.quitacao || 0)))}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                Taxa
+                              </p>
+                              <p className="text-xs font-black text-emerald-600 mt-0.5 whitespace-nowrap">
+                                {Number(emp.taxa || 0).toFixed(2)}%
+                                <span className="text-slate-400 text-[9px] font-bold"> a.m.</span>
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                Prazo Restante
+                              </p>
+                              <p className="text-sm text-slate-800 font-bold mt-0.5 whitespace-nowrap">
+                                <span className="text-slate-900 font-black">
+                                  {emp.prazo_restante}
+                                </span>{" "}
+                                <span className="text-slate-400 font-medium">
+                                  de {emp.prazo}
+                                </span>
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                Período
+                              </p>
+
+                              <div className="flex items-center gap-1.5 mt-0.5 whitespace-nowrap">
+                                <span className="text-[10px] font-black text-slate-700">
+                                  {formatDateBR(emp.inicio_desconto)}
+                                </span>
+
+                                <span className="text-[9px] font-bold text-slate-300">
+                                  ?
+                                </span>
+
+                                <span className="text-[10px] font-black text-slate-700">
+                                  {formatDateBR(emp.final_desconto)}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1777,7 +1978,7 @@ export default function ConsultaCPFPage() {
                   })
                 ) : (
                   <p className="text-xs font-bold text-slate-400 text-center py-8 bg-slate-50/40 rounded-2xl border border-dashed border-slate-200">
-                    Nenhum empréstimo consignado ativo encontrado.
+                    Nenhum empr?stimo consignado ativo encontrado.
                   </p>
                 )}
               </div>
@@ -1857,10 +2058,10 @@ export default function ConsultaCPFPage() {
                         <div className="flex items-center gap-3.5 min-w-0 pr-4 w-full md:w-80 print:w-96">
                           <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
                             {logoUrl ? (
-                              <img 
-                                src={getStaticUrl(logoUrl)} 
-                                alt={cartao.banco} 
-                                className="w-full h-full object-cover absolute inset-0" 
+                              <img
+                                src={getStaticUrl(logoUrl)}
+                                alt={cartao.banco}
+                                className="w-full h-full object-cover absolute inset-0"
                                 data-html2canvas-ignore="true"
                               />
                             ) : (
@@ -1869,30 +2070,30 @@ export default function ConsultaCPFPage() {
                               </span>
                             )}
                           </div>
-                          
+
                           <div className="min-w-0">
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Banco</p>
                             <p className="text-sm font-black text-slate-800 uppercase truncate">{formatBankName(cartao.codigo, cartao.banco)}</p>
                             <p className="text-xs font-black text-pink-600 truncate">{cartao.tipo || "Cartão Consignado"}</p>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 flex-1 w-full text-left print:grid-cols-4">
                           <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Parcela Reservada</p>
                             <p className="text-sm font-black text-slate-800">{formatBRL(cartao.parcela_promosys)}</p>
                           </div>
-                          
+
                           <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Limite de Saque</p>
                             <p className="text-sm font-black text-slate-800">{formatBRL(cartao.limite_cartao)}</p>
                           </div>
-                          
+
                           <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Limite Utilizado</p>
                             <p className="text-sm font-black text-red-500">{formatBRL(cartao.utilizado)}</p>
                           </div>
-                          
+
                           <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Limite Disponível</p>
                             <p className="text-sm font-black text-emerald-600">{formatBRL(cartao.disponivel)}</p>
@@ -1909,7 +2110,7 @@ export default function ConsultaCPFPage() {
               </div>
             </div>
             )}
-            
+
             </>
             )}
 

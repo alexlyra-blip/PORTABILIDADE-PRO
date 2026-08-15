@@ -300,6 +300,16 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             restantes = safe_int(emp.get("ParcelasRestantes"))
             pagas = max(0, prazo - restantes)
 
+            inicio_desconto = safe_str(
+                emp.get("InicioDesconto")
+            )
+            final_desconto = safe_str(
+                emp.get("FinalDesconto")
+            )
+            data_averbacao = safe_str(
+                emp.get("DataAverbacao")
+            )
+
             emprestimos.append({
                 "banco": safe_str(emp.get("NomeBanco") or emp.get("Banco")),
                 "codigo": safe_str(emp.get("Banco")),
@@ -310,6 +320,9 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "prazo": prazo,
                 "parcelas_pagas": pagas,
                 "prazo_restante": restantes,
+                "inicio_desconto": inicio_desconto,
+                "final_desconto": final_desconto,
+                "data_averbacao": data_averbacao,
                 "taxa": safe_float(emp.get("Taxa")),
                 "situacao": "ATIVO",
                 "valor_contrato": safe_float(emp.get("ValorOriginal") or emp.get("ValorEmprestimo") or emp.get("Quitacao") or 0.0)
@@ -504,7 +517,13 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             },
             "banco_pagador": {
                 "codigo": safe_str(dados_bancarios.get("Banco")),
-                "nome": safe_str(dados_bancarios.get("Banco")),
+                "nome": safe_str(
+                    dados_bancarios.get("NomeBanco")
+                    or dados_bancarios.get("BancoNome")
+                    or dados_bancarios.get("DescricaoBanco")
+                    or dados_bancarios.get("Nome")
+                    or dados_bancarios.get("Banco")
+                ),
                 "agencia": safe_str(dados_bancarios.get("Agencia")),
                 "conta": safe_str(dados_bancarios.get("ContaPagto")),
                 "tipo_pagamento": "Cartão Magnético" if safe_str(dados_bancarios.get("MeioPagamento")) == "1" else "Conta Corrente"

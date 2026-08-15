@@ -54,6 +54,16 @@ class MultiCorbanService:
             
             if response.status_code == 401 or response.status_code == 403:
                 raise ValueError("Autenticação MultiCorban inválida.")
+            elif response.status_code == 402:
+                logger.error(
+                    "Licenca MultiCorban expirada ou indisponivel. "
+                    "Response: %s",
+                    response.text[:200],
+                )
+                raise ValueError(
+                    "Licenca da MultiCorban expirada. "
+                    "Regularize a licenca para realizar novas consultas."
+                )
             elif response.status_code == 429:
                 raise ValueError("Limite de requisições da MultiCorban atingido.")
             elif response.status_code == 400 or response.status_code == 422:
@@ -63,7 +73,51 @@ class MultiCorbanService:
             elif response.status_code >= 500:
                 raise ValueError("Serviço MultiCorban temporariamente indisponível.")
                 
-            return response.json()
+            # Diagnostico protegido da resposta MultiCorban.
+            # Alguns CPFs podem retornar corpo vazio ou conteudo nao JSON.
+            content_type = response.headers.get("content-type", "")
+            response_text = response.text or ""
+
+            logger.info(
+                "MULTICORBAN_RESPONSE endpoint=%s status=%s "
+                "content_type=%s body_length=%s",
+                endpoint,
+                response.status_code,
+                content_type,
+                len(response_text),
+            )
+
+            if not response_text.strip():
+                logger.error(
+                    "MULTICORBAN_EMPTY_RESPONSE endpoint=%s status=%s",
+                    endpoint,
+                    response.status_code,
+                )
+                raise ValueError(
+                    "MultiCorban retornou resposta vazia."
+                )
+
+            try:
+                return response.json()
+            except ValueError as exc:
+                safe_preview = (
+                    response_text[:500]
+                    .replace("\r", " ")
+                    .replace("\n", " ")
+                )
+
+                logger.error(
+                    "MULTICORBAN_INVALID_JSON endpoint=%s "
+                    "status=%s content_type=%s body=%r",
+                    endpoint,
+                    response.status_code,
+                    content_type,
+                    safe_preview,
+                )
+
+                raise ValueError(
+                    "MultiCorban retornou resposta em formato invalido."
+                ) from exc
             
         except httpx.TimeoutException:
             logger.error(f"Timeout na chamada ao endpoint: {url}")

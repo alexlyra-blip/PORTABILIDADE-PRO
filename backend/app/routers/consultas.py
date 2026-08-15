@@ -290,7 +290,7 @@ async def _execute_cpf_query_flow(
             or "credencia" in err_msg.lower()
         ):
             raise HTTPException(
-                status_code=401,
+                status_code=502,
                 detail=(
                     "Falha de autenticação no provedor "
                     f"{provider_type}."
@@ -640,7 +640,7 @@ async def consultar_cpf_unificado(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    if current_user.role not in ["admin", "promotora"] and not getattr(current_user, "can_consult_cpf", False):
+    if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
 
     provider_type = await get_active_provider(db)
@@ -703,7 +703,7 @@ async def consultar_cpf_unificado(
 # MANTER ROTAS PROMOSYS PARA COMPATIBILIDADE (Clara/n8n)
 @router.post("/promosys/cpf", response_model=ConsultaCpfMultiResponse)
 async def consultar_promosys_cpf(request: CpfRequest, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
-    if current_user.role not in ["admin", "promotora"] and not getattr(current_user, "can_consult_cpf", False):
+    if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
     return await _execute_cpf_query_flow(request.cpf, db, request.convenio, "promosys")
 
@@ -746,7 +746,7 @@ async def consultar_promosys_creditos():
 # ROTAS ESPECÍFICAS MULTICORBAN
 @router.post("/multicorban/cpf", response_model=ConsultaResponse)
 async def consultar_multicorban_cpf(request: MultiCorbanCpfRequest, current_user = Depends(get_current_user)):
-    if current_user.role not in ["admin", "promotora"] and not getattr(current_user, "can_consult_cpf", False):
+    if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
     provider = MultiCorbanProvider()
     try:
@@ -756,7 +756,7 @@ async def consultar_multicorban_cpf(request: MultiCorbanCpfRequest, current_user
 
 @router.post("/multicorban/siape", response_model=ConsultaResponse)
 async def consultar_multicorban_siape(request: MultiCorbanCpfRequest, current_user = Depends(get_current_user)):
-    if current_user.role not in ["admin", "promotora"] and not getattr(current_user, "can_consult_cpf", False):
+    if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
     provider = MultiCorbanProvider()
     try:
@@ -766,7 +766,7 @@ async def consultar_multicorban_siape(request: MultiCorbanCpfRequest, current_us
 
 @router.post("/multicorban/geral", response_model=ConsultaResponse)
 async def consultar_multicorban_geral(request: MultiCorbanGeralRequest, current_user = Depends(get_current_user)):
-    if current_user.role not in ["admin", "promotora"] and not getattr(current_user, "can_consult_cpf", False):
+    if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
     provider = MultiCorbanProvider()
     try:
@@ -776,7 +776,7 @@ async def consultar_multicorban_geral(request: MultiCorbanGeralRequest, current_
 
 @router.post("/multicorban/offline", response_model=ConsultaResponse)
 async def consultar_multicorban_offline(request: MultiCorbanOfflineRequest, current_user = Depends(get_current_user)):
-    if current_user.role not in ["admin", "promotora"] and not getattr(current_user, "can_consult_cpf", False):
+    if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
     provider = MultiCorbanProvider()
     try:
