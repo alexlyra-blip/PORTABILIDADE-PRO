@@ -11,6 +11,7 @@ const BANK_NAME_BY_CODE = {
   "104": "CAIXA",
   "237": "BANCO BRADESCO",
   "320": "CCB BRASIL",
+  "626": "C6 CONSIGNADO",
   "756": "SICOOB",
 };
 
@@ -134,6 +135,13 @@ export default function ConsultaCPFPage() {
   const [searchFilter, setSearchFilter] = useState("");
   const [downloadState, setDownloadState] = useState("idle");
   const [recentQueries, setRecentQueries] = useState([]);
+  const [c6RefinByContract, setC6RefinByContract] = useState({});
+  const [c6RefinLoading, setC6RefinLoading] = useState({});
+  const [c6RefinOpen, setC6RefinOpen] = useState({});
+  const [
+    c6RefinSelectedByContract,
+    setC6RefinSelectedByContract,
+  ] = useState({});
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
@@ -431,6 +439,208 @@ export default function ConsultaCPFPage() {
     }
   };
 
+  const getC6RefinKey = (emp) => {
+    const documento = String(
+      activeBenefit?.cliente?.cpf
+        || dados?.cpf
+        || ""
+    ).replace(/\D/g, "");
+
+    const beneficio = String(
+      activeBenefit?.cliente?.beneficio
+        || activeBenefit?.numero
+        || ""
+    ).replace(/\D/g, "");
+
+    const contrato = String(
+      emp?.contrato || ""
+    ).trim();
+
+    return [
+      documento,
+      beneficio,
+      contrato,
+    ].join(":");
+  };
+
+  const isC6RefinLoan = (emp) => {
+    const beneficioConvenio = String(
+      activeBenefit?.convenio
+        || convenio
+        || "INSS"
+    ).trim().toUpperCase();
+
+    if (beneficioConvenio !== "INSS") {
+      return false;
+    }
+
+    const bankCode = normalizeBankCode(
+      emp?.codigo
+    );
+
+    const bankName = String(
+      emp?.banco || ""
+    ).trim().toUpperCase();
+
+    return (
+      bankCode === "626"
+      || bankName.includes("C6")
+    );
+  };
+
+  const formatC6Rate = (value) => {
+    let rate = Number(value || 0);
+
+    if (
+      rate > 0
+      && rate < 1
+    ) {
+      rate *= 100;
+    }
+
+    return `${rate
+      .toFixed(2)
+      .replace(".", ",")}%`;
+  };
+
+  const handleC6Refin = async (emp) => {
+    if (!isC6RefinLoan(emp)) {
+      return;
+    }
+
+    const key = getC6RefinKey(emp);
+
+    const existingResult =
+      c6RefinByContract[key];
+
+    /*
+     * Se ja temos uma simulacao valida,
+     * apenas abre/fecha o painel.
+     */
+    if (existingResult?.success) {
+      setC6RefinOpen((prev) => ({
+        ...prev,
+        [key]: !prev[key],
+      }));
+      return;
+    }
+
+    const cliente =
+      activeBenefit?.cliente || {};
+
+    const margens =
+      activeBenefit?.margens || {};
+
+    const payload = {
+      cpf:
+        cliente.cpf
+        || dados?.cpf
+        || cpf,
+      beneficio:
+        cliente.beneficio
+        || activeBenefit?.numero
+        || "",
+      contrato:
+        emp?.contrato
+        || "",
+      data_nascimento:
+        cliente.data_nascimento
+        || "",
+      renda: Number(
+        cliente.salario
+          || margens.salario
+          || 0
+      ),
+      parcela: Number(
+        emp?.parcela
+          || 0
+      ),
+      prazo: 108,
+    };
+
+    if (
+      !String(payload.cpf).replace(/\D/g, "")
+      || !String(payload.beneficio).replace(/\D/g, "")
+      || !String(payload.contrato).trim()
+      || !payload.data_nascimento
+      || payload.renda <= 0
+      || payload.parcela <= 0
+    ) {
+      toast.error(
+        "Os dados deste contrato est\\u00e3o incompletos para consultar o Refin C6."
+      );
+      return;
+    }
+
+    setC6RefinLoading((prev) => ({
+      ...prev,
+      [key]: true,
+    }));
+
+    setC6RefinOpen((prev) => ({
+      ...prev,
+      [key]: true,
+    }));
+
+    try {
+      const result = await api.post(
+        "/consultas/c6/refin",
+        payload
+      );
+
+      setC6RefinByContract((prev) => ({
+        ...prev,
+        [key]: result,
+      }));
+
+      setC6RefinSelectedByContract((prev) => ({
+        ...prev,
+        [key]: 0,
+      }));
+
+      setC6RefinOpen((prev) => ({
+        ...prev,
+        [key]: true,
+      }));
+
+      toast.success(
+        "Refin C6 consultado com sucesso."
+      );
+    } catch (error) {
+      console.error(
+        "Erro ao consultar Refin C6:",
+        error
+      );
+
+      const message =
+        error?.message
+        || "N\\u00e3o foi poss\\u00edvel consultar o Refin C6.";
+
+      setC6RefinByContract((prev) => ({
+        ...prev,
+        [key]: {
+          success: false,
+          status: "erro",
+          mensagem: message,
+        },
+      }));
+
+      setC6RefinOpen((prev) => ({
+        ...prev,
+        [key]: true,
+      }));
+
+      toast.error(
+        "N\\u00e3o foi poss\\u00edvel consultar o Refin C6."
+      );
+    } finally {
+      setC6RefinLoading((prev) => ({
+        ...prev,
+        [key]: false,
+      }));
+    }
+  };
+
   const handleImprimir = async () => {
     setDownloadState("loading");
     try {
@@ -581,32 +791,128 @@ export default function ConsultaCPFPage() {
           <div style="margin-bottom: 25px;">
             <h3 style="font-size: 12px; font-weight: 900; color: #0f172a; border-bottom: 2px solid #ea580c; padding-bottom: 6px; margin: 0 0 10px 0; text-transform: uppercase;">Empréstimos Consignados Ativos (${activeBenefit.emprestimos?.length || 0})</h3>
             ${activeBenefit.emprestimos && activeBenefit.emprestimos.length > 0 ? `
-              <table style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e2e8f0;">
-                <thead>
-                  <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                    <th style="padding: 8px 10px; text-align: left; font-weight: 700; color: #475569;">Banco</th>
-                    <th style="padding: 8px 10px; text-align: left; font-weight: 700; color: #475569;">Contrato</th>
-                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Parcela</th>
-                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Valor Contrato</th>
-                    <th style="padding: 8px 10px; text-align: right; font-weight: 700; color: #475569;">Saldo Devedor</th>
-                    <th style="padding: 8px 10px; text-align: center; font-weight: 700; color: #475569;">Prazo</th>
-                    <th style="padding: 8px 10px; text-align: center; font-weight: 700; color: #475569;">Taxa</th>
+              <table style="width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 8px;">
+              <thead>
+                <tr style="background-color: #f8fafc; border-bottom: 1px solid #cbd5e1;">
+                  <th style="width: 20%; padding: 8px 6px; text-align: left; font-size: 7px; font-weight: 900; color: #64748b; text-transform: uppercase;">
+                    Banco
+                  </th>
+
+                  <th style="width: 12%; padding: 8px 5px; text-align: left; font-size: 7px; font-weight: 900; color: #64748b; text-transform: uppercase;">
+                    Valor Contrato
+                  </th>
+
+                  <th style="width: 11%; padding: 8px 5px; text-align: left; font-size: 7px; font-weight: 900; color: #64748b; text-transform: uppercase;">
+                    Data Início
+                  </th>
+
+                  <th style="width: 11%; padding: 8px 5px; text-align: left; font-size: 7px; font-weight: 900; color: #64748b; text-transform: uppercase;">
+                    Data Final
+                  </th>
+
+                  <th style="width: 10%; padding: 8px 5px; text-align: left; font-size: 7px; font-weight: 900; color: #64748b; text-transform: uppercase;">
+                    Parcela
+                  </th>
+
+                  <th style="width: 9%; padding: 8px 5px; text-align: left; font-size: 7px; font-weight: 900; color: #64748b; text-transform: uppercase;">
+                    Taxa
+                  </th>
+
+                  <th style="width: 12%; padding: 8px 5px; text-align: left; font-size: 7px; font-weight: 900; color: #64748b; text-transform: uppercase;">
+                    Prazo Restante
+                  </th>
+
+                  <th style="width: 15%; padding: 8px 5px; text-align: left; font-size: 7px; font-weight: 900; color: #64748b; text-transform: uppercase;">
+                    Saldo Devedor
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                ${(activeBenefit.emprestimos || []).map((emp) => `
+                  <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 9px 6px; vertical-align: top;">
+                      <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase; line-height: 1.15; word-break: break-word;">
+                        ${formatBankName(
+                          emp.codigo
+                            || emp.banco_codigo
+                            || emp.Banco,
+                          emp.banco
+                            || emp.nome_banco
+                            || emp.NomeBanco
+                            || ""
+                        )}
+                      </div>
+
+                      <div style="font-size: 6.5px; font-weight: 700; color: #94a3b8; margin-top: 3px; line-height: 1.1; word-break: break-word;">
+                        Contrato: ${emp.contrato
+                          || emp.numero_contrato
+                          || emp.Contrato
+                          || "Não Informado"}
+                      </div>
+                    </td>
+
+                    <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 800; color: #0f172a;">
+                      ${formatBRL(
+                        emp.valor_contrato
+                          ?? emp.valor_emprestimo
+                          ?? emp.ValorEmprestimo
+                          ?? 0
+                      )}
+                    </td>
+
+                    <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 800; color: #0f172a;">
+                      ${formatDateBR(
+                        emp.inicio_desconto
+                          || emp.InicioDesconto
+                          || ""
+                      )}
+                    </td>
+
+                    <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 800; color: #0f172a;">
+                      ${formatDateBR(
+                        emp.final_desconto
+                          || emp.FinalDesconto
+                          || ""
+                      )}
+                    </td>
+
+                    <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 900; color: #0f172a;">
+                      ${formatBRL(
+                        emp.parcela
+                          ?? emp.valor_parcela
+                          ?? emp.ValorParcela
+                          ?? 0
+                      )}
+                    </td>
+
+                    <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 900; color: #15803d;">
+                      ${Number(emp.taxa || 0)
+                        .toFixed(2)
+                        .replace(".", ",")}% a.m.
+                    </td>
+
+                    <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 900; color: #0f172a;">
+                      ${emp.prazo_restante
+                        ?? emp.parcelas_restantes
+                        ?? emp.ParcelasRestantes
+                        ?? 0} de ${emp.prazo
+                        ?? emp.Prazo
+                        ?? 0}
+                    </td>
+
+                    <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 900; color: #2563eb;">
+                      ${formatBRL(
+                        emp.saldo_devedor
+                          ?? emp.quitacao
+                          ?? emp.Quitacao
+                          ?? 0
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  ${activeBenefit.emprestimos.map((emp, idx) => `
-                    <tr style="border-bottom: 1px solid #e2e8f0; background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-                      <td style="padding: 8px 10px; color: #0f172a; font-weight: 900; text-transform: uppercase;">${formatBankName(emp.codigo, emp.banco)}</td>
-                      <td style="padding: 8px 10px; color: #475569; font-weight: bold;">${emp.contrato || 'N/A'}</td>
-                      <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 900;">${formatBRL(emp.parcela)}</td>
-                      <td style="padding: 8px 10px; text-align: right; color: #0f172a; font-weight: 700;">${formatBRL(Math.abs(Number(emp.valor_contrato || 0)))}</td>
-                      <td style="padding: 8px 10px; text-align: right; color: #2563eb; font-weight: 900;">${formatBRL(Math.abs(Number(emp.saldo_devedor || emp.quitacao || 0)))}</td>
-                      <td style="padding: 8px 10px; text-align: center; color: #0f172a; font-weight: 700;">${emp.prazo_restante} de ${emp.prazo}</td>
-                      <td style="padding: 8px 10px; text-align: center; color: #166534; font-weight: 900;">${Number(emp.taxa || 0).toFixed(2)}% a.m.</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
+                `).join("")}
+              </tbody>
+            </table>
             ` : `
               <div style="padding: 15px; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; font-size: 10px; color: #64748b; font-weight: bold;">
                 Nenhum empréstimo consignado ativo encontrado.
@@ -1385,6 +1691,83 @@ export default function ConsultaCPFPage() {
 
 
             {/* Grid 1: Dados Pessoais (Cabeçalho Premium) e Dados do Benefício/Trabalho */}
+            {/* RESUMO_FINANCEIRO_SUPERIOR */}
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-6 md:p-7 print-no-break">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                  <Icons.TrendingUp size={20} />
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
+                    Resumo Financeiro
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Margens e disponibilidade
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="bg-slate-50 rounded-2xl border border-slate-100 p-4">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">
+                    Sal?rio do Benef?cio
+                  </p>
+                  <p className="text-sm md:text-base font-black text-slate-800 mt-1">
+                    {formatBRL(marginInfo.salario)}
+                  </p>
+                </div>
+
+                <div className="bg-blue-50/60 rounded-2xl border border-blue-100 p-4">
+                  <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest leading-tight">
+                    Margem Consign?vel
+                  </p>
+                  <p className="text-sm md:text-base font-black text-blue-700 mt-1">
+                    {formatBRL(marginInfo.margemConsignavel)}
+                  </p>
+                </div>
+
+                <div className="bg-amber-50/60 rounded-2xl border border-amber-100 p-4">
+                  <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest leading-tight">
+                    Total Comprometido
+                  </p>
+                  <p className="text-sm md:text-base font-black text-amber-700 mt-1">
+                    {formatBRL(marginInfo.totalComprometido)}
+                  </p>
+                </div>
+
+                <div className={`rounded-2xl border p-4 ${
+                  marginInfo.margemLivreReal < 0
+                    ? "bg-red-50/60 border-red-100"
+                    : "bg-emerald-50/60 border-emerald-100"
+                }`}>
+                  <p className={`text-[9px] font-black uppercase tracking-widest leading-tight ${
+                    marginInfo.margemLivreReal < 0
+                      ? "text-red-500"
+                      : "text-emerald-600"
+                  }`}>
+                    Margem Dispon?vel
+                  </p>
+                  <p className={`text-sm md:text-base font-black mt-1 ${
+                    marginInfo.margemLivreReal < 0
+                      ? "text-red-700"
+                      : "text-emerald-700"
+                  }`}>
+                    {formatBRL(marginInfo.margemLivreReal)}
+                  </p>
+                </div>
+
+                <div className="bg-emerald-50 rounded-2xl border border-emerald-200 p-4 col-span-2 md:col-span-1">
+                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-tight">
+                    Valor Liberado
+                  </p>
+                  <p className="text-sm md:text-base font-black text-emerald-700 mt-1">
+                    {formatBRL(marginInfo.valorLiberadoMargem)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-4`}>
 
               {/* Dados do Cliente - Cabeçalho Premium com Ícone Premium Crown */}
@@ -1478,10 +1861,14 @@ export default function ConsultaCPFPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
+                  <div className={`grid grid-cols-1 ${
+                    convenio === "GOVERNO" || convenio === "CLT PRIVADO"
+                      ? "md:grid-cols-2 print:grid-cols-2"
+                      : "md:grid-cols-1 print:grid-cols-1"
+                  } gap-4 print:gap-2`}>
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
                       <FiliaçãoIcon className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
-                      <div className="w-full">
+                      <div className="w-full min-w-0">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome da Mãe</p>
                         <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.filiacao || "Não Informada"}</p>
                       </div>
@@ -1703,39 +2090,23 @@ export default function ConsultaCPFPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3 border-t border-slate-100 print:grid-cols-3 print:gap-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                UF Benefício
+                                UF Benef?cio
                               </p>
                               <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
                                 {activeBenefit.beneficio?.uf
-                                  || "Não Informada"}
+                                  || "N?o Informada"}
                               </p>
                             </div>
 
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Valor do Benefício
+                                Valor do Benef?cio
                               </p>
                               <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
                                 {formatBRL(marginInfo.salario)}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Meio Pagamento
-                              </p>
-                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                                {activeBenefit.banco_pagador?.tipo_pagamento
-                                  || (
-                                    isCartaoMagnetico(
-                                      activeBenefit
-                                    )
-                                      ? "Cartão Magnético"
-                                      : "Conta Corrente"
-                                  )}
                               </p>
                             </div>
                           </div>
@@ -1744,31 +2115,56 @@ export default function ConsultaCPFPage() {
 
                       {/* Dados Bancários Condicionais */}
                     <div className="pt-3.5 border-t border-slate-100 bg-slate-50/60 p-4 rounded-2xl border border-slate-150">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                        <Icons.Landmark size={14} className="text-slate-500" /> DADOS BANCÁRIOS DE RECEBIMENTO
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                        <Icons.Landmark size={14} className="text-slate-500" />
+                        DADOS DO PAGAMENTO
                       </p>
 
-                      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2.5fr)_minmax(70px,0.6fr)_minmax(110px,1fr)] gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[minmax(135px,1fr)_minmax(0,2.5fr)_minmax(80px,0.7fr)_minmax(110px,1fr)] gap-4">
                         <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">Banco</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            Meio de Pagamento
+                          </span>
+                          <p className="text-xs font-black text-slate-800 uppercase leading-tight">
+                            {activeBenefit.banco_pagador?.tipo_pagamento
+                              || (
+                                isCartaoMagnetico(activeBenefit)
+                                  ? "Cart?o Magn?tico"
+                                  : "Conta Corrente"
+                              )}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            Banco
+                          </span>
                           <p className="text-xs font-black text-slate-800 uppercase leading-tight break-words">
-                            {formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)}
+                            {formatBankName(
+                              activeBenefit.banco_pagador?.codigo,
+                              activeBenefit.banco_pagador?.nome
+                            )}
                           </p>
                         </div>
 
                         <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">Agência</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            Ag?ncia
+                          </span>
                           <p className="text-xs font-black text-slate-800">
-                            {activeBenefit.banco_pagador?.agencia || "Não Informada"}
+                            {activeBenefit.banco_pagador?.agencia
+                              || "N?o Informada"}
                           </p>
                         </div>
 
-                        {/* Exibir conta somente se NÃO for cartão magnético */}
                         {!isCartaoMagnetico(activeBenefit) && (
                           <div>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">Conta Corrente</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">
+                              Conta Corrente
+                            </span>
                             <p className="text-xs font-black text-slate-800">
-                              {activeBenefit.banco_pagador?.conta || "Não Informada"}
+                              {activeBenefit.banco_pagador?.conta
+                                || "N?o Informada"}
                             </p>
                           </div>
                         )}
@@ -1783,104 +2179,6 @@ export default function ConsultaCPFPage() {
             {!(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
               <>
                 {/* Resumo Financeiro (Margens Inteligentes) */}
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 relative overflow-hidden print-no-break">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -mr-20 -mt-20 opacity-50 pointer-events-none print:hidden"></div>
-
-              <div className="flex items-center gap-3 mb-8 relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 print:bg-slate-50 print:text-emerald-700 print:border-slate-200">
-                  <Icons.TrendingUp size={20} />
-                </div>
-
-                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
-                  Resumo Financeiro (Margens)
-                </h3>
-
-                {!isSiape && marginInfo.isLOAS && (
-                  <span className="ml-3 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[9px] font-black uppercase tracking-wider">
-                    LOAS 35%
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-6 relative z-10 print:grid-cols-5">
-                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                    {isSiape ? "Salário Bruto" : "Salário Base"}
-                  </p>
-                  <p className="text-lg font-black text-slate-800">
-                    {formatBRL(marginInfo.salarioBruto)}
-                  </p>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                    {isSiape ? "Valor Líquido" : `Consignável (${marginInfo.percent * 100}%)`}
-                  </p>
-                  <p className="text-lg font-black text-slate-800">
-                    {formatBRL(isSiape ? marginInfo.valorLiquido : marginInfo.margemConsignavel)}
-                  </p>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                    {isSiape ? "Descontos" : "Total Comprometido"}
-                  </p>
-                  <p className="text-lg font-black text-slate-800">
-                    {formatBRL(isSiape ? marginInfo.descontos : marginInfo.totalComprometido)}
-                  </p>
-                </div>
-
-                <div className={`p-5 rounded-2xl border flex flex-col justify-center ${
-                  marginInfo.margemLivreReal < 0
-                    ? "bg-red-50/60 dark:bg-red-950/20 border-red-200 dark:border-red-900/30"
-                    : "bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/30"
-                }`}>
-                  <p className={`text-[10px] font-black uppercase tracking-widest mb-1.5 ${
-                    marginInfo.margemLivreReal < 0 ? "text-red-600" : "text-emerald-600"
-                  }`}>
-                    Margem Disponível
-                  </p>
-
-                  <p className={`text-xl font-black ${
-                    marginInfo.margemLivreReal < 0 ? "text-red-600" : "text-emerald-700"
-                  }`}>
-                    {formatBRL(
-                      marginInfo.margemLivreReal
-                    )}
-                  </p>
-
-                  {!isSiape && marginInfo.margemLivreReal < 0 && (
-                    <span className="text-[9px] font-bold text-red-500 uppercase mt-0.5 tracking-wider">
-                      Margem negativa
-                    </span>
-                  )}
-                </div>
-
-                <div className={`p-5 rounded-2xl border flex flex-col justify-center ${
-                  marginInfo.margemLivreReal < 0
-                    ? "bg-slate-50 border-slate-200 opacity-60"
-                    : "bg-gradient-to-tr from-emerald-500/10 to-teal-500/5 border-emerald-200"
-                }`}>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
-                    Valor Liberado Aprox.
-                  </p>
-
-                  <p className={`text-2xl font-black ${
-                    marginInfo.margemLivreReal < 0 ? "text-slate-400" : "text-emerald-700"
-                  }`}>
-                    {formatBRL(marginInfo.valorLiberadoMargem)}
-                  </p>
-
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                    {marginInfo.coeficienteUtilizado > 0
-                      ? `Coeficiente ${marginInfo.coeficienteUtilizado.toFixed(5).replace(".", ",")}`
-                      : "Coeficiente SIAPE não configurado"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Empr?stimos Ativos */}
             <div className="bg-white p-6 md:p-7 rounded-[2rem] shadow-xl border border-slate-100 print-no-break">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                 <div className="flex items-center gap-3">
@@ -1907,6 +2205,53 @@ export default function ConsultaCPFPage() {
                 {activeBenefit.emprestimos && activeBenefit.emprestimos.length > 0 ? (
                   activeBenefit.emprestimos.map((emp, idx) => {
                     const logoUrl = getSubLogo(emp.codigo, emp.banco);
+
+                    const showC6Refin = isC6RefinLoan(emp);
+                    const c6RefinKey = getC6RefinKey(emp);
+                    const c6RefinResult = c6RefinByContract[c6RefinKey];
+                    const isC6RefinLoading = Boolean(
+                      c6RefinLoading[c6RefinKey]
+                    );
+                    const isC6RefinOpen = Boolean(
+                      c6RefinOpen[c6RefinKey]
+                    );
+
+                    const c6RefinConditions = (
+                      Array.isArray(
+                        c6RefinResult?.condicoes
+                      )
+                      && c6RefinResult.condicoes.length > 0
+                    )
+                      ? c6RefinResult.condicoes
+                      : (
+                          c6RefinResult?.success
+                            ? [c6RefinResult]
+                            : []
+                        );
+
+                    const requestedC6Index = Number(
+                      c6RefinSelectedByContract[
+                        c6RefinKey
+                      ] ?? 0
+                    );
+
+                    const c6RefinSelectedIndex = (
+                      Number.isInteger(
+                        requestedC6Index
+                      )
+                      && requestedC6Index >= 0
+                      && requestedC6Index
+                        < c6RefinConditions.length
+                    )
+                      ? requestedC6Index
+                      : 0;
+
+                    const c6RefinDisplay = (
+                      c6RefinConditions[
+                        c6RefinSelectedIndex
+                      ]
+                      || c6RefinResult
+                    );
 
                     return (
                       <div
@@ -2016,6 +2361,229 @@ export default function ConsultaCPFPage() {
                             </div>
                           </div>
                         </div>
+
+                        {showC6Refin && (
+                          <div
+                            className="mt-4 pt-4 border-t border-slate-200 print:hidden"
+                            data-html2canvas-ignore="true"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleC6Refin(emp)}
+                              disabled={isC6RefinLoading}
+                              className={`w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 border transition-all ${
+                                isC6RefinLoading
+                                  ? "bg-slate-100 border-slate-200 text-slate-400 cursor-wait"
+                                  : "bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 border-slate-800 text-white hover:shadow-lg hover:-translate-y-0.5"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 text-left">
+                                <div className="w-9 h-9 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center font-black text-xs">
+                                  C6
+                                </div>
+
+                                <div>
+                                  <p className="text-[9px] uppercase tracking-[0.2em] font-black opacity-60">
+                                    Refinanciamento INSS
+                                  </p>
+
+                                  <p className="text-xs font-black uppercase tracking-wide">
+                                    {isC6RefinLoading
+                                      ? "Consultando C6..."
+                                      : c6RefinResult?.success
+                                        ? (
+                                            isC6RefinOpen
+                                              ? "Ocultar Refin C6"
+                                              : "Ver Refin C6"
+                                          )
+                                        : c6RefinResult
+                                          ? "Consultar novamente"
+                                          : "Consultar Refin C6"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <span
+                                className={`text-sm font-black transition-transform ${
+                                  isC6RefinOpen
+                                    ? "rotate-180"
+                                    : ""
+                                }`}
+                              >
+                                {"\u25BC"}
+                              </span>
+                            </button>
+
+                            {isC6RefinOpen && (
+                              <div className="mt-3">
+                                {isC6RefinLoading ? (
+                                  <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-6">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-5 h-5 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
+
+                                      <div>
+                                        <p className="text-xs font-black text-blue-900 uppercase">
+                                          Consultando Refin C6
+                                        </p>
+
+                                        <p className="text-[10px] font-bold text-blue-500 mt-1">
+                                          Gerando token e simulando este contrato.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : c6RefinResult?.success ? (
+                                  <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+                                    <div className="px-5 py-4 bg-gradient-to-r from-slate-950 to-blue-950 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 text-[9px] font-black tracking-widest">
+                                            C6 REFIN
+                                          </span>
+                                        </div>
+
+                                        <p className="mt-2 text-sm font-black">
+                                          {c6RefinDisplay.tabela
+                                            || "Refinanciamento C6"}
+                                        </p>
+                                      </div>
+
+                                      <div className="sm:text-right">
+                                        <p className="text-[9px] uppercase tracking-widest font-black text-white/50">
+                                          Valor Liberado
+                                        </p>
+
+                                        <p className="text-2xl font-black text-emerald-300">
+                                          {formatBRL(
+                                            Number(
+                                              c6RefinDisplay.valor_liberado
+                                                || c6RefinDisplay.valor_cliente
+                                                || 0
+                                            )
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-200">
+                                      <div className="bg-white p-4">
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                          Tabela
+                                        </p>
+
+                                        <p className="text-xs font-black text-slate-800 mt-1">
+                                          {c6RefinDisplay.tabela
+                                            || "C6 Refin"}
+                                        </p>
+                                      </div>
+
+                                      <div className="bg-white p-4">
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                          Prazo
+                                        </p>
+
+                                        <p className="text-xs font-black text-slate-800 mt-1">
+                                          {Number(
+                                            c6RefinDisplay.prazo
+                                              || 0
+                                          )}x
+                                        </p>
+                                      </div>
+
+                                      <div className="bg-white p-4">
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                          Parcela
+                                        </p>
+
+                                        <p className="text-xs font-black text-slate-800 mt-1">
+                                          {formatBRL(
+                                            Number(
+                                              c6RefinDisplay.parcela
+                                                || 0
+                                            )
+                                          )}
+                                        </p>
+                                      </div>
+
+                                      <div className="bg-white p-4">
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                          Taxa
+                                        </p>
+
+                                        <p className="text-xs font-black text-emerald-600 mt-1">
+                                          {formatC6Rate(
+                                            c6RefinDisplay.taxa
+                                          )} a.m.
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {c6RefinConditions.length > 1 && (
+                                      <div className="border-t border-slate-200 bg-slate-50/80 px-4 py-3">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                          <div>
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                                              {c6RefinConditions.length} {"TABELAS DISPON\u00cdVEIS"}
+                                            </p>
+                                            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                                              {"Escolha uma tabela para visualizar a condi\u00e7\u00e3o"}
+                                            </p>
+                                          </div>
+
+                                          <select
+                                            value={c6RefinSelectedIndex}
+                                            onChange={(event) => {
+                                              setC6RefinSelectedByContract(
+                                                (prev) => ({
+                                                  ...prev,
+                                                  [c6RefinKey]: Number(
+                                                    event.target.value
+                                                  ),
+                                                })
+                                              );
+                                            }}
+                                            className="w-full sm:w-auto sm:min-w-[310px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-black text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                                          >
+                                            {c6RefinConditions.map(
+                                              (
+                                                condition,
+                                                conditionIndex
+                                              ) => (
+                                                <option
+                                                  key={`${
+                                                    condition.tabela_codigo
+                                                      || "c6"
+                                                  }-${conditionIndex}`}
+                                                  value={conditionIndex}
+                                                >
+                                                  {condition.tabela
+                                                    || `Tabela ${
+                                                      conditionIndex + 1
+                                                    }`}
+                                                </option>
+                                              )
+                                            )}
+                                          </select>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : c6RefinResult ? (
+                                  <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+                                    <p className="text-xs font-black text-red-700 uppercase">
+                                      {"Refin C6 indispon\\u00edvel"}
+                                    </p>
+
+                                    <p className="text-[10px] font-bold text-red-500 mt-1 leading-relaxed">
+                                      {c6RefinResult.mensagem
+                                        || "N\\u00e3o foi poss\\u00edvel simular este contrato no C6."}
+                                    </p>
+                                  </div>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })
