@@ -705,20 +705,65 @@ export default function ConsultaCPFPage() {
   };
 
   // Formatação de data nascidos
-  const formatDateBR = (dateStr) => {
-    if (!dateStr) return "Não Informado";
+  const formatDateBR = (dateValue) => {
+    if (
+      dateValue === null
+      || dateValue === undefined
+      || dateValue === ""
+    ) {
+      return "N?o Informado";
+    }
+
     try {
-      const parts = dateStr.split("-");
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      const value = String(dateValue).trim();
+
+      // Formato YYYYMM.
+      // 202408 -> 08/2024
+      if (/^\d{6}$/.test(value)) {
+        const year = value.slice(0, 4);
+        const month = value.slice(4, 6);
+
+        if (
+          Number(month) >= 1
+          && Number(month) <= 12
+        ) {
+          return `${month}/${year}`;
+        }
       }
-      return dateStr;
+
+      // Formato YYYYMMDD.
+      // 20240815 -> 15/08/2024
+      if (/^\d{8}$/.test(value)) {
+        const year = value.slice(0, 4);
+        const month = value.slice(4, 6);
+        const day = value.slice(6, 8);
+
+        if (
+          Number(month) >= 1
+          && Number(month) <= 12
+          && Number(day) >= 1
+          && Number(day) <= 31
+        ) {
+          return `${day}/${month}/${year}`;
+        }
+      }
+
+      // Formato ISO YYYY-MM-DD
+      // Tamb?m aceita timestamp come?ando por YYYY-MM-DD.
+      const isoDate = value.match(
+        /^(\d{4})-(\d{2})-(\d{2})/
+      );
+
+      if (isoDate) {
+        return `${isoDate[3]}/${isoDate[2]}/${isoDate[1]}`;
+      }
+
+      return value;
     } catch {
-      return dateStr;
+      return String(dateValue);
     }
   };
 
-  // Formatação para Moeda Brasileira (BRL)
   const formatBRL = (val) => {
     if (val === null || val === undefined || isNaN(Number(val))) return "R$ 0,00";
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val)).replace(/\s/g, " ");
@@ -1900,7 +1945,7 @@ export default function ConsultaCPFPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-x-5 gap-y-3 flex-1 min-w-0">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-x-4 gap-y-3 flex-1 min-w-0">
                             <div>
                               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
                                 Valor Contrato
@@ -1912,19 +1957,28 @@ export default function ConsultaCPFPage() {
 
                             <div>
                               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                                Parcela
+                                Data In?cio
                               </p>
                               <p className="text-xs font-black text-slate-800 mt-0.5 whitespace-nowrap">
-                                {formatBRL(emp.parcela)}
+                                {formatDateBR(emp.inicio_desconto)}
                               </p>
                             </div>
 
                             <div>
                               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                                Saldo Devedor
+                                Data Final
                               </p>
-                              <p className="text-xs font-black text-blue-600 mt-0.5 whitespace-nowrap">
-                                {formatBRL(Math.abs(Number(emp.saldo_devedor || emp.quitacao || 0)))}
+                              <p className="text-xs font-black text-slate-800 mt-0.5 whitespace-nowrap">
+                                {formatDateBR(emp.final_desconto)}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                Parcela
+                              </p>
+                              <p className="text-xs font-black text-slate-800 mt-0.5 whitespace-nowrap">
+                                {formatBRL(emp.parcela)}
                               </p>
                             </div>
 
@@ -1954,22 +2008,11 @@ export default function ConsultaCPFPage() {
 
                             <div>
                               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                                Período
+                                Saldo Devedor
                               </p>
-
-                              <div className="flex items-center gap-1.5 mt-0.5 whitespace-nowrap">
-                                <span className="text-[10px] font-black text-slate-700">
-                                  {formatDateBR(emp.inicio_desconto)}
-                                </span>
-
-                                <span className="text-[9px] font-bold text-slate-300">
-                                  ?
-                                </span>
-
-                                <span className="text-[10px] font-black text-slate-700">
-                                  {formatDateBR(emp.final_desconto)}
-                                </span>
-                              </div>
+                              <p className="text-xs font-black text-blue-600 mt-0.5 whitespace-nowrap">
+                                {formatBRL(Math.abs(Number(emp.saldo_devedor || emp.quitacao || 0)))}
+                              </p>
                             </div>
                           </div>
                         </div>
