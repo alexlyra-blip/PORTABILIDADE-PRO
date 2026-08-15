@@ -85,6 +85,9 @@ class ConsultaEmprestimo(BaseModel):
     prazo: int = 0
     parcelas_pagas: int = 0
     prazo_restante: int = 0
+    inicio_desconto: Optional[str] = ""
+    final_desconto: Optional[str] = ""
+    data_averbacao: Optional[str] = ""
     taxa: float = 0.0
     taxa_saldo_devedor: float = 0.0
     situacao: str = ""

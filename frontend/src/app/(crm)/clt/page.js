@@ -702,10 +702,14 @@ export default function CltMultibancosPage() {
 
       const user = JSON.parse(userRaw);
 
-      if (
-        user.role !== "admin" &&
-        !user.can_consult_cpf
-      ) {
+      const cltAllowedRoles = [
+        "admin",
+        "promotora",
+        "corretor",
+        "vendedor",
+      ];
+
+      if (!cltAllowedRoles.includes(user.role)) {
         window.location.href = "/simulador";
       }
     } catch {

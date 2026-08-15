@@ -348,6 +348,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
         cartoes = []
 
         for ct in contratos:
+
             tipo = safe_int(ct.get("Tipo_Emprestimo"))
 
             banco_nome = safe_str(ct.get("Banco_Nome"))
@@ -363,6 +364,10 @@ class PromosysProvider(ConsultaBeneficioProvider):
             parcelas_pagas = safe_int(ct.get("ParcPagas"))
             prazo_restante = max(0, prazo - parcelas_pagas)
 
+            inicio_desconto = safe_str(ct.get("InicioDesconto"))
+            final_desconto = safe_str(ct.get("FinalDesconto"))
+            data_averbacao = safe_str(ct.get("dt_averbacao"))
+
             if tipo == 98:
                 emprestimos.append({
                     "banco": banco_nome,
@@ -375,6 +380,9 @@ class PromosysProvider(ConsultaBeneficioProvider):
                     "prazo": prazo,
                     "parcelas_pagas": parcelas_pagas,
                     "prazo_restante": prazo_restante,
+                    "inicio_desconto": inicio_desconto,
+                    "final_desconto": final_desconto,
+                    "data_averbacao": data_averbacao,
                     "taxa": safe_float(ct.get("TaxaJuros")),
                     "taxa_ponderada": safe_float(ct.get("TaxaJurosPonderada")),
                     "situacao": safe_str(ct.get("Situacao")),
