@@ -2364,96 +2364,191 @@ export default function ConsultaCPFPage() {
 
                         {showC6Refin && (
                           <div
-                            className="mt-4 pt-4 border-t border-slate-200 print:hidden"
+                            className="mt-3 pt-3 border-t border-slate-200 print:hidden"
                             data-html2canvas-ignore="true"
+                            data-c6-refin-compact="true"
                           >
                             <button
                               type="button"
                               onClick={() => handleC6Refin(emp)}
                               disabled={isC6RefinLoading}
-                              className={`w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 border transition-all ${
+                              className={`w-full flex items-center justify-between gap-4 rounded-xl px-3.5 py-3 border transition-all ${
                                 isC6RefinLoading
-                                  ? "bg-slate-100 border-slate-200 text-slate-400 cursor-wait"
-                                  : "bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 border-slate-800 text-white hover:shadow-lg hover:-translate-y-0.5"
+                                  ? "bg-slate-50 border-slate-200 cursor-wait"
+                                  : c6RefinResult?.success
+                                    ? "bg-emerald-50/40 border-emerald-100 hover:bg-emerald-50/70"
+                                    : "bg-slate-50/70 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
-                              <div className="flex items-center gap-3 text-left">
-                                <div className="w-9 h-9 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center font-black text-xs">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div
+                                  className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px] font-black border ${
+                                    c6RefinResult?.success
+                                      ? "bg-white text-emerald-700 border-emerald-200"
+                                      : "bg-white text-slate-700 border-slate-200"
+                                  }`}
+                                >
                                   C6
                                 </div>
 
-                                <div>
-                                  <p className="text-[9px] uppercase tracking-[0.2em] font-black opacity-60">
-                                    Refinanciamento INSS
-                                  </p>
+                                <div className="text-left min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-[11px] font-black text-slate-800">
+                                      Refinanciamento C6
+                                    </p>
 
-                                  <p className="text-xs font-black uppercase tracking-wide">
-                                    {isC6RefinLoading
-                                      ? "Consultando C6..."
-                                      : c6RefinResult?.success
-                                        ? (
-                                            isC6RefinOpen
-                                              ? "Ocultar Refin C6"
-                                              : "Ver Refin C6"
+                                    {c6RefinResult?.success && (
+                                      <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-wider text-emerald-700">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                        {"Dispon\u00edvel"}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {isC6RefinLoading ? (
+                                    <p className="text-[10px] font-semibold text-blue-600 mt-0.5">
+                                      Consultando condi\u00e7\u00f5es...
+                                    </p>
+                                  ) : c6RefinResult?.success ? (
+                                    <p className="text-[10px] font-bold text-slate-500 mt-0.5 truncate">
+                                      <span className="font-black text-emerald-700">
+                                        {formatBRL(
+                                          Number(
+                                            c6RefinDisplay.valor_liberado
+                                              || c6RefinDisplay.valor_cliente
+                                              || 0
                                           )
-                                        : c6RefinResult
-                                          ? "Consultar novamente"
-                                          : "Consultar Refin C6"}
-                                  </p>
+                                        )}
+                                      </span>
+                                      {" liberado \u2022 "}
+                                      {Number(c6RefinDisplay.prazo || 0)}x
+                                      {" \u2022 "}
+                                      {formatC6Rate(c6RefinDisplay.taxa)} a.m.
+                                    </p>
+                                  ) : (
+                                    <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                                      {"Consulte as condi\u00e7\u00f5es dispon\u00edveis para este contrato"}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
 
-                              <span
-                                className={`text-sm font-black transition-transform ${
-                                  isC6RefinOpen
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              >
-                                {"\u25BC"}
-                              </span>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span
+                                  className={`text-[9px] font-black uppercase tracking-wider ${
+                                    c6RefinResult?.success
+                                      ? "text-emerald-700"
+                                      : "text-blue-600"
+                                  }`}
+                                >
+                                  {isC6RefinLoading
+                                    ? "Consultando"
+                                    : c6RefinResult?.success
+                                      ? (
+                                          isC6RefinOpen
+                                            ? "Ocultar"
+                                            : "Detalhes"
+                                        )
+                                      : c6RefinResult
+                                        ? "Consultar novamente"
+                                        : "Consultar"}
+                                </span>
+
+                                {c6RefinResult?.success && (
+                                  <span
+                                    className={`text-[10px] text-slate-400 transition-transform ${
+                                      isC6RefinOpen
+                                        ? "rotate-180"
+                                        : ""
+                                    }`}
+                                  >
+                                    {"\u25BC"}
+                                  </span>
+                                )}
+                              </div>
                             </button>
 
                             {isC6RefinOpen && (
-                              <div className="mt-3">
+                              <div className="mt-2">
                                 {isC6RefinLoading ? (
-                                  <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-6">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-5 h-5 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
+                                  <div className="rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="w-4 h-4 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
 
-                                      <div>
-                                        <p className="text-xs font-black text-blue-900 uppercase">
-                                          Consultando Refin C6
-                                        </p>
-
-                                        <p className="text-[10px] font-bold text-blue-500 mt-1">
-                                          Gerando token e simulando este contrato.
-                                        </p>
-                                      </div>
+                                      <p className="text-[10px] font-bold text-blue-700">
+                                        Consultando Refin C6...
+                                      </p>
                                     </div>
                                   </div>
                                 ) : c6RefinResult?.success ? (
-                                  <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
-                                    <div className="px-5 py-4 bg-gradient-to-r from-slate-950 to-blue-950 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                      <div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 text-[9px] font-black tracking-widest">
-                                            C6 REFIN
-                                          </span>
+                                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+                                    {c6RefinConditions.length > 1 ? (
+                                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100">
+                                        <div>
+                                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                            {c6RefinConditions.length} {"TABELAS DISPON\u00cdVEIS"}
+                                          </p>
+
+                                          <p className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                                            {"Selecione a condi\u00e7\u00e3o que deseja visualizar"}
+                                          </p>
                                         </div>
 
-                                        <p className="mt-2 text-sm font-black">
+                                        <select
+                                          value={c6RefinSelectedIndex}
+                                          onChange={(event) => {
+                                            setC6RefinSelectedByContract(
+                                              (prev) => ({
+                                                ...prev,
+                                                [c6RefinKey]: Number(
+                                                  event.target.value
+                                                ),
+                                              })
+                                            );
+                                          }}
+                                          className="w-full sm:w-auto sm:min-w-[300px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                                        >
+                                          {c6RefinConditions.map(
+                                            (
+                                              condition,
+                                              conditionIndex
+                                            ) => (
+                                              <option
+                                                key={`${
+                                                  condition.tabela_codigo
+                                                    || "c6"
+                                                }-${conditionIndex}`}
+                                                value={conditionIndex}
+                                              >
+                                                {condition.tabela
+                                                  || `Tabela ${
+                                                    conditionIndex + 1
+                                                  }`}
+                                              </option>
+                                            )
+                                          )}
+                                        </select>
+                                      </div>
+                                    ) : (
+                                      <div className="pb-3 border-b border-slate-100">
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                          Tabela
+                                        </p>
+
+                                        <p className="text-[10px] font-black text-slate-700 mt-1">
                                           {c6RefinDisplay.tabela
                                             || "Refinanciamento C6"}
                                         </p>
                                       </div>
+                                    )}
 
-                                      <div className="sm:text-right">
-                                        <p className="text-[9px] uppercase tracking-widest font-black text-white/50">
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-3">
+                                      <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+                                        <p className="text-[7px] font-black uppercase tracking-widest text-slate-400">
                                           Valor Liberado
                                         </p>
 
-                                        <p className="text-2xl font-black text-emerald-300">
+                                        <p className="text-sm font-black text-emerald-700 mt-1">
                                           {formatBRL(
                                             Number(
                                               c6RefinDisplay.valor_liberado
@@ -2463,39 +2558,13 @@ export default function ConsultaCPFPage() {
                                           )}
                                         </p>
                                       </div>
-                                    </div>
 
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-200">
-                                      <div className="bg-white p-4">
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
-                                          Tabela
-                                        </p>
-
-                                        <p className="text-xs font-black text-slate-800 mt-1">
-                                          {c6RefinDisplay.tabela
-                                            || "C6 Refin"}
-                                        </p>
-                                      </div>
-
-                                      <div className="bg-white p-4">
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
-                                          Prazo
-                                        </p>
-
-                                        <p className="text-xs font-black text-slate-800 mt-1">
-                                          {Number(
-                                            c6RefinDisplay.prazo
-                                              || 0
-                                          )}x
-                                        </p>
-                                      </div>
-
-                                      <div className="bg-white p-4">
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                      <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+                                        <p className="text-[7px] font-black uppercase tracking-widest text-slate-400">
                                           Parcela
                                         </p>
 
-                                        <p className="text-xs font-black text-slate-800 mt-1">
+                                        <p className="text-sm font-black text-slate-700 mt-1">
                                           {formatBRL(
                                             Number(
                                               c6RefinDisplay.parcela
@@ -2505,78 +2574,41 @@ export default function ConsultaCPFPage() {
                                         </p>
                                       </div>
 
-                                      <div className="bg-white p-4">
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                      <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+                                        <p className="text-[7px] font-black uppercase tracking-widest text-slate-400">
+                                          Prazo
+                                        </p>
+
+                                        <p className="text-sm font-black text-slate-700 mt-1">
+                                          {Number(
+                                            c6RefinDisplay.prazo
+                                              || 0
+                                          )}x
+                                        </p>
+                                      </div>
+
+                                      <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+                                        <p className="text-[7px] font-black uppercase tracking-widest text-slate-400">
                                           Taxa
                                         </p>
 
-                                        <p className="text-xs font-black text-emerald-600 mt-1">
+                                        <p className="text-sm font-black text-emerald-700 mt-1">
                                           {formatC6Rate(
                                             c6RefinDisplay.taxa
                                           )} a.m.
                                         </p>
                                       </div>
                                     </div>
-
-                                    {c6RefinConditions.length > 1 && (
-                                      <div className="border-t border-slate-200 bg-slate-50/80 px-4 py-3">
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                          <div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                                              {c6RefinConditions.length} {"TABELAS DISPON\u00cdVEIS"}
-                                            </p>
-                                            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
-                                              {"Escolha uma tabela para visualizar a condi\u00e7\u00e3o"}
-                                            </p>
-                                          </div>
-
-                                          <select
-                                            value={c6RefinSelectedIndex}
-                                            onChange={(event) => {
-                                              setC6RefinSelectedByContract(
-                                                (prev) => ({
-                                                  ...prev,
-                                                  [c6RefinKey]: Number(
-                                                    event.target.value
-                                                  ),
-                                                })
-                                              );
-                                            }}
-                                            className="w-full sm:w-auto sm:min-w-[310px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-black text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 cursor-pointer"
-                                          >
-                                            {c6RefinConditions.map(
-                                              (
-                                                condition,
-                                                conditionIndex
-                                              ) => (
-                                                <option
-                                                  key={`${
-                                                    condition.tabela_codigo
-                                                      || "c6"
-                                                  }-${conditionIndex}`}
-                                                  value={conditionIndex}
-                                                >
-                                                  {condition.tabela
-                                                    || `Tabela ${
-                                                      conditionIndex + 1
-                                                    }`}
-                                                </option>
-                                              )
-                                            )}
-                                          </select>
-                                        </div>
-                                      </div>
-                                    )}
                                   </div>
                                 ) : c6RefinResult ? (
-                                  <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
-                                    <p className="text-xs font-black text-red-700 uppercase">
-                                      {"Refin C6 indispon\\u00edvel"}
+                                  <div className="rounded-xl border border-red-100 bg-red-50/60 px-4 py-3">
+                                    <p className="text-[9px] font-black text-red-700 uppercase">
+                                      {"Refin C6 indispon\u00edvel"}
                                     </p>
 
-                                    <p className="text-[10px] font-bold text-red-500 mt-1 leading-relaxed">
+                                    <p className="text-[10px] font-semibold text-red-500 mt-1">
                                       {c6RefinResult.mensagem
-                                        || "N\\u00e3o foi poss\\u00edvel simular este contrato no C6."}
+                                        || "N\u00e3o foi poss\u00edvel simular este contrato no C6."}
                                     </p>
                                   </div>
                                 ) : null}

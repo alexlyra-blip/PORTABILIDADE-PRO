@@ -217,6 +217,29 @@ export const Icons = {
   CreditCard: ({ size = 20, className = "", ...props }: IconProps) => (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
   ),
+  CreditCardDollar: ({ size = 20, className = "", ...props }: IconProps) => (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <rect x="2" y="3.5" width="20" height="14" rx="2.3" />
+      <path d="M2 8.5h20" />
+      <circle cx="12" cy="18" r="4" fill="currentColor" stroke="currentColor" />
+      <path
+        d="M12 15.6v4.8M13.4 16.4c-.35-.35-.82-.55-1.42-.55-.82 0-1.38.4-1.38.98 0 .62.55.86 1.52 1.08.94.22 1.5.5 1.5 1.1 0 .63-.6 1.02-1.5 1.02-.7 0-1.27-.2-1.7-.62"
+        stroke="white"
+        strokeWidth="1.35"
+      />
+    </svg>
+  ),
   ChevronDown: ({ size = 20, className = "", ...props }: IconProps) => (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m6 9 6 6 6-6" /></svg>
   ),
