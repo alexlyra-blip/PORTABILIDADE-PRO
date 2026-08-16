@@ -663,6 +663,7 @@ export default function CltMultibancosPage() {
     nome: "",
     telefone: "",
     email: "",
+    data_nascimento: "",
     vinculo_index: null,
   });
 
@@ -895,6 +896,8 @@ export default function CltMultibancosPage() {
       email:
         customer?.email ||
         previous.email,
+      data_nascimento:
+        previous.data_nascimento,
     }));
   };
 
@@ -915,6 +918,11 @@ export default function CltMultibancosPage() {
         String(
           overrides.email ?? form.email
         ).trim() || null,
+      data_nascimento:
+        String(
+          overrides.data_nascimento ??
+            form.data_nascimento
+        ).trim() || null,
       vinculo_index:
         overrides.vinculo_index ??
         form.vinculo_index ??
@@ -931,9 +939,94 @@ export default function CltMultibancosPage() {
         null,
     };
 
-    if (payload.cpf.length !== 11) {
+    const cpfDigits = payload.cpf;
+
+    const cpfRepeated =
+      /^(\d)\1{10}$/.test(cpfDigits);
+
+    const calculateCpfDigit = (baseLength) => {
+      let sum = 0;
+
+      for (let index = 0; index < baseLength; index += 1) {
+        sum +=
+          Number(cpfDigits[index]) *
+          (baseLength + 1 - index);
+      }
+
+      const remainder =
+        (sum * 10) % 11;
+
+      return remainder === 10
+        ? 0
+        : remainder;
+    };
+
+    const cpfValid =
+      cpfDigits.length === 11 &&
+      !cpfRepeated &&
+      calculateCpfDigit(9) ===
+        Number(cpfDigits[9]) &&
+      calculateCpfDigit(10) ===
+        Number(cpfDigits[10]);
+
+    if (!cpfValid) {
       toast.warning(
-        "Informe um CPF válido com 11 dígitos."
+        "CPF inv\u00e1lido. Confira os 11 d\u00edgitos."
+      );
+      return;
+    }
+
+    const phoneDigits = String(
+      payload.telefone ||
+      ""
+    ).replace(/\D/g, "");
+
+    const phoneValid =
+      !phoneDigits ||
+      (
+        (
+          phoneDigits.length === 10 ||
+          phoneDigits.length === 11
+        ) &&
+        /^[1-9]\d+$/.test(phoneDigits)
+      );
+
+    if (!phoneValid) {
+      toast.warning(
+        "Telefone inv\u00e1lido. Informe DDD + n\u00famero com 10 ou 11 d\u00edgitos."
+      );
+      return;
+    }
+
+    const emailValue = String(
+      payload.email ||
+      ""
+    ).trim();
+
+    const emailValid =
+      !emailValue ||
+      /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
+        emailValue
+      );
+
+    if (!emailValid) {
+      toast.warning(
+        "E-mail inv\u00e1lido. Confira o endere\u00e7o informado."
+      );
+      return;
+    }
+
+    const birthDate = String(
+      payload.data_nascimento ||
+      ""
+    ).trim();
+
+    if (
+      birthDate &&
+      !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)
+    ) {
+      toast.warning(
+        "Data de nascimento inv\u00e1lida."
       );
       return;
     }
@@ -947,6 +1040,54 @@ export default function CltMultibancosPage() {
       );
 
       setBusinessError(null);
+
+      // Se o C6 ainda estiver processando a
+      // autorizacao, preserva o link ORIGINAL.
+      const previousC6Authorization =
+        authorizations.find(
+          (item) =>
+            item?.banco_id === "c6_bank"
+        );
+
+      const responseC6Bank =
+        Array.isArray(response?.bancos)
+          ? response.bancos.find(
+              (bank) =>
+                bank?.banco_id === "c6_bank"
+            )
+          : null;
+
+      if (
+        responseC6Bank?.status ===
+          "awaiting_authorization" &&
+        responseC6Bank?.authorization_pending &&
+        !responseC6Bank?.authorization_url &&
+        previousC6Authorization?.url
+      ) {
+        responseC6Bank.authorization_url =
+          previousC6Authorization.url;
+
+        const currentAuthorizations =
+          Array.isArray(response?.autorizacoes)
+            ? response.autorizacoes
+            : [];
+
+        response.autorizacoes = [
+          ...currentAuthorizations.filter(
+            (item) =>
+              item?.banco_id !== "c6_bank"
+          ),
+          {
+            banco: "C6 Bank",
+            banco_id: "c6_bank",
+            id:
+              previousC6Authorization.id ||
+              null,
+            url:
+              previousC6Authorization.url,
+          },
+        ];
+      }
       setResult(response);
       updateFormFromResponse(response);
       setLastUpdated(new Date());
@@ -973,9 +1114,23 @@ export default function CltMultibancosPage() {
       ) {
         setAuthorized(false);
 
-        toast.success(
-          "Link de autorização gerado com sucesso."
-        );
+        const c6StillPending =
+          Array.isArray(response?.bancos) &&
+          response.bancos.some(
+            (bank) =>
+              bank?.banco_id === "c6_bank" &&
+              bank?.authorization_pending
+          );
+
+        if (c6StillPending) {
+          toast.warning(
+            "Autorizacao C6 ainda em processamento. Nenhum novo link foi gerado."
+          );
+        } else {
+          toast.success(
+            "Link de autorizacao gerado com sucesso."
+          );
+        }
       } else if (
         responseStatus === "processing"
       ) {
@@ -988,6 +1143,14 @@ export default function CltMultibancosPage() {
       ) {
         toast.warning(
           "Selecione o vínculo empregatício que deseja consultar."
+        );
+      } else if (
+        responseStatus === "authorized"
+      ) {
+        setAuthorized(true);
+
+        toast.success(
+          "Autorizacao C6 confirmada. A simulacao C6 ainda nao foi executada."
         );
       } else if (
         responseStatus === "completed"
@@ -1115,6 +1278,10 @@ export default function CltMultibancosPage() {
         simulationContext?.telefone ||
         form.telefone.replace(/\D/g, ""),
       email: simulationContext?.email || form.email,
+      data_nascimento:
+        simulationContext?.data_nascimento ||
+        form.data_nascimento ||
+        null,
       valor_parcela: null,
       valor_solicitado: null,
       quantidade_parcelas: quantidadeParcelas || null,
@@ -1391,6 +1558,36 @@ export default function CltMultibancosPage() {
                 />
               </div>
             </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+                Data de nascimento
+              </span>
+
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 dark:border-white/10 dark:bg-slate-950/50">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-[8px] font-black text-violet-600">
+                  DN
+                </span>
+
+                <input
+                  value={form.data_nascimento}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      data_nascimento:
+                        event.target.value,
+                    }))
+                  }
+                  type="date"
+                  className="h-14 w-full bg-transparent text-sm font-bold text-slate-900 outline-none dark:text-white"
+                />
+              </div>
+
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">
+                Necessaria para autorizacao do C6 Bank.
+              </p>
+            </label>
+
 
             <label className="block">
               <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
@@ -2487,6 +2684,10 @@ export default function CltMultibancosPage() {
 
                 <span className="rounded-full bg-emerald-500/10 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-emerald-600">
                   Lotus Mais ativo
+                </span>
+
+                <span className="rounded-full bg-emerald-500/10 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-emerald-600">
+                  C6 Bank ativo
                 </span>
 
                 <span className="rounded-full bg-slate-500/10 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-slate-500">
