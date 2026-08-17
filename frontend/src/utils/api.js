@@ -3,16 +3,17 @@ const API_BASE_URL = '/api';
 
 export const getStaticUrl = (path) => {
   if (!path || path === "null" || path === "undefined") return null;
-  if (path.startsWith('http')) return path;
-  if (path.startsWith('data:image')) return path; // Suporte para Base64
-  if (path.startsWith('blob:')) return path; // Suporte para pré-visualização local
-  
-  // Em produção, BASE_URL deve ser vazio para usar caminhos relativos
-  // ou configurado via variável de ambiente.
+  const normalizedPath = String(path).trim().replace(/\\/g, '/');
+
+  if (normalizedPath.startsWith('http')) return normalizedPath;
+  if (normalizedPath.startsWith('data:image')) return normalizedPath;
+  if (normalizedPath.startsWith('blob:')) return normalizedPath;
+
   const base = BASE_URL || '';
-  if (path.startsWith('/api/')) return `${base}${path}`;
-  if (path.startsWith('/uploads')) return `${base}${path}`;
-  return `${base}/uploads${path.startsWith('/') ? '' : '/'}${path}`;
+  if (normalizedPath.startsWith('/')) return `${base}${normalizedPath}`;
+  if (normalizedPath.startsWith('api/')) return `${base}/${normalizedPath}`;
+  if (normalizedPath.startsWith('uploads/')) return `${base}/${normalizedPath}`;
+  return `${base}/uploads/${normalizedPath}`;
 };
 
 const getHeaders = () => {
