@@ -8,10 +8,23 @@ import { useToast } from "@/components/ToastProvider";
 
 const BANK_NAME_BY_CODE = {
   "001": "BANCO DO BRASIL",
+  "033": "SANTANDER",
+  "041": "BANRISUL",
+  "070": "BRB",
   "104": "CAIXA",
+  "121": "AGIBANK",
   "237": "BANCO BRADESCO",
+  "254": "PARANÁ BANCO",
+  "318": "BANCO BMG",
   "320": "CCB BRASIL",
+  "336": "C6 BANK",
+  "341": "ITAÚ",
+  "389": "BANCO MERCANTIL",
+  "422": "BANCO SAFRA",
+  "623": "BANCO PAN",
   "626": "C6 CONSIGNADO",
+  "707": "BANCO DAYCOVAL",
+  "739": "BANCO CETELEM",
   "756": "SICOOB",
 };
 
@@ -101,6 +114,49 @@ const PhoneIcon = ({ className = "w-4 h-4 text-teal-500", ...props }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
   </svg>
+);
+
+const getBankInitials = (name) => {
+  const ignoredWords = new Set(["BANCO", "BANK", "S", "SA"]);
+  const words = String(name || "B")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word && !ignoredWords.has(word));
+
+  return (words.length ? words : ["B"])
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join("");
+};
+
+const BankLogo = ({ src, alt, className = "w-full h-full object-contain p-1.5" }) => {
+  const [failedSrc, setFailedSrc] = useState(null);
+  const resolvedSrc = getStaticUrl(src);
+
+  if (!resolvedSrc || failedSrc === resolvedSrc) {
+    return <span className="text-[10px] font-black text-slate-500 uppercase">{getBankInitials(alt)}</span>;
+  }
+
+  return (
+    <img
+      src={resolvedSrc}
+      alt={alt || "Logo do banco"}
+      className={className}
+      onError={() => setFailedSrc(resolvedSrc)}
+      data-html2canvas-ignore="true"
+    />
+  );
+};
+
+const C6BankLogo = ({ className = "w-9 h-9" }) => (
+  <div className={`${className} rounded-lg bg-black text-white flex flex-col items-center justify-center shadow-sm border border-slate-700 leading-none`} aria-label="C6 Bank">
+    <span className="text-[11px] font-black tracking-tight">C6</span>
+    <span className="text-[4px] font-bold tracking-[0.12em] mt-0.5">BANK</span>
+  </div>
 );
 
 const FiliaçãoIcon = ({ className = "w-4 h-4 text-indigo-500", ...props }) => (
@@ -429,7 +485,7 @@ export default function ConsultaCPFPage() {
         || normalizedMsg.includes("licenca multicorban expirada")
       ) {
         toast.error(
-          "Licen?a da MultiCorban expirada. Regularize a licen?a para realizar novas consultas."
+          "Licença da MultiCorban expirada. Regularize a licença para realizar novas consultas."
         );
       } else {
         toast.error(`Erro ao consultar: ${rawMsg}`);
@@ -612,16 +668,12 @@ export default function ConsultaCPFPage() {
         error
       );
 
-      const message =
-        error?.message
-        || "N\\u00e3o foi poss\\u00edvel consultar o Refin C6.";
-
       setC6RefinByContract((prev) => ({
         ...prev,
         [key]: {
           success: false,
           status: "erro",
-          mensagem: message,
+          mensagem: "Refin C6 indisponível",
         },
       }));
 
@@ -862,19 +914,11 @@ export default function ConsultaCPFPage() {
                     </td>
 
                     <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 800; color: #0f172a;">
-                      ${formatDateBR(
-                        emp.inicio_desconto
-                          || emp.InicioDesconto
-                          || ""
-                      )}
+                      ${formatDateBR(getLoanStartDate(emp))}
                     </td>
 
                     <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 800; color: #0f172a;">
-                      ${formatDateBR(
-                        emp.final_desconto
-                          || emp.FinalDesconto
-                          || ""
-                      )}
+                      ${formatDateBR(getLoanEndDate(emp))}
                     </td>
 
                     <td style="padding: 9px 5px; vertical-align: top; font-size: 8px; font-weight: 900; color: #0f172a;">
@@ -922,7 +966,7 @@ export default function ConsultaCPFPage() {
 
           <!-- Section: Active Cards -->
           <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 12px; font-weight: 900; color: #0f172a; border-bottom: 2px solid #db2777; padding-bottom: 6px; margin: 0 0 10px 0; text-transform: uppercase;">Cartões de Crédito Consignado (RMC / RCC) (${activeBenefit.cartoes?.length || 0})</h3>
+            <h3 style="font-size: 12px; font-weight: 900; color: #0f172a; border-bottom: 2px solid #db2777; padding-bottom: 6px; margin: 0 0 10px 0; text-transform: uppercase;">Cartões de Crédito Consignado - RMC / RCC</h3>
             ${activeBenefit.cartoes && activeBenefit.cartoes.length > 0 ? `
               <table style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e2e8f0;">
                 <thead>
@@ -1017,7 +1061,7 @@ export default function ConsultaCPFPage() {
       || dateValue === undefined
       || dateValue === ""
     ) {
-      return "N?o Informado";
+      return "Não Informado";
     }
 
     try {
@@ -1055,7 +1099,7 @@ export default function ConsultaCPFPage() {
       }
 
       // Formato ISO YYYY-MM-DD
-      // Tamb?m aceita timestamp come?ando por YYYY-MM-DD.
+      // Também aceita timestamp começando por YYYY-MM-DD.
       const isoDate = value.match(
         /^(\d{4})-(\d{2})-(\d{2})/
       );
@@ -1070,6 +1114,31 @@ export default function ConsultaCPFPage() {
     }
   };
 
+  const firstFilledValue = (...values) => values.find((value) => (
+    value !== null && value !== undefined && String(value).trim() !== ""
+  ));
+
+  const getLoanStartDate = (loan) => firstFilledValue(
+    loan?.inicio_desconto,
+    loan?.InicioDesconto,
+    loan?.data_inicio,
+    loan?.dataInicio,
+    loan?.data_inicio_contrato,
+    loan?.inicio,
+    loan?.DataInicio
+  );
+
+  const getLoanEndDate = (loan) => firstFilledValue(
+    loan?.final_desconto,
+    loan?.FinalDesconto,
+    loan?.data_final,
+    loan?.dataFinal,
+    loan?.data_fim,
+    loan?.dataFim,
+    loan?.fim,
+    loan?.DataFinal
+  );
+
   const formatBRL = (val) => {
     if (val === null || val === undefined || isNaN(Number(val))) return "R$ 0,00";
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val)).replace(/\s/g, " ");
@@ -1077,87 +1146,65 @@ export default function ConsultaCPFPage() {
 
   const getSubLogo = (code, name) => {
     const cleanCode = normalizeBankCode(code);
-
-    const normalizeName = (value) =>
-      String(value || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-
+    const normalizeName = (value) => String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const comparableName = (value) => normalizeName(value)
+      .replace(/\b(BANCO|BANK|S A|SA|LTDA)\b/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
     const aliasesByCode = {
       "001": ["BANCO DO BRASIL"],
+      "033": ["SANTANDER", "BANCO SANTANDER"],
+      "041": ["BANRISUL", "BANCO DO ESTADO DO RIO GRANDE DO SUL"],
+      "070": ["BRB", "BANCO DE BRASILIA"],
       "104": ["CAIXA", "CEF", "CAIXA ECONOMICA", "CAIXA ECONOMICA FEDERAL"],
+      "121": ["AGIBANK", "BANCO AGIBANK"],
       "237": ["BRADESCO", "BRADESCO SA", "BANCO BRADESCO"],
+      "254": ["PARANA BANCO", "PARANA"],
+      "318": ["BMG", "BANCO BMG"],
       "320": ["CCB BRASIL", "BANCO CCB BRASIL", "CCB"],
+      "336": ["C6", "C6 BANK", "BANCO C6"],
+      "341": ["ITAU", "ITAU UNIBANCO"],
+      "389": ["MERCANTIL", "BANCO MERCANTIL", "BANCO MERCANTIL DO BRASIL"],
+      "422": ["SAFRA", "BANCO SAFRA"],
+      "623": ["PAN", "BANCO PAN"],
+      "626": ["C6", "C6 BANK", "C6 CONSIG", "C6 CONSIGNADO", "BANCO C6", "BANCO FICSA"],
+      "707": ["DAYCOVAL", "BANCO DAYCOVAL"],
+      "739": ["CETELEM", "BANCO CETELEM"],
+      "756": ["SICOOB", "BANCO SICOOB"],
     };
 
     if (cleanCode) {
-      const matchByExactCode = subLogos.find((logo) => {
-        const logoName = String(logo?.name || "").trim();
-
-        const codeMatch = logoName.match(/^(\d{1,3})(?:\s|\-|$)/);
-
-        if (!codeMatch) return false;
-
-        return normalizeBankCode(codeMatch[1]) === cleanCode;
+      const byCode = subLogos.find((logo) => {
+        const match = String(logo?.name || "").trim().match(/^(\d{1,3})(?:\s|\-|$)/);
+        return match && normalizeBankCode(match[1]) === cleanCode;
       });
-
-      if (matchByExactCode) {
-        return matchByExactCode.logo_url;
-      }
+      if (byCode) return byCode.logo_url;
     }
 
-    const requestedNames = [
-      BANK_NAME_BY_CODE[cleanCode],
-      name,
-      ...(aliasesByCode[cleanCode] || []),
-    ]
+    const requestedNames = [BANK_NAME_BY_CODE[cleanCode], name, ...(aliasesByCode[cleanCode] || [])]
       .map(normalizeName)
       .filter(Boolean);
+    const exact = subLogos.find((logo) => requestedNames.includes(normalizeName(logo?.name)));
+    if (exact) return exact.logo_url;
 
-    const exactMatchByName = subLogos.find((logo) => {
-      const logoName = normalizeName(logo?.name);
+    const comparableNames = requestedNames.map(comparableName).filter(Boolean);
+    const comparable = subLogos.find((logo) => comparableNames.includes(comparableName(logo?.name)));
+    if (comparable) return comparable.logo_url;
+    if (cleanCode) return null;
 
-      return (
-        logoName &&
-        requestedNames.includes(logoName)
-      );
+    const fallbackName = comparableName(name);
+    const fallback = subLogos.find((logo) => {
+      const logoName = comparableName(logo?.name);
+      return logoName && fallbackName && logoName.length >= 4 && fallbackName.length >= 4
+        && (logoName.includes(fallbackName) || fallbackName.includes(logoName));
     });
-
-    if (exactMatchByName) {
-      return exactMatchByName.logo_url;
-    }
-
-    // Quando temos codigo do banco, nao usamos busca parcial.
-    // Isso evita, por exemplo, BANCO DO BRASIL (001)
-    // casar incorretamente com CCB BRASIL (320).
-    if (cleanCode) {
-      return null;
-    }
-
-    const fallbackName = normalizeName(name);
-
-    if (!fallbackName) {
-      return null;
-    }
-
-    const fallbackMatch = subLogos.find((logo) => {
-      const logoName = normalizeName(logo?.name);
-
-      if (!logoName || logoName.length < 4 || fallbackName.length < 4) {
-        return false;
-      }
-
-      return (
-        logoName.includes(fallbackName) ||
-        fallbackName.includes(logoName)
-      );
-    });
-
-    return fallbackMatch ? fallbackMatch.logo_url : null;
+    return fallback ? fallback.logo_url : null;
   };
 
   const isSiape = String(
@@ -1681,7 +1728,7 @@ export default function ConsultaCPFPage() {
                       >
                         <Icons.User size={13} />
                         <span>{b.cliente?.nome ? b.cliente.nome.split(' ')[0] : (b.numero ? `NB ${b.numero}` : `Registro ${idx + 1}`)}</span>
-                        {b.cliente?.cpf && <span className="text-[10px] opacity-80">({maskCpfCnpj(b.cliente.cpf)})</span>}
+                        <span className="text-[10px] opacity-80">(NB {b.cliente?.beneficio || b.numero || "Não informado"})</span>
                       </button>
                     ))}
                   </div>
@@ -1708,67 +1755,35 @@ export default function ConsultaCPFPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <div className="bg-slate-50 rounded-2xl border border-slate-100 p-4">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">
-                    Sal?rio do Benef?cio
-                  </p>
-                  <p className="text-sm md:text-base font-black text-slate-800 mt-1">
-                    {formatBRL(marginInfo.salario)}
-                  </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+                <div className="flex items-center gap-3 bg-slate-50 rounded-2xl border border-slate-100 p-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><Icons.Wallet size={20} /></div>
+                  <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">Salário do Benefício</p><p className="text-sm md:text-base font-black text-slate-800 mt-1 whitespace-nowrap">{formatBRL(marginInfo.salario)}</p></div>
                 </div>
-
-                <div className="bg-blue-50/60 rounded-2xl border border-blue-100 p-4">
-                  <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest leading-tight">
-                    Margem Consign?vel
-                  </p>
-                  <p className="text-sm md:text-base font-black text-blue-700 mt-1">
-                    {formatBRL(marginInfo.margemConsignavel)}
-                  </p>
+                <div className="flex items-center gap-3 bg-blue-50/60 rounded-2xl border border-blue-100 p-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0"><Icons.BarChartUp size={20} /></div>
+                  <div className="min-w-0"><p className="text-[9px] font-black text-blue-500 uppercase tracking-widest leading-tight">Margem Consignável</p><p className="text-sm md:text-base font-black text-blue-700 mt-1 whitespace-nowrap">{formatBRL(marginInfo.margemConsignavel)}</p></div>
                 </div>
-
-                <div className="bg-amber-50/60 rounded-2xl border border-amber-100 p-4">
-                  <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest leading-tight">
-                    Total Comprometido
-                  </p>
-                  <p className="text-sm md:text-base font-black text-amber-700 mt-1">
-                    {formatBRL(marginInfo.totalComprometido)}
-                  </p>
+                <div className="flex items-center gap-3 bg-amber-50/60 rounded-2xl border border-amber-100 p-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><Icons.Activity size={20} /></div>
+                  <div className="min-w-0"><p className="text-[9px] font-black text-amber-600 uppercase tracking-widest leading-tight">Total Comprometido</p><p className="text-sm md:text-base font-black text-amber-700 mt-1 whitespace-nowrap">{formatBRL(marginInfo.totalComprometido)}</p></div>
                 </div>
-
-                <div className={`rounded-2xl border p-4 ${
-                  marginInfo.margemLivreReal < 0
-                    ? "bg-red-50/60 border-red-100"
-                    : "bg-emerald-50/60 border-emerald-100"
-                }`}>
-                  <p className={`text-[9px] font-black uppercase tracking-widest leading-tight ${
-                    marginInfo.margemLivreReal < 0
-                      ? "text-red-500"
-                      : "text-emerald-600"
-                  }`}>
-                    Margem Dispon?vel
-                  </p>
-                  <p className={`text-sm md:text-base font-black mt-1 ${
-                    marginInfo.margemLivreReal < 0
-                      ? "text-red-700"
-                      : "text-emerald-700"
-                  }`}>
-                    {formatBRL(marginInfo.margemLivreReal)}
-                  </p>
+                <div className={`flex items-center gap-3 rounded-2xl border p-4 ${marginInfo.margemLivreReal < 0 ? "bg-red-50/60 border-red-100" : "bg-emerald-50/60 border-emerald-100"}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${marginInfo.margemLivreReal < 0 ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"}`}><Icons.ShieldCheck size={20} /></div>
+                  <div className="min-w-0"><p className={`text-[9px] font-black uppercase tracking-widest leading-tight ${marginInfo.margemLivreReal < 0 ? "text-red-500" : "text-emerald-600"}`}>Margem Disponível</p><p className={`text-sm md:text-base font-black mt-1 whitespace-nowrap ${marginInfo.margemLivreReal < 0 ? "text-red-700" : "text-emerald-700"}`}>{formatBRL(marginInfo.margemLivreReal)}</p></div>
                 </div>
-
-                <div className="bg-emerald-50 rounded-2xl border border-emerald-200 p-4 col-span-2 md:col-span-1">
-                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-tight">
-                    Valor Liberado
-                  </p>
-                  <p className="text-sm md:text-base font-black text-emerald-700 mt-1">
-                    {formatBRL(marginInfo.valorLiberadoMargem)}
-                  </p>
+                <div className="flex items-center gap-3 bg-emerald-50 rounded-2xl border border-emerald-200 p-4 sm:col-span-2 xl:col-span-1">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0"><Icons.Banknote size={20} /></div>
+                  <div className="min-w-0"><p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-tight">Valor Liberado</p><p className="text-sm md:text-base font-black text-emerald-700 mt-1 whitespace-nowrap">{formatBRL(marginInfo.valorLiberadoMargem)}</p></div>
                 </div>
               </div>
             </div>
 
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-4`}>
+            <div className={`grid grid-cols-1 gap-6 ${
+              convenio === "GOVERNO" || convenio === "CLT PRIVADO"
+                ? "md:grid-cols-2 print:grid-cols-2"
+                : "xl:grid-cols-3 print:grid-cols-3"
+            } print:gap-4`}>
 
               {/* Dados do Cliente - Cabeçalho Premium com Ícone Premium Crown */}
               <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
@@ -1953,6 +1968,7 @@ export default function ConsultaCPFPage() {
 
               {/* Dados do Benefício & Dados Bancários */}
               {!(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
+                <>
                 <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
                   <div className="flex items-center justify-between mb-6">
@@ -2036,8 +2052,8 @@ export default function ConsultaCPFPage() {
                         </>
                       ) : (
                         <>
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
-                            <div className="md:col-span-1">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
+                            <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                 Número (NB)
                               </p>
@@ -2047,7 +2063,7 @@ export default function ConsultaCPFPage() {
                               </p>
                             </div>
 
-                            <div className="md:col-span-3">
+                            <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                 Espécie
                               </p>
@@ -2093,17 +2109,17 @@ export default function ConsultaCPFPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                UF Benef?cio
+                                UF Benefício
                               </p>
                               <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
                                 {activeBenefit.beneficio?.uf
-                                  || "N?o Informada"}
+                                  || "Não Informada"}
                               </p>
                             </div>
 
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Valor do Benef?cio
+                                Valor do Benefício
                               </p>
                               <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
                                 {formatBRL(marginInfo.salario)}
@@ -2113,65 +2129,28 @@ export default function ConsultaCPFPage() {
                         </>
                       )}
 
-                      {/* Dados Bancários Condicionais */}
-                    <div className="pt-3.5 border-t border-slate-100 bg-slate-50/60 p-4 rounded-2xl border border-slate-150">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                        <Icons.Landmark size={14} className="text-slate-500" />
-                        DADOS DO PAGAMENTO
-                      </p>
+                  </div>
+                </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[minmax(135px,1fr)_minmax(0,2.5fr)_minmax(80px,0.7fr)_minmax(110px,1fr)] gap-4">
-                        <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">
-                            Meio de Pagamento
-                          </span>
-                          <p className="text-xs font-black text-slate-800 uppercase leading-tight">
-                            {activeBenefit.banco_pagador?.tipo_pagamento
-                              || (
-                                isCartaoMagnetico(activeBenefit)
-                                  ? "Cart?o Magn?tico"
-                                  : "Conta Corrente"
-                              )}
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">
-                            Banco
-                          </span>
-                          <p className="text-xs font-black text-slate-800 uppercase leading-tight break-words">
-                            {formatBankName(
-                              activeBenefit.banco_pagador?.codigo,
-                              activeBenefit.banco_pagador?.nome
-                            )}
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">
-                            Ag?ncia
-                          </span>
-                          <p className="text-xs font-black text-slate-800">
-                            {activeBenefit.banco_pagador?.agencia
-                              || "N?o Informada"}
-                          </p>
-                        </div>
-
-                        {!isCartaoMagnetico(activeBenefit) && (
-                          <div>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">
-                              Conta Corrente
-                            </span>
-                            <p className="text-xs font-black text-slate-800">
-                              {activeBenefit.banco_pagador?.conta
-                                || "N?o Informada"}
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-10 -mt-10 pointer-events-none" />
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100"><Icons.Banknote size={20} /></div>
+                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dados do Pagamento</h3>
+                  </div>
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-4 rounded-2xl bg-slate-50 border border-slate-100 p-4">
+                      <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0"><BankLogo src={getSubLogo(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)} alt={activeBenefit.banco_pagador?.nome || "Banco pagador"} /></div>
+                      <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Banco Pagador</p><p className="text-sm font-black text-slate-800 uppercase leading-tight break-words mt-1">{formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome) || "Não Informado"}</p></div>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Meio de Pagamento</p><p className="text-sm font-black text-slate-800 uppercase mt-1">{activeBenefit.banco_pagador?.tipo_pagamento || (isCartaoMagnetico(activeBenefit) ? "Cartão Magnético" : "Conta Corrente")}</p></div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Agência</p><p className="text-sm font-black text-slate-800 mt-1">{activeBenefit.banco_pagador?.agencia || "Não Informada"}</p></div>
+                      <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conta</p><p className="text-sm font-black text-slate-800 mt-1 break-all">{activeBenefit.banco_pagador?.conta || (isCartaoMagnetico(activeBenefit) ? "Cartão" : "Não Informada")}</p></div>
                     </div>
                   </div>
                 </div>
+                </>
               )}
             </div>
 
@@ -2261,18 +2240,7 @@ export default function ConsultaCPFPage() {
                         <div className="flex flex-col xl:flex-row xl:items-center gap-4">
                           <div className="flex items-center gap-3 min-w-0 xl:w-[245px] xl:flex-shrink-0">
                             <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
-                              {logoUrl ? (
-                                <img
-                                  src={getStaticUrl(logoUrl)}
-                                  alt={emp.banco}
-                                  className="w-full h-full object-cover absolute inset-0"
-                                  data-html2canvas-ignore="true"
-                                />
-                              ) : (
-                                <span className="text-xs font-black text-slate-400">
-                                  {(emp.banco || "B").charAt(0)}
-                                </span>
-                              )}
+                              <BankLogo src={logoUrl} alt={emp.banco || formatBankName(emp.codigo, emp.banco)} />
                             </div>
 
                             <div className="min-w-0">
@@ -2302,10 +2270,10 @@ export default function ConsultaCPFPage() {
 
                             <div>
                               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                                Data In?cio
+                                Data Início
                               </p>
                               <p className="text-xs font-black text-slate-800 mt-0.5 whitespace-nowrap">
-                                {formatDateBR(emp.inicio_desconto)}
+                                {formatDateBR(getLoanStartDate(emp))}
                               </p>
                             </div>
 
@@ -2314,7 +2282,7 @@ export default function ConsultaCPFPage() {
                                 Data Final
                               </p>
                               <p className="text-xs font-black text-slate-800 mt-0.5 whitespace-nowrap">
-                                {formatDateBR(emp.final_desconto)}
+                                {formatDateBR(getLoanEndDate(emp))}
                               </p>
                             </div>
 
@@ -2381,15 +2349,7 @@ export default function ConsultaCPFPage() {
                               }`}
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                <div
-                                  className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px] font-black border ${
-                                    c6RefinResult?.success
-                                      ? "bg-white text-emerald-700 border-emerald-200"
-                                      : "bg-white text-slate-700 border-slate-200"
-                                  }`}
-                                >
-                                  C6
-                                </div>
+                                <C6BankLogo className="w-8 h-8 flex-shrink-0" />
 
                                 <div className="text-left min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
@@ -2606,10 +2566,6 @@ export default function ConsultaCPFPage() {
                                       {"Refin C6 indispon\u00edvel"}
                                     </p>
 
-                                    <p className="text-[10px] font-semibold text-red-500 mt-1">
-                                      {c6RefinResult.mensagem
-                                        || "N\u00e3o foi poss\u00edvel simular este contrato no C6."}
-                                    </p>
                                   </div>
                                 ) : null}
                               </div>
@@ -2621,7 +2577,7 @@ export default function ConsultaCPFPage() {
                   })
                 ) : (
                   <p className="text-xs font-bold text-slate-400 text-center py-8 bg-slate-50/40 rounded-2xl border border-dashed border-slate-200">
-                    Nenhum empr?stimo consignado ativo encontrado.
+                    Nenhum empréstimo consignado ativo encontrado.
                   </p>
                 )}
               </div>
@@ -2684,12 +2640,16 @@ export default function ConsultaCPFPage() {
                 </p>
               </div>
             ) : (
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center border border-pink-100 print:bg-slate-50 print:text-pink-700 print:border-slate-200">
-                  <Icons.CreditCard size={20} />
+            <div className="bg-white p-6 md:p-7 rounded-[2rem] shadow-xl border border-slate-100 print-no-break">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center border border-pink-100"><Icons.CreditCard size={20} /></div>
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Cartões de Crédito Consignado - RMC / RCC</h3>
                 </div>
-                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Cartões de Crédito Consignado (RMC / RCC) ({activeBenefit.cartoes?.length || 0})</h3>
+                <div className="inline-flex self-start sm:self-auto items-center gap-2 px-3.5 py-2 rounded-xl bg-pink-50 border border-pink-100">
+                  <span className="text-[9px] font-black text-pink-500 uppercase tracking-widest">Total Cartões</span>
+                  <span className="text-sm font-black text-pink-700">{activeBenefit.cartoes?.length || 0}</span>
+                </div>
               </div>
 
               <div className="space-y-3.5">
@@ -2700,18 +2660,7 @@ export default function ConsultaCPFPage() {
                       <div key={idx} className="p-5 rounded-2xl border border-slate-150 bg-slate-50/60 hover:bg-slate-50 hover:shadow-md transition-all flex flex-col md:flex-row gap-4 justify-between items-start md:items-center print-no-break">
                         <div className="flex items-center gap-3.5 min-w-0 pr-4 w-full md:w-80 print:w-96">
                           <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
-                            {logoUrl ? (
-                              <img
-                                src={getStaticUrl(logoUrl)}
-                                alt={cartao.banco}
-                                className="w-full h-full object-cover absolute inset-0"
-                                data-html2canvas-ignore="true"
-                              />
-                            ) : (
-                              <span className="text-[10px] font-black text-slate-400">
-                                {(cartao.banco || "B").charAt(0)}
-                              </span>
-                            )}
+                            <BankLogo src={logoUrl} alt={cartao.banco || formatBankName(cartao.codigo, cartao.banco)} />
                           </div>
 
                           <div className="min-w-0">
