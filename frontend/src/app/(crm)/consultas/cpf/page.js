@@ -116,29 +116,25 @@ const PhoneIcon = ({ className = "w-4 h-4 text-teal-500", ...props }) => (
   </svg>
 );
 
-const getBankInitials = (name) => {
-  const ignoredWords = new Set(["BANCO", "BANK", "S", "SA"]);
-  const words = String(name || "B")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word && !ignoredWords.has(word));
+const BankFallbackIcon = ({ className = "w-6 h-6" }) => (
+  <svg className={`${className} text-slate-400`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 10h18" />
+    <path d="M5 10v8" />
+    <path d="M9 10v8" />
+    <path d="M15 10v8" />
+    <path d="M19 10v8" />
+    <path d="M3 18h18" />
+    <path d="M2 21h20" />
+    <path d="m12 3 9 4H3l9-4Z" />
+  </svg>
+);
 
-  return (words.length ? words : ["B"])
-    .slice(0, 2)
-    .map((word) => word.charAt(0))
-    .join("");
-};
-
-const BankLogo = ({ src, alt, className = "w-full h-full object-contain p-1.5" }) => {
+const BankLogo = ({ src, alt, className = "w-full h-full object-cover" }) => {
   const [failedSrc, setFailedSrc] = useState(null);
   const resolvedSrc = getStaticUrl(src);
 
   if (!resolvedSrc || failedSrc === resolvedSrc) {
-    return <span className="text-[10px] font-black text-slate-500 uppercase">{getBankInitials(alt)}</span>;
+    return <BankFallbackIcon />;
   }
 
   return (
@@ -146,6 +142,8 @@ const BankLogo = ({ src, alt, className = "w-full h-full object-contain p-1.5" }
       src={resolvedSrc}
       alt={alt || "Logo do banco"}
       className={className}
+      loading="eager"
+      decoding="async"
       onError={() => setFailedSrc(resolvedSrc)}
       data-html2canvas-ignore="true"
     />
@@ -188,7 +186,6 @@ export default function ConsultaCPFPage() {
   const [providerConfigLoaded, setProviderConfigLoaded] = useState(false);
   const [convenio, setConvenio] = useState("INSS");
   const [searchType, setSearchType] = useState("CPF");
-  const [searchFilter, setSearchFilter] = useState("");
   const [downloadState, setDownloadState] = useState("idle");
   const [recentQueries, setRecentQueries] = useState([]);
   const [c6RefinByContract, setC6RefinByContract] = useState({});
@@ -1023,21 +1020,17 @@ export default function ConsultaCPFPage() {
     }
   };
 
-  useEffect(() => {
-    setActiveBenefitIndex(0);
-  }, [searchFilter]);
+  const availableBeneficios = dados?.beneficios || [];
 
-  const filteredBeneficios = (dados && dados.beneficios) ? dados.beneficios.filter(b => {
-    if (!searchFilter) return true;
-    const filterLower = searchFilter.toLowerCase();
-    const nome = (b.cliente?.nome || "").toLowerCase();
-    const cpfNum = (b.cliente?.cpf || "").replace(/\D/g, "");
-    return nome.includes(filterLower) || cpfNum.includes(filterLower.replace(/\D/g, ""));
-  }) : [];
-
-  const activeBenefit = (dados && filteredBeneficios && filteredBeneficios.length > 0)
-    ? filteredBeneficios[activeBenefitIndex]
+  const activeBenefit = availableBeneficios.length > 0
+    ? availableBeneficios[Math.min(activeBenefitIndex, availableBeneficios.length - 1)]
     : dados;
+
+  const getBenefitClientName = (benefit, index) => {
+    const fullName = String(benefit?.cliente?.nome || "").trim();
+    if (fullName) return fullName.split(/\s+/).slice(0, 2).join(" ");
+    return benefit?.numero ? `NB ${benefit.numero}` : `Registro ${index + 1}`;
+  };
 
   // Formatação de telefone
   const formatPhone = (phoneStr) => {
@@ -1154,7 +1147,8 @@ export default function ConsultaCPFPage() {
       .replace(/\s+/g, " ")
       .trim();
     const comparableName = (value) => normalizeName(value)
-      .replace(/\b(BANCO|BANK|S A|SA|LTDA)\b/g, " ")
+      .replace(/^\d{1,3}\s+/, "")
+      .replace(/\b(BANCO|BANK|S A|SA|LTDA|CREDITO|CONSIGNADO|CONSIG|FINANCEIRA|SOCIEDADE)\b/g, " ")
       .replace(/\s+/g, " ")
       .trim();
     const aliasesByCode = {
@@ -1164,7 +1158,7 @@ export default function ConsultaCPFPage() {
       "070": ["BRB", "BANCO DE BRASILIA"],
       "104": ["CAIXA", "CEF", "CAIXA ECONOMICA", "CAIXA ECONOMICA FEDERAL"],
       "121": ["AGIBANK", "BANCO AGIBANK"],
-      "237": ["BRADESCO", "BRADESCO SA", "BANCO BRADESCO"],
+      "237": ["BRADESCO", "BRADESCO S A", "BANCO BRADESCO"],
       "254": ["PARANA BANCO", "PARANA"],
       "318": ["BMG", "BANCO BMG"],
       "320": ["CCB BRASIL", "BANCO CCB BRASIL", "CCB"],
@@ -1172,15 +1166,19 @@ export default function ConsultaCPFPage() {
       "341": ["ITAU", "ITAU UNIBANCO"],
       "389": ["MERCANTIL", "BANCO MERCANTIL", "BANCO MERCANTIL DO BRASIL"],
       "422": ["SAFRA", "BANCO SAFRA"],
+      "465": ["CAPITAL CONSIG", "CAPITAL CONSIGNADO"],
       "623": ["PAN", "BANCO PAN"],
       "626": ["C6", "C6 BANK", "C6 CONSIG", "C6 CONSIGNADO", "BANCO C6", "BANCO FICSA"],
       "707": ["DAYCOVAL", "BANCO DAYCOVAL"],
       "739": ["CETELEM", "BANCO CETELEM"],
       "756": ["SICOOB", "BANCO SICOOB"],
+      "925": ["BRB", "BRB CREDITO", "BANCO DE BRASILIA"],
     };
 
+    const logoCandidates = subLogos.filter((logo) => String(logo?.logo_url || "").trim());
+
     if (cleanCode) {
-      const byCode = subLogos.find((logo) => {
+      const byCode = logoCandidates.find((logo) => {
         const match = String(logo?.name || "").trim().match(/^(\d{1,3})(?:\s|\-|$)/);
         return match && normalizeBankCode(match[1]) === cleanCode;
       });
@@ -1188,28 +1186,37 @@ export default function ConsultaCPFPage() {
     }
 
     const requestedNames = [BANK_NAME_BY_CODE[cleanCode], name, ...(aliasesByCode[cleanCode] || [])]
-      .map(normalizeName)
+      .map(comparableName)
       .filter(Boolean);
-    const exact = subLogos.find((logo) => requestedNames.includes(normalizeName(logo?.name)));
-    if (exact) return exact.logo_url;
 
-    const comparableNames = requestedNames.map(comparableName).filter(Boolean);
-    const comparable = subLogos.find((logo) => comparableNames.includes(comparableName(logo?.name)));
-    if (comparable) return comparable.logo_url;
-    if (cleanCode) return null;
-
-    const fallbackName = comparableName(name);
-    const fallback = subLogos.find((logo) => {
+    const byName = logoCandidates.find((logo) => {
       const logoName = comparableName(logo?.name);
-      return logoName && fallbackName && logoName.length >= 4 && fallbackName.length >= 4
-        && (logoName.includes(fallbackName) || fallbackName.includes(logoName));
+      if (!logoName) return false;
+      return requestedNames.some((requestedName) => (
+        logoName === requestedName
+        || (
+          logoName.length >= 3
+          && requestedName.length >= 3
+          && (
+            logoName.startsWith(`${requestedName} `)
+            || requestedName.startsWith(`${logoName} `)
+          )
+        )
+      ));
     });
-    return fallback ? fallback.logo_url : null;
+
+    return byName?.logo_url || null;
   };
 
   const isSiape = String(
     activeBenefit?.convenio || convenio || ""
   ).trim().toUpperCase() === "SIAPE";
+
+  const isBenefitBlocked = activeBenefit?.beneficio?.bloqueado === true
+    || String(activeBenefit?.beneficio?.bloqueio_emprestimo || "")
+      .trim()
+      .toLowerCase()
+      .includes("sim");
 
   const getMarginData = () => {
     if (!activeBenefit) return null;
@@ -1688,54 +1695,43 @@ export default function ConsultaCPFPage() {
               );
             })()}
 
-            {/* Abas de Benefícios ou Navegação de Servidores (CNPJ / Carrossel) */}
-            {(dados.is_cnpj_query || (dados.beneficios && dados.beneficios.length > 1)) ? (
+            {/* Seletor exibido somente quando existem múltiplos benefícios */}
+            {(dados.beneficios && dados.beneficios.length > 1) ? (
               <div className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-xl mb-6 print:hidden">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-emerald-100 text-emerald-700 font-black px-3 py-1.5 rounded-full text-xs uppercase tracking-widest">
-                      {dados.is_cnpj_query ? "Servidor" : "Benefício"} {filteredBeneficios.length > 0 ? activeBenefitIndex + 1 : 0} de {filteredBeneficios.length}
-                    </div>
-                    {searchFilter && <span className="text-[10px] text-slate-400 font-bold uppercase">(Filtro Ativo)</span>}
-                  </div>
-                  <div className="flex flex-1 items-center gap-2 max-w-sm w-full relative">
-                     <Icons.Search size={16} className="absolute left-3 text-slate-400" />
-                     <input type="text" placeholder="Filtrar por nome ou CPF..." value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-emerald-500 focus:bg-white outline-none transition-all" />
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <div className="bg-emerald-100 text-emerald-700 font-black px-3 py-1.5 rounded-full text-xs uppercase tracking-widest">
+                    {dados.is_cnpj_query ? "Servidor" : "Benefício"} {availableBeneficios.length > 0 ? activeBenefitIndex + 1 : 0} de {availableBeneficios.length}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setActiveBenefitIndex(prev => Math.max(0, prev - 1))} disabled={activeBenefitIndex === 0 || filteredBeneficios.length === 0} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 transition-all text-slate-700">
+                    <button onClick={() => setActiveBenefitIndex((prev) => Math.max(0, prev - 1))} disabled={activeBenefitIndex === 0 || availableBeneficios.length === 0} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 transition-all text-slate-700" aria-label="Benefício anterior">
                       <Icons.ChevronLeft size={20} />
                     </button>
-                    <button onClick={() => setActiveBenefitIndex(prev => Math.min(filteredBeneficios.length - 1, prev + 1))} disabled={activeBenefitIndex >= filteredBeneficios.length - 1 || filteredBeneficios.length === 0} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 transition-all text-slate-700">
+                    <button onClick={() => setActiveBenefitIndex((prev) => Math.min(availableBeneficios.length - 1, prev + 1))} disabled={activeBenefitIndex >= availableBeneficios.length - 1 || availableBeneficios.length === 0} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 transition-all text-slate-700" aria-label="Próximo benefício">
                       <Icons.ChevronRight size={20} />
                     </button>
                   </div>
                 </div>
 
-                {/* Carrossel de Funcionários / Benefícios */}
-                {filteredBeneficios.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2 pt-1 border-t border-slate-100 scrollbar-thin">
-                    {filteredBeneficios.map((b, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setActiveBenefitIndex(idx)}
-                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${
-                          activeBenefitIndex === idx
-                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        <Icons.User size={13} />
-                        <span>{b.cliente?.nome ? b.cliente.nome.split(' ')[0] : (b.numero ? `NB ${b.numero}` : `Registro ${idx + 1}`)}</span>
-                        <span className="text-[10px] opacity-80">(NB {b.cliente?.beneficio || b.numero || "Não informado"})</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="flex gap-2 overflow-x-auto pb-1 pt-2 border-t border-slate-100 scrollbar-thin">
+                  {availableBeneficios.map((benefit, index) => (
+                    <button
+                      key={benefit?.cliente?.beneficio || benefit?.numero || index}
+                      type="button"
+                      onClick={() => setActiveBenefitIndex(index)}
+                      className={`px-4 py-2 rounded-xl whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${
+                        activeBenefitIndex === index
+                          ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      }`}
+                    >
+                      <Icons.User size={14} />
+                      <span className="text-xs font-black uppercase tracking-wide">{getBenefitClientName(benefit, index)}</span>
+                      <span className="text-[10px] font-bold opacity-80">NB {benefit.cliente?.beneficio || benefit.numero || "Não informado"}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
-
 
             {/* Grid 1: Dados Pessoais (Cabeçalho Premium) e Dados do Benefício/Trabalho */}
             {/* RESUMO_FINANCEIRO_SUPERIOR */}
@@ -1782,62 +1778,37 @@ export default function ConsultaCPFPage() {
             <div className={`grid grid-cols-1 gap-6 ${
               convenio === "GOVERNO" || convenio === "CLT PRIVADO"
                 ? "md:grid-cols-2 print:grid-cols-2"
-                : "xl:grid-cols-3 print:grid-cols-3"
+                : "xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] print:grid-cols-[5fr_7fr]"
             } print:gap-4`}>
 
-              {/* Dados do Cliente - Cabeçalho Premium com Ícone Premium Crown */}
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 print:bg-slate-50 print:text-amber-700 print:border-slate-200">
-                      <CrownIcon className="w-5 h-5 text-amber-500 animate-pulse" />
-                    </div>
-                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dados do Cliente</h3>
+              {/* Dados do Cliente */}
+              <div className="bg-white p-6 md:p-7 rounded-[2rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-10 -mt-10 pointer-events-none" />
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                    <Icons.User size={20} />
                   </div>
-                  <PremiumBadge />
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dados do Cliente</h3>
                 </div>
 
-                <div className="space-y-5 print:space-y-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
-                    <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                      <UserIcon className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome Completo</p>
-                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.nome || "Não Informado"}</p>
-                      </div>
+                <div className="space-y-3.5 print:space-y-2">
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3 min-w-0">
+                    <UserIcon className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                    <div className="min-w-0 w-full">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome Completo</p>
+                      <p className="text-sm font-black text-slate-800 uppercase whitespace-nowrap overflow-hidden text-ellipsis print:text-xs">{activeBenefit.cliente?.nome || "Não Informado"}</p>
                     </div>
+                  </div>
 
-                    <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 print:grid-cols-2 print:gap-2">
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
                       <CpfIcon className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CPF</p>
-                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.cpf ? maskCpfCnpj(activeBenefit.cliente.cpf) : "Não Informado"}</p>
+                        <p className="text-sm font-black text-slate-800 print:text-xs">{activeBenefit.cliente?.cpf ? maskCpfCnpj(activeBenefit.cliente.cpf) : "Não Informado"}</p>
                       </div>
                     </div>
-                  </div>
-
-                  {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3 print:gap-2">
-                      <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex flex-col">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">RG</p>
-                        <p className="text-xs font-black text-slate-800 uppercase mt-0.5 print:text-[10px]">{activeBenefit.cliente?.rg || "Não Informado"}</p>
-                      </div>
-
-                      <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex flex-col">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Título de Eleitor</p>
-                        <p className="text-xs font-black text-slate-800 uppercase mt-0.5 print:text-[10px]">{activeBenefit.cliente?.titulo_eleitor || "Não Informado"}</p>
-                      </div>
-
-                      <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex flex-col">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sexo</p>
-                        <p className="text-xs font-black text-slate-800 uppercase mt-0.5 print:text-[10px]">{activeBenefit.cliente?.sexo || "Não Informado"}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
-                    <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
                       <CalendarIcon className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data de Nascimento</p>
@@ -1847,68 +1818,59 @@ export default function ConsultaCPFPage() {
                         </p>
                       </div>
                     </div>
-
-                    <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                      <PhoneIcon className="w-4 h-4 text-teal-500 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Telefone / Contato</p>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {(() => {
-                            const telefonesList = activeBenefit.telefones?.length ? activeBenefit.telefones : (dados.telefones?.length ? dados.telefones : (activeBenefit.cliente?.telefones?.length ? activeBenefit.cliente.telefones : (dados.cliente?.telefones?.length ? dados.cliente.telefones : [])));
-                            if (telefonesList && telefonesList.length > 0) {
-                              return telefonesList.map((tel, i) => (
-                                <a
-                                  key={i}
-                                  href={`https://wa.me/${String(tel).replace(/\D/g, '')}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 rounded-lg text-[10px] font-black transition-all border border-emerald-100 print:bg-transparent print:border-none print:shadow-none print:p-0 print:text-slate-800 print:text-xs"
-                                >
-                                  <Icons.MessageCircle size={10} className="text-emerald-500 print:hidden" />
-                                  <span>{formatPhone(tel)}</span>
-                                </a>
-                              ));
-                            }
-                            return <span className="text-xs font-bold text-slate-400">Nenhum</span>;
-                          })()}
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
-                  <div className={`grid grid-cols-1 ${
-                    convenio === "GOVERNO" || convenio === "CLT PRIVADO"
-                      ? "md:grid-cols-2 print:grid-cols-2"
-                      : "md:grid-cols-1 print:grid-cols-1"
-                  } gap-4 print:gap-2`}>
-                    <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                      <FiliaçãoIcon className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
-                      <div className="w-full min-w-0">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome da Mãe</p>
-                        <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.filiacao || "Não Informada"}</p>
-                      </div>
-                    </div>
-
-                    {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
-                      <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                        <FiliaçãoIcon className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                        <div className="w-full">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome do Pai</p>
-                          <p className="text-sm font-black text-slate-800 uppercase print:text-xs">{activeBenefit.cliente?.nome_pai || "Não Informado"}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {activeBenefit.cliente?.endereco && (
-                    <div className="bg-slate-50 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
-                      <MapPinIcon className="w-4.5 h-4.5 text-amber-500 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Endereço Completo</p>
-                        <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed print:text-xs">{activeBenefit.cliente.endereco}</p>
-                      </div>
+                  {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 print:grid-cols-3 print:gap-2">
+                      <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">RG</p><p className="text-xs font-black text-slate-800 uppercase">{activeBenefit.cliente?.rg || "Não Informado"}</p></div>
+                      <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Título de Eleitor</p><p className="text-xs font-black text-slate-800 uppercase">{activeBenefit.cliente?.titulo_eleitor || "Não Informado"}</p></div>
+                      <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sexo</p><p className="text-xs font-black text-slate-800 uppercase">{activeBenefit.cliente?.sexo || "Não Informado"}</p></div>
                     </div>
                   )}
+
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3 min-w-0">
+                    <FiliaçãoIcon className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
+                    <div className="min-w-0 w-full">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome da Mãe</p>
+                      <p className="text-sm font-black text-slate-800 uppercase whitespace-nowrap overflow-hidden text-ellipsis print:text-xs">{activeBenefit.cliente?.filiacao || activeBenefit.cliente?.nome_mae || "Não Informada"}</p>
+                    </div>
+                  </div>
+
+                  {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && activeBenefit.cliente?.nome_pai && (
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
+                      <FiliaçãoIcon className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                      <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nome do Pai</p><p className="text-sm font-black text-slate-800 uppercase">{activeBenefit.cliente.nome_pai}</p></div>
+                    </div>
+                  )}
+
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3 min-w-0">
+                    <MapPinIcon className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                    <div className="min-w-0 w-full">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Endereço</p>
+                      <p className="text-xs font-bold text-slate-700 uppercase leading-relaxed break-words">{activeBenefit.cliente?.endereco || "Não Informado"}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-start gap-3">
+                    <PhoneIcon className="w-4 h-4 text-teal-500 mt-0.5 shrink-0" />
+                    <div className="min-w-0 w-full">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Telefone</p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {(() => {
+                          const telefonesList = activeBenefit.telefones?.length ? activeBenefit.telefones : (dados.telefones?.length ? dados.telefones : (activeBenefit.cliente?.telefones?.length ? activeBenefit.cliente.telefones : (dados.cliente?.telefones?.length ? dados.cliente.telefones : [])));
+                          if (telefonesList.length > 0) {
+                            return telefonesList.map((telefone, index) => (
+                              <a key={`${telefone}-${index}`} href={`https://wa.me/${String(telefone).replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black transition-all border border-emerald-100 print:bg-transparent print:border-none print:p-0 print:text-slate-800 print:text-xs">
+                                <Icons.MessageCircle size={10} className="text-emerald-500 print:hidden" />
+                                <span>{formatPhone(telefone)}</span>
+                              </a>
+                            ));
+                          }
+                          return <span className="text-xs font-bold text-slate-400">Nenhum</span>;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1966,191 +1928,75 @@ export default function ConsultaCPFPage() {
                 </div>
               )}
 
-              {/* Dados do Benefício & Dados Bancários */}
+              {/* Dados do Benefício e Pagamento unificados */}
               {!(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
-                <>
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
-                  <div className="flex items-center justify-between mb-6">
+                <div className="bg-white p-6 md:p-7 rounded-[2rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-10 -mt-10 pointer-events-none" />
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 print:bg-slate-50 print:text-purple-700 print:border-slate-200">
-                        <Icons.UserCheck size={20} />
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                        <Icons.CreditCard size={20} />
                       </div>
                       <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
-                          {isSiape
-                            ? "Dados do Vínculo SIAPE"
-                            : "Dados do Benefício"}
-                        </h3>
+                        {isSiape ? "Dados do Vínculo e Pagamento" : "Dados do Benefício e Pagamento"}
+                      </h3>
                     </div>
 
-                    {/* Cadeado Premium para Empréstimo */}
-                    {activeBenefit.beneficio?.bloqueio_emprestimo && (
-                      <div>
-                        {activeBenefit.beneficio.bloqueio_emprestimo.toLowerCase().includes("sim") || activeBenefit.beneficio.bloqueado === true ? (
-                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 shadow-sm animate-pulse">
-                            <LockPremiumIcon className="w-3.5 h-3.5" />
-                            <span className="text-[8px] font-black uppercase tracking-wider">BLOQUEADO</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-sm">
-                            <UnlockPremiumIcon className="w-3.5 h-3.5" />
-                            <span className="text-[8px] font-black uppercase tracking-wider">LIBERADO</span>
-                          </div>
-                        )}
-                      </div>
+                    <div className={`inline-flex self-start sm:self-auto items-center gap-1.5 px-3 py-1.5 rounded-full border shadow-sm ${
+                      isBenefitBlocked
+                        ? "bg-red-50 border-red-200 text-red-600"
+                        : "bg-emerald-50 border-emerald-200 text-emerald-600"
+                    }`}>
+                      {isBenefitBlocked ? <LockPremiumIcon className="w-3.5 h-3.5" /> : <UnlockPremiumIcon className="w-3.5 h-3.5" />}
+                      <span className="text-[9px] font-black uppercase tracking-wider">{isBenefitBlocked ? "Bloqueado" : "Liberado"}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3.5 print:space-y-2">
+                    {isSiape ? (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 print:grid-cols-2 print:gap-2">
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Matrícula</p><p className="text-sm font-black text-amber-600 mt-1">{activeBenefit.beneficio?.matricula || activeBenefit.cliente?.beneficio || activeBenefit.numero || "Não Informada"}</p></div>
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Regime Jurídico</p><p className="text-sm font-black text-slate-800 uppercase mt-1">{activeBenefit.beneficio?.regime_juridico || "Não Informado"}</p></div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 print:grid-cols-2 print:gap-2">
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Órgão</p><p className="text-sm font-black text-slate-800 uppercase mt-1">{activeBenefit.beneficio?.orgao || "Não Informado"}</p></div>
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Instituto</p><p className="text-sm font-black text-slate-800 uppercase mt-1">{activeBenefit.beneficio?.instituto || "Não Informado"}</p></div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] gap-3.5 print:grid-cols-2 print:gap-2">
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Número do Benefício (NB)</p><p className="text-sm font-black text-blue-600 mt-1">{activeBenefit.cliente?.beneficio || activeBenefit.numero || "Não Informado"}</p></div>
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Situação</p><span className={`inline-flex mt-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${String(activeBenefit.beneficio?.situacao || "").toUpperCase() === "ATIVO" ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-red-50 text-red-600 border-red-100"}`}>{activeBenefit.beneficio?.situacao || "Desconhecida"}</span></div>
+                        </div>
+
+                        <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Espécie / Benefício</p>
+                          <p className="text-sm font-black text-slate-800 uppercase mt-1 break-words">{activeBenefit.cliente?.especie || activeBenefit.beneficio?.especie || "Não Informada"}</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 print:grid-cols-4 print:gap-2">
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Concessão</p><p className="text-sm font-black text-slate-800 mt-1">{activeBenefit.beneficio?.ddb ? formatDateBR(activeBenefit.beneficio.ddb) : "Não Informada"}</p></div>
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">UF</p><p className="text-sm font-black text-slate-800 uppercase mt-1">{activeBenefit.beneficio?.uf || "Não Informada"}</p></div>
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor do Benefício</p><p className="text-sm font-black text-emerald-700 mt-1">{formatBRL(marginInfo.salario)}</p></div>
+                          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Meio de Pagamento</p><p className="text-xs font-black text-slate-800 uppercase mt-1">{activeBenefit.banco_pagador?.tipo_pagamento || (isCartaoMagnetico(activeBenefit) ? "Cartão Magnético" : "Conta Corrente")}</p></div>
+                        </div>
+                      </>
                     )}
-                  </div>
 
-                  <div className="space-y-4 print:space-y-2">
-                      {isSiape ? (
-                        <>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Matrícula
-                              </p>
-                              <p className="text-sm font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
-                                {activeBenefit.beneficio?.matricula
-                                  || activeBenefit.cliente?.beneficio
-                                  || activeBenefit.numero
-                                  || "Não Informada"}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Regime Jurídico
-                              </p>
-                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                                {activeBenefit.beneficio?.regime_juridico
-                                  || "Não Informado"}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Órgão
-                              </p>
-                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                                {activeBenefit.beneficio?.orgao
-                                  || "Não Informado"}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Instituto
-                              </p>
-                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                                {activeBenefit.beneficio?.instituto
-                                  || "Não Informado"}
-                              </p>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Número (NB)
-                              </p>
-                              <p className="text-sm font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl inline-block mt-0.5 print:bg-transparent print:p-0 print:text-xs">
-                                {activeBenefit.cliente?.beneficio
-                                  || activeBenefit.numero}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Espécie
-                              </p>
-                              <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs whitespace-normal break-words leading-snug">
-                                {activeBenefit.cliente?.especie
-                                  || "Não Informada"}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Situação
-                              </p>
-                              <p className={`text-[10px] font-black uppercase inline-block px-2.5 py-1 rounded-xl mt-0.5 ${
-                                (
-                                  activeBenefit.beneficio?.situacao
-                                  || ""
-                                ).toUpperCase() === "ATIVO"
-                                  ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                                  : "bg-red-50 text-red-600 border border-red-100"
-                              } print:bg-transparent print:p-0 print:text-xs`}>
-                                {activeBenefit.beneficio?.situacao
-                                  || "Desconhecida"}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Concessão (DDB)
-                              </p>
-                              <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
-                                {activeBenefit.beneficio?.ddb
-                                  ? formatDateBR(
-                                      activeBenefit.beneficio.ddb
-                                    )
-                                  : "Não Informada"}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100 print:grid-cols-2 print:gap-2">
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                UF Benefício
-                              </p>
-                              <p className="text-sm font-black text-slate-800 uppercase mt-0.5 print:text-xs">
-                                {activeBenefit.beneficio?.uf
-                                  || "Não Informada"}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                Valor do Benefício
-                              </p>
-                              <p className="text-sm font-black text-slate-800 mt-0.5 print:text-xs">
-                                {formatBRL(marginInfo.salario)}
-                              </p>
-                            </div>
-                          </div>
-                        </>
-                      )}
-
-                  </div>
-                </div>
-
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 print-no-break relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-10 -mt-10 pointer-events-none" />
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100"><Icons.Banknote size={20} /></div>
-                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dados do Pagamento</h3>
-                  </div>
-                  <div className="space-y-5">
-                    <div className="flex items-center gap-4 rounded-2xl bg-slate-50 border border-slate-100 p-4">
-                      <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0"><BankLogo src={getSubLogo(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)} alt={activeBenefit.banco_pagador?.nome || "Banco pagador"} /></div>
-                      <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Banco Pagador</p><p className="text-sm font-black text-slate-800 uppercase leading-tight break-words mt-1">{formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome) || "Não Informado"}</p></div>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Meio de Pagamento</p><p className="text-sm font-black text-slate-800 uppercase mt-1">{activeBenefit.banco_pagador?.tipo_pagamento || (isCartaoMagnetico(activeBenefit) ? "Cartão Magnético" : "Conta Corrente")}</p></div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Agência</p><p className="text-sm font-black text-slate-800 mt-1">{activeBenefit.banco_pagador?.agencia || "Não Informada"}</p></div>
-                      <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conta</p><p className="text-sm font-black text-slate-800 mt-1 break-all">{activeBenefit.banco_pagador?.conta || (isCartaoMagnetico(activeBenefit) ? "Cartão" : "Não Informada")}</p></div>
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(90px,0.55fr)_minmax(120px,0.7fr)] gap-4 items-center">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-16 h-14 rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
+                          <BankLogo src={getSubLogo(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)} alt={activeBenefit.banco_pagador?.nome || "Banco pagador"} className="w-full h-full object-contain p-1" />
+                        </div>
+                        <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Banco</p><p className="text-sm font-black text-slate-800 uppercase leading-tight break-words mt-1">{formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome) || "Não Informado"}</p></div>
+                      </div>
+                      <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Agência</p><p className="text-sm font-black text-slate-800 mt-1">{activeBenefit.banco_pagador?.agencia || "Não Informada"}</p></div>
+                      <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conta</p><p className="text-sm font-black text-slate-800 mt-1 break-all">{activeBenefit.banco_pagador?.conta || (isCartaoMagnetico(activeBenefit) ? "Cartão" : "Não Informada")}</p></div>
                     </div>
                   </div>
                 </div>
-                </>
               )}
             </div>
 
