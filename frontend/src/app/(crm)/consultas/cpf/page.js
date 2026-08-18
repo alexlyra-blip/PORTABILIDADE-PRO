@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
@@ -50,6 +50,66 @@ const formatBankName = (codigo, banco) => {
   }
 
   return canonicalName;
+};
+
+const SECONDARY_LOGOS_CACHE_KEY = "cached_sub_logos";
+
+const normalizeSecondaryLogos = (logos) => (
+  Array.isArray(logos)
+    ? logos
+      .filter((logo) => logo && typeof logo === "object")
+      .map((logo) => ({
+        ...logo,
+        name: String(logo.name || "").trim(),
+        logo_url: String(logo.logo_url || "").trim(),
+      }))
+      .filter((logo) => logo.name)
+    : []
+);
+
+/*
+ * Carrega e decodifica as imagens antes de liberar o resultado da consulta.
+ * Assim o navegador pinta o cartão já com a logo secundária pronta, sem
+ * mostrar primeiro o avatar genérico.
+ */
+const preloadSecondaryLogoImages = async (logos) => {
+  if (typeof window === "undefined") return;
+
+  const sources = Array.from(new Set(
+    normalizeSecondaryLogos(logos)
+      .map((logo) => getStaticUrl(logo.logo_url))
+      .filter(Boolean)
+  ));
+
+  await Promise.all(sources.map((src) => new Promise((resolve) => {
+    const image = new window.Image();
+    let settled = false;
+    let timeoutId = null;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      image.onload = null;
+      image.onerror = null;
+      resolve();
+    };
+
+    image.onload = () => {
+      if (typeof image.decode === "function") {
+        image.decode().catch(() => {}).finally(finish);
+      } else {
+        finish();
+      }
+    };
+    image.onerror = finish;
+    timeoutId = window.setTimeout(finish, 3500);
+    image.src = src;
+
+    if (image.complete) {
+      image.onload();
+    }
+  })));
 };
 
 // Premium Custom Icons
@@ -143,6 +203,7 @@ const BankLogo = ({ src, alt, className = "w-full h-full object-cover" }) => {
       alt={alt || "Logo do banco"}
       className={className}
       loading="eager"
+      fetchPriority="high"
       decoding="async"
       onError={() => setFailedSrc(resolvedSrc)}
       data-html2canvas-ignore="true"
@@ -179,6 +240,7 @@ export default function ConsultaCPFPage() {
   const [dados, setDados] = useState(null);
   const [activeBenefitIndex, setActiveBenefitIndex] = useState(0);
   const [subLogos, setSubLogos] = useState([]);
+  const secondaryLogosLoadRef = useRef(Promise.resolve([]));
   const [isAdmin, setIsAdmin] = useState(false);
   const [creditos, setCreditos] = useState(null);
   const [activeProvider, setActiveProvider] = useState(null);
@@ -230,14 +292,59 @@ export default function ConsultaCPFPage() {
   };
 
   useEffect(() => {
-    api.get("/admin/sub-logos")
-      .then((res) => setSubLogos(res || []))
-      .catch((error) => {
-        console.error(
-          "Erro ao carregar logos secundários:",
-          error
+    let cancelled = false;
+
+    const loadSecondaryLogos = async () => {
+      let cachedLogos = [];
+      let cachedImagesReady = Promise.resolve();
+
+      try {
+        cachedLogos = normalizeSecondaryLogos(
+          JSON.parse(localStorage.getItem(SECONDARY_LOGOS_CACHE_KEY) || "[]")
         );
-      });
+
+        if (cachedLogos.length > 0) {
+          if (!cancelled) setSubLogos(cachedLogos);
+          cachedImagesReady = preloadSecondaryLogoImages(cachedLogos);
+        }
+      } catch (cacheError) {
+        console.warn("Cache de logos secundárias inválido:", cacheError);
+        localStorage.removeItem(SECONDARY_LOGOS_CACHE_KEY);
+      }
+
+      try {
+        const response = await api.get("/admin/sub-logos");
+        const freshLogos = normalizeSecondaryLogos(response);
+
+        try {
+          localStorage.setItem(
+            SECONDARY_LOGOS_CACHE_KEY,
+            JSON.stringify(freshLogos)
+          );
+        } catch (storageError) {
+          console.warn(
+            "Não foi possível atualizar o cache de logos secundárias:",
+            storageError
+          );
+        }
+
+        await Promise.all([
+          cachedImagesReady,
+          preloadSecondaryLogoImages(freshLogos),
+        ]);
+
+        if (!cancelled) setSubLogos(freshLogos);
+        return freshLogos;
+      } catch (error) {
+        console.error("Erro ao carregar logos secundárias:", error);
+        await cachedImagesReady;
+
+        if (!cancelled) setSubLogos(cachedLogos);
+        return cachedLogos;
+      }
+    };
+
+    secondaryLogosLoadRef.current = loadSecondaryLogos();
 
     const loadPageConfiguration = async () => {
       try {
@@ -298,6 +405,10 @@ export default function ConsultaCPFPage() {
     };
 
     void loadPageConfiguration();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const fetchBalance = async (provider) => {
@@ -408,6 +519,7 @@ export default function ConsultaCPFPage() {
         : "/consultas/promosys/cpf";
 
       const response = await api.post(endpoint, payload);
+      await secondaryLogosLoadRef.current;
       setDados(response);
       setActiveBenefitIndex(0);
 
@@ -457,6 +569,7 @@ export default function ConsultaCPFPage() {
         convenio: isCnpj ? "CNPJ" : (activeProvider === "multicorban" ? convenio : "INSS")
       });
       if (res && (res.cliente || res.beneficio_principal || (res.beneficios && res.beneficios.length > 0))) {
+        await secondaryLogosLoadRef.current;
         setDados(res);
         setActiveBenefitIndex(0);
         await fetchBalance(activeProvider);
@@ -1138,74 +1251,111 @@ export default function ConsultaCPFPage() {
   };
 
   const getSubLogo = (code, name) => {
-    const cleanCode = normalizeBankCode(code);
-    const normalizeName = (value) => String(value || "")
+    const extractBankCode = (value) => {
+      const text = String(value || "").trim();
+      const isolatedCode = text.match(/(?:^|\D)(\d{3})(?:\D|$)/)?.[1];
+
+      if (isolatedCode) return isolatedCode;
+      if (/^\d{1,3}$/.test(text)) return text.padStart(3, "0");
+      return "";
+    };
+
+    const normalizeBankLogoName = (value) => String(value || "")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toUpperCase()
+      .replace(/\b\d{3}\b/g, " ")
+      .replace(
+        /\b(BANCO|BANK|CONSIGNADO|CONSIGNADA|CONSIG|FINANCEIRA|CFI|S\.?A\.?|SA|LTDA|CREDITO|SOCIEDADE)\b/g,
+        " "
+      )
       .replace(/[^A-Z0-9]+/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    const comparableName = (value) => normalizeName(value)
-      .replace(/^\d{1,3}\s+/, "")
-      .replace(/\b(BANCO|BANK|S A|SA|LTDA|CREDITO|CONSIGNADO|CONSIG|FINANCEIRA|SOCIEDADE)\b/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+
+    let cleanCode = extractBankCode(code) || extractBankCode(name);
+    const upperName = String(name || "").toUpperCase().trim();
+
+    if (!cleanCode && (upperName === "CEF" || upperName.includes("CEF"))) {
+      cleanCode = "104";
+    }
+
+    /*
+     * Fonte exclusiva: cadastro de Logos Secundárias.
+     * As logos principais de /admin/banks continuam reservadas à animação.
+     */
+    const availableLogos = normalizeSecondaryLogos(subLogos)
+      .map((logo) => ({
+        name: logo.name,
+        code:
+          logo.codigo
+          || logo.code
+          || logo.bank_code
+          || "",
+        logo_url: logo.logo_url,
+      }))
+      .filter((logo) => logo.logo_url);
+
+    if (cleanCode) {
+      const matchByCode = availableLogos.find((logo) => (
+        (extractBankCode(logo.code) || extractBankCode(logo.name)) === cleanCode
+      ));
+
+      if (matchByCode) return matchByCode.logo_url;
+    }
+
     const aliasesByCode = {
-      "001": ["BANCO DO BRASIL"],
-      "033": ["SANTANDER", "BANCO SANTANDER"],
-      "041": ["BANRISUL", "BANCO DO ESTADO DO RIO GRANDE DO SUL"],
+      "001": ["BANCO DO BRASIL", "BRASIL"],
+      "033": ["SANTANDER"],
+      "041": ["BANRISUL"],
       "070": ["BRB", "BANCO DE BRASILIA"],
-      "104": ["CAIXA", "CEF", "CAIXA ECONOMICA", "CAIXA ECONOMICA FEDERAL"],
-      "121": ["AGIBANK", "BANCO AGIBANK"],
-      "237": ["BRADESCO", "BRADESCO S A", "BANCO BRADESCO"],
+      "104": ["CAIXA", "CEF", "CAIXA ECONOMICA FEDERAL"],
+      "121": ["AGIBANK"],
+      "237": ["BRADESCO"],
       "254": ["PARANA BANCO", "PARANA"],
-      "318": ["BMG", "BANCO BMG"],
-      "320": ["CCB BRASIL", "BANCO CCB BRASIL", "CCB"],
-      "336": ["C6", "C6 BANK", "BANCO C6"],
+      "318": ["BMG"],
+      "320": ["CCB BRASIL", "CCB"],
+      "336": ["C6", "C6 BANK"],
       "341": ["ITAU", "ITAU UNIBANCO"],
-      "389": ["MERCANTIL", "BANCO MERCANTIL", "BANCO MERCANTIL DO BRASIL"],
-      "422": ["SAFRA", "BANCO SAFRA"],
-      "465": ["CAPITAL CONSIG", "CAPITAL CONSIGNADO"],
+      "386": ["NUBANK", "NU FINANCEIRA"],
+      "389": ["MERCANTIL"],
+      "422": ["SAFRA"],
+      "465": ["CAPITAL CONSIG", "CAPITAL CONSIGNADO", "CAPITAL"],
       "623": ["PAN", "BANCO PAN"],
-      "626": ["C6", "C6 BANK", "C6 CONSIG", "C6 CONSIGNADO", "BANCO C6", "BANCO FICSA"],
-      "707": ["DAYCOVAL", "BANCO DAYCOVAL"],
-      "739": ["CETELEM", "BANCO CETELEM"],
-      "756": ["SICOOB", "BANCO SICOOB"],
+      "626": ["C6", "C6 BANK", "C6 CONSIGNADO", "BANCO FICSA"],
+      "707": ["DAYCOVAL"],
+      "739": ["CETELEM"],
+      "748": ["SICREDI", "SICRED"],
+      "756": ["SICOOB"],
       "925": ["BRB", "BRB CREDITO", "BANCO DE BRASILIA"],
     };
 
-    const logoCandidates = subLogos.filter((logo) => String(logo?.logo_url || "").trim());
-
-    if (cleanCode) {
-      const byCode = logoCandidates.find((logo) => {
-        const match = String(logo?.name || "").trim().match(/^(\d{1,3})(?:\s|\-|$)/);
-        return match && normalizeBankCode(match[1]) === cleanCode;
-      });
-      if (byCode) return byCode.logo_url;
-    }
-
-    const requestedNames = [BANK_NAME_BY_CODE[cleanCode], name, ...(aliasesByCode[cleanCode] || [])]
-      .map(comparableName)
+    const requestedNames = [
+      BANK_NAME_BY_CODE[cleanCode],
+      name,
+      ...(aliasesByCode[cleanCode] || []),
+    ]
+      .map(normalizeBankLogoName)
       .filter(Boolean);
 
-    const byName = logoCandidates.find((logo) => {
-      const logoName = comparableName(logo?.name);
-      if (!logoName) return false;
+    const matchByName = availableLogos.find((logo) => {
+      const candidateName = normalizeBankLogoName(logo.name);
+      if (!candidateName) return false;
+
       return requestedNames.some((requestedName) => (
-        logoName === requestedName
+        candidateName === requestedName
         || (
-          logoName.length >= 3
-          && requestedName.length >= 3
+          candidateName.length >= 2
+          && requestedName.length >= 2
           && (
-            logoName.startsWith(`${requestedName} `)
-            || requestedName.startsWith(`${logoName} `)
+            candidateName.includes(requestedName)
+            || requestedName.includes(candidateName)
           )
         )
       ));
     });
 
-    return byName?.logo_url || null;
+    return matchByName?.logo_url || null;
   };
 
   const isSiape = String(
@@ -1938,7 +2088,7 @@ export default function ConsultaCPFPage() {
                         <Icons.CreditCard size={20} />
                       </div>
                       <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">
-                        {isSiape ? "Dados do Vínculo e Pagamento" : "Dados do Benefício e Pagamento"}
+                        Dados do Benefício
                       </h3>
                     </div>
 
@@ -1988,7 +2138,7 @@ export default function ConsultaCPFPage() {
                     <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(90px,0.55fr)_minmax(120px,0.7fr)] gap-4 items-center">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-16 h-14 rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
-                          <BankLogo src={getSubLogo(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)} alt={activeBenefit.banco_pagador?.nome || "Banco pagador"} className="w-full h-full object-contain p-1" />
+                          <BankLogo src={getSubLogo(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome)} alt={activeBenefit.banco_pagador?.nome || "Banco pagador"} className="w-full h-full object-cover" />
                         </div>
                         <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Banco</p><p className="text-sm font-black text-slate-800 uppercase leading-tight break-words mt-1">{formatBankName(activeBenefit.banco_pagador?.codigo, activeBenefit.banco_pagador?.nome) || "Não Informado"}</p></div>
                       </div>
