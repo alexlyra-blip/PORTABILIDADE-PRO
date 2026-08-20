@@ -52,6 +52,15 @@ class User(Base):
     phone = Column(String(15), nullable=True)
     last_access = Column(DateTime(timezone=True), nullable=True)
     current_token = Column(Text, nullable=True)
+    # Regras comerciais de acesso. Campos nulos preservam usuários antigos
+    # sem vencimento até que o administrador faça a primeira renovação.
+    is_demo_user = Column(Boolean, default=False, server_default="false", nullable=False)
+    allow_concurrent_sessions = Column(Boolean, default=False, server_default="false", nullable=False)
+    subscription_expires_at = Column(DateTime(timezone=True), nullable=True)
+    subscription_auto_renew = Column(Boolean, default=False, server_default="false", nullable=False)
+    subscription_last_renewed_at = Column(DateTime(timezone=True), nullable=True)
+    subscription_last_renewed_by_user_id = Column(Integer, nullable=True)
+    created_by_user_id = Column(Integer, nullable=True)
     can_consult_cpf = Column(Boolean, default=False)
     can_use_credit_card = Column(Boolean, default=False)
     monthly_goal = Column(Float, default=110000.0)

@@ -28,23 +28,23 @@ def compress_logo_to_webp_base64(file_contents: bytes) -> str:
     import io
     import base64
     from PIL import Image
-    
+
     try:
         # Carregar imagem
         img = Image.open(io.BytesIO(file_contents))
-        
+
         # Converter para RGBA para preservar transparência se aplicável
         if img.mode not in ('RGB', 'RGBA'):
             img = img.convert('RGBA')
-            
+
         # Redimensionar para tamanho máximo de 128x128 usando LANCZOS
         img.thumbnail((128, 128), Image.Resampling.LANCZOS)
-        
+
         # Salvar em formato WEBP leve com qualidade 75
         out_buf = io.BytesIO()
         img.save(out_buf, format="WEBP", quality=75)
         webp_bytes = out_buf.getvalue()
-        
+
         return f"data:image/webp;base64,{base64.b64encode(webp_bytes).decode()}"
     except Exception as e:
         print(f"Error compressing image: {e}")
@@ -101,10 +101,10 @@ async def get_bank_image(bank_id: int, db: AsyncSession = Depends(get_db)):
 
     result = await db.execute(select(Bank).where(Bank.id == bank_id))
     bank = result.scalar_one_or_none()
-    
+
     if not bank or not bank.logo_url or not bank.logo_url.startswith("data:image"):
         raise HTTPException(status_code=404, detail="Image not found")
-        
+
     try:
         header, encoded = bank.logo_url.split(",", 1)
         content_type = header.split(":")[1].split(";")[0]
@@ -133,9 +133,9 @@ async def delete_bank(bank_id: int, db: AsyncSession = Depends(get_db), admin: U
 
 @router.post("/banks/{bank_id}/upload-logo")
 async def upload_bank_logo(
-    bank_id: int, 
-    file: UploadFile = File(...), 
-    db: AsyncSession = Depends(get_db), 
+    bank_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
     admin: UserResponse = Depends(get_admin_user)
 ):
     import base64
@@ -144,12 +144,12 @@ async def upload_bank_logo(
         base64_logo = compress_logo_to_webp_base64(contents)
     except Exception:
         base64_logo = f"data:{file.content_type};base64,{base64.b64encode(contents).decode()}"
-    
+
     bank = await AdminService.update_bank(db, bank_id, {"logo_url": base64_logo})
-    
+
     if not bank:
         raise HTTPException(status_code=404, detail="Bank not found")
-        
+
     return {"logo_url": base64_logo}
 
 # Rules
@@ -287,10 +287,10 @@ async def get_sub_logo_image(logo_id: int, db: AsyncSession = Depends(get_db)):
 
     result = await db.execute(select(SubAgreementLogo).where(SubAgreementLogo.id == logo_id))
     logo = result.scalar_one_or_none()
-    
+
     if not logo or not logo.logo_url or not logo.logo_url.startswith("data:image"):
         raise HTTPException(status_code=404, detail="Image not found")
-        
+
     try:
         header, encoded = logo.logo_url.split(",", 1)
         content_type = header.split(":")[1].split(";")[0]
@@ -316,9 +316,9 @@ async def delete_sub_logo(logo_id: int, db: AsyncSession = Depends(get_db), admi
 
 @router.post("/sub-logos/{logo_id}/upload-logo")
 async def upload_sub_logo(
-    logo_id: int, 
-    file: UploadFile = File(...), 
-    db: AsyncSession = Depends(get_db), 
+    logo_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
     admin: UserResponse = Depends(get_admin_user)
 ):
     import base64
@@ -327,14 +327,14 @@ async def upload_sub_logo(
         base64_logo = compress_logo_to_webp_base64(contents)
     except Exception:
         base64_logo = f"data:{file.content_type};base64,{base64.b64encode(contents).decode()}"
-    
+
     logo = await AdminService.update_sub_logo(db, logo_id, {"logo_url": base64_logo})
     if not logo:
         raise HTTPException(status_code=404, detail="Logo not found")
     return {"logo_url": base64_logo}
 
 # Users
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/users")
 async def list_users(db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_manager_user)):
     return await AdminService.get_all_users(db, current_user)
 
@@ -349,6 +349,17 @@ async def update_user(user_id: int, user_data: dict, db: AsyncSession = Depends(
         raise HTTPException(status_code=404, detail="User not found")
     return user_obj
 
+@router.post("/users/{user_id}/renew", response_model=UserResponse)
+async def renew_user_subscription(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: UserResponse = Depends(get_admin_user),
+):
+    user_obj = await AdminService.renew_user_subscription(db, user_id, admin, 30)
+    if not user_obj:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user_obj
+
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_manager_user)):
     success = await AdminService.delete_user(db, user_id, current_user)
@@ -356,12 +367,13 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db), current_
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deleted"}
 
-@router.get("/users/{user_id}", response_model=UserResponse)
+@router.get("/users/{user_id}")
 async def get_user(user_id: int, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
     user_obj = await AdminService.get_user_by_id(db, user_id, current_user)
     if not user_obj:
         raise HTTPException(status_code=404, detail="User not found")
-    return user_obj
+    visible_users = await AdminService.get_all_users(db, current_user)
+    return next((item for item in visible_users if item["id"] == user_id), None)
 
 # Configuracoes de Regras e Bancos
 @router.get("/users/{user_id}/rules")
@@ -409,8 +421,15 @@ async def list_simulations(db: AsyncSession = Depends(get_db), current_user: Use
     return await AdminService.get_all_simulations(db, current_user)
 
 @router.get("/dashboard-stats")
-async def get_dashboard_stats(days: int = 30, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
-    return await AdminService.get_dashboard_stats(db, current_user, days=days)
+async def get_dashboard_stats(
+    days: int = 30,
+    promotora_id: int = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
+    return await AdminService.get_dashboard_stats(
+        db, current_user, days=days, promotora_id=promotora_id
+    )
 
 @router.get("/dashboard-recent")
 async def get_dashboard_recent(
@@ -436,24 +455,32 @@ async def get_dashboard_recent(
     )
 
 @router.get("/export-stats-pdf")
-async def export_stats_pdf(days: int = 30, db: AsyncSession = Depends(get_db), current_user: UserResponse = Depends(get_current_user)):
+async def export_stats_pdf(
+    days: int = 30,
+    promotora_id: int = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
     if current_user.role not in ["admin", "promotora"]:
         raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    stats = await AdminService.get_dashboard_stats(db, current_user, days)
-    
+
+    stats = await AdminService.get_dashboard_stats(
+        db, current_user, days, promotora_id=promotora_id
+    )
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
     styles = getSampleStyleSheet()
     elements = []
-    
+
     title = ParagraphStyle('Title', parent=styles['Heading1'], alignment=1, fontSize=18, textColor=colors.HexColor('#0f172a'))
-    elements.append(Paragraph(f"Relatório de Produtividade - Últimos {days} Dias", title))
+    scope_name = stats.get("scope", {}).get("name", "Visão Global")
+    elements.append(Paragraph(f"Relatório de Produtividade - {scope_name} - Últimos {days} Dias", title))
     elements.append(Spacer(1, 0.5*cm))
-    
+
     elements.append(Paragraph(f"Gerado por: {current_user.name} ({current_user.role.upper()}) em {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
     elements.append(Spacer(1, 1*cm))
-    
+
     elements.append(Paragraph("Resumo de Simulações", styles['Heading2']))
     summary_data = [
         ["Bancos Atingidos", "Tabelas Atingidas", "Total de Simulações na Base"],
@@ -471,12 +498,12 @@ async def export_stats_pdf(days: int = 30, db: AsyncSession = Depends(get_db), c
     ]))
     elements.append(t)
     elements.append(Spacer(1, 1*cm))
-    
+
     elements.append(Paragraph("Ranking de Usuários (Top 5+ Consultores)", styles['Heading2']))
     users_data = [["Posição", "Nome do Consultor", "Simulações / Vendas"]]
-    for i, u in enumerate(stats["stats"].get("top_3_users", [])[:10]): 
+    for i, u in enumerate(stats["stats"].get("top_users", [])[:10]):
         users_data.append([f"#{i+1}", u["name"], str(u["count"])])
-        
+
     t_users = Table(users_data, colWidths=[3*cm, 8*cm, 5*cm])
     t_users.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#10b981')),
@@ -490,9 +517,9 @@ async def export_stats_pdf(days: int = 30, db: AsyncSession = Depends(get_db), c
 
     elements.append(Paragraph("Ranking de Bancos e Instituições (Top 5+ Ofertas)", styles['Heading2']))
     banks_data = [["Posição", "Instituição Bancária", "Ofertas Emitidas"]]
-    for i, b in enumerate(stats["stats"].get("top_3_banks", [])[:10]): 
+    for i, b in enumerate(stats["stats"].get("top_banks", [])[:10]):
         banks_data.append([f"#{i+1}", b["name"], str(b["count"])])
-        
+
     t_banks = Table(banks_data, colWidths=[3*cm, 8*cm, 5*cm])
     t_banks.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#6366f1')),
@@ -505,10 +532,10 @@ async def export_stats_pdf(days: int = 30, db: AsyncSession = Depends(get_db), c
 
     doc.build(elements)
     buffer.seek(0)
-    
+
     return StreamingResponse(
-        buffer, 
-        media_type="application/pdf", 
+        buffer,
+        media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=relatorio_vendas_{days}d.pdf"}
     )
 
@@ -539,17 +566,17 @@ async def get_whatsapp_logs(
     user_id: int = None
 ):
     query = select(WhatsappChatLog, User).outerjoin(User, WhatsappChatLog.user_id == User.id).order_by(WhatsappChatLog.created_at.desc())
-    
+
     if protocol:
         query = query.where(WhatsappChatLog.protocol.ilike(f"%{protocol}%"))
     if phone:
         query = query.where(WhatsappChatLog.sender_phone.ilike(f"%{phone}%"))
     if user_id:
         query = query.where(WhatsappChatLog.user_id == user_id)
-        
+
     result = await db.execute(query)
     rows = result.all()
-    
+
     def safe_loads(msg_str):
         if not msg_str: return []
         try:
@@ -564,7 +591,7 @@ async def get_whatsapp_logs(
             return []
         except:
             return []
-            
+
     return [
         {
             "id": log.id,

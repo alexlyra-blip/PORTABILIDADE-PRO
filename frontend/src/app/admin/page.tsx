@@ -8,8 +8,8 @@ import AnnouncementManager from "@/components/admin/AnnouncementManager";
 import ThemeManager from "@/components/admin/ThemeManager";
 import { api, getStaticUrl } from "@/utils/api";
 import { useToast } from "@/components/ToastProvider";
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, PieChart, Pie, Cell, Legend
 } from 'recharts';
 
@@ -22,17 +22,20 @@ export default function AdminPage() {
   const [downloadState, setDownloadState] = useState("idle"); // 'idle' | 'loading' | 'success'
   const [loading, setLoading] = useState(true);
   const [filterDays, setFilterDays] = useState(1);
+  const [promotoraId, setPromotoraId] = useState<number | null>(null);
+  const [scopeReady, setScopeReady] = useState(false);
 
   // Arquitetura Fail-Safe: Estado totalmente imutável e estruturado para evitar qualquer quebra.
   const [data, setData] = useState<any>({
+    scope: { type: "global", id: null, name: "Visão Global", logo_url: null, users_count: null },
     totals: { banks: 0, tables: 0, simulations: 0, simulations_period: 0 },
-    stats: { 
+    stats: {
       top_bank: "Sem dados", top_bank_logo: null,
       top_origin_bank: "Sem dados", top_origin_logo: null,
       top_table: "Sem dados", top_table_logo: null,
       top_user: "Nenhum", top_user_count: 0,
-      avg_rate: "0%", 
-      top_banks: [], top_users: [] 
+      avg_rate: "0%",
+      top_banks: [], top_users: []
     },
     agreements: [],
     historical: []
@@ -48,26 +51,36 @@ export default function AdminPage() {
         setRole(parsedUser.role || "vendedor");
       } catch (e) {}
     }
+    const params = new URLSearchParams(window.location.search);
+    const requestedPromotora = Number(params.get("promotora_id"));
+    setPromotoraId(Number.isInteger(requestedPromotora) && requestedPromotora > 0 ? requestedPromotora : null);
+    setScopeReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!scopeReady) return;
     fetchData(true);
-    
+
     // Auto-refresh inteligente a cada 2 minutos alinhado com o cache
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         fetchData(false);
       }
     }, 120000);
-    
+
     return () => clearInterval(interval);
-  }, [filterDays]);
+  }, [filterDays, promotoraId, scopeReady]);
 
   const fetchData = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
-      const res = await api.get(`/admin/dashboard-stats?days=${filterDays}`);
+      const scopeQuery = promotoraId ? `&promotora_id=${promotoraId}` : "";
+      const res = await api.get(`/admin/dashboard-stats?days=${filterDays}${scopeQuery}`);
       const d = res.data || res;
 
       if (d) {
         setData({
+          scope: d.scope || { type: "global", id: null, name: "Visão Global", logo_url: null, users_count: null },
           totals: d.totals || { banks: 0, tables: 0, simulations: 0, simulations_period: 0 },
           stats: {
             top_bank: d.stats?.top_bank || "Sem dados",
@@ -98,7 +111,8 @@ export default function AdminPage() {
     try {
       setDownloadState("loading");
       const token = localStorage.getItem('token');
-      const url = `${window.location.origin}/api/admin/export-stats-pdf?days=${filterDays}`;
+      const scopeQuery = promotoraId ? `&promotora_id=${promotoraId}` : "";
+      const url = `${window.location.origin}/api/admin/export-stats-pdf?days=${filterDays}${scopeQuery}`;
       const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
       if (!response.ok) throw new Error("Erro ao gerar PDF");
       const blob = await response.blob();
@@ -124,7 +138,7 @@ export default function AdminPage() {
     </div>
   );
 
-  if (role !== "admin") {
+  if (role !== "admin" && role !== "promotora") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
         <div className="w-24 h-24 bg-red-500/10 text-red-500 rounded-[2rem] flex items-center justify-center mb-6 border border-red-500/20 shadow-2xl">
@@ -140,19 +154,28 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700 max-w-7xl mx-auto pb-10">
-      
-      <PageHeader 
-        title="Painel" 
-        highlight="Inteligente" 
-        subtitle="Visão Global Administrativa e Métricas de Uso"
+
+      <PageHeader
+        title={role === "promotora" ? "Painel" : data.scope?.type === "promotora" ? "Painel da" : "Painel"}
+        highlight={role === "promotora" ? "Inteligente" : data.scope?.type === "promotora" ? data.scope.name : "Inteligente"}
+        subtitle={role === "promotora" ? `Visão geral exclusiva de ${data.scope?.name || "sua promotora"} e sua equipe` : data.scope?.type === "promotora" ? "Painel Inteligente exclusivo da promotora e sua equipe" : "Visão Global Administrativa e Métricas de Uso"}
       >
+        {role === "admin" && data.scope?.type === "promotora" && (
+          <button
+            type="button"
+            onClick={() => window.location.href = "/admin/users"}
+            className="py-3 px-5 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 text-[10px] font-black uppercase tracking-widest transition-all"
+          >
+            ← Voltar para usuários
+          </button>
+        )}
         <div className="bg-black/20 px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-3 backdrop-blur-md">
            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"></span>
            <span className="text-[10px] font-black text-white uppercase tracking-widest">Sistema Operante</span>
         </div>
 
-        <select 
-          value={filterDays} 
+        <select
+          value={filterDays}
           onChange={(e) => setFilterDays(Number(e.target.value))}
           className="py-3 px-6 bg-white hover:bg-slate-50 text-blue-900 rounded-2xl border-none text-[11px] font-black uppercase tracking-widest cursor-pointer shadow-lg transition-all"
         >
@@ -161,9 +184,9 @@ export default function AdminPage() {
           <option value={30}>Últimos 30 Dias</option>
           <option value={90}>Últimos 90 Dias</option>
         </select>
-        
-        <button 
-          onClick={handleExportPDF} 
+
+        <button
+          onClick={handleExportPDF}
           disabled={downloadState === "loading"}
           className={`py-3 px-6 text-white rounded-2xl border border-white/20 shadow-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group cursor-pointer ${
             downloadState === "loading"
@@ -182,33 +205,33 @@ export default function AdminPage() {
 
       {/* Cards de Métricas Rápidas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard 
-          title="Bancos Cadastrados" 
-          value={data.totals.banks} 
+        <StatsCard
+          title="Bancos Cadastrados"
+          value={data.totals.banks}
           icon={<Icons.Bank />}
-          trend="+12%" 
-          trendUp={true} 
+          trend="+12%"
+          trendUp={true}
         />
-        <StatsCard 
-          title="Tabelas de Regras" 
-          value={data.totals.tables} 
+        <StatsCard
+          title="Tabelas de Regras"
+          value={data.totals.tables}
           icon={<Icons.Table />}
-          trend="Ativas" 
-          trendUp={true} 
+          trend="Ativas"
+          trendUp={true}
         />
-        <StatsCard 
-          title="Usuários Ativos" 
-          value={data.stats.top_users.length} 
+        <StatsCard
+          title="Usuários Ativos"
+          value={data.scope?.type === "promotora" ? data.scope.users_count : data.stats.top_users.length}
           icon={<Icons.Users />}
-          trend="Sincronizados" 
-          trendUp={true} 
+          trend="Sincronizados"
+          trendUp={true}
         />
-        <StatsCard 
-          title="Simulações (Total)" 
-          value={data.totals.simulations} 
+        <StatsCard
+          title="Simulações (Total)"
+          value={data.totals.simulations}
           icon={<Icons.Activity />}
-          trend={`${data.totals.simulations_period} no período`} 
-          trendUp={true} 
+          trend={`${data.totals.simulations_period} no período`}
+          trendUp={true}
         />
       </div>
 
@@ -221,7 +244,7 @@ export default function AdminPage() {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Evolução no período selecionado</p>
             </div>
           </div>
-          
+
           <div className="h-72 w-full">
             {data.historical.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -235,7 +258,7 @@ export default function AdminPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 900 }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 900 }} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                     itemStyle={{ fontWeight: 900, fontSize: '12px', color: '#1e293b' }}
                   />
@@ -256,7 +279,7 @@ export default function AdminPage() {
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl">
             <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase mb-1">Convênios</h3>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Porcentagem das requisições</p>
-            
+
             <div className="h-64 w-full">
               {data.agreements.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">

@@ -29,6 +29,11 @@ export default function LoginPage() {
   // Load remembered settings on mount
   useEffect(() => {
     setMounted(true);
+    const accessError = sessionStorage.getItem("access_error");
+    if (accessError) {
+      setError(accessError);
+      sessionStorage.removeItem("access_error");
+    }
     
     // Load last active branding (cached regardless of remember_me) to show identity immediately
     const cachedBranding = localStorage.getItem('last_active_branding');

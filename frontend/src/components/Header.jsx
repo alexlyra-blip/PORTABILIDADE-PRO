@@ -8,7 +8,7 @@ import { useToast } from "@/components/ToastProvider";
 
 export default function Header() {
   const { toast } = useToast();
-  const [user, setUser] = useState({ name: 'Usuário', role: 'corretor', avatar_url: '' });
+  const [user, setUser] = useState({ name: 'Usuário', role: 'corretor', avatar_url: '', access_notice: null });
   const [showSettings, setShowSettings] = useState(false);
   const [contracts, setContracts] = useState([]);
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function Header() {
           };
         }
       }
-      
+
       const savedMeta = localStorage.getItem('meta_config');
       if (savedMeta) {
          setMetaConfig(JSON.parse(savedMeta));
@@ -67,9 +67,9 @@ export default function Header() {
         }
       });
     };
-    
+
     loadUser();
-    
+
     // Escuta mudanças na meta em outras janelas/páginas
     const handleStorageChange = (e) => {
        if (!e || e.key === 'meta_config' || e.type === 'meta-updated' || e.type === 'contracts-updated' || e.key === 'accepted_contracts') {
@@ -83,7 +83,7 @@ export default function Header() {
     window.addEventListener('meta-updated', handleStorageChange);
     window.addEventListener('contracts-updated', handleStorageChange);
     window.addEventListener('user-updated', loadUser);
-    
+
     const handleClickOutside = (e) => {
       if (settingsRef.current && !settingsRef.current.contains(e.target)) {
         setShowSettings(false);
@@ -93,7 +93,7 @@ export default function Header() {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       window.removeEventListener('user-updated', loadUser);
@@ -107,6 +107,8 @@ export default function Header() {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
+
+  const accessNotice = user?.access_notice;
 
   const updateMetaValue = async (newVal) => {
     const val = Number(newVal);
@@ -158,7 +160,7 @@ export default function Header() {
       const vContrato = Number(item.valor_contrato || item.parcela || 0);
       let isInPeriod = false;
       const itemDate = item.data_aceite ? new Date(item.data_aceite + "T12:00:00") : null;
-      
+
       if (item.data_aceite) {
         if (tipo === 'mensal') {
           const itemMonth = item.data_aceite.substring(0, 7);
@@ -243,8 +245,8 @@ export default function Header() {
                 </span>
                 <span className="text-slate-400">/</span>
                 {isEditingMeta ? (
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     value={stats.target}
                     autoFocus
                     onBlur={() => setIsEditingMeta(false)}
@@ -255,7 +257,7 @@ export default function Header() {
                     className="bg-transparent w-20 text-blue-600 outline-none border-b border-blue-500 transition-all text-center font-black"
                   />
                 ) : (
-                  <span 
+                  <span
                     onClick={() => setIsEditingMeta(true)}
                     className="text-blue-600 cursor-pointer hover:underline font-black"
                     title="Clique para editar a meta"
@@ -270,26 +272,26 @@ export default function Header() {
 
         {/* Sino de Notificações */}
         <div className="relative" ref={notificationRef}>
-          <button 
+          <button
             onClick={() => setShowAnnPopover(!showAnnPopover)}
             className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors relative cursor-pointer"
             title="Comunicados e Notificações"
           >
-            <svg 
-              className={`w-6 h-6 transition-transform ${unread ? "animate-bounce" : "hover:rotate-12"}`} 
-              fill="none" 
-              viewBox="0 0 24 24" 
+            <svg
+              className={`w-6 h-6 transition-transform ${(unread || accessNotice) ? "animate-bounce" : "hover:rotate-12"}`}
+              fill="none"
+              viewBox="0 0 24 24"
               stroke="currentColor"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            {unread && (
+            {(unread || accessNotice) && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-[#0f172a] flex items-center justify-center animate-pulse">
                 <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
               </span>
             )}
           </button>
-          
+
           {showAnnPopover && (
             <div className="absolute right-0 mt-4 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in slide-in-from-top-2 p-5 text-left">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3 mb-4">
@@ -300,7 +302,15 @@ export default function Header() {
                   <span className="text-[9px] font-black bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-md uppercase tracking-widest">Novo</span>
                 )}
               </div>
-              
+
+              {accessNotice && (
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-amber-600">Vencimento do seu acesso</p>
+                  <p className="mt-1 text-xs font-black text-slate-800">{accessNotice.message}</p>
+                  <p className="mt-1 text-[10px] text-slate-500">Solicite a renovação ao administrador responsável.</p>
+                </div>
+              )}
+
               {announcement ? (
                 <div className="space-y-4">
                   <div>
@@ -309,25 +319,25 @@ export default function Header() {
                       {announcement.created_at ? new Date(announcement.created_at).toLocaleDateString('pt-BR') : ''}
                     </p>
                   </div>
-                  
+
                   {announcement.image_url && (
                     <div className="rounded-xl overflow-hidden border border-slate-100 dark:border-white/5 shadow-sm max-h-36 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-                      <img 
-                        src={getStaticUrl(announcement.image_url) || ''} 
-                        className="w-full h-full object-cover cursor-zoom-in hover:scale-[1.02] transition-transform" 
+                      <img
+                        src={getStaticUrl(announcement.image_url) || ''}
+                        className="w-full h-full object-cover cursor-zoom-in hover:scale-[1.02] transition-transform"
                         onClick={() => setIsZoomed(true)}
-                        alt="Card Notificação" 
+                        alt="Card Notificação"
                         title="Clique para ampliar"
                       />
                     </div>
                   )}
-                  
+
                   <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed max-h-40 overflow-y-auto pr-1 whitespace-pre-line custom-scrollbar">
                     {announcement.message}
                   </div>
-                  
+
                   {unread ? (
-                    <button 
+                    <button
                       onClick={() => {
                         localStorage.setItem(`announcement_read_${announcement.id}`, 'true');
                         setUnread(false);
@@ -351,7 +361,7 @@ export default function Header() {
         </div>
 
         <div className="relative" ref={settingsRef}>
-          <div 
+          <div
             className="flex items-center space-x-3 pl-4 border-l border-slate-200 dark:border-white/10 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => setShowSettings(!showSettings)}
           >
@@ -366,7 +376,7 @@ export default function Header() {
             </div>
             <div className="flex flex-col items-start hidden sm:flex">
               <span className="text-sm font-black text-slate-800 dark:text-white leading-tight drop-shadow-sm">{user.name}</span>
-              <span 
+              <span
                 className="text-[9px] font-black uppercase tracking-widest leading-tight opacity-70"
                 style={{ color: user.brand_color || '#2563eb' }}
               >
@@ -396,7 +406,7 @@ export default function Header() {
                  <p className="text-xs text-slate-500 dark:text-slate-400">{user.email || 'Perfil Autenticado'}</p>
               </div>
               <div className="p-2">
-                <button 
+                <button
                   onClick={() => { router.push('/admin/users'); setShowSettings(false); }}
                   className="w-full text-left px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
@@ -418,13 +428,13 @@ export default function Header() {
       {isZoomed && announcement && announcement.image_url && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md cursor-zoom-out" onClick={() => setIsZoomed(false)}>
           <div className="relative max-w-[95vw] max-h-[90vh] z-10 flex flex-col items-center select-none" onClick={(e) => e.stopPropagation()}>
-            <img 
-              src={getStaticUrl(announcement.image_url)} 
+            <img
+              src={getStaticUrl(announcement.image_url)}
               className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/10 cursor-zoom-out"
               onClick={() => setIsZoomed(false)}
-              alt="Card Ampliado" 
+              alt="Card Ampliado"
             />
-            <button 
+            <button
               onClick={() => setIsZoomed(false)}
               className="mt-6 px-8 py-3 bg-white text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl active:scale-95"
             >

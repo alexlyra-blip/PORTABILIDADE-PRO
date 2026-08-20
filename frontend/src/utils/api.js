@@ -35,7 +35,25 @@ const handleResponse = async (response, endpoint, method) => {
   }
 
   if (response.status === 403) {
-    throw new Error(`Acesso negado (${response.status}): Você não tem permissão para esta operação.`);
+    let detail = "Você não tem permissão para esta operação.";
+    try {
+      const data = await response.json();
+      detail = typeof data?.detail === "string" ? data.detail : detail;
+    } catch (_) {}
+
+    const accessBlocked = [
+      "Seu acesso expirou",
+      "promotora está indisponível",
+      "Usuário inativo",
+    ].some((message) => detail.includes(message));
+
+    if (accessBlocked && endpoint !== "/auth/login" && typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      sessionStorage.setItem("access_error", detail);
+      window.location.href = "/login";
+    }
+    throw new Error(detail);
   }
 
   if (!response.ok) {

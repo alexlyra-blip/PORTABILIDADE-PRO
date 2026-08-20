@@ -58,6 +58,10 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    is_demo_user: Optional[bool] = False
+    allow_concurrent_sessions: Optional[bool] = False
+    subscription_expires_at: Optional[datetime] = None
+    subscription_auto_renew: Optional[bool] = False
 
 # Auth Schemas
 class LoginRequest(BaseModel):
@@ -69,6 +73,10 @@ class UserResponse(UserBase):
     simulations_count: Optional[int] = 0
     last_access: Optional[datetime] = None
     broker_name: Optional[str] = None
+    subscription_expires_at: Optional[datetime] = None
+    subscription_days_remaining: Optional[int] = None
+    subscription_status: Optional[str] = None
+    access_notice: Optional[dict] = None
     class Config:
         from_attributes = True
 
