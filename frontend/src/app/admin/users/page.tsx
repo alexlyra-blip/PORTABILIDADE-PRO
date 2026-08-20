@@ -5,6 +5,7 @@ import { api, getStaticUrl } from "@/utils/api";
 import { Icons } from "@/components/Icons";
 import { useToast } from "@/components/ToastProvider";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 
 
 interface User {
@@ -15,6 +16,10 @@ interface User {
   active?: boolean; phone?: string; can_consult_cpf?: boolean;
   can_use_credit_card?: boolean;
   subscription_expires_at?: string; users_count?: number;
+  subscription_auto_renew?: boolean; subscription_days_remaining?: number;
+  subscription_status?: string; is_demo_user?: boolean;
+  allow_concurrent_sessions?: boolean;
+  effective_active?: boolean; access_block_reason?: string;
   promotora_id?: number; broker_id?: number;
   simulations_count?: number;
   last_access?: string;
@@ -27,7 +32,16 @@ function getDaysLeft(expiresAt?: string): number | null {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
+function toLocalDateTimeInput(value?: string): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 16);
+}
+
 export default function UsersPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +61,9 @@ export default function UsersPage() {
     seller_limit: 0, brand_color: "#2563eb", sidebar_color: "#0f172a",
     sidebar_color_secondary: "#1e293b", highlight_color: "#2563eb", logo_url: "", avatar_url: "",
     is_temporary_password: true, active: true, phone: "",
-    can_consult_cpf: false, can_use_credit_card: false
+    can_consult_cpf: false, can_use_credit_card: false,
+    is_demo_user: false, subscription_auto_renew: false,
+    subscription_expires_at: "", broker_id: null
   });
 
 
@@ -93,7 +109,11 @@ export default function UsersPage() {
         active: user.active ?? true,
         phone: user.phone || "",
         can_consult_cpf: user.can_consult_cpf ?? false,
-        can_use_credit_card: user.can_use_credit_card ?? false });
+        can_use_credit_card: user.can_use_credit_card ?? false,
+        is_demo_user: user.is_demo_user ?? false,
+        subscription_auto_renew: user.subscription_auto_renew ?? false,
+        subscription_expires_at: toLocalDateTimeInput(user.subscription_expires_at),
+        broker_id: user.broker_id ?? null });
     } else {
       setEditingUser(null);
       const isPromo = loggedUser?.role === 'promotora';
@@ -106,10 +126,43 @@ export default function UsersPage() {
         logo_url: isPromo && loggedUser.logo_url ? loggedUser.logo_url : "", 
         avatar_url: isPromo && loggedUser.avatar_url ? loggedUser.avatar_url : "", 
         is_temporary_password: true, active: true, phone: "",
-        can_consult_cpf: false, can_use_credit_card: false
+        can_consult_cpf: false, can_use_credit_card: false,
+        is_demo_user: false, subscription_auto_renew: false,
+        subscription_expires_at: "", broker_id: null
       });
     }
     setModalOpen(true);
+  };
+
+  const handlePromotoraSelection = (value: string) => {
+    const promoterId = value ? Number(value) : null;
+    const promoter = users.find(
+      (candidate) => candidate.id === promoterId && candidate.role === "promotora"
+    );
+
+    setFormData((current: any) => ({
+      ...current,
+      broker_id: promoterId,
+      ...(promoter
+        ? {
+            brand_color: promoter.brand_color || "#2563eb",
+            sidebar_color: promoter.sidebar_color || "#0f172a",
+            sidebar_color_secondary:
+              promoter.sidebar_color_secondary || "#1e293b",
+            highlight_color:
+              promoter.highlight_color || promoter.brand_color || "#2563eb",
+            logo_url: promoter.logo_url || promoter.avatar_url || "",
+            avatar_url: promoter.avatar_url || promoter.logo_url || "",
+          }
+        : {
+            brand_color: "#2563eb",
+            sidebar_color: "#0f172a",
+            sidebar_color_secondary: "#1e293b",
+            highlight_color: "#2563eb",
+            logo_url: "",
+            avatar_url: "",
+          }),
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -117,6 +170,8 @@ export default function UsersPage() {
     try {
       if (editingUser) {
         const updateData = { ...formData }; if (!updateData.password) delete updateData.password;
+        if (!updateData.subscription_expires_at) delete updateData.subscription_expires_at;
+        else updateData.subscription_expires_at = new Date(updateData.subscription_expires_at).toISOString();
         await api.patch(`/admin/users/${editingUser.id}`, updateData);
         if (loggedUser?.id === editingUser.id) {
           const nu = { ...loggedUser, ...updateData }; localStorage.setItem('user', JSON.stringify(nu));
@@ -124,7 +179,13 @@ export default function UsersPage() {
         }
       } else {
         if (!formData.password) { toast.warning("Senha é obrigatória."); setIsSubmitting(false); return; }
-        await api.post("/admin/users", formData);
+        const createData = { ...formData };
+        if (createData.subscription_expires_at) {
+          createData.subscription_expires_at = new Date(createData.subscription_expires_at).toISOString();
+        } else {
+          delete createData.subscription_expires_at;
+        }
+        await api.post("/admin/users", createData);
       }
       setModalOpen(false); setEditingUser(null); loadUsers();
       toast.success("Usuário salvo com sucesso!");
@@ -136,11 +197,18 @@ export default function UsersPage() {
     const msg = newActive ? `Reativar ${user.name}?` : `Bloquear ${user.name}? ${user.role === 'promotora' ? 'Todos os usuários da promotora também serão bloqueados.' : ''}`;
     if (!window.confirm(msg)) return;
     try {
-      await api.patch(`/admin/users/${user.id}`, { active: newActive,
-        ...(newActive && user.role === 'promotora' ? { subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() } : {})
-      });
+      await api.patch(`/admin/users/${user.id}`, { active: newActive });
       loadUsers();
       toast.success("Status do usuário atualizado!");
+    } catch (e) { console.error(e); }
+  };
+
+  const handleRenew = async (user: User) => {
+    if (!window.confirm(`Renovar o acesso de ${user.name} por mais 30 dias?`)) return;
+    try {
+      await api.post(`/admin/users/${user.id}/renew`, {});
+      await loadUsers();
+      toast.success("Acesso renovado por 30 dias.");
     } catch (e) { console.error(e); }
   };
 
@@ -175,10 +243,11 @@ export default function UsersPage() {
     const daysLeft = getDaysLeft(user.subscription_expires_at);
     const isPromo = user.role === 'promotora';
     const isBlocked = user.active === false;
+    const isEffectivelyBlocked = user.effective_active === false;
     const usedUsers = users.filter(u => u.broker_id === user.id).length;
     
     return (
-      <div key={user.id} className={`bg-slate-50 dark:bg-white/5 p-6 rounded-[2.5rem] border transition-all group relative overflow-hidden ${isBlocked ? 'border-red-200 dark:border-red-900/30 bg-red-50/30' : 'border-slate-100 dark:border-white/5 hover:border-blue-500/30'}`}>
+      <div key={user.id} className={`bg-slate-50 dark:bg-white/5 p-6 rounded-[2.5rem] border transition-all group relative overflow-hidden ${isEffectivelyBlocked ? 'border-red-200 dark:border-red-900/30 bg-red-50/30' : 'border-slate-100 dark:border-white/5 hover:border-blue-500/30'}`}>
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="relative">
@@ -191,7 +260,7 @@ export default function UsersPage() {
                 </div>
               )}
             </div>
-            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm ${isBlocked ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
+            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm ${isEffectivelyBlocked ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
           </div>
           <div className="flex flex-col items-end gap-2">
             <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
@@ -203,6 +272,12 @@ export default function UsersPage() {
             <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${isBlocked ? 'bg-red-100 text-red-600 border-red-200' : 'bg-emerald-100 text-emerald-600 border-emerald-200'}`}>
               {isBlocked ? '🚫 Bloqueado' : '✅ Ativo'}
             </span>
+            {user.is_demo_user && loggedUser?.role === 'admin' && (
+              <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase border bg-violet-100 text-violet-700 border-violet-200">Demo · simultâneo</span>
+            )}
+            {!isBlocked && user.access_block_reason === 'promotora' && (
+              <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase border bg-red-100 text-red-700 border-red-200">Promotora indisponível</span>
+            )}
           </div>
         </div>
 
@@ -227,9 +302,9 @@ export default function UsersPage() {
         </div>
 
         {/* Promotora Info */}
-        {isPromo && (
+        {(isPromo || user.subscription_expires_at) && (
           <div className="mb-4 space-y-2">
-            <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-white/10">
+            {isPromo && <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-white/10">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Usuários da Promotora</p>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black text-slate-800 dark:text-white">{usedUsers} <span className="text-slate-400 font-medium">/ {user.seller_limit || '∞'}</span></span>
@@ -239,7 +314,7 @@ export default function UsersPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </div>}
             {daysLeft !== null && (
               <div className={`p-3 rounded-2xl border ${daysLeft <= 5 ? 'bg-red-50 border-red-100' : daysLeft <= 10 ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}`}>
                 <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${daysLeft <= 5 ? 'text-red-400' : daysLeft <= 10 ? 'text-amber-500' : 'text-emerald-500'}`}>Renovação da Assinatura</p>
@@ -249,9 +324,28 @@ export default function UsersPage() {
                     {daysLeft === 0 ? 'EXPIRADO' : `${daysLeft} dias restantes`}
                   </span>
                 </div>
+                <p className="mt-1 text-[9px] font-bold text-slate-500">Vence em {new Date(user.subscription_expires_at!).toLocaleString('pt-BR')}</p>
+                {loggedUser?.role === 'admin' && (
+                  <p className="mt-1 text-[9px] font-black uppercase text-slate-500">Renovação automática: {user.subscription_auto_renew ? 'ativa' : 'desativada'}</p>
+                )}
               </div>
             )}
+            {loggedUser?.role === 'admin' && user.subscription_expires_at && (
+              <button type="button" onClick={() => handleRenew(user)} className="w-full py-2.5 rounded-2xl bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20">
+                Renovar +30 dias
+              </button>
+            )}
           </div>
+        )}
+
+        {isPromo && loggedUser?.role === 'admin' && (
+          <button
+            type="button"
+            onClick={() => router.push(`/admin?promotora_id=${user.id}`)}
+            className="mb-3 w-full py-3 rounded-2xl bg-gradient-to-r from-slate-900 to-blue-900 text-white text-[9px] font-black uppercase tracking-widest shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+          >
+            <Icons.Activity size={14} /> Painel Geral · Painel Inteligente
+          </button>
         )}
 
         {/* Actions */}
@@ -409,6 +503,37 @@ export default function UsersPage() {
                       <option value="admin">ADMINISTRADOR MASTER</option>
                     </select>
                   </div>
+                  {loggedUser?.role === 'admin' && formData.role === 'corretor' && (
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Promotora vinculada</label>
+                      <select value={formData.broker_id || ""} onChange={(e) => handlePromotoraSelection(e.target.value)} className="input-admin !rounded-2xl !bg-slate-50 border-none shadow-inner" required={formData.is_demo_user}>
+                        <option value="">SEM PROMOTORA</option>
+                        {users.filter((u) => u.role === 'promotora').map((promotora) => (
+                          <option key={promotora.id} value={promotora.id}>{promotora.name}</option>
+                        ))}
+                      </select>
+                      {formData.broker_id && (
+                        <p className="mt-2 text-[9px] font-bold text-emerald-600">
+                          ✓ Identidade visual da promotora carregada na prévia.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {loggedUser?.role === 'admin' && ['promotora', 'corretor'].includes(formData.role) && (
+                    <div className="space-y-3 rounded-[1.75rem] border border-violet-100 bg-violet-50/60 p-4">
+                      <button type="button" onClick={() => setFormData({...formData, is_demo_user: !formData.is_demo_user, role: 'corretor'})} className={`w-full py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest border ${formData.is_demo_user ? 'bg-violet-600 text-white border-violet-500' : 'bg-white text-slate-500 border-slate-200'}`}>
+                        {formData.is_demo_user ? '✓ Usuário demonstrativo · acesso simultâneo' : 'Usuário comum · sessão única'}
+                      </button>
+                      <div>
+                        <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Vencimento do acesso</label>
+                        <input type="datetime-local" value={formData.subscription_expires_at || ""} onChange={(e) => setFormData({...formData, subscription_expires_at: e.target.value})} className="input-admin !rounded-2xl !bg-white border-none shadow-inner" />
+                        <p className="mt-1 text-[9px] text-slate-400">Novas promotoras e corretores recebem 30 dias automaticamente.</p>
+                      </div>
+                      <button type="button" onClick={() => setFormData({...formData, subscription_auto_renew: !formData.subscription_auto_renew})} className={`w-full py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest border ${formData.subscription_auto_renew ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-white text-slate-500 border-slate-200'}`}>
+                        {formData.subscription_auto_renew ? '✓ Renovação automática ativa' : 'Renovação automática desativada'}
+                      </button>
+                    </div>
+                  )}
                   {formData.role === 'promotora' && (
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Limite de Usuários</label>

@@ -88,7 +88,7 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { name: "Painel Geral", href: "/admin", icon: <Icons.LayoutDashboard />, roles: ['admin'] },
+    { name: "Painel Geral", href: "/admin", icon: <Icons.LayoutDashboard />, roles: ['admin', 'promotora'] },
     { name: "Financeiro", href: "/admin/financeiro", icon: <Icons.Wallet />, roles: ['admin'] },
     { name: "Cartão de Crédito", href: "/admin/cartao-credito", icon: <Icons.CreditCardDollar />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Bancos", href: "/admin/banks", icon: <Icons.Landmark />, roles: ['admin'] },

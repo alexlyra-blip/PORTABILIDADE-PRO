@@ -8,6 +8,7 @@ from sqlalchemy.future import select
 from app.database import get_db
 from app.services import auth_service
 from app.models.sqlalchemy_models import User
+from app.services.user_access_service import validate_effective_access
 
 async def get_current_user(authorization: Optional[str] = Header(None), db: AsyncSession = Depends(get_db)):
     if not authorization:
@@ -30,10 +31,10 @@ async def get_current_user(authorization: Optional[str] = Header(None), db: Asyn
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuário não encontrado")
 
-    if not user.active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
+    await validate_effective_access(db, user)
 
-    if user.current_token and user.current_token != token:
+    concurrent_demo = bool(user.is_demo_user and user.allow_concurrent_sessions)
+    if not concurrent_demo and user.current_token and user.current_token != token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sessão encerrada: outro dispositivo realizou o login")
 
     return user

@@ -73,7 +73,7 @@ export default function Sidebar() {
         { name: "Consulta CPF", href: "/consultas/cpf", icon: <Icons.Search />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "CLT Multibancos", href: "/clt", icon: <Icons.Briefcase />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Credenciais Bancárias", href: "/credenciais-bancarias", icon: <Icons.Key />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
-    { name: "Simulações", href: "/dashboard", icon: <Icons.LayoutDashboard /> },
+    { name: "Simulações", href: "/dashboard", icon: <Icons.LayoutDashboard />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Meus Contratos", href: "/meus-contratos", icon: <Icons.FileText />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Bancos e Regras", href: "/bancos", icon: <Icons.Landmark />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Relatórios", href: "/relatorio", icon: <Icons.TrendingUp />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
@@ -238,6 +238,7 @@ export default function Sidebar() {
                   <p className="px-2 py-1 text-[9px] font-black text-white/30 uppercase tracking-widest">Administrativo</p>
                   {[
                     { name: "Painel Admin", href: "/admin", icon: <Icons.Settings2 size={16} />, roles: ['admin'] },
+                    { name: "Painel Geral", href: "/admin", icon: <Icons.LayoutDashboard size={16} />, roles: ['promotora'] },
                     { name: "Usuários", href: "/admin/users", icon: <Icons.Users size={16} />, roles: ['admin', 'promotora'] },
                     { name: "Regra Bancos", href: "/admin/promotora-rules", icon: <Icons.SlidersHorizontal size={16} />, roles: ['admin', 'promotora'] },
                     { name: "WhatsApp", href: "/admin/whatsapp", icon: <Icons.MessageCircle size={16} />, roles: ['admin', 'promotora'] }
@@ -339,6 +340,7 @@ export default function Sidebar() {
             <p className="px-4 text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-3 italic">Área Administrativa</p>
             {[
               { name: "Painel Admin", href: "/admin", icon: <Icons.Settings2 />, roles: ['admin'] },
+              { name: "Painel Geral", href: "/admin", icon: <Icons.LayoutDashboard />, roles: ['promotora'] },
               { name: user.role === 'promotora' ? 'Usuários' : 'Gestão Usuários', href: "/admin/users", icon: <Icons.Users />, roles: ['admin', 'promotora'] },
               { name: "Regra Bancos", href: "/admin/promotora-rules", icon: <Icons.SlidersHorizontal />, roles: ['admin', 'promotora'] },
               { name: "WhatsApp", href: "/admin/whatsapp", icon: <Icons.MessageCircle />, roles: ['admin', 'promotora'] }

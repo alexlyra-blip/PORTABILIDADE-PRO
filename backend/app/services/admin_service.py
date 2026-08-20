@@ -7,7 +7,8 @@ from fastapi import HTTPException
 from app.models.sqlalchemy_models import Bank, BankRule, BankTable, Coefficient, User, Company, Simulation, SimulationResult, UserBankVisibility, PromotoraRule
 from app.schemas.simulacao_schema import BankCreate, BankRuleCreate, BankTableCreate, CoefficientCreate, CompanyCreate
 from app.services import auth_service
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from app.services.user_access_service import apply_auto_renewal, days_remaining, normalize_datetime
 
 class AdminService:
     @staticmethod
@@ -406,6 +407,33 @@ class AdminService:
         if not users:
             return []
 
+        renewed = False
+        for account in users:
+            renewed = await apply_auto_renewal(db, account) or renewed
+        if renewed:
+            await db.commit()
+
+        users_by_id = {account.id: account for account in users}
+
+        def effective_access(account):
+            if not account.active:
+                return False, "user"
+            own_expiry = normalize_datetime(account.subscription_expires_at)
+            if own_expiry and own_expiry <= datetime.now(timezone.utc):
+                return False, "expired"
+            parent_id = account.broker_id
+            visited = {account.id}
+            while parent_id and parent_id not in visited:
+                visited.add(parent_id)
+                parent = users_by_id.get(parent_id)
+                if not parent:
+                    break
+                parent_expiry = normalize_datetime(parent.subscription_expires_at)
+                if not parent.active or (parent_expiry and parent_expiry <= datetime.now(timezone.utc)):
+                    return False, "promotora"
+                parent_id = parent.broker_id
+            return True, None
+
         user_ids = [u.id for u in users]
         
         # Otimização: Obter todas as simulações agrupadas em uma única query
@@ -425,17 +453,50 @@ class AdminService:
             )
             broker_names = {row[0]: row[1] for row in broker_res.all()}
 
-        # Compute simulations count for each user
+        response = []
         for u in users:
-            u.simulations_count = sim_counts.get(u.id, 0)
-            
-            # Identify creator
-            if u.broker_id:
-                u.broker_name = broker_names.get(u.broker_id, "Sistema")
-            else:
-                u.broker_name = "Administrador"
-            
-        return users
+            effective_active, access_block_reason = effective_access(u)
+            remaining = days_remaining(u.subscription_expires_at)
+            can_view_expiration = current_user.role == "admin" or u.id == current_user.id
+            visible_remaining = remaining if can_view_expiration else None
+            item = {
+                "id": u.id, "name": u.name, "email": u.email,
+                "role": u.role, "broker_id": u.broker_id,
+                "seller_limit": u.seller_limit, "brand_color": u.brand_color,
+                "sidebar_color": u.sidebar_color,
+                "sidebar_color_secondary": u.sidebar_color_secondary,
+                "highlight_color": u.highlight_color, "logo_url": u.logo_url,
+                "avatar_url": u.avatar_url, "dark_mode": u.dark_mode,
+                "is_temporary_password": u.is_temporary_password,
+                "active": u.active, "phone": u.phone,
+                "effective_active": effective_active,
+                "access_block_reason": access_block_reason,
+                "can_consult_cpf": u.can_consult_cpf,
+                "can_use_credit_card": u.can_use_credit_card,
+                "monthly_goal": u.monthly_goal, "daily_goal": u.daily_goal,
+                "monthly_goal_type": u.monthly_goal_type,
+                "simulations_count": sim_counts.get(u.id, 0),
+                "last_access": u.last_access,
+                "broker_name": broker_names.get(u.broker_id, "Administrador") if u.broker_id else "Administrador",
+                "subscription_expires_at": u.subscription_expires_at if can_view_expiration else None,
+                "subscription_days_remaining": visible_remaining,
+                "subscription_status": (
+                    None if not can_view_expiration else
+                    "unlimited" if visible_remaining is None else
+                    "expired" if visible_remaining == 0 else
+                    "expiring" if visible_remaining <= 5 else "active"
+                ),
+            }
+            # Nunca exponha controles comerciais à promotora.
+            if current_user.role == "admin":
+                item.update({
+                    "is_demo_user": bool(u.is_demo_user),
+                    "allow_concurrent_sessions": bool(u.allow_concurrent_sessions),
+                    "subscription_auto_renew": bool(u.subscription_auto_renew),
+                    "created_by_user_id": u.created_by_user_id,
+                })
+            response.append(item)
+        return response
 
     @staticmethod
     async def count_sellers_by_broker(db: AsyncSession, broker_id: int) -> int:
@@ -455,6 +516,11 @@ class AdminService:
                 "can_use_credit_card",
                 None,
             )
+            for field in (
+                "is_demo_user", "allow_concurrent_sessions",
+                "subscription_expires_at", "subscription_auto_renew",
+            ):
+                user_data.pop(field, None)
 
         if current_user.role == "vendedor":
             raise HTTPException(status_code=403, detail="Vendedores não podem criar usuários")
@@ -478,6 +544,41 @@ class AdminService:
                 user_data["logo_url"] = current_user.logo_url
             if not user_data.get("avatar_url"):
                 user_data["avatar_url"] = current_user.avatar_url
+
+        role = user_data.get("role")
+        if current_user.role == "admin":
+            user_data["created_by_user_id"] = current_user.id
+            is_demo = bool(user_data.get("is_demo_user"))
+            if is_demo:
+                if role != "corretor":
+                    raise HTTPException(status_code=400, detail="O usuário demonstrativo deve ter o papel CORRETOR.")
+                if not user_data.get("broker_id"):
+                    raise HTTPException(status_code=400, detail="Selecione a promotora do usuário demonstrativo.")
+                parent_result = await db.execute(select(User).where(User.id == user_data["broker_id"]))
+                parent = parent_result.scalar_one_or_none()
+                parent_expiry = normalize_datetime(parent.subscription_expires_at) if parent else None
+                if (
+                    not parent or parent.role != "promotora" or not parent.active
+                    or (parent_expiry and parent_expiry <= datetime.now(timezone.utc))
+                ):
+                    raise HTTPException(status_code=400, detail="A promotora selecionada é inválida.")
+                user_data["allow_concurrent_sessions"] = True
+                # A identidade visual é resolvida dinamicamente pelo vínculo.
+                user_data["brand_color"] = parent.brand_color
+                user_data["sidebar_color"] = parent.sidebar_color
+                user_data["sidebar_color_secondary"] = parent.sidebar_color_secondary
+                user_data["highlight_color"] = parent.highlight_color
+                user_data["logo_url"] = parent.logo_url
+            else:
+                user_data["allow_concurrent_sessions"] = False
+
+            if role in ("promotora", "corretor") and not user_data.get("subscription_expires_at"):
+                user_data["subscription_expires_at"] = datetime.now(timezone.utc) + timedelta(days=30)
+        else:
+            user_data["created_by_user_id"] = current_user.id
+            user_data["is_demo_user"] = False
+            user_data["allow_concurrent_sessions"] = False
+            user_data["subscription_auto_renew"] = False
             
         if "password" in user_data:
             user_data["password_hash"] = auth_service.get_password_hash(user_data.pop("password"))
@@ -485,11 +586,10 @@ class AdminService:
         if "is_temporary_password" not in user_data:
             user_data["is_temporary_password"] = True
 
-        role = user_data.get("role")
         if role in ["vendedor", "corretor"] and user_data.get("broker_id"):
             broker_result = await db.execute(select(User).where(User.id == user_data["broker_id"]))
             broker = broker_result.scalar_one_or_none()
-            if broker:
+            if broker and current_user.role != "admin":
                 limit = broker.seller_limit if broker.seller_limit is not None else 0
                 if limit <= 0:
                     raise HTTPException(
@@ -518,6 +618,13 @@ class AdminService:
                 "can_use_credit_card",
                 None,
             )
+            for field in (
+                "is_demo_user", "allow_concurrent_sessions",
+                "subscription_expires_at", "subscription_auto_renew",
+                "subscription_last_renewed_at", "subscription_last_renewed_by_user_id",
+                "created_by_user_id",
+            ):
+                user_data.pop(field, None)
 
         result = await db.execute(select(User).where(User.id == user_id))
         db_user = result.scalar_one_or_none()
@@ -547,6 +654,35 @@ class AdminService:
                 if field in user_data:
                     user_data.pop(field)
 
+        if current_user.role == "admin":
+            next_role = user_data.get("role", db_user.role)
+            next_broker_id = user_data.get("broker_id", db_user.broker_id)
+            is_demo = bool(user_data.get("is_demo_user", db_user.is_demo_user))
+            if is_demo:
+                if next_role != "corretor" or not next_broker_id:
+                    raise HTTPException(status_code=400, detail="Usuário demonstrativo exige papel CORRETOR e uma promotora.")
+                parent_result = await db.execute(select(User).where(User.id == next_broker_id))
+                parent = parent_result.scalar_one_or_none()
+                parent_expiry = normalize_datetime(parent.subscription_expires_at) if parent else None
+                if (
+                    not parent or parent.role != "promotora" or not parent.active
+                    or (parent_expiry and parent_expiry <= datetime.now(timezone.utc))
+                ):
+                    raise HTTPException(status_code=400, detail="A promotora selecionada é inválida.")
+                user_data["allow_concurrent_sessions"] = True
+                if not db_user.subscription_expires_at and not user_data.get("subscription_expires_at"):
+                    user_data["subscription_expires_at"] = datetime.now(timezone.utc) + timedelta(days=30)
+            else:
+                user_data["allow_concurrent_sessions"] = False
+
+        if isinstance(user_data.get("subscription_expires_at"), str):
+            try:
+                user_data["subscription_expires_at"] = datetime.fromisoformat(
+                    user_data["subscription_expires_at"].replace("Z", "+00:00")
+                )
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Data de vencimento inválida.")
+
         if "password" in user_data and user_data["password"]:
             db_user.password_hash = auth_service.get_password_hash(user_data.pop("password"))
         elif "password" in user_data:
@@ -555,6 +691,31 @@ class AdminService:
         for key, value in user_data.items():
             setattr(db_user, key, value)
             
+        await db.commit()
+        await db.refresh(db_user)
+        return db_user
+
+    @staticmethod
+    async def renew_user_subscription(db: AsyncSession, user_id: int, admin: User, days: int = 30):
+        if admin.role != "admin":
+            raise HTTPException(status_code=403, detail="Renovação exclusiva do administrador.")
+        if days != 30:
+            raise HTTPException(status_code=400, detail="A renovação deve ser de 30 dias.")
+
+        result = await db.execute(select(User).where(User.id == user_id))
+        db_user = result.scalar_one_or_none()
+        if not db_user:
+            return None
+        if db_user.role not in ("promotora", "corretor"):
+            raise HTTPException(status_code=400, detail="Este tipo de usuário não possui assinatura renovável.")
+
+        now = datetime.now(timezone.utc)
+        current_expiry = normalize_datetime(db_user.subscription_expires_at)
+        base = current_expiry if current_expiry and current_expiry > now else now
+        db_user.subscription_expires_at = base + timedelta(days=days)
+        db_user.subscription_last_renewed_at = now
+        db_user.subscription_last_renewed_by_user_id = admin.id
+        db_user.active = True
         await db.commit()
         await db.refresh(db_user)
         return db_user
@@ -715,13 +876,29 @@ class AdminService:
     _global_logos_ttl = 3600 # 1 hora
 
     @staticmethod
-    async def get_dashboard_stats(db: AsyncSession, current_user: User, days: int = 30):
+    async def get_dashboard_stats(
+        db: AsyncSession,
+        current_user: User,
+        days: int = 30,
+        promotora_id: int = None,
+    ):
         import time
         import asyncio
         from sqlalchemy import text, cast, Date
         from app.models.sqlalchemy_models import SubAgreementLogo
         
-        cache_key = f"{current_user.id}_{days}"
+        scope_user = current_user
+        if promotora_id is not None:
+            if current_user.role != "admin":
+                raise HTTPException(status_code=403, detail="Filtro de promotora exclusivo do administrador.")
+            scope_result = await db.execute(
+                select(User).where(User.id == promotora_id, User.role == "promotora")
+            )
+            scope_user = scope_result.scalar_one_or_none()
+            if not scope_user:
+                raise HTTPException(status_code=404, detail="Promotora não encontrada.")
+
+        cache_key = f"{current_user.id}_{scope_user.id}_{days}"
         now = time.time()
         
         # Check cache immediately without lock for speed
@@ -744,19 +921,21 @@ class AdminService:
             debug_errors = []
 
         # Base conditions
-        sim_conds = [Simulation.created_at >= period_ago]
-        if current_user.role == "promotora":
-            sim_conds.append(Simulation.user_id.in_(
-                select(User.id).where((User.id == current_user.id) | (User.broker_id == current_user.id))
+        scope_conds = []
+        if scope_user.role == "promotora":
+            scope_conds.append(Simulation.user_id.in_(
+                select(User.id).where((User.id == scope_user.id) | (User.broker_id == scope_user.id))
             ))
-        elif current_user.role != "admin":
-            sim_conds.append(Simulation.user_id == current_user.id)
+        elif scope_user.role != "admin":
+            scope_conds.append(Simulation.user_id == scope_user.id)
+
+        sim_conds = [Simulation.created_at >= period_ago, *scope_conds]
 
         # 1. Combined Total System Counts in a single SELECT query
         counts_q = select(
             select(func.count(Bank.id)).scalar_subquery().label("banks"),
             select(func.count(BankTable.id)).scalar_subquery().label("tables"),
-            select(func.count(Simulation.id)).scalar_subquery().label("simulations"),
+            select(func.count(Simulation.id)).where(*scope_conds).scalar_subquery().label("simulations"),
             select(func.count(Simulation.id)).where(*sim_conds).scalar_subquery().label("simulations_period")
         )
 
@@ -794,12 +973,12 @@ class AdminService:
         
         # 7. Subqueries for Results
         res_query = select(SimulationResult).join(Simulation)
-        if current_user.role == "promotora":
+        if scope_user.role == "promotora":
             res_query = res_query.join(User, Simulation.user_id == User.id).where(
-                (User.id == current_user.id) | (User.broker_id == current_user.id)
+                (User.id == scope_user.id) | (User.broker_id == scope_user.id)
             )
-        elif current_user.role != "admin":
-            res_query = res_query.where(Simulation.user_id == current_user.id)
+        elif scope_user.role != "admin":
+            res_query = res_query.where(Simulation.user_id == scope_user.id)
             
         res_query = res_query.where(Simulation.created_at >= period_ago)
         subq = res_query.subquery()
@@ -886,6 +1065,17 @@ class AdminService:
             hist_val = []
 
         recent_simulations_db = []
+
+        scope_users_count = None
+        if scope_user.role == "promotora":
+            scope_users_count = (
+                await db.execute(
+                    select(func.count(User.id)).where(
+                        User.broker_id == scope_user.id,
+                        User.active == True,
+                    )
+                )
+            ).scalar() or 0
 
         counts_row = counts_res[0] if counts_res else None
         total_banks = counts_row[0] if counts_row else 0
@@ -1008,6 +1198,13 @@ class AdminService:
             historical_chart.append(entry)
 
         response_data = {
+            "scope": {
+                "type": "promotora" if scope_user.role == "promotora" else "global",
+                "id": scope_user.id if scope_user.role == "promotora" else None,
+                "name": scope_user.name if scope_user.role == "promotora" else "Visão Global",
+                "logo_url": (scope_user.logo_url or scope_user.avatar_url) if scope_user.role == "promotora" else None,
+                "users_count": scope_users_count,
+            },
             "totals": {
                 "banks": total_banks,
                 "tables": total_tables,

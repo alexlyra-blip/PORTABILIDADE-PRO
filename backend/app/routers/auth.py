@@ -6,6 +6,11 @@ from app.models import sqlalchemy_models
 from app.schemas import simulacao_schema as schemas
 from sqlalchemy.future import select
 from app.routers.deps import get_current_user
+from app.services.user_access_service import (
+    own_access_notice,
+    resolve_branding_user,
+    validate_effective_access,
+)
 
 router = APIRouter()
 
@@ -18,14 +23,15 @@ async def login(req: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
         if not user or not auth_service.verify_password(req.password, user.password_hash):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou senha incorretos")
         
-        if not user.active:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sua conta está inativa. Entre em contato com o administrador.")
+        await validate_effective_access(db, user)
+        branding_user = await resolve_branding_user(db, user)
         
         token = auth_service.create_access_token(subject=user.email)
         
         from datetime import datetime, timezone
         user.last_access = datetime.now(timezone.utc)
-        user.current_token = token
+        if not bool(user.is_demo_user and user.allow_concurrent_sessions):
+            user.current_token = token
         await db.commit()
         return {
             "access_token": token,
@@ -36,11 +42,11 @@ async def login(req: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
                 "email": user.email,
                 "role": user.role,
                 "company_id": user.company_id,
-                "brand_color": user.brand_color,
-                "sidebar_color": user.sidebar_color,
-                "sidebar_color_secondary": user.sidebar_color_secondary,
-                "highlight_color": user.highlight_color,
-                "logo_url": user.logo_url,
+                "brand_color": branding_user.brand_color,
+                "sidebar_color": branding_user.sidebar_color,
+                "sidebar_color_secondary": branding_user.sidebar_color_secondary,
+                "highlight_color": branding_user.highlight_color,
+                "logo_url": branding_user.logo_url or branding_user.avatar_url,
                 "avatar_url": user.avatar_url,
                 "seller_limit": user.seller_limit,
                 "can_use_credit_card": bool(
@@ -50,8 +56,12 @@ async def login(req: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
                 "monthly_goal": user.monthly_goal,
                 "daily_goal": user.daily_goal,
                 "monthly_goal_type": user.monthly_goal_type,
+                "subscription_expires_at": user.subscription_expires_at,
+                "access_notice": own_access_notice(user),
             }
         }
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
@@ -73,12 +83,7 @@ async def get_branding(email: str, db: AsyncSession = Depends(get_db)):
             "sidebar_color": "#0f172a"
         }
         
-    branding_user = user
-    if user.role == "vendedor" and user.broker_id:
-        broker_result = await db.execute(select(User).where(User.id == user.broker_id))
-        broker = broker_result.scalar_one_or_none()
-        if broker:
-            branding_user = broker
+    branding_user = await resolve_branding_user(db, user)
             
     return {
         "name": branding_user.name,
