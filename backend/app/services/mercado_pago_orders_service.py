@@ -13,6 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sqlalchemy_models import Payment
 from app.schemas.payment_schema import CreatePaymentLinkRequest
+from app.services.payment_fee_config_service import (
+    PaymentFeeConfigService,
+)
+from app.services.seller_fee_simulator_service import (
+    SellerFeeSimulatorService,
+)
 
 
 MERCADO_PAGO_API_URL = "https://api.mercadopago.com"
@@ -752,6 +758,83 @@ class MercadoPagoOrdersService:
             else {}
         )
 
+        installments = int(
+            mp_payment.get("installments")
+            or (
+                payment_method.get(
+                    "installments"
+                )
+                if isinstance(
+                    payment_method,
+                    dict,
+                )
+                else None
+            )
+            or previous_payload.get(
+                "selected_installments"
+            )
+            or 1
+        )
+
+        pricing_snapshot = previous_payload.get(
+            "pricing_snapshot"
+        )
+
+        if not isinstance(pricing_snapshot, dict):
+            pricing_snapshot = {}
+
+        if not pricing_snapshot and payment.amount:
+            try:
+                config_result = await (
+                    PaymentFeeConfigService.get_config(
+                        db
+                    )
+                )
+
+                pricing_snapshot = (
+                    SellerFeeSimulatorService.simulate(
+                        amount=Decimal(
+                            str(payment.amount)
+                        ),
+                        commission_table=int(
+                            previous_payload.get(
+                                "commission_table"
+                            )
+                            or 1
+                        ),
+                        installments=installments,
+                        channel=str(
+                            previous_payload.get(
+                                "payment_channel"
+                            )
+                            or "checkout"
+                        ),
+                        fee_config=(
+                            config_result.get(
+                                "fees",
+                                {},
+                            )
+                        ),
+                        simulation_type="charge",
+                    )
+                )
+
+                pricing_snapshot = {
+                    **pricing_snapshot,
+                    "source": (
+                        "seller_fee_simulator"
+                    ),
+                }
+            except Exception as exc:
+                # O pagamento não pode falhar apenas porque o dado
+                # complementar do comprovante ficou indisponível.
+                print(
+                    "[MERCADO_PAGO_ORDER] "
+                    "Não foi possível gravar "
+                    "o snapshot financeiro:",
+                    exc,
+                )
+
         payment.mercado_pago_payload = {
             **previous_payload,
             "checkout_type": "orders",
@@ -778,22 +861,10 @@ class MercadoPagoOrdersService:
                 )
             ),
 
-            "installments": int(
-                mp_payment.get("installments")
-                or (
-                    payment_method.get(
-                        "installments"
-                    )
-                    if isinstance(
-                        payment_method,
-                        dict,
-                    )
-                    else None
-                )
-                or previous_payload.get(
-                    "selected_installments"
-                )
-                or 1
+            "installments": installments,
+
+            "pricing_snapshot": (
+                pricing_snapshot
             ),
 
             "statement_descriptor": (
