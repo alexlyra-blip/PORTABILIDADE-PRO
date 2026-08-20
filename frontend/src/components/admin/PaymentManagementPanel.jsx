@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "@/utils/api";
+import { openPremiumPaymentReceipt } from "@/components/admin/PremiumPaymentReceipt";
 
 
 const money = (value) =>
@@ -196,6 +198,7 @@ function escapeHtml(value) {
 
 export default function PaymentManagementPanel({
   payments = [],
+  cardSalesFinance = [],
   stats = {},
   onRefresh,
 }) {
@@ -318,6 +321,104 @@ export default function PaymentManagementPanel({
     if (onRefresh) {
       await onRefresh();
     }
+  };
+
+
+  const openPremiumReceipt = (payment) => {
+    const sameValue = (left, right) =>
+      left !== null
+      && left !== undefined
+      && left !== ""
+      && right !== null
+      && right !== undefined
+      && right !== ""
+      && String(left) === String(right);
+
+    const normalizedText = (value) =>
+      String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+
+    const paymentAmount = Number(payment.amount || 0);
+    const paymentInstallments = Number(payment.installments || 0);
+
+    const rankedSales = cardSalesFinance.map((sale) => {
+      const salePayment = sale?.payment || {};
+      const saleReceipt = sale?.receipt || {};
+      const salePricing = sale?.pricing || {};
+      const saleCustomer = sale?.customer || {};
+      let score = 0;
+
+      const identifiers = [
+        [salePayment.id, payment.id],
+        [salePayment.external_reference, payment.external_reference],
+        [saleReceipt.external_reference, payment.external_reference],
+        [salePayment.order_id, payment.order_id],
+        [saleReceipt.order_id, payment.order_id],
+        [salePayment.mercado_pago_payment_id, payment.payment_id],
+        [saleReceipt.mercado_pago_payment_id, payment.payment_id],
+        [salePayment.mercado_pago_payment_id, payment.mercado_pago_payment_id],
+      ];
+
+      score += identifiers.reduce(
+        (total, [left, right]) => total + (sameValue(left, right) ? 20 : 0),
+        0
+      );
+
+      const saleName = normalizedText(
+        saleCustomer.name || saleReceipt.customer_name
+      );
+      const paymentName = normalizedText(payment.customer_name);
+
+      if (saleName && paymentName && saleName === paymentName) {
+        score += 5;
+      }
+
+      const saleAmount = Number(
+        salePricing.customer_total
+        ?? salePayment.amount
+        ?? saleReceipt.amount
+        ?? 0
+      );
+
+      if (
+        saleAmount > 0
+        && paymentAmount > 0
+        && Math.abs(saleAmount - paymentAmount) < 0.02
+      ) {
+        score += 5;
+      }
+
+      const saleInstallments = Number(
+        saleReceipt.installments
+        ?? salePayment.installments
+        ?? salePricing.installments
+        ?? 0
+      );
+
+      if (
+        saleInstallments > 0
+        && paymentInstallments > 0
+        && saleInstallments === paymentInstallments
+      ) {
+        score += 2;
+      }
+
+      return { sale, score };
+    });
+
+    rankedSales.sort((left, right) => right.score - left.score);
+
+    const matchingSale = rankedSales[0]?.score >= 7
+      ? rankedSales[0].sale
+      : null;
+
+    openPremiumPaymentReceipt({
+      sale: matchingSale || null,
+      payment,
+    });
   };
 
 
@@ -1163,9 +1264,14 @@ setTimeout(
       </div>
 
 
-      {selectedPayment && (
+      {selectedPayment
+        && typeof document !== "undefined"
+        && createPortal(
 
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          style={{ zIndex: 2147483000 }}
+        >
 
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] bg-white shadow-2xl">
 
@@ -1311,7 +1417,7 @@ setTimeout(
                   <button
                     type="button"
                     onClick={() =>
-                      setReceiptPayment(
+                      openPremiumReceipt(
                         selectedPayment
                       )
                     }
@@ -1377,7 +1483,9 @@ setTimeout(
 
           </div>
 
-        </div>
+        </div>,
+
+        document.body
 
       )}
 

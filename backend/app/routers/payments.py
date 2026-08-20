@@ -1,5 +1,6 @@
 import secrets
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Request, HTTPException
@@ -31,9 +32,180 @@ from app.services.mercado_pago_webhook_service import (
 from app.services.mercado_pago_orders_service import (
     MercadoPagoOrdersService,
 )
+from app.services.payment_fee_config_service import (
+    PaymentFeeConfigService,
+)
+from app.services.seller_fee_simulator_service import (
+    SellerFeeSimulatorService,
+)
 
 
 router = APIRouter()
+
+
+def _payment_payload(
+    payment: Payment,
+) -> Dict[str, Any]:
+    payload = payment.mercado_pago_payload
+
+    return (
+        payload
+        if isinstance(payload, dict)
+        else {}
+    )
+
+
+def _payment_pricing_snapshot(
+    payment: Payment,
+    fee_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Calcula os dados financeiros exibidos no comprovante.
+
+    Vendas do fluxo seguro já guardam seu próprio snapshot. Pagamentos
+    avulsos, porém, armazenam somente o valor cobrado. Para esses casos,
+    aplicamos a mesma regra oficial da Calculadora do Vendedor no modo
+    ``charge`` e devolvemos o resultado sem alterar o registro histórico.
+    """
+
+    payload = _payment_payload(payment)
+    existing_snapshot = payload.get(
+        "pricing_snapshot"
+    )
+
+    if isinstance(existing_snapshot, dict) and existing_snapshot:
+        return existing_snapshot
+
+    if not fee_config or not payment.amount:
+        return {}
+
+    payment_type = str(
+        payment.payment_type_id or ""
+    ).lower()
+
+    if payment_type and "card" not in payment_type:
+        return {}
+
+    try:
+        installments = int(
+            payload.get("installments")
+            or payload.get(
+                "selected_installments"
+            )
+            or 1
+        )
+
+        channel = str(
+            payload.get("payment_channel")
+            or "checkout"
+        ).strip().lower()
+
+        commission_table = int(
+            payload.get("commission_table")
+            or 1
+        )
+
+        snapshot = (
+            SellerFeeSimulatorService.simulate(
+                amount=Decimal(
+                    str(payment.amount)
+                ),
+                commission_table=(
+                    commission_table
+                ),
+                installments=installments,
+                channel=channel,
+                fee_config=fee_config,
+                simulation_type="charge",
+            )
+        )
+
+        return {
+            **snapshot,
+            "source": (
+                "seller_fee_simulator"
+            ),
+        }
+    except (TypeError, ValueError):
+        return {}
+
+
+def _serialize_admin_payment(
+    payment: Payment,
+    fee_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    payload = _payment_payload(payment)
+
+    return {
+        "id": payment.id,
+        "external_reference": (
+            payment.external_reference
+        ),
+        "preference_id": payment.preference_id,
+        "payment_id": (
+            payment.mercado_pago_payment_id
+        ),
+        "customer_name": payment.customer_name,
+        "customer_email": payment.customer_email,
+        "customer_document": (
+            payment.customer_document
+        ),
+        "customer_phone": payment.customer_phone,
+        "description": payment.description,
+        "package_name": payment.package_name,
+        "consultation_quantity": (
+            payment.consultation_quantity
+        ),
+        "amount": float(payment.amount or 0),
+        "status": payment.status,
+        "status_detail": payment.status_detail,
+        "payment_method_id": (
+            payment.payment_method_id
+        ),
+        "payment_type_id": payment.payment_type_id,
+        "order_id": payload.get("order_id"),
+        "transaction_id": payload.get(
+            "transaction_id"
+        ),
+        "card_brand": payload.get("card_brand"),
+        "installments": payload.get(
+            "installments"
+        ),
+        "statement_descriptor": payload.get(
+            "statement_descriptor"
+        ),
+        "last_refund": payload.get("last_refund"),
+        "payment_channel": payload.get(
+            "payment_channel"
+        ) or "checkout",
+        "installment_mode": payload.get(
+            "installment_mode"
+        ),
+        "commission_table": payload.get(
+            "commission_table"
+        ) or 1,
+        "pricing_snapshot": (
+            _payment_pricing_snapshot(
+                payment,
+                fee_config,
+            )
+        ),
+        "checkout_url": payment.checkout_url,
+        "expires_at": (
+            payment.expires_at.isoformat()
+            if payment.expires_at
+            else None
+        ),
+        "paid_at": (
+            payment.paid_at.isoformat()
+            if payment.paid_at
+            else None
+        ),
+        "created_at": (
+            payment.created_at.isoformat()
+            if payment.created_at
+            else None
+        ),
+    }
 
 
 @router.post("/admin/create-link")
@@ -192,112 +364,33 @@ async def list_admin_payments(
     result = await db.execute(query)
     payments = result.scalars().all()
 
+    fee_config: Dict[str, Any] = {}
+
+    try:
+        config_result = await (
+            PaymentFeeConfigService.get_config(db)
+        )
+        fee_config = config_result.get(
+            "fees",
+            {},
+        )
+    except Exception as exc:
+        # A listagem financeira continua disponível mesmo se a
+        # configuração das taxas estiver temporariamente indisponível.
+        print(
+            "[PAYMENTS_ADMIN] "
+            "Não foi possível calcular as taxas:",
+            exc,
+        )
+
     return {
         "success": True,
         "payments": [
-            {
-                "id": p.id,
-                "external_reference": p.external_reference,
-                "preference_id": p.preference_id,
-                "payment_id": p.mercado_pago_payment_id,
-                "customer_name": p.customer_name,
-                "customer_email": p.customer_email,
-                "customer_document": p.customer_document,
-                "customer_phone": p.customer_phone,
-                "description": p.description,
-                "package_name": p.package_name,
-                "consultation_quantity": p.consultation_quantity,
-                "amount": float(p.amount or 0),
-                "status": p.status,
-                "status_detail": p.status_detail,
-                "payment_method_id": p.payment_method_id,
-                "payment_type_id": p.payment_type_id,
-                "order_id": (
-                    (
-                        p.mercado_pago_payload
-                        or {}
-                    ).get("order_id")
-                    if isinstance(
-                        p.mercado_pago_payload,
-                        dict,
-                    )
-                    else None
-                ),
-                "transaction_id": (
-                    (
-                        p.mercado_pago_payload
-                        or {}
-                    ).get("transaction_id")
-                    if isinstance(
-                        p.mercado_pago_payload,
-                        dict,
-                    )
-                    else None
-                ),
-                "card_brand": (
-                    (
-                        p.mercado_pago_payload
-                        or {}
-                    ).get("card_brand")
-                    if isinstance(
-                        p.mercado_pago_payload,
-                        dict,
-                    )
-                    else None
-                ),
-                "installments": (
-                    (
-                        p.mercado_pago_payload
-                        or {}
-                    ).get("installments")
-                    if isinstance(
-                        p.mercado_pago_payload,
-                        dict,
-                    )
-                    else None
-                ),
-                "statement_descriptor": (
-                    (
-                        p.mercado_pago_payload
-                        or {}
-                    ).get(
-                        "statement_descriptor"
-                    )
-                    if isinstance(
-                        p.mercado_pago_payload,
-                        dict,
-                    )
-                    else None
-                ),
-                "last_refund": (
-                    (
-                        p.mercado_pago_payload
-                        or {}
-                    ).get("last_refund")
-                    if isinstance(
-                        p.mercado_pago_payload,
-                        dict,
-                    )
-                    else None
-                ),
-                "checkout_url": p.checkout_url,
-                "expires_at": (
-                    p.expires_at.isoformat()
-                    if p.expires_at
-                    else None
-                ),
-                "paid_at": (
-                    p.paid_at.isoformat()
-                    if p.paid_at
-                    else None
-                ),
-                "created_at": (
-                    p.created_at.isoformat()
-                    if p.created_at
-                    else None
-                ),
-            }
-            for p in payments
+            _serialize_admin_payment(
+                payment,
+                fee_config,
+            )
+            for payment in payments
         ],
     }
 

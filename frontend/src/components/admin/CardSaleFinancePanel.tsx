@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import { api } from "@/utils/api";
+import { openPremiumPaymentReceipt } from "@/components/admin/PremiumPaymentReceipt";
 
 type FinanceStatus =
   | "documentation_pending"
@@ -654,6 +655,9 @@ export default function CardSaleFinancePanel({
     if (!sale.receipt_available) {
       return;
     }
+
+    openPremiumPaymentReceipt({ sale });
+    return;
 
     const item = sale as any;
     const payment = item.payment || {};

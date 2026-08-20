@@ -889,6 +889,7 @@ export default function FinanceiroPage() {
 
         <PaymentManagementPanel
           payments={payments}
+          cardSalesFinance={cardSalesFinance}
           stats={stats}
           onRefresh={loadData}
         />
