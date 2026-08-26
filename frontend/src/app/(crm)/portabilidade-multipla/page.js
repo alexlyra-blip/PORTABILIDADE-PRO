@@ -451,8 +451,8 @@ function normalizeLoan(
         loanValue(
           loan,
           [
-            "saldo_devedor",
             "quitacao",
+            "saldo_devedor",
             "saldo",
             "valor_quitacao",
           ]
@@ -2282,8 +2282,7 @@ export default function PortabilidadeMultiplaPage() {
                 className="
                   h-full
                   w-full
-                  object-contain
-                  p-1
+                  object-cover
                 "
               />
             ) : (
