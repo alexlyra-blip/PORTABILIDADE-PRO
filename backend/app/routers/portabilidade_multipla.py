@@ -1345,7 +1345,7 @@ async def simular_portabilidade_multipla_facta(
             _motor_float(
                 item.get("troco")
             ),
-        reverse=True,
+        reverse=False,
     )
 
     return {
