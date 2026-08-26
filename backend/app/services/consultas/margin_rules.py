@@ -148,12 +148,19 @@ def recalculate_benefit_margins(data: Dict[str, Any]) -> Dict[str, Any]:
 
     total_emprestimos_ativos = money(
         sum(
-            money(
-                contrato.get("parcela")
-                or contrato.get("valor_parcela")
-                or contrato.get("Vl_Parcela")
-            )
-            for contrato in emprestimos_ativos
+            (
+                Decimal(
+                    str(
+                        money(
+                            contrato.get("parcela")
+                            or contrato.get("valor_parcela")
+                            or contrato.get("Vl_Parcela")
+                        )
+                    )
+                )
+                for contrato in emprestimos_ativos
+            ),
+            Decimal("0"),
         )
     )
 
@@ -175,6 +182,7 @@ def recalculate_benefit_margins(data: Dict[str, Any]) -> Dict[str, Any]:
         cartao["disponivel"] = 0.0 if cartao_ativo else margem_cartao_unitaria
 
     quantidade_cartoes_ativos = len(cartoes_ativos)
+
     total_cartoes_ativos = money(
         Decimal(str(margem_cartao_unitaria))
         * Decimal(str(quantidade_cartoes_ativos))
@@ -185,10 +193,12 @@ def recalculate_benefit_margins(data: Dict[str, Any]) -> Dict[str, Any]:
         + Decimal(str(total_cartoes_ativos))
     )
 
-    margem_livre = money(
+    margem_livre_calculada = money(
         Decimal(str(margem_emprestimo))
         - Decimal(str(total_comprometido))
     )
+
+    margem_livre = margem_livre_calculada
 
     total_limite_cartoes = money(
         Decimal(str(margem_cartao_unitaria))
@@ -196,7 +206,11 @@ def recalculate_benefit_margins(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     cartao_disponivel = money(
-        max(0.0, total_limite_cartoes - total_cartoes_ativos)
+        max(
+            Decimal("0"),
+            Decimal(str(total_limite_cartoes))
+            - Decimal(str(total_cartoes_ativos)),
+        )
     )
 
     margens.update({

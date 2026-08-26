@@ -147,3 +147,61 @@ def test_recalcula_payload_antigo_do_cache():
     assert beneficio_loas["margens"]["margem_livre"] == -110.90
 
     assert principal["margens"]["margem_emprestimo"] == 648.40
+
+
+
+def test_margem_negativa_preserva_centavo_exato():
+    """
+    Regressao:
+    648,40 + 81,05 = 729,45
+    648,40 - 729,45 = -81,05
+
+    Nao pode virar -81,04 por erro binario de float.
+    """
+    result = recalculate_benefit_margins({
+        "cliente": {
+            "especie": "41",
+            "salario": 1621.00,
+        },
+        "margens": {
+            "salario": 1621.00,
+        },
+        "emprestimos": [
+            {
+                "parcela": 648.40,
+                "situacao": "ATIVO",
+            },
+        ],
+        "cartoes": [
+            {
+                "tipo": "Cartão Consignado",
+                "situacao": "ATIVO",
+            },
+        ],
+        "resumo": {},
+    })
+
+    assert (
+        result["margens"]["margem_emprestimo"]
+        == 648.40
+    )
+
+    assert (
+        result["margens"]["cartao_utilizado"]
+        == 81.05
+    )
+
+    assert (
+        result["margens"]["total_comprometido"]
+        == 729.45
+    )
+
+    assert (
+        result["margens"]["margem_livre"]
+        == -81.05
+    )
+
+    assert (
+        result["cliente"]["margem_livre"]
+        == -81.05
+    )
