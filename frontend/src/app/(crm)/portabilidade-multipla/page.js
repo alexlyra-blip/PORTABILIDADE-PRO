@@ -366,6 +366,48 @@ function normalizeLoan(
     loan?.contract ||
     "";
 
+  const prazoTotal = Number(
+    loanValue(
+      loan,
+      [
+        "prazo",
+        "prazo_total",
+        "Prazo",
+      ]
+    ) || 0
+  );
+
+  const prazoRestante = Number(
+    loanValue(
+      loan,
+      [
+        "prazo_restante",
+        "parcelas_restantes",
+        "ParcelasRestantes",
+      ]
+    ) || 0
+  );
+
+  const parcelasPagasInformadas = Number(
+    loanValue(
+      loan,
+      [
+        "parcelas_pagas",
+        "pagas",
+        "ParcelasPagas",
+      ]
+    ) || 0
+  );
+
+  const parcelasPagas =
+    parcelasPagasInformadas > 0
+      ? parcelasPagasInformadas
+      : Math.max(
+          0,
+          prazoTotal -
+            prazoRestante
+        );
+
   return {
     ...loan,
 
@@ -416,7 +458,320 @@ function normalizeLoan(
           ]
         )
       ),
+
+    codigo:
+      loan?.codigo ||
+      loan?.code ||
+      loan?.bank_code ||
+      "",
+
+    taxa:
+      money(
+        loanValue(
+          loan,
+          [
+            "taxa",
+            "taxa_atual",
+            "taxa_mensal",
+            "Taxa",
+          ]
+        )
+      ),
+
+    prazo:
+      prazoTotal,
+
+    prazo_restante:
+      prazoRestante,
+
+    parcelas_pagas:
+      parcelasPagas,
+
+    valor_contrato:
+      money(
+        loanValue(
+          loan,
+          [
+            "valor_contrato",
+            "valor_emprestimo",
+            "valor_liberado",
+            "ValorEmprestimo",
+          ]
+        )
+      ),
+
+    data_averbacao:
+      loan?.data_averbacao ||
+      loan?.inicio_desconto ||
+      loan?.data_inicio ||
+      null,
   };
+}
+
+
+
+// MULTIPLA_MOTOR_FACTA_FRONTEND
+
+function calculateAge(value) {
+  if (!value) return 0;
+
+  const raw = String(value).trim();
+
+  let date = null;
+
+  if (
+    /^\d{4}-\d{2}-\d{2}/.test(raw)
+  ) {
+    date = new Date(
+      raw.slice(0, 10) +
+      "T12:00:00"
+    );
+  } else {
+    const match = raw.match(
+      /^(\d{2})\/(\d{2})\/(\d{4})$/
+    );
+
+    if (match) {
+      date = new Date(
+        Number(match[3]),
+        Number(match[2]) - 1,
+        Number(match[1])
+      );
+    }
+  }
+
+  if (
+    !date ||
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return 0;
+  }
+
+  const today = new Date();
+
+  let age =
+    today.getFullYear() -
+    date.getFullYear();
+
+  const month =
+    today.getMonth() -
+    date.getMonth();
+
+  if (
+    month < 0 ||
+    (
+      month === 0 &&
+      today.getDate() <
+        date.getDate()
+    )
+  ) {
+    age -= 1;
+  }
+
+  return Math.max(0, age);
+}
+
+
+function extractMotorClient(
+  benefit,
+  response,
+  fallback
+) {
+  const client =
+    benefit?.cliente ||
+    response?.cliente ||
+    {};
+
+  const benefitInfo =
+    (
+      benefit?.beneficio &&
+      typeof benefit.beneficio ===
+        "object"
+    )
+      ? benefit.beneficio
+      : (
+          response?.beneficio &&
+          typeof response.beneficio ===
+            "object"
+        )
+        ? response.beneficio
+        : {};
+
+  const birthDate =
+    client?.data_nascimento ||
+    client?.nascimento ||
+    client?.birth_date ||
+    "";
+
+  let idade = Number(
+    client?.idade ||
+    response?.idade ||
+    0
+  );
+
+  if (!idade && birthDate) {
+    idade = calculateAge(
+      birthDate
+    );
+  }
+
+  const especieRaw =
+    benefitInfo?.especie ||
+    benefit?.especie ||
+    client?.especie ||
+    response?.beneficio?.especie ||
+    response?.especie ||
+    "";
+
+  const especieMatch =
+    String(especieRaw)
+      .match(/\d{1,3}/);
+
+  const especie =
+    especieMatch
+      ? especieMatch[0]
+          .padStart(2, "0")
+      : String(
+          especieRaw || ""
+        );
+
+  const analfabeto =
+    client?.analfabeto === true ||
+    client?.nao_assina === true ||
+    client?.cliente_assina ===
+      false;
+
+  return {
+    nome:
+      extractClientName(
+        benefit,
+        response
+      ),
+
+    cpf:
+      onlyDigits(
+        extractCPF(
+          benefit,
+          response,
+          fallback
+        )
+      ),
+
+    idade:
+      idade || 18,
+
+    especie,
+
+    data_concessao:
+      benefitInfo?.data_concessao ||
+      benefitInfo?.concessao ||
+      benefit?.data_concessao ||
+      benefit?.concessao ||
+      null,
+
+    analfabeto,
+
+    is_60_plus:
+      idade
+        ? idade >= 60
+        : false,
+
+    is_invalidez_60_plus:
+      idade >= 60 &&
+      [
+        "04",
+        "05",
+        "06",
+        "32",
+        "87",
+        "92",
+      ].includes(especie),
+
+    possui_dois_cartoes:
+      false,
+  };
+}
+
+
+function bankRuleMatches(
+  loanBank,
+  ruleBank
+) {
+  const loanText = norm(
+    loanBank
+  );
+
+  const ruleText = norm(
+    ruleBank
+  );
+
+  if (
+    !loanText ||
+    !ruleText
+  ) {
+    return false;
+  }
+
+  const loanCanonical =
+    normalizeBank(
+      loanText
+    );
+
+  const ruleCanonical =
+    normalizeBank(
+      ruleText
+    );
+
+  if (
+    loanCanonical ===
+      ruleCanonical ||
+    loanCanonical.includes(
+      ruleCanonical
+    ) ||
+    ruleCanonical.includes(
+      loanCanonical
+    )
+  ) {
+    return true;
+  }
+
+  const noise = new Set([
+    "BANCO",
+    "SA",
+    "S",
+    "A",
+    "CONSIGNADO",
+    "FINANCEIRA",
+    "CREDITO",
+    "BANK",
+  ]);
+
+  const words = (value) =>
+    new Set(
+      norm(value)
+        .split(/[^A-Z0-9]+/)
+        .filter(
+          (word) =>
+            word.length >= 2 &&
+            !noise.has(word)
+        )
+    );
+
+  const loanWords =
+    words(loanText);
+
+  const ruleWords =
+    words(ruleText);
+
+  for (const word of ruleWords) {
+    if (loanWords.has(word)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 
@@ -509,6 +864,12 @@ export default function PortabilidadeMultiplaPage() {
     setValidation,
   ] = useState(null);
 
+
+  const [
+    motorResult,
+    setMotorResult,
+  ] = useState(null);
+
   const [
     validating,
     setValidating,
@@ -571,6 +932,30 @@ export default function PortabilidadeMultiplaPage() {
         }
       })
       .catch(() => {});
+
+
+    api
+      .get(
+        "/portabilidade-multipla/motor-config"
+      )
+      .then((response) => {
+
+        setConfig(
+          (previous) => ({
+            ...previous,
+            motor_rules:
+              response || {},
+          })
+        );
+      })
+      .catch((error) => {
+
+        console.warn(
+          "Nao foi possivel carregar "
+          + "o pre-check FACTA:",
+          error
+        );
+      });
 
 
     api
@@ -692,6 +1077,7 @@ export default function PortabilidadeMultiplaPage() {
      */
     setSelectedIds([]);
     setValidation(null);
+    setMotorResult(null);
   };
 
 
@@ -1233,6 +1619,7 @@ export default function PortabilidadeMultiplaPage() {
      */
     setSelectedIds([]);
     setValidation(null);
+    setMotorResult(null);
 
     setActiveBenefitIndex(
       index
@@ -1243,6 +1630,127 @@ export default function PortabilidadeMultiplaPage() {
       text:
         "Beneficio alterado. A selecao anterior foi limpa para impedir a unificacao de contratos de NBs diferentes.",
     });
+  };
+
+
+  const getFactaPrecheck = (
+    loan
+  ) => {
+
+    const motorRules =
+      config?.motor_rules ||
+      {};
+
+    const excluded =
+      motorRules
+        ?.excluded_origin_banks ||
+      [];
+
+    const loanBankText = [
+      loan?.codigo,
+      loan?.banco,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const excludedMatch =
+      excluded.find(
+        (bank) =>
+          bankRuleMatches(
+            loanBankText,
+            bank
+          )
+      );
+
+    if (excludedMatch) {
+      return {
+        blocked: true,
+        reason:
+          "FACTA nao porta este banco "
+          + "originador.",
+      };
+    }
+
+    const paid = Number(
+      loan?.parcelas_pagas ||
+      Math.max(
+        0,
+        Number(
+          loan?.prazo || 0
+        ) -
+        Number(
+          loan?.prazo_restante ||
+          0
+        )
+      )
+    );
+
+    let specificMinimum = 0;
+
+    for (
+      const rule
+      of (
+        motorRules
+          ?.origin_min_paid ||
+        []
+      )
+    ) {
+
+      if (
+        bankRuleMatches(
+          loanBankText,
+          rule?.origin_bank
+        )
+      ) {
+        specificMinimum =
+          Math.max(
+            specificMinimum,
+            Number(
+              rule?.min_paid ||
+              0
+            )
+          );
+      }
+    }
+
+    const required = Math.max(
+      Number(
+        motorRules
+          ?.min_paid_installments ||
+        0
+      ),
+
+      Number(
+        motorRules
+          ?.min_table_paid_any ||
+        0
+      ),
+
+      specificMinimum
+    );
+
+    if (
+      required > 0 &&
+      paid < required
+    ) {
+      return {
+        blocked: true,
+        reason:
+          `FACTA exige no minimo `
+          + `${required} parcelas `
+          + `pagas. Contrato possui `
+          + `${paid}.`,
+        required,
+        paid,
+      };
+    }
+
+    return {
+      blocked: false,
+      reason: "",
+      required,
+      paid,
+    };
   };
 
 
@@ -1275,6 +1783,22 @@ export default function PortabilidadeMultiplaPage() {
       return;
     }
 
+    const factaCheck =
+      getFactaPrecheck(
+        loan
+      );
+
+    if (factaCheck.blocked) {
+
+      setNotice({
+        type: "error",
+        text:
+          factaCheck.reason,
+      });
+
+      return;
+    }
+
     const alreadySelected =
       selectedIds.includes(
         loan._id
@@ -1290,6 +1814,7 @@ export default function PortabilidadeMultiplaPage() {
       );
 
       setValidation(null);
+    setMotorResult(null);
 
       return;
     }
@@ -1357,6 +1882,7 @@ export default function PortabilidadeMultiplaPage() {
     ]);
 
     setValidation(null);
+    setMotorResult(null);
     setNotice(null);
   };
 
@@ -1392,7 +1918,43 @@ export default function PortabilidadeMultiplaPage() {
       }
 
 
+      const blockedSelected =
+        selectedLoans
+          .map(
+            (loan) => ({
+              loan,
+              check:
+                getFactaPrecheck(
+                  loan
+                ),
+            })
+          )
+          .filter(
+            (item) =>
+              item.check.blocked
+          );
+
+      if (
+        blockedSelected.length
+      ) {
+        setNotice({
+          type: "error",
+          text:
+            blockedSelected
+              .map(
+                (item) =>
+                  `${item.loan.banco}: `
+                  + item.check.reason
+              )
+              .join(" | "),
+        });
+
+        return;
+      }
+
+
       setValidating(true);
+      setMotorResult(null);
       setNotice(null);
 
       try {
@@ -1432,9 +1994,6 @@ export default function PortabilidadeMultiplaPage() {
                       loan.contrato ||
                       null,
 
-                    /*
-                     * NB enviado ao backend.
-                     */
                     beneficio:
                       normalizeBenefit(
                         loan.beneficio
@@ -1449,22 +2008,177 @@ export default function PortabilidadeMultiplaPage() {
         );
 
         if (
-          response
+          !response
             ?.elegivel_previo
+        ) {
+
+          setNotice({
+            type: "error",
+            text:
+              "A operacao possui bloqueios nas regras da Portabilidade Multipla.",
+          });
+
+          return;
+        }
+
+
+        const activeBenefit =
+          benefits[
+            activeBenefitIndex
+          ] ||
+          benefits[0] ||
+          {};
+
+        const motorClient =
+          extractMotorClient(
+            activeBenefit,
+            rawResponse,
+            cpf
+          );
+
+
+        const motorResponse =
+          await api.post(
+            "/portabilidade-multipla/simular",
+            {
+              banco_destino:
+                "FACTA",
+
+              convenio:
+                "INSS",
+
+              margem_disponivel:
+                money(
+                  margin
+                ),
+
+              cliente:
+                motorClient,
+
+              contratos:
+                selectedLoans.map(
+                  (loan) => ({
+                    banco:
+                      loan.banco,
+
+                    codigo:
+                      loan.codigo ||
+                      "",
+
+                    contrato:
+                      loan.contrato ||
+                      null,
+
+                    beneficio:
+                      normalizeBenefit(
+                        loan.beneficio
+                      ),
+
+                    parcela:
+                      money(
+                        loan.parcela
+                      ),
+
+                    saldo_devedor:
+                      money(
+                        loan.saldo_devedor
+                      ),
+
+                    taxa:
+                      money(
+                        loan.taxa
+                      ),
+
+                    prazo:
+                      Number(
+                        loan.prazo ||
+                        0
+                      ),
+
+                    prazo_restante:
+                      Number(
+                        loan
+                          .prazo_restante ||
+                        0
+                      ),
+
+                    parcelas_pagas:
+                      Number(
+                        loan
+                          .parcelas_pagas ||
+                        0
+                      ),
+
+                    valor_contrato:
+                      money(
+                        loan
+                          .valor_contrato
+                      ),
+
+                    data_averbacao:
+                      loan
+                        .data_averbacao ||
+                      null,
+                  })
+                ),
+            },
+            {
+              timeout: 90000,
+            }
+          );
+
+        setMotorResult(
+          motorResponse
+        );
+
+        if (
+          motorResponse?.success &&
+          motorResponse?.ofertas
+            ?.length
         ) {
 
           setNotice({
             type: "success",
             text:
-              "Operacao aprovada nas regras da Portabilidade Multipla FACTA.",
+              `${motorResponse.ofertas.length} `
+              + `tabela(s) FACTA elegivel(is) `
+              + `para todos os contratos selecionados.`,
           });
 
         } else {
 
+          const contractBlocks =
+            (
+              motorResponse
+                ?.bloqueios_contratos ||
+              []
+            )
+              .flatMap(
+                (item) =>
+                  (
+                    item?.motivos ||
+                    []
+                  ).map(
+                    (reason) =>
+                      `${item.banco}: ${reason}`
+                  )
+              );
+
+          const blocks = [
+            ...(
+              motorResponse
+                ?.bloqueios ||
+              []
+            ),
+            ...contractBlocks,
+          ];
+
           setNotice({
             type: "error",
             text:
-              "A operacao possui bloqueios.",
+              blocks.length
+                ? blocks.join(" | ")
+                : "Nenhuma tabela FACTA elegivel foi encontrada pelo Motor.",
           });
         }
 
@@ -1476,7 +2190,7 @@ export default function PortabilidadeMultiplaPage() {
           type: "error",
           text:
             error?.message ||
-            "Erro ao validar a operacao.",
+            "Erro ao simular a Portabilidade Multipla FACTA.",
         });
 
       } finally {
@@ -1495,6 +2209,12 @@ export default function PortabilidadeMultiplaPage() {
         loan._id
       );
 
+
+    const factaPrecheck =
+      getFactaPrecheck(
+        loan
+      );
+
     const blockedGroup =
       selectedGroup &&
       selectedGroup !== group &&
@@ -1503,7 +2223,8 @@ export default function PortabilidadeMultiplaPage() {
     const blocked =
       group === "C" ||
       !group ||
-      blockedGroup;
+      blockedGroup ||
+      factaPrecheck.blocked;
 
     const logo =
       getBankLogo(
@@ -1635,60 +2356,118 @@ export default function PortabilidadeMultiplaPage() {
             </p>
 
 
+            {factaPrecheck.blocked ? (
+              <div
+                className="
+                  mt-3
+                  rounded-xl
+                  border
+                  border-red-100
+                  bg-red-50
+                  px-3
+                  py-2
+                  text-[9px]
+                  font-black
+                  text-red-600
+                "
+              >
+                FACTA: {factaPrecheck.reason}
+              </div>
+            ) : null}
+
+
             <div
               className="
                 mt-3
                 grid
                 grid-cols-2
                 gap-3
+                md:grid-cols-3
               "
             >
               <div>
-                <p
-                  className="
-                    text-[8px]
-                    font-black
-                    uppercase
-                    text-slate-400
-                  "
-                >
+                <p className="text-[8px] font-black uppercase text-slate-400">
                   Parcela
                 </p>
 
-                <p
-                  className="
-                    text-sm
-                    font-black
-                    text-slate-800
-                  "
-                >
+                <p className="text-sm font-black text-slate-800">
                   {formatBRL(
                     loan.parcela
                   )}
                 </p>
               </div>
 
+
               <div>
-                <p
-                  className="
-                    text-[8px]
-                    font-black
-                    uppercase
-                    text-slate-400
-                  "
-                >
+                <p className="text-[8px] font-black uppercase text-slate-400">
                   Saldo
                 </p>
 
-                <p
-                  className="
-                    text-sm
-                    font-black
-                    text-slate-800
-                  "
-                >
+                <p className="text-sm font-black text-blue-700">
                   {formatBRL(
                     loan.saldo_devedor
+                  )}
+                </p>
+              </div>
+
+
+              <div>
+                <p className="text-[8px] font-black uppercase text-slate-400">
+                  Taxa atual
+                </p>
+
+                <p className="text-sm font-black text-emerald-700">
+                  {Number(
+                    loan.taxa || 0
+                  )
+                    .toFixed(2)
+                    .replace(".", ",")}
+                  % a.m.
+                </p>
+              </div>
+
+
+              <div>
+                <p className="text-[8px] font-black uppercase text-slate-400">
+                  Prazo restante
+                </p>
+
+                <p className="text-sm font-black text-slate-800">
+                  {Number(
+                    loan.prazo_restante ||
+                    0
+                  )}
+                  /
+                  {Number(
+                    loan.prazo ||
+                    0
+                  )}
+                </p>
+              </div>
+
+
+              <div>
+                <p className="text-[8px] font-black uppercase text-slate-400">
+                  Valor contrato
+                </p>
+
+                <p className="text-sm font-black text-slate-800">
+                  {formatBRL(
+                    loan.valor_contrato
+                  )}
+                </p>
+              </div>
+
+
+              <div>
+                <p className="text-[8px] font-black uppercase text-slate-400">
+                  Parcelas pagas
+                </p>
+
+                <p className="text-sm font-black text-slate-800">
+                  {Number(
+                    loan.parcelas_pagas ||
+                    0
                   )}
                 </p>
               </div>
@@ -3217,6 +3996,354 @@ export default function PortabilidadeMultiplaPage() {
                     ) : null}
 
 
+                    {motorResult
+                      ?.bloqueios_contratos
+                      ?.length > 0 ? (
+                      <div
+                        className="
+                          mt-5
+                          space-y-2
+                        "
+                      >
+                        <p
+                          className="
+                            text-[8px]
+                            font-black
+                            uppercase
+                            tracking-[0.18em]
+                            text-red-300
+                          "
+                        >
+                          Bloqueios do Motor
+                        </p>
+
+                        {motorResult
+                          .bloqueios_contratos
+                          .map(
+                            (
+                              item,
+                              index
+                            ) => (
+                              <div
+                                key={index}
+                                className="
+                                  rounded-xl
+                                  border
+                                  border-red-400/20
+                                  bg-red-500/10
+                                  p-3
+                                "
+                              >
+                                <p
+                                  className="
+                                    text-[10px]
+                                    font-black
+                                    text-red-200
+                                  "
+                                >
+                                  {item.banco}
+                                </p>
+
+                                {(item.motivos || [])
+                                  .map(
+                                    (
+                                      reason,
+                                      reasonIndex
+                                    ) => (
+                                      <p
+                                        key={
+                                          reasonIndex
+                                        }
+                                        className="
+                                          mt-1
+                                          text-[9px]
+                                          font-semibold
+                                          leading-relaxed
+                                          text-red-100/60
+                                        "
+                                      >
+                                        {reason}
+                                      </p>
+                                    )
+                                  )}
+                              </div>
+                            )
+                          )}
+                      </div>
+                    ) : null}
+
+
+                    {motorResult
+                      ?.ofertas
+                      ?.length > 0 ? (
+                      <div
+                        className="
+                          mt-6
+                          space-y-3
+                        "
+                      >
+                        <div
+                          className="
+                            flex
+                            items-center
+                            justify-between
+                            gap-2
+                          "
+                        >
+                          <div>
+                            <p
+                              className="
+                                text-[8px]
+                                font-black
+                                uppercase
+                                tracking-[0.2em]
+                                text-blue-300
+                              "
+                            >
+                              Tabelas FACTA
+                            </p>
+
+                            <p
+                              className="
+                                mt-1
+                                text-[9px]
+                                font-semibold
+                                text-white/35
+                              "
+                            >
+                              Aprovadas em todos os contratos
+                            </p>
+                          </div>
+
+                          <span
+                            className="
+                              rounded-full
+                              bg-blue-500/15
+                              px-2.5
+                              py-1
+                              text-[9px]
+                              font-black
+                              text-blue-300
+                            "
+                          >
+                            {
+                              motorResult
+                                .ofertas
+                                .length
+                            }
+                          </span>
+                        </div>
+
+
+                        {motorResult
+                          .ofertas
+                          .map(
+                            (
+                              offer,
+                              index
+                            ) => (
+                              <div
+                                key={
+                                  `${offer.tabela}-${offer.prazo}-${index}`
+                                }
+                                className={`
+                                  rounded-[1.4rem]
+                                  border
+                                  p-4
+                                  ${
+                                    index === 0
+                                      ? "border-emerald-400/30 bg-emerald-500/10"
+                                      : "border-white/10 bg-white/5"
+                                  }
+                                `}
+                              >
+                                <div
+                                  className="
+                                    flex
+                                    items-start
+                                    justify-between
+                                    gap-3
+                                  "
+                                >
+                                  <div
+                                    className="
+                                      min-w-0
+                                      flex-1
+                                    "
+                                  >
+                                    <div
+                                      className="
+                                        flex
+                                        flex-wrap
+                                        items-center
+                                        gap-2
+                                      "
+                                    >
+                                      <p
+                                        className="
+                                          truncate
+                                          text-[11px]
+                                          font-black
+                                          text-white
+                                        "
+                                      >
+                                        {offer.tabela}
+                                      </p>
+
+                                      {index === 0 ? (
+                                        <span
+                                          className="
+                                            rounded-full
+                                            bg-emerald-400/15
+                                            px-2
+                                            py-1
+                                            text-[7px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            text-emerald-300
+                                          "
+                                        >
+                                          Melhor troco
+                                        </span>
+                                      ) : null}
+                                    </div>
+
+                                    <p
+                                      className="
+                                        mt-1
+                                        text-[9px]
+                                        font-bold
+                                        text-white/35
+                                      "
+                                    >
+                                      {Number(
+                                        offer.prazo ||
+                                        0
+                                      )}
+                                      x
+                                      {" \u2022 "}
+                                      Taxa{" "}
+                                      {Number(
+                                        offer.taxa_refin ||
+                                        offer.taxa_juros ||
+                                        0
+                                      )
+                                        .toFixed(2)
+                                        .replace(
+                                          ".",
+                                          ","
+                                        )}
+                                      % a.m.
+                                    </p>
+                                  </div>
+
+                                  <p
+                                    className="
+                                      whitespace-nowrap
+                                      text-sm
+                                      font-black
+                                      text-emerald-300
+                                    "
+                                  >
+                                    {formatBRL(
+                                      offer.troco
+                                    )}
+                                  </p>
+                                </div>
+
+
+                                <div
+                                  className="
+                                    mt-4
+                                    grid
+                                    grid-cols-2
+                                    gap-2
+                                  "
+                                >
+                                  <div
+                                    className="
+                                      rounded-xl
+                                      bg-black/15
+                                      p-3
+                                    "
+                                  >
+                                    <p className="text-[7px] font-black uppercase text-white/30">
+                                      Parcela Refin
+                                    </p>
+
+                                    <p className="mt-1 text-xs font-black">
+                                      {formatBRL(
+                                        offer.parcela_refin
+                                      )}
+                                    </p>
+                                  </div>
+
+
+                                  <div
+                                    className="
+                                      rounded-xl
+                                      bg-black/15
+                                      p-3
+                                    "
+                                  >
+                                    <p className="text-[7px] font-black uppercase text-white/30">
+                                      Novo contrato
+                                    </p>
+
+                                    <p className="mt-1 text-xs font-black">
+                                      {formatBRL(
+                                        offer.novo_contrato
+                                      )}
+                                    </p>
+                                  </div>
+
+
+                                  <div
+                                    className="
+                                      rounded-xl
+                                      bg-black/15
+                                      p-3
+                                    "
+                                  >
+                                    <p className="text-[7px] font-black uppercase text-white/30">
+                                      Coeficiente
+                                    </p>
+
+                                    <p className="mt-1 text-xs font-black">
+                                      {Number(
+                                        offer.coeficiente ||
+                                        0
+                                      ).toFixed(6)}
+                                    </p>
+                                  </div>
+
+
+                                  <div
+                                    className="
+                                      rounded-xl
+                                      bg-black/15
+                                      p-3
+                                    "
+                                  >
+                                    <p className="text-[7px] font-black uppercase text-white/30">
+                                      Troco
+                                    </p>
+
+                                    <p className="mt-1 text-xs font-black text-emerald-300">
+                                      {formatBRL(
+                                        offer.troco
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          )}
+                      </div>
+                    ) : null}
+
+
                     <button
                       type="button"
                       onClick={
@@ -3268,11 +4395,11 @@ export default function PortabilidadeMultiplaPage() {
                       )}
 
                       {validating
-                        ? "Validando..."
+                        ? "Simulando..."
                         : validation
                             ?.elegivel_previo
-                        ? "Operação elegível"
-                        : "Validar operação"}
+                        ? "Simulação concluída"
+                        : "Simular FACTA"}
                     </button>
 
 

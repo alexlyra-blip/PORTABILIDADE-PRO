@@ -250,3 +250,122 @@ def test_nao_permite_beneficios_diferentes():
         for bloqueio
         in result["bloqueios"]
     )
+
+
+
+def test_intersecao_facta_todos_contratos():
+    results = [
+        {
+            "ofertas": [
+                {
+                    "banco": "FACTA",
+                    "tabela": "FACTA 84",
+                    "prazo": 84,
+                    "valor_liberado": 1500,
+                },
+                {
+                    "banco": "OUTRO",
+                    "tabela": "OUTRA",
+                    "prazo": 84,
+                    "valor_liberado": 9999,
+                },
+            ]
+        },
+        {
+            "ofertas": [
+                {
+                    "banco": "FACTA FINANCEIRA",
+                    "tabela": "FACTA 84",
+                    "prazo": 84,
+                    "valor_liberado": 1400,
+                }
+            ]
+        },
+    ]
+
+    offers = (
+        module
+        .interseccionar_ofertas_facta(
+            results
+        )
+    )
+
+    assert len(offers) == 1
+
+    assert (
+        offers[0]["tabela"]
+        == "FACTA 84"
+    )
+
+
+def test_intersecao_remove_tabela_nao_comum():
+    results = [
+        {
+            "ofertas": [
+                {
+                    "banco": "FACTA",
+                    "tabela": "FACTA 84",
+                    "prazo": 84,
+                    "valor_liberado": 1500,
+                },
+                {
+                    "banco": "FACTA",
+                    "tabela": "FACTA 96",
+                    "prazo": 96,
+                    "valor_liberado": 2000,
+                },
+            ]
+        },
+        {
+            "ofertas": [
+                {
+                    "banco": "FACTA",
+                    "tabela": "FACTA 84",
+                    "prazo": 84,
+                    "valor_liberado": 1400,
+                }
+            ]
+        },
+    ]
+
+    offers = (
+        module
+        .interseccionar_ofertas_facta(
+            results
+        )
+    )
+
+    assert len(offers) == 1
+    assert offers[0]["prazo"] == 84
+
+
+def test_intersecao_sem_facta_em_um_contrato():
+    results = [
+        {
+            "ofertas": [
+                {
+                    "banco": "FACTA",
+                    "tabela": "FACTA 84",
+                    "prazo": 84,
+                }
+            ]
+        },
+        {
+            "ofertas": [
+                {
+                    "banco": "OUTRO",
+                    "tabela": "OUTRA",
+                    "prazo": 84,
+                }
+            ]
+        },
+    ]
+
+    offers = (
+        module
+        .interseccionar_ofertas_facta(
+            results
+        )
+    )
+
+    assert offers == []

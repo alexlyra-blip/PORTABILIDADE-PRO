@@ -498,3 +498,191 @@ class PortabilidadeMultiplaFactaService:
             "bloqueios": bloqueios,
             "avisos": avisos,
         }
+
+
+
+# MOTOR_HELPERS_PORTABILIDADE_MULTIPLA_FACTA
+
+def _motor_normalizar_texto(value):
+    import unicodedata
+
+    text = str(value or "").strip().upper()
+
+    text = "".join(
+        char
+        for char in unicodedata.normalize(
+            "NFD",
+            text,
+        )
+        if unicodedata.category(char)
+        != "Mn"
+    )
+
+    return " ".join(text.split())
+
+
+def oferta_e_facta(oferta):
+    if not isinstance(oferta, dict):
+        return False
+
+    banco = (
+        oferta.get("banco")
+        or oferta.get("bank")
+        or oferta.get("banco_nome")
+        or oferta.get("nome_banco")
+        or ""
+    )
+
+    return (
+        "FACTA"
+        in _motor_normalizar_texto(
+            banco
+        )
+    )
+
+
+def chave_oferta_facta(oferta):
+    tabela = (
+        oferta.get("tabela")
+        or oferta.get("table_name")
+        or oferta.get("nome_tabela")
+        or oferta.get("tabela_nome")
+        or ""
+    )
+
+    prazo_raw = (
+        oferta.get("prazo")
+        or oferta.get("term")
+        or 0
+    )
+
+    try:
+        prazo = int(
+            float(prazo_raw or 0)
+        )
+    except (TypeError, ValueError):
+        prazo = 0
+
+    return (
+        _motor_normalizar_texto(
+            tabela
+        ),
+        prazo,
+    )
+
+
+def interseccionar_ofertas_facta(
+    resultados_motor,
+):
+    """
+    Retorna apenas tabelas FACTA existentes
+    em TODOS os contratos selecionados.
+
+    Nao recalcula nenhuma regra do motor.
+    Apenas cruza os resultados ja aprovados
+    pelo SimuladorService.
+    """
+
+    mapas = []
+
+    for resultado in resultados_motor:
+
+        ofertas = (
+            resultado.get("ofertas")
+            if isinstance(
+                resultado,
+                dict,
+            )
+            else []
+        ) or []
+
+        mapa = {}
+
+        for oferta in ofertas:
+
+            if not oferta_e_facta(
+                oferta
+            ):
+                continue
+
+            chave = chave_oferta_facta(
+                oferta
+            )
+
+            if (
+                not chave[0]
+                or chave[1] <= 0
+            ):
+                continue
+
+            if chave not in mapa:
+                mapa[chave] = oferta
+
+        mapas.append(mapa)
+
+    if not mapas:
+        return []
+
+    if any(
+        not mapa
+        for mapa in mapas
+    ):
+        return []
+
+    comuns = set(
+        mapas[0].keys()
+    )
+
+    for mapa in mapas[1:]:
+        comuns &= set(
+            mapa.keys()
+        )
+
+    resultado = []
+
+    for chave in sorted(
+        comuns,
+        key=lambda item: (
+            item[1],
+            item[0],
+        ),
+        reverse=True,
+    ):
+        variantes = [
+            mapa[chave]
+            for mapa in mapas
+        ]
+
+        def valor_liberado(
+            oferta,
+        ):
+            try:
+                return float(
+                    oferta.get(
+                        "valor_liberado",
+                        oferta.get(
+                            "troco",
+                            0,
+                        ),
+                    )
+                    or 0
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                return 0.0
+
+        # Se houver alguma pequena diferenca
+        # entre contextos de origem,
+        # usamos o resultado mais conservador.
+        escolhida = min(
+            variantes,
+            key=valor_liberado,
+        )
+
+        resultado.append(
+            dict(escolhida)
+        )
+
+    return resultado
