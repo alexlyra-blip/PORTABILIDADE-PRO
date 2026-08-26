@@ -2196,8 +2196,85 @@ export default function PortabilidadeMultiplaPage() {
             }
           );
 
+        /* MULTIPLA_NEGATIVE_BLOCK_SUMMARY */
+
+        const negativeMarginMessage =
+          "Sem margem para libera\u00e7\u00e3o de troco ou saldo negativo.";
+
+        const negativeMarginBlock =
+          Array.isArray(
+            motorResponse
+              ?.bloqueios_contratos
+          )
+            ? motorResponse
+                .bloqueios_contratos
+                .some((block) => {
+                  const reasons = [
+                    ...(
+                      Array.isArray(
+                        block?.motivos
+                      )
+                        ? block.motivos
+                        : []
+                    ),
+                    ...(
+                      Array.isArray(
+                        block?.razoes
+                      )
+                        ? block.razoes
+                        : []
+                    ),
+                    ...(
+                      Array.isArray(
+                        block?.reasons
+                      )
+                        ? block.reasons
+                        : []
+                    ),
+                    block?.motivo,
+                    block?.mensagem,
+                  ]
+                    .filter(Boolean)
+                    .map(
+                      (reason) =>
+                        String(reason)
+                    );
+
+                  return reasons.some(
+                    (reason) =>
+                      reason.includes(
+                        negativeMarginMessage
+                      )
+                  );
+                })
+            : false;
+
+        const motorResultForDisplay =
+          negativeMarginBlock
+            ? {
+                ...motorResponse,
+
+                bloqueios_contratos: [
+                  {
+                    banco:
+                      negativeMarginMessage,
+
+                    banco_origem:
+                      negativeMarginMessage,
+
+                    nome_banco:
+                      negativeMarginMessage,
+
+                    motivos: [],
+                    razoes: [],
+                    reasons: [],
+                  },
+                ],
+              }
+            : motorResponse;
+
         setMotorResult(
-          motorResponse
+          motorResultForDisplay
         );
 
         if (
