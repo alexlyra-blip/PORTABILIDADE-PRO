@@ -316,6 +316,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "contrato": safe_str(emp.get("Contrato")),
                 "parcela": parcela,
                 "quitacao": quitacao,
+                "saldo_devedor": quitacao,
                 "valor_liberado": 0.0,
                 "prazo": prazo,
                 "parcelas_pagas": pagas,
