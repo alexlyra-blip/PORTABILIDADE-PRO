@@ -67,8 +67,59 @@ export default function Sidebar() {
   };
 
 
+  const portabilidadeMultiplaIcon = (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M4.2 8.5A8.2 8.2 0 0 1 18.3 5.7"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M16.2 3.7H20.2V7.7"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19.8 15.5A8.2 8.2 0 0 1 5.7 18.3"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7.8 20.3H3.8V16.3"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20.1 7.5L17.4 5"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M3.9 16.5L6.6 19"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+
   const menuItems = [
     { name: "Nova Simulação", href: "/simulador", icon: <Icons.Calculator />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
+    { name: "Portabilidade Múltipla", href: "/portabilidade-multipla", icon: portabilidadeMultiplaIcon, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "Ofertas", href: "/ofertas", icon: <Icons.Trophy />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
         { name: "Consulta CPF", href: "/consultas/cpf", icon: <Icons.Search />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },
     { name: "CLT Multibancos", href: "/clt", icon: <Icons.Briefcase />, roles: ['admin', 'promotora', 'corretor', 'vendedor'] },

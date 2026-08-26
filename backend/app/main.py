@@ -163,7 +163,10 @@ from app.routers import payment_orders
 from app.routers import payment_fees
 from app.routers import seller_calculator
 
+from app.routers import portabilidade_multipla
+
 # Include Routers
+app.include_router(portabilidade_multipla.router, prefix="/api/portabilidade-multipla", tags=["Portabilidade Multipla"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(banks.router, prefix="/api/banks", tags=["Banks"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
