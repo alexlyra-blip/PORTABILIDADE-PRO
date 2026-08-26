@@ -2253,23 +2253,7 @@ export default function PortabilidadeMultiplaPage() {
           negativeMarginBlock
             ? {
                 ...motorResponse,
-
-                bloqueios_contratos: [
-                  {
-                    banco:
-                      negativeMarginMessage,
-
-                    banco_origem:
-                      negativeMarginMessage,
-
-                    nome_banco:
-                      negativeMarginMessage,
-
-                    motivos: [],
-                    razoes: [],
-                    reasons: [],
-                  },
-                ],
+                bloqueios_contratos: [],
               }
             : motorResponse;
 
@@ -2322,9 +2306,11 @@ export default function PortabilidadeMultiplaPage() {
           setNotice({
             type: "error",
             text:
-              blocks.length
-                ? blocks.join(" | ")
-                : "Nenhuma tabela FACTA elegivel foi encontrada pelo Motor.",
+              negativeMarginBlock
+                ? negativeMarginMessage
+                : blocks.length
+                  ? blocks.join(" | ")
+                  : "Nenhuma tabela FACTA elegivel foi encontrada pelo Motor.",
           });
         }
 
