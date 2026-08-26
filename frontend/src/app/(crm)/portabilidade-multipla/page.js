@@ -871,6 +871,75 @@ export default function PortabilidadeMultiplaPage() {
   ] = useState(null);
 
   const [
+    selectedFactaTerm,
+    setSelectedFactaTerm,
+  ] = useState(null);
+
+  /* MULTIPLA_FACTA_TERM_FILTER */
+  const factaOffers = Array.isArray(
+    motorResult?.ofertas
+  )
+    ? motorResult.ofertas
+    : [];
+
+  const factaAvailableTerms = [
+    ...new Set(
+      factaOffers
+        .map(
+          (offer) =>
+            Number(
+              offer?.prazo || 0
+            )
+        )
+        .filter(
+          (term) =>
+            Number.isFinite(term) &&
+            term > 0
+        )
+    ),
+  ].sort(
+    (a, b) => b - a
+  );
+
+  const factaPreferredTerm =
+    factaAvailableTerms.includes(108)
+      ? 108
+      : (
+          factaAvailableTerms[0] ||
+          null
+        );
+
+  const factaActiveTerm =
+    factaAvailableTerms.includes(
+      Number(selectedFactaTerm)
+    )
+      ? Number(selectedFactaTerm)
+      : factaPreferredTerm;
+
+  const factaVisibleOffers =
+    factaActiveTerm
+      ? factaOffers.filter(
+          (offer) =>
+            Number(
+              offer?.prazo || 0
+            ) === factaActiveTerm
+        )
+      : factaOffers;
+
+  useEffect(() => {
+    if (!factaOffers.length) {
+      setSelectedFactaTerm(null);
+      return;
+    }
+
+    setSelectedFactaTerm(
+      factaPreferredTerm
+    );
+  }, [motorResult]);
+
+
+
+  const [
     validating,
     setValidating,
   ] = useState(false);
@@ -4134,9 +4203,138 @@ export default function PortabilidadeMultiplaPage() {
                         </div>
 
 
-                        {motorResult
-                          .ofertas
-                          .map(
+                        {/* MULTIPLA_FACTA_TERM_BUTTONS */}
+                        {factaAvailableTerms.length > 0 ? (
+                          <div
+                            className="
+                              rounded-2xl
+                              border
+                              border-white/10
+                              bg-black/10
+                              p-3
+                            "
+                          >
+                            <div
+                              className="
+                                mb-2
+                                flex
+                                items-center
+                                justify-between
+                                gap-3
+                              "
+                            >
+                              <p
+                                className="
+                                  text-[8px]
+                                  font-black
+                                  uppercase
+                                  tracking-[0.18em]
+                                  text-white/40
+                                "
+                              >
+                                Prazos disponíveis
+                              </p>
+
+                              {factaActiveTerm ? (
+                                <p
+                                  className="
+                                    text-[8px]
+                                    font-black
+                                    uppercase
+                                    text-white/40
+                                  "
+                                >
+                                  {factaActiveTerm}X
+                                  {" • "}
+                                  {
+                                    factaVisibleOffers
+                                      .length
+                                  }
+                                  {" "}
+                                  {
+                                    factaVisibleOffers
+                                      .length === 1
+                                      ? "tabela"
+                                      : "tabelas"
+                                  }
+                                </p>
+                              ) : null}
+                            </div>
+
+                            <div
+                              className="
+                                flex
+                                flex-wrap
+                                gap-2
+                              "
+                            >
+                              {
+                                factaAvailableTerms
+                                  .map(
+                                    (term) => {
+                                      const termCount =
+                                        factaOffers
+                                          .filter(
+                                            (offer) =>
+                                              Number(
+                                                offer
+                                                  ?.prazo ||
+                                                0
+                                              ) ===
+                                              term
+                                          )
+                                          .length;
+
+                                      const active =
+                                        factaActiveTerm
+                                        === term;
+
+                                      return (
+                                        <button
+                                          key={term}
+                                          type="button"
+                                          onClick={() =>
+                                            setSelectedFactaTerm(
+                                              term
+                                            )
+                                          }
+                                          className={`
+                                            rounded-xl
+                                            px-3
+                                            py-2
+                                            text-[9px]
+                                            font-black
+                                            uppercase
+                                            tracking-wider
+                                            transition-all
+                                            ${
+                                              active
+                                                ? "text-white shadow-lg"
+                                                : "bg-white/5 text-white/45 hover:bg-white/10 hover:text-white"
+                                            }
+                                          `}
+                                          style={
+                                            active
+                                              ? {
+                                                  background:
+                                                    brandColor,
+                                                }
+                                              : undefined
+                                          }
+                                        >
+                                          {term}X
+                                          {" "}
+                                          ({termCount})
+                                        </button>
+                                      );
+                                    }
+                                  )
+                              }
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {factaVisibleOffers.map(
                             (
                               offer,
                               index
@@ -4298,43 +4496,10 @@ export default function PortabilidadeMultiplaPage() {
                                   </div>
 
 
-                                  <div
-                                    className="
-                                      rounded-xl
-                                      bg-black/15
-                                      p-3
-                                    "
-                                  >
-                                    <p className="text-[7px] font-black uppercase text-white/30">
-                                      Coeficiente
-                                    </p>
-
-                                    <p className="mt-1 text-xs font-black">
-                                      {Number(
-                                        offer.coeficiente ||
-                                        0
-                                      ).toFixed(6)}
-                                    </p>
-                                  </div>
 
 
-                                  <div
-                                    className="
-                                      rounded-xl
-                                      bg-black/15
-                                      p-3
-                                    "
-                                  >
-                                    <p className="text-[7px] font-black uppercase text-white/30">
-                                      Troco
-                                    </p>
 
-                                    <p className="mt-1 text-xs font-black text-emerald-300">
-                                      {formatBRL(
-                                        offer.troco
-                                      )}
-                                    </p>
-                                  </div>
+
                                 </div>
                               </div>
                             )
