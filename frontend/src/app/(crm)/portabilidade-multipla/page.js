@@ -2249,13 +2249,83 @@ export default function PortabilidadeMultiplaPage() {
                 })
             : false;
 
+        /* MULTIPLA_LAST_MOTOR_FAILURE */
+
+        const motorBlocks =
+          Array.isArray(
+            motorResponse
+              ?.bloqueios_contratos
+          )
+            ? motorResponse
+                .bloqueios_contratos
+            : [];
+
+        const lastMotorBlock =
+          [...motorBlocks]
+            .reverse()
+            .find(
+              (block) =>
+                Array.isArray(
+                  block?.motivos
+                ) &&
+                block.motivos.length > 0
+            ) ||
+          null;
+
+        const lastMotorReason =
+          lastMotorBlock
+            ? lastMotorBlock
+                .motivos[
+                  lastMotorBlock
+                    .motivos
+                    .length - 1
+                ]
+            : null;
+
+        const lastMotorBank =
+          lastMotorBlock
+            ? (
+                lastMotorBlock.banco ||
+                lastMotorBlock
+                  .banco_origem ||
+                lastMotorBlock
+                  .nome_banco ||
+                "FACTA"
+              )
+            : null;
+
+        const lastMotorFailure =
+          lastMotorReason
+            ? `${lastMotorBank}: ${lastMotorReason}`
+            : null;
+
         const motorResultForDisplay =
           negativeMarginBlock
             ? {
                 ...motorResponse,
                 bloqueios_contratos: [],
               }
-            : motorResponse;
+            : (
+                lastMotorBlock &&
+                lastMotorReason
+              )
+              ? {
+                  ...motorResponse,
+
+                  bloqueios_contratos: [
+                    {
+                      ...lastMotorBlock,
+
+                      banco:
+                        lastMotorBank,
+
+                      motivos: [
+                        lastMotorReason,
+                      ],
+                    },
+                  ],
+                }
+              : motorResponse;
 
         setMotorResult(
           motorResultForDisplay
@@ -2277,39 +2347,33 @@ export default function PortabilidadeMultiplaPage() {
 
         } else {
 
-          const contractBlocks =
-            (
-              motorResponse
-                ?.bloqueios_contratos ||
-              []
+          const globalBlocks =
+            Array.isArray(
+              motorResponse?.bloqueios
             )
-              .flatMap(
-                (item) =>
-                  (
-                    item?.motivos ||
-                    []
-                  ).map(
-                    (reason) =>
-                      `${item.banco}: ${reason}`
-                  )
-              );
+              ? motorResponse.bloqueios
+              : [];
 
-          const blocks = [
-            ...(
-              motorResponse
-                ?.bloqueios ||
-              []
-            ),
-            ...contractBlocks,
-          ];
+          const lastGlobalBlock =
+            globalBlocks.length
+              ? String(
+                  globalBlocks[
+                    globalBlocks.length - 1
+                  ]
+                )
+              : null;
+
+          const visibleFailure =
+            lastMotorFailure ||
+            lastGlobalBlock;
 
           setNotice({
             type: "error",
             text:
               negativeMarginBlock
                 ? negativeMarginMessage
-                : blocks.length
-                  ? blocks.join(" | ")
+                : visibleFailure
+                  ? `Simula\u00e7\u00e3o n\u00e3o aprovada: ${visibleFailure}`
                   : "Nenhuma tabela FACTA elegivel foi encontrada pelo Motor.",
           });
         }
