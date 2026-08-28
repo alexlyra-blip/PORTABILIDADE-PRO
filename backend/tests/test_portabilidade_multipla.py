@@ -65,7 +65,7 @@ def test_exemplo_margem_negativa():
         == 100
     )
     assert result["maior_parcela"] == 120
-    assert result["parcela_refin"] == 320
+    assert result["parcela_refin"] == 340
 
 
 def test_grupo_c_nao_pode_ser_unificado():
@@ -174,12 +174,14 @@ def test_refin_reprova_se_nao_atender_nenhum():
         contratos=[
             {
                 "banco": "C6",
-                "parcela": 40,
+                "parcela": 20,
                 "saldo_devedor": 2500,
             }
         ],
         valor_operacao_refin=2999,
     )
+
+    assert result["parcela_refin"] == 40
 
     assert (
         result[
@@ -447,3 +449,53 @@ def test_grupo_c_nao_agrupa_nem_com_mesmo_banco():
         "Grupo C" in item
         for item in result["bloqueios"]
     )
+
+def test_parcela_refin_final_inclui_vinte():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=-80,
+        contratos=[
+            {
+                "banco": "C6",
+                "beneficio": "1234567890",
+                "parcela": 200,
+                "saldo_devedor": 3000,
+            },
+            {
+                "banco": "PAN",
+                "beneficio": "1234567890",
+                "parcela": 200,
+                "saldo_devedor": 3000,
+            },
+        ],
+    )
+
+    assert result["soma_parcelas"] == 400
+    assert result["margem_negativa"] == 80
+    assert result["parcela_refin"] == 340
+
+def test_parcela_refin_final_inclui_vinte_sem_margem_negativa():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "C6",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+            },
+            {
+                "banco": "PAN",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+            },
+        ],
+    )
+
+    assert result["soma_parcelas"] == 200
+    assert result["margem_negativa"] == 0
+    assert result["parcela_refin"] == 220

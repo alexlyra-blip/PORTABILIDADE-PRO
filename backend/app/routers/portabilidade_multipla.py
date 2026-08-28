@@ -937,13 +937,23 @@ async def simular_portabilidade_multipla_facta(
                 banco=
                     banco_origem,
 
-                # IMPORTANTE:
-                # O Motor recebe a soma original
-                # das parcelas e a margem negativa
-                # separadamente, evitando desconto
-                # em duplicidade.
-                parcela=
-                    soma_parcelas,
+                # MULTIPLA_REFIN_FINAL_PLUS_20
+                # A parcela FINAL do Refin deve ser:
+                #
+                # soma parcelas
+                # - margem negativa
+                # + R$ 20,00.
+                #
+                # Como o Motor recebe e desconta
+                # margem negativa separadamente,
+                # enviamos parcela_refin + margem.
+                #
+                # Assim o Motor termina exatamente
+                # na parcela_refin calculada.
+                parcela=(
+                    parcela_refin
+                    + margem_negativa
+                ),
 
                 saldo_devedor=
                     soma_saldos,
