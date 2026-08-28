@@ -947,6 +947,14 @@ export default function PortabilidadeMultiplaPage() {
   const [notice, setNotice] =
     useState(null);
 
+  /*
+   * MULTIPLA_RESULT_TOP_BANNER
+   * Referencia usada para levar o usuario
+   * diretamente ao resultado da simulacao.
+   */
+  const simulationResultRef =
+    useRef(null);
+
   const [
     clientData,
     setClientData,
@@ -1956,6 +1964,42 @@ export default function PortabilidadeMultiplaPage() {
   };
 
 
+  /*
+   * MULTIPLA_RESULT_AUTO_SCROLL
+   * Quando o Motor concluir, desloca a tela
+   * para o resultado visivel no topo.
+   */
+  useEffect(() => {
+    if (
+      !motorResult ||
+      !notice
+    ) {
+      return;
+    }
+
+    const timer =
+      window.setTimeout(
+        () => {
+          simulationResultRef
+            .current
+            ?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+        },
+        80
+      );
+
+    return () =>
+      window.clearTimeout(
+        timer
+      );
+  }, [
+    motorResult,
+    notice,
+  ]);
+
+
   const handleValidate =
     async () => {
 
@@ -2272,7 +2316,7 @@ export default function PortabilidadeMultiplaPage() {
             ) ||
           null;
 
-        const lastMotorReason =
+        const lastMotorReasonRaw =
           lastMotorBlock
             ? lastMotorBlock
                 .motivos[
@@ -2280,6 +2324,25 @@ export default function PortabilidadeMultiplaPage() {
                     .motivos
                     .length - 1
                 ]
+            : null;
+
+        const lastMotorReason =
+          lastMotorReasonRaw
+            ? (
+                String(
+                  lastMotorReasonRaw
+                )
+                  .split(" | ")
+                  .map(
+                    (reason) =>
+                      reason.trim()
+                  )
+                  .filter(Boolean)
+                  .pop() ||
+                String(
+                  lastMotorReasonRaw
+                )
+              )
             : null;
 
         const lastMotorBank =
@@ -3347,14 +3410,159 @@ export default function PortabilidadeMultiplaPage() {
 
 
         {notice ? (
-          <div className="mt-4">
-            <Notice
-              type={
-                notice.type
-              }
+          <div
+            ref={
+              simulationResultRef
+            }
+            className="
+              mt-4
+              scroll-mt-28
+            "
+          >
+            <div
+              role="alert"
+              aria-live="assertive"
+              className={`
+                rounded-[1.5rem]
+                border-2
+                px-5
+                py-4
+                shadow-lg
+                ${
+                  notice.type ===
+                  "success"
+                    ? `
+                      border-emerald-200
+                      bg-emerald-50
+                      shadow-emerald-100/60
+                    `
+                    : notice.type ===
+                      "warning"
+                    ? `
+                      border-amber-200
+                      bg-amber-50
+                      shadow-amber-100/60
+                    `
+                    : `
+                      border-red-200
+                      bg-red-50
+                      shadow-red-100/70
+                    `
+                }
+              `}
             >
-              {notice.text}
-            </Notice>
+              <div
+                className="
+                  flex
+                  items-start
+                  gap-4
+                "
+              >
+                <div
+                  className={`
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-full
+                    ${
+                      notice.type ===
+                      "success"
+                        ? `
+                          bg-emerald-600
+                          text-white
+                        `
+                        : notice.type ===
+                          "warning"
+                        ? `
+                          bg-amber-500
+                          text-white
+                        `
+                        : `
+                          bg-red-600
+                          text-white
+                        `
+                    }
+                  `}
+                >
+                  {notice.type ===
+                  "success" ? (
+                    <Icons.Check
+                      size={18}
+                    />
+                  ) : (
+                    <span
+                      className="
+                        text-lg
+                        font-black
+                      "
+                    >
+                      !
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                  "
+                >
+                  <p
+                    className={`
+                      text-[11px]
+                      font-black
+                      uppercase
+                      tracking-[0.16em]
+                      ${
+                        notice.type ===
+                        "success"
+                          ? "text-emerald-700"
+                          : notice.type ===
+                            "warning"
+                          ? "text-amber-700"
+                          : "text-red-700"
+                      }
+                    `}
+                  >
+                    {motorResult
+                      ? motorResult
+                          ?.success
+                        ? "Simula\u00e7\u00e3o aprovada"
+                        : "Simula\u00e7\u00e3o n\u00e3o aprovada"
+                      : notice.type ===
+                        "success"
+                      ? "Opera\u00e7\u00e3o conclu\u00edda"
+                      : notice.type ===
+                        "warning"
+                      ? "Aten\u00e7\u00e3o"
+                      : "Opera\u00e7\u00e3o n\u00e3o aprovada"}
+                  </p>
+
+                  <p
+                    className={`
+                      mt-1
+                      text-sm
+                      font-bold
+                      leading-relaxed
+                      ${
+                        notice.type ===
+                        "success"
+                          ? "text-emerald-900"
+                          : notice.type ===
+                            "warning"
+                          ? "text-amber-900"
+                          : "text-red-900"
+                      }
+                    `}
+                  >
+                    {notice.text}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -4192,6 +4400,8 @@ export default function PortabilidadeMultiplaPage() {
 
 
                     {motorResult
+                      ?.success &&
+                    motorResult
                       ?.bloqueios_contratos
                       ?.length > 0 ? (
                       <div
@@ -4666,7 +4876,11 @@ export default function PortabilidadeMultiplaPage() {
                       "
                       style={{
                         background:
-                          brandColor,
+                          motorResult
+                            ? motorResult?.success
+                              ? "#059669"
+                              : "#dc2626"
+                            : brandColor,
                       }}
                     >
                       {validating ? (
@@ -4674,8 +4888,7 @@ export default function PortabilidadeMultiplaPage() {
                           size={16}
                           className="animate-spin"
                         />
-                      ) : validation
-                          ?.elegivel_previo ? (
+                      ) : motorResult?.success ? (
                         <Icons.Check
                           size={16}
                         />
@@ -4687,10 +4900,11 @@ export default function PortabilidadeMultiplaPage() {
 
                       {validating
                         ? "Simulando..."
-                        : validation
-                            ?.elegivel_previo
-                        ? "Simulação concluída"
-                        : "Simular FACTA"}
+                        : motorResult
+                          ? motorResult?.success
+                            ? "Simula\u00e7\u00e3o aprovada"
+                            : "Simula\u00e7\u00e3o n\u00e3o aprovada"
+                          : "Simular FACTA"}
                     </button>
 
 
