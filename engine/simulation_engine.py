@@ -500,7 +500,15 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                         bank_threshold = float(regra.portability_rate_threshold or 0.0)
                         
                         # Se a tabela NÃO define um limite próprio, usamos o do banco
-                        if tabela_threshold <= 0 and bank_threshold > 0:
+                        if (
+                        not getattr(
+                            cliente_input,
+                            "skip_portability_rate_validation",
+                            False,
+                        )
+                        and tabela_threshold <= 0
+                        and bank_threshold > 0
+                    ):
                             port_adj = float(tabela.portability_adjustment or 0.0)
                             taxa_port_com_ajuste = taxa_port_calc + port_adj
                             if taxa_port_com_ajuste < (bank_threshold - 0.0005):
@@ -509,7 +517,14 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                                 break
                         
                         # Se a tabela DEFINE um limite, comparamos com a taxa do cliente (ignorando o banco)
-                        elif tabela_threshold > 0:
+                        elif (
+                        not getattr(
+                            cliente_input,
+                            "skip_portability_rate_validation",
+                            False,
+                        )
+                        and tabela_threshold > 0
+                    ):
                             if taxa_port_calc < (tabela_threshold - 0.0005):
                                 tabela_viavel_taxa = False
                                 motivos_tabelas.append(f"Tabela {tabela.name}: Taxa port. atual {taxa_port_calc:.2f}% abaixo do permitido por esta tabela ({tabela_threshold}%)")

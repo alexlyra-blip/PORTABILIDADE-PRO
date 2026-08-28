@@ -29,6 +29,7 @@ class SimulacaoInput(BaseModel):
     is_invalidez_60_plus: bool = Field(False, description="Invalidez acima de 60 anos")
     possui_dois_cartoes: bool = Field(False, description="Cliente possui 2 cartões ativos?")
     valor_margem_negativa: float = Field(0.0, description="Valor da margem negativa do beneficiário")
+    skip_portability_rate_validation: bool = Field(False, description="Ignora apenas a validacao de taxa minima da portabilidade")
 
     class Config:
         populate_by_name = True

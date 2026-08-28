@@ -953,6 +953,11 @@ async def simular_portabilidade_multipla_facta(
                         contrato.taxa
                     ),
 
+                # Portabilidade Multipla FACTA:
+                # nao aplica taxa minima de portabilidade.
+                skip_portability_rate_validation=
+                    True,
+
                 total_term=
                     prazo_total,
 

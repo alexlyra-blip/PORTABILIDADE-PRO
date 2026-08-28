@@ -369,3 +369,81 @@ def test_intersecao_sem_facta_em_um_contrato():
     )
 
     assert offers == []
+
+def test_grupo_a_com_grupo_a_pode_unificar():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "BMG",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+            },
+            {
+                "banco": "C6",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is True
+    assert result["grupo_operacao"] == "A"
+
+
+def test_grupo_b_com_grupo_b_pode_unificar():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "Mercantil",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+            },
+            {
+                "banco": "PicPay",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is True
+    assert result["grupo_operacao"] == "B"
+
+
+def test_grupo_c_nao_agrupa_nem_com_mesmo_banco():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "BRB",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+            },
+            {
+                "banco": "BRB",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+
+    assert any(
+        "Grupo C" in item
+        for item in result["bloqueios"]
+    )
