@@ -398,8 +398,15 @@ class PortabilidadeMultiplaFactaService:
                     "valor da margem negativa."
                 )
 
+        # MULTIPLA_REFIN_FINAL_PLUS_20
+        # Regra FACTA:
+        # soma das parcelas
+        # - margem negativa
+        # + R$ 20,00.
         parcela_refin = round(
-            soma_parcelas - margem_negativa,
+            soma_parcelas
+            - margem_negativa
+            + cls.ADICIONAL_VIABILIDADE,
             2,
         )
 

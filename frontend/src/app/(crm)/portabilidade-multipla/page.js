@@ -1321,11 +1321,15 @@ export default function PortabilidadeMultiplaPage() {
               )
             : 0;
 
+        /* MULTIPLA_REFIN_FINAL_PLUS_20 */
         const parcelaRefin =
           Math.max(
             0,
             somaParcelas -
-              margemNegativa
+              margemNegativa +
+              money(
+                config.adicional_viabilidade
+              )
           );
 
         return {
