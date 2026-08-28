@@ -178,6 +178,185 @@ class PortabilidadeMultiplaFactaService:
         except (TypeError, ValueError):
             return 0.0
 
+    # MULTIPLA_PROMOTORA_ORIGIN_RULES
+
+    @staticmethod
+    def _promotora_clean_words(value):
+        import re
+
+        text = str(value or "").upper()
+
+        for noise in [
+            "BANCO",
+            "S.A.",
+            "SA",
+            "CONSIGNADO",
+            "CREDITO",
+            "FINANCEIRA",
+            "BANK",
+            "PORTABILIDADE",
+            "INSTITUICAO",
+        ]:
+            text = text.replace(noise, " ")
+
+        return set(
+            re.findall(
+                r"[A-Z0-9]{2,}",
+                text,
+            )
+        )
+
+    @classmethod
+    def _promotora_bank_matches(
+        cls,
+        input_bank,
+        rule_bank,
+    ):
+        full_origin_name = str(
+            input_bank or ""
+        ).upper()
+
+        rule_bank_name = str(
+            rule_bank or ""
+        ).upper()
+
+        input_words = cls._promotora_clean_words(
+            full_origin_name
+        )
+
+        rule_words = cls._promotora_clean_words(
+            rule_bank_name
+        )
+
+        if (
+            rule_words
+            and input_words
+            and rule_words.intersection(input_words)
+        ):
+            return True
+
+        return bool(
+            rule_bank_name
+            and (
+                rule_bank_name in full_origin_name
+                or full_origin_name in rule_bank_name
+            )
+        )
+
+    @staticmethod
+    def _promotora_int(value):
+        try:
+            return max(
+                0,
+                int(float(value or 0)),
+            )
+        except (TypeError, ValueError):
+            return 0
+
+    @classmethod
+    def validar_regras_promotora_origem(
+        cls,
+        contratos,
+        origin_config=None,
+        origin_blocklist=None,
+    ):
+        """
+        Pre-validacao das regras de origem da promotora
+        aplicada somente a Portabilidade Multipla.
+        """
+
+        origin_config = origin_config or []
+        origin_blocklist = origin_blocklist or []
+
+        bloqueios = []
+
+        for index, contrato in enumerate(
+            contratos or [],
+            start=1,
+        ):
+            banco = str(
+                contrato.get("banco", "") or ""
+            ).strip()
+
+            parcelas_raw = contrato.get(
+                "parcelas_pagas"
+            )
+
+            if parcelas_raw in (None, ""):
+                prazo = cls._promotora_int(
+                    contrato.get("prazo")
+                )
+
+                prazo_restante = cls._promotora_int(
+                    contrato.get("prazo_restante")
+                )
+
+                parcelas_pagas = max(
+                    0,
+                    prazo - prazo_restante,
+                )
+            else:
+                parcelas_pagas = cls._promotora_int(
+                    parcelas_raw
+                )
+
+            for rule in origin_config:
+                if not isinstance(rule, dict):
+                    continue
+
+                rule_bank = str(
+                    rule.get("origin_bank", "") or ""
+                ).strip()
+
+                if not cls._promotora_bank_matches(
+                    banco,
+                    rule_bank,
+                ):
+                    continue
+
+                min_paid = cls._promotora_int(
+                    rule.get("min_paid", 0)
+                )
+
+                if parcelas_pagas < min_paid:
+                    bloqueios.append(
+                        f"Contrato {index}: "
+                        "Regra da promotora: "
+                        f"{rule_bank} exige no minimo "
+                        f"{min_paid} parcelas pagas. "
+                        f"Contrato possui {parcelas_pagas}."
+                    )
+
+                    break
+
+            for rule in origin_blocklist:
+                if isinstance(rule, dict):
+                    rule_bank = str(
+                        rule.get("origin_bank", "") or ""
+                    ).strip()
+                else:
+                    rule_bank = str(
+                        rule or ""
+                    ).strip()
+
+                if not cls._promotora_bank_matches(
+                    banco,
+                    rule_bank,
+                ):
+                    continue
+
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "Regra da promotora: "
+                    "a promotora nao porta contratos "
+                    f"originados no banco {rule_bank}."
+                )
+
+                break
+
+        return bloqueios
+
+
     @classmethod
     def validar(
         cls,

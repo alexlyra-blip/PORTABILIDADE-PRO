@@ -1,4 +1,23 @@
-﻿from typing import List, Optional
+﻿
+import json as _multipla_promotora_json
+
+from sqlalchemy.future import (
+    select as _multipla_promotora_select,
+)
+
+from sqlalchemy.ext.asyncio import (
+    AsyncSession as _MultiplaPromotoraAsyncSession,
+)
+
+from app.database import (
+    get_db as _multipla_promotora_get_db,
+)
+
+from app.models.sqlalchemy_models import (
+    PromotoraRule as _MultiplaPromotoraRule,
+)
+
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -19,6 +38,9 @@ class ContratoMultiplaInput(BaseModel):
     saldo_devedor: float = 0.0
     contrato: Optional[str] = None
     beneficio: str
+    prazo: Optional[int] = None
+    prazo_restante: Optional[int] = None
+    parcelas_pagas: Optional[int] = None
 
 
 class PortabilidadeMultiplaInput(BaseModel):
@@ -62,11 +84,19 @@ async def configuracao_portabilidade_multipla(
 async def validar_portabilidade_multipla(
     payload: PortabilidadeMultiplaInput,
     current_user: User = Depends(get_current_user),
+    db: _MultiplaPromotoraAsyncSession = Depends(
+        _multipla_promotora_get_db
+    ),
 ):
+    # MULTIPLA_PROMOTORA_ORIGIN_RULES
+
     contratos = []
 
     for contrato in payload.contratos:
-        if hasattr(contrato, "model_dump"):
+        if hasattr(
+            contrato,
+            "model_dump",
+        ):
             contratos.append(
                 contrato.model_dump()
             )
@@ -75,12 +105,10 @@ async def validar_portabilidade_multipla(
                 contrato.dict()
             )
 
-    return (
+    validacao = (
         PortabilidadeMultiplaFactaService
         .validar(
-            banco_destino=(
-                payload.banco_destino
-            ),
+            banco_destino=payload.banco_destino,
             convenio=payload.convenio,
             margem_disponivel=(
                 payload.margem_disponivel
@@ -91,6 +119,84 @@ async def validar_portabilidade_multipla(
             ),
         )
     )
+
+    promotora_id = current_user.id
+
+    if (
+        getattr(
+            current_user,
+            "role",
+            "",
+        )
+        != "promotora"
+        and getattr(
+            current_user,
+            "broker_id",
+            None,
+        )
+    ):
+        promotora_id = current_user.broker_id
+
+    result = await db.execute(
+        _multipla_promotora_select(
+            _MultiplaPromotoraRule
+        ).where(
+            _MultiplaPromotoraRule.promotora_id
+            == promotora_id
+        )
+    )
+
+    origin_config = []
+    origin_blocklist = []
+
+    for rule in result.scalars().all():
+        if rule.rule_key not in {
+            "origin_bank_config",
+            "origin_bank_blocklist",
+        }:
+            continue
+
+        try:
+            parsed = _multipla_promotora_json.loads(
+                rule.rule_value or "[]"
+            )
+        except (TypeError, ValueError):
+            parsed = []
+
+        if not isinstance(parsed, list):
+            parsed = []
+
+        if rule.rule_key == "origin_bank_config":
+            origin_config = parsed
+
+        if rule.rule_key == "origin_bank_blocklist":
+            origin_blocklist = parsed
+
+    bloqueios_promotora = (
+        PortabilidadeMultiplaFactaService
+        .validar_regras_promotora_origem(
+            contratos=contratos,
+            origin_config=origin_config,
+            origin_blocklist=origin_blocklist,
+        )
+    )
+
+    if bloqueios_promotora:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_promotora,
+        ]
+
+        validacao["elegivel_previo"] = False
+
+    validacao[
+        "bloqueios_promotora"
+    ] = bloqueios_promotora
+
+    return validacao
 
 
 

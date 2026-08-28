@@ -499,3 +499,66 @@ def test_parcela_refin_final_inclui_vinte_sem_margem_negativa():
     assert result["soma_parcelas"] == 200
     assert result["margem_negativa"] == 0
     assert result["parcela_refin"] == 220
+
+def test_regra_promotora_bloqueia_banco_origem():
+    bloqueios = Service.validar_regras_promotora_origem(
+        contratos=[
+            {
+                "banco": "C6",
+                "parcelas_pagas": 30,
+            }
+        ],
+        origin_config=[],
+        origin_blocklist=[
+            {
+                "origin_bank": "C6",
+            }
+        ],
+    )
+
+    assert len(bloqueios) == 1
+    assert "Regra da promotora" in bloqueios[0]
+    assert "nao porta" in bloqueios[0]
+
+
+def test_regra_promotora_exige_minimo_parcelas_pagas():
+    bloqueios = Service.validar_regras_promotora_origem(
+        contratos=[
+            {
+                "banco": "626 - C6 CONSIGNADO",
+                "prazo": 84,
+                "prazo_restante": 69,
+            }
+        ],
+        origin_config=[
+            {
+                "origin_bank": "C6",
+                "min_paid": 18,
+            }
+        ],
+        origin_blocklist=[],
+    )
+
+    assert len(bloqueios) == 1
+    assert "18 parcelas" in bloqueios[0]
+    assert "possui 15" in bloqueios[0]
+
+
+def test_regra_promotora_libera_quando_minimo_atendido():
+    bloqueios = Service.validar_regras_promotora_origem(
+        contratos=[
+            {
+                "banco": "626 - C6 CONSIGNADO",
+                "parcelas_pagas": 18,
+            }
+        ],
+        origin_config=[
+            {
+                "origin_bank": "C6",
+                "min_paid": 18,
+            }
+        ],
+        origin_blocklist=[],
+    )
+
+    assert bloqueios == []

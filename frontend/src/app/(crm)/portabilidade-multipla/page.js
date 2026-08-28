@@ -2115,6 +2115,38 @@ export default function PortabilidadeMultiplaPage() {
                       normalizeBenefit(
                         loan.beneficio
                       ),
+
+                    /* MULTIPLA_PROMOTORA_ORIGIN_RULES */
+                    prazo:
+                      Number(
+                        loan.prazo ||
+                        0
+                      ),
+
+                    prazo_restante:
+                      Number(
+                        loan
+                          .prazo_restante ||
+                        0
+                      ),
+
+                    parcelas_pagas:
+                      Number(
+                        loan
+                          .parcelas_pagas ??
+                        Math.max(
+                          0,
+                          Number(
+                            loan.prazo ||
+                            0
+                          ) -
+                            Number(
+                              loan
+                                .prazo_restante ||
+                              0
+                            )
+                        )
+                      ),
                   })
                 ),
             }
