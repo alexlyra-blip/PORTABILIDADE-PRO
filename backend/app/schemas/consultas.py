@@ -49,6 +49,22 @@ class ConsultaMargem(BaseModel):
     rmc_promosys: float = 0.0
     rcc_promosys: float = 0.0
 
+    # Regra INSS 45%
+    # 35% emprestimos + 5% RMC + 5% RCC
+    margem_total_consignavel: float = 0.0
+
+    margem_rmc: float = 0.0
+    margem_rcc: float = 0.0
+
+    rmc_utilizado: float = 0.0
+    rcc_utilizado: float = 0.0
+
+    rmc_disponivel: float = 0.0
+    rcc_disponivel: float = 0.0
+
+    possui_rmc: bool = False
+    possui_rcc: bool = False
+
 class ConsultaBeneficio(BaseModel):
     situacao: str = ""
     bloqueado: bool = False

@@ -190,6 +190,9 @@ def _serialize_admin_payment(
             )
         ),
         "checkout_url": payment.checkout_url,
+        "expiration_days": payload.get(
+            "_portabilidade_pro_expiration_days"
+        ),
         "expires_at": (
             payment.expires_at.isoformat()
             if payment.expires_at
@@ -832,6 +835,26 @@ async def update_admin_payment(
         await MercadoPagoService.update_preference(
             preference_id=payment.preference_id,
             payload=update_payload,
+        )
+
+    # Persiste localmente a mesma validade
+    # enviada ao Mercado Pago.
+    if data.expiration_days is not None:
+        payment.expires_at = expiration_date
+
+        # Preserva exatamente a validade selecionada
+        # pelo administrador: 1, 3, 7, 15 ou 30 dias.
+        local_payment_payload = dict(
+            payment.mercado_pago_payload
+            or {}
+        )
+
+        local_payment_payload[
+            "_portabilidade_pro_expiration_days"
+        ] = int(data.expiration_days)
+
+        payment.mercado_pago_payload = (
+            local_payment_payload
         )
 
     if data.customer_name is not None:

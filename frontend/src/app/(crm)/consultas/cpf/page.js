@@ -1454,11 +1454,16 @@ export default function ConsultaCPFPage() {
       cliente.especie === "87" ||
       cliente.especie === "88";
 
-    const percent = isLOAS ? 0.35 : 0.40;
+    const percent = 0.45;
 
     const margemConsignavel = Number(
-      margens.margem_emprestimo ||
-      salario * percent
+      margens.margem_total_consignavel ??
+      (salario * percent)
+    );
+
+    const margemEmprestimo = Number(
+      margens.margem_emprestimo ??
+      (salario * 0.35)
     );
 
     const totalComprometido = Number(
@@ -1468,7 +1473,7 @@ export default function ConsultaCPFPage() {
     const margemLivreReal =
       margens.margem_livre !== undefined
         ? Number(margens.margem_livre)
-        : margemConsignavel - totalComprometido;
+        : margemEmprestimo - Number(activeBenefit.resumo?.total_parcelas_emprestimos || 0);
 
     const showMargem = Math.max(
       0,

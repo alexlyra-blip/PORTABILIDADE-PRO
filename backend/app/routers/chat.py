@@ -957,6 +957,223 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             print(f"[WARNING] Erro ao consultar Promosys no chat: {e}")
             return f"❌ *Erro de Integração:* Não conseguimos consultar o CPF {masked_cpf} na Promosys no momento. Tente novamente mais tarde."
 
+    # CLARA_C6_AUTO_REFIN_BEGIN
+    # --------------------------------------------------------
+    # Refin C6 automatico
+    # --------------------------------------------------------
+    from app.services.bank_credentials_service import (
+        BankCredentialsService,
+    )
+    from app.services.c6_bank_service import (
+        C6BankError,
+        C6BankService,
+    )
+
+    c6_service = None
+
+    try:
+        c6_credentials = await (
+            BankCredentialsService
+            .resolve_decrypted_credentials_for_user(
+                db,
+                user_id=user_id,
+                provider="C6",
+            )
+        )
+
+        if c6_credentials:
+            c6_service = C6BankService(
+                c6_credentials
+            )
+
+    except Exception as credentials_error:
+        print(
+            "[CLARA_C6] credencial_indisponivel "
+            f"tipo={type(credentials_error).__name__}"
+        )
+
+        c6_service = None
+
+    def _clara_float(value):
+        try:
+            if value in (None, ""):
+                return 0.0
+
+            if isinstance(
+                value,
+                (int, float),
+            ):
+                return float(value)
+
+            raw = (
+                str(value)
+                .strip()
+                .replace("R$", "")
+                .replace(" ", "")
+            )
+
+            if "," in raw:
+                raw = (
+                    raw
+                    .replace(".", "")
+                    .replace(",", ".")
+                )
+
+            return float(raw)
+
+        except Exception:
+            return 0.0
+
+    def _is_c6_contract(contract):
+        bank_name = str(
+            contract.get("banco")
+            or contract.get("bank")
+            or ""
+        ).upper()
+
+        code_values = [
+            contract.get("codigo"),
+            contract.get("codigo_banco"),
+            contract.get("banco_codigo"),
+            contract.get("codigoBanco"),
+            contract.get("bank_code"),
+        ]
+
+        codes = set()
+
+        for code_value in code_values:
+            digits = "".join(
+                filter(
+                    str.isdigit,
+                    str(code_value or ""),
+                )
+            )
+
+            if digits:
+                codes.add(
+                    digits.lstrip("0")
+                    or "0"
+                )
+
+        bank_digits = "".join(
+            filter(str.isdigit, bank_name)
+        )
+
+        if bank_digits:
+            codes.add(
+                bank_digits.lstrip("0")
+                or "0"
+            )
+
+        return bool(
+            "626" in codes
+            or "336" in codes
+            or "C6" in bank_name
+            or "FICSA" in bank_name
+        )
+
+    def _extract_c6_offer(result):
+        if not isinstance(result, dict):
+            return None, 0.0
+
+        conditions = (
+            result.get("condicoes")
+            or []
+        )
+
+        if isinstance(conditions, list):
+            for condition in conditions:
+                if not isinstance(
+                    condition,
+                    dict,
+                ):
+                    continue
+
+                value = _clara_float(
+                    condition.get(
+                        "valor_liberado"
+                    )
+                    or condition.get(
+                        "valor_cliente"
+                    )
+                    or condition.get(
+                        "client_amount"
+                    )
+                )
+
+                if value > 0:
+                    return condition, value
+
+        value = _clara_float(
+            result.get("valor_liberado")
+            or result.get("valor_cliente")
+            or result.get("client_amount")
+        )
+
+        if value > 0:
+            return result, value
+
+        return None, 0.0
+
+    def _selected_port_offer(
+        sim_session,
+    ):
+        simulations = (
+            sim_session.get(
+                "simulations",
+                [],
+            )
+            or []
+        )
+
+        if not simulations:
+            return None
+
+        offers = (
+            simulations[-1].get(
+                "ofertas",
+                [],
+            )
+            or []
+        )
+
+        if not offers:
+            return None
+
+        # Mesma prioridade do fluxo atual:
+        # primeira tabela de cada banco,
+        # com prazo 108 priorizado.
+        first_by_bank = []
+        banks_seen = set()
+
+        for offer in offers:
+            bank = str(
+                offer.get("banco")
+                or ""
+            )
+
+            if bank not in banks_seen:
+                banks_seen.add(bank)
+                first_by_bank.append(offer)
+
+        first_by_bank.sort(
+            key=lambda item:
+                item.get("prazo") != 108
+        )
+
+        if not first_by_bank:
+            return None
+
+        return first_by_bank[0]
+
+    if session is not None:
+        session["c6_refins"] = []
+        session[
+            "resumo_ofertas_beneficios"
+        ] = []
+
+    # CLARA_C6_AUTO_REFIN_END
+
     # 3. Process simulations for each benefit
     beneficios = dados_json.get("beneficios", [])
     if not beneficios:
@@ -1025,56 +1242,541 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             benefit_header += f"_(Libera aprox. {fmt_brl(liberado_aprox)})_"
         benefit_header += "\n\n"
         
-        loans = b.get("emprestimos", [])
+        loans = b.get("emprestimos", []) or []
         benefit_loans_replies = []
-        
+
+        benefit_refin_count = 0
+        benefit_refin_total = 0.0
+
+        benefit_port_count = 0
+        benefit_port_total = 0.0
+
+        client_data = (
+            b.get("cliente", {})
+            or {}
+        )
+
+        benefit_data = b.get(
+            "beneficio",
+            {},
+        )
+
+        if isinstance(
+            benefit_data,
+            dict,
+        ):
+            benefit_number = (
+                b.get("numero")
+                or client_data.get(
+                    "beneficio"
+                )
+                or benefit_data.get(
+                    "numero"
+                )
+                or benefit_data.get(
+                    "beneficio"
+                )
+                or benefit_data.get(
+                    "nb"
+                )
+                or ""
+            )
+        else:
+            benefit_number = (
+                b.get("numero")
+                or client_data.get(
+                    "beneficio"
+                )
+                or benefit_data
+                or ""
+            )
+
+        benefit_number = str(
+            benefit_number
+        ).strip()
+
+        income_value = _clara_float(
+            client_data.get("salario")
+            or (
+                benefit_data.get("valor")
+                if isinstance(
+                    benefit_data,
+                    dict,
+                )
+                else 0
+            )
+            or b.get(
+                "margens",
+                {},
+            ).get("salario")
+        )
+
+        birth_date = str(
+            client_data.get(
+                "data_nascimento"
+            )
+            or client_data.get(
+                "nascimento"
+            )
+            or client_data.get(
+                "birth_date"
+            )
+            or ""
+        ).strip()
+
+        if not loans:
+            if _clara_float(
+                margem_livre
+            ) > 0:
+                benefit_loans_replies.append(
+                    "\u2139\ufe0f *Nenhum contrato ativo "
+                    "encontrado para portabilidade.*\n"
+                    "\U0001F4B5 *Margem Livre "
+                    "dispon\u00edvel:* "
+                    f"{fmt_brl(margem_livre)}"
+                )
+            else:
+                benefit_loans_replies.append(
+                    "\u274c *Cliente n\u00e3o possui "
+                    "contratos ativos para realizar "
+                    "portabilidade.*\n"
+                    "\U0001F4C9 *Margem Livre:* "
+                    f"{fmt_brl(margem_livre)}"
+                )
+
         # Run simulation for each loan
         for idx_l, c in enumerate(loans):
-            # Parse species digits
-            spec_digits = "".join(filter(str.isdigit, especie))
-            
-            # Setup session dict for simulation running
+            spec_digits = "".join(
+                filter(
+                    str.isdigit,
+                    especie,
+                )
+            )
+
+            remaining = int(
+                _clara_float(
+                    c.get("prazo_restante")
+                    or 0
+                )
+            )
+
+            total_term = int(
+                _clara_float(
+                    c.get("prazo")
+                    or 0
+                )
+            )
+
+            # ====================================================
+            # PRIORIDADE: REFIN C6 108X
+            # ====================================================
+
+            if (
+                _is_c6_contract(c)
+                and c6_service is not None
+            ):
+                try:
+                    c6_result = await (
+                        c6_service
+                        .simular_refin_inss(
+                            cpf=clean_cpf,
+                            beneficio=(
+                                benefit_number
+                            ),
+                            contrato=str(
+                                c.get("contrato")
+                                or ""
+                            ),
+                            data_nascimento=(
+                                birth_date
+                            ),
+                            renda=income_value,
+                            parcela=_clara_float(
+                                c.get("parcela")
+                            ),
+                            prazo=108,
+                        )
+                    )
+
+                    (
+                        c6_offer,
+                        c6_value,
+                    ) = _extract_c6_offer(
+                        c6_result
+                    )
+
+                    if (
+                        c6_offer is not None
+                        and c6_value > 0
+                    ):
+                        c6_term = int(
+                            _clara_float(
+                                c6_offer.get(
+                                    "prazo"
+                                )
+                                or c6_offer.get(
+                                    "installment_quantity"
+                                )
+                                or 108
+                            )
+                        ) or 108
+
+                        c6_table = str(
+                            c6_offer.get(
+                                "tabela"
+                            )
+                            or c6_result.get(
+                                "tabela"
+                            )
+                            or "Refinanciamento C6"
+                        )
+
+                        c6_installment = (
+                            c6_offer.get(
+                                "parcela"
+                            )
+                            or c6_offer.get(
+                                "installment_amount"
+                            )
+                        )
+
+                        benefit_refin_count += 1
+                        benefit_refin_total += (
+                            c6_value
+                        )
+
+                        loan_detail = (
+                            f"\U0001F4CC *CONTRATO {idx_l + 1}*\n"
+                            f"\u2022 *Origem:* {c.get('banco')}\n"
+                            f"\u2022 *Contrato:* {c.get('contrato')}\n"
+                            f"\u2022 *Parcelas Restantes:* {remaining}\n"
+                            f"\u2022 *Parcela Atual:* "
+                            f"{fmt_brl(c.get('parcela'))}\n"
+                            f"\u2022 *Saldo Devedor:* "
+                            f"{fmt_brl(c.get('quitacao'))}"
+                        )
+
+                        loan_detail += (
+                            "\n\n"
+                            "\U0001F3E6 "
+                            "*REFINANCIAMENTO C6 "
+                            f"{c6_term}X*\n"
+                            "\U0001F3F7\ufe0f "
+                            f"*Tabela:* {c6_table}\n"
+                        )
+
+                        if c6_installment:
+                            loan_detail += (
+                                "\U0001F4B5 "
+                                "*Nova Parcela:* "
+                                f"{fmt_brl(c6_installment)}\n"
+                            )
+
+                        loan_detail += (
+                            "\U0001F4B0 "
+                            "*Valor Liberado:* "
+                            f"{fmt_brl(c6_value)}"
+                        )
+
+                        benefit_loans_replies.append(
+                            loan_detail
+                        )
+
+                        if session is not None:
+                            session.setdefault(
+                                "c6_refins",
+                                [],
+                            ).append(
+                                {
+                                    "beneficio":
+                                        benefit_number,
+                                    "contrato":
+                                        c.get(
+                                            "contrato"
+                                        ),
+                                    "prazo":
+                                        c6_term,
+                                    "tabela":
+                                        c6_table,
+                                    "valor_liberado":
+                                        round(
+                                            c6_value,
+                                            2,
+                                        ),
+                                }
+                            )
+
+                        # Refin C6 positivo:
+                        # nao porta este contrato.
+                        continue
+
+                except C6BankError as c6_error:
+                    print(
+                        "[CLARA_C6] refin_inelegivel "
+                        f"contrato="
+                        f"{str(c.get('contrato') or '')[-4:]} "
+                        f"tipo="
+                        f"{type(c6_error).__name__}"
+                    )
+
+                except Exception as c6_error:
+                    print(
+                        "[CLARA_C6] refin_indisponivel "
+                        f"contrato="
+                        f"{str(c.get('contrato') or '')[-4:]} "
+                        f"tipo="
+                        f"{type(c6_error).__name__}"
+                    )
+
+            # ====================================================
+            # FALLBACK AUTOMATICO: PORTABILIDADE
+            # ====================================================
+
             sim_session = {
                 "convenio": "INSS",
-                "banco_origem": c.get("banco", ""),
+                "banco_origem": c.get(
+                    "banco",
+                    "",
+                ),
                 "idade": str(client_age),
-                "parcela": str(c.get("parcela", 0.0)),
-                "saldo_devedor": str(c.get("quitacao", 0.0)),
-                "total_term": str(c.get("prazo", 84)),
-                "remaining_term": str(c.get("prazo_restante", 68)),
-                "analfabeto": "sim" if is_illiterate else "não",
-                "benefit_species": spec_digits or None,
-                "valor_margem_negativa": "0"
+                "parcela": str(
+                    c.get(
+                        "parcela",
+                        0.0,
+                    )
+                ),
+                "saldo_devedor": str(
+                    c.get(
+                        "quitacao",
+                        0.0,
+                    )
+                ),
+                "total_term": str(
+                    c.get(
+                        "prazo",
+                        84,
+                    )
+                ),
+                "remaining_term": str(
+                    c.get(
+                        "prazo_restante",
+                        68,
+                    )
+                ),
+                "analfabeto": (
+                    "sim"
+                    if is_illiterate
+                    else "n\u00e3o"
+                ),
+                "benefit_species":
+                    spec_digits or None,
+                "valor_margem_negativa": "0",
             }
-            
+
             try:
-                # Na simulação de benefício CPF, idx_b e idx_l vêm do loop (0-indexed)
-                sim_reply = await run_simulation_and_respond(
-                    sim_session, db, user_id=user_id, compact=True, 
-                    b_idx=idx_b + 1, c_idx=idx_l + 1, is_manual=False
+                sim_reply = await (
+                    run_simulation_and_respond(
+                        sim_session,
+                        db,
+                        user_id=user_id,
+                        compact=True,
+                        b_idx=idx_b + 1,
+                        c_idx=idx_l + 1,
+                        is_manual=False,
+                    )
                 )
+
+                selected_offer = (
+                    _selected_port_offer(
+                        sim_session
+                    )
+                )
+
+                if selected_offer:
+                    port_value = (
+                        _clara_float(
+                            selected_offer.get(
+                                "valor_liberado"
+                            )
+                        )
+                    )
+
+                    if port_value > 0:
+                        benefit_port_count += 1
+                        benefit_port_total += (
+                            port_value
+                        )
+
                 loan_detail = (
-                    f"📌 *CONTRATO {idx_l + 1} ({c.get('banco')} - Contrato {c.get('contrato')}):*\n"
-                    f"• *Parcela:* {fmt_brl(c.get('parcela'))} | *Taxa Atual:* {c.get('taxa')}% a.m.\n"
-                    f"• *Saldo Devedor:* {fmt_brl(c.get('quitacao'))} | *Prazo:* {c.get('prazo_restante')} de {c.get('prazo')} meses\n\n"
-                    f"{sim_reply}"
+                    f"\U0001F4CC *CONTRATO {idx_l + 1}*\n"
+                    f"\u2022 *Origem:* {c.get('banco')}\n"
+                    f"\u2022 *Contrato:* {c.get('contrato')}\n"
+                    f"\u2022 *Parcelas Restantes:* {remaining}\n"
+                    f"\u2022 *Parcela Atual:* "
+                    f"{fmt_brl(c.get('parcela'))}\n"
+                    f"\u2022 *Saldo Devedor:* "
+                    f"{fmt_brl(c.get('quitacao'))}"
                 )
-                
-                # Merge into global session context
-                if session is not None and "simulations" in sim_session:
-                    if "simulations" not in session:
-                        session["simulations"] = []
-                    session["simulations"].extend(sim_session["simulations"])
-                    
-                benefit_loans_replies.append(loan_detail)
+
+                loan_detail += (
+                    f"\n\n{sim_reply}"
+                )
+
+                if (
+                    session is not None
+                    and "simulations"
+                    in sim_session
+                ):
+                    if (
+                        "simulations"
+                        not in session
+                    ):
+                        session[
+                            "simulations"
+                        ] = []
+
+                    session[
+                        "simulations"
+                    ].extend(
+                        sim_session[
+                            "simulations"
+                        ]
+                    )
+
+                benefit_loans_replies.append(
+                    loan_detail
+                )
+
             except Exception as sim_err:
-                print(f"[WARNING] Erro ao simular contrato {c.get('contrato')}: {sim_err}")
-                benefit_loans_replies.append(f"📌 *CONTRATO {idx_l + 1} ({c.get('banco')}):* Erro ao calcular portabilidade.")
-                
-        if not loans:
-            benefit_loans_replies.append("ℹ️ *Nenhum empréstimo ativo encontrado neste benefício.*")
-            
-        reply += benefit_header + "\n\n".join(benefit_loans_replies)
+                print(
+                    "[WARNING] Erro ao simular "
+                    f"contrato "
+                    f"{c.get('contrato')}: "
+                    f"{sim_err}"
+                )
+
+                benefit_loans_replies.append(
+                    f"\U0001F4CC *CONTRATO "
+                    f"{idx_l + 1} "
+                    f"({c.get('banco')}):* "
+                    "Erro ao calcular portabilidade."
+                )
+
+        # ========================================================
+        # RESUMO POR BENEFICIO
+        # ========================================================
+
+        margin_value = _clara_float(
+            margem_livre
+        )
+
+        margin_released = max(
+            0.0,
+            _clara_float(
+                liberado_aprox
+            ),
+        )
+
+        total_general = (
+            margin_released
+            + benefit_refin_total
+            + benefit_port_total
+        )
+
+        summary_lines = [
+            "\U0001F4CA *RESUMO DAS OFERTAS*",
+        ]
+
+        if margin_value > 0:
+            margin_summary = (
+                "\U0001F4B5 *Margem Livre:* "
+                f"{fmt_brl(margin_value)}"
+            )
+
+            if margin_released > 0:
+                margin_summary += (
+                    " _(Libera aprox. "
+                    f"{fmt_brl(margin_released)})_"
+                )
+
+            summary_lines.append(
+                margin_summary
+            )
+
+        if benefit_refin_count > 0:
+            summary_lines.append(
+                "\U0001F3E6 "
+                "*Refinanciamento(s) C6:* "
+                f"{benefit_refin_count} "
+                "| *Total Liberado:* "
+                f"{fmt_brl(benefit_refin_total)}"
+            )
+
+        if benefit_port_count > 0:
+            summary_lines.append(
+                "\U0001F504 "
+                "*Portabilidade(s):* "
+                f"{benefit_port_count} "
+                "| *Total Liberado:* "
+                f"{fmt_brl(benefit_port_total)}"
+            )
+
+        summary_lines.append(
+            "\U0001F4B0 "
+            "*Total Geral Liberado:* "
+            f"{fmt_brl(total_general)}"
+        )
+
+        benefit_loans_replies.append(
+            "\n".join(summary_lines)
+        )
+
+        if session is not None:
+            session.setdefault(
+                "resumo_ofertas_beneficios",
+                [],
+            ).append(
+                {
+                    "beneficio":
+                        benefit_number,
+                    "margem_livre":
+                        round(
+                            margin_value,
+                            2,
+                        ),
+                    "margem_liberada":
+                        round(
+                            margin_released,
+                            2,
+                        ),
+                    "qtd_refins_c6":
+                        benefit_refin_count,
+                    "total_refins_c6":
+                        round(
+                            benefit_refin_total,
+                            2,
+                        ),
+                    "qtd_portabilidades":
+                        benefit_port_count,
+                    "total_portabilidades":
+                        round(
+                            benefit_port_total,
+                            2,
+                        ),
+                    "total_geral":
+                        round(
+                            total_general,
+                            2,
+                        ),
+                }
+            )
+
+        reply += (
+            benefit_header
+            + "\n\n".join(
+                benefit_loans_replies
+            )
+        )
 
     reply += (
         "\n\nPosso te ajudar com mais alguma dúvida sobre essas simulações, ou você gostaria de ver as opções de outro banco?\n"
