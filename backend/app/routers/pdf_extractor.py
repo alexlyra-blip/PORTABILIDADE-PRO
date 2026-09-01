@@ -6,12 +6,233 @@ from datetime import datetime
 import math
 import asyncio
 from app.services.margem_service import calcular_valor_liberado_margem
+from app.services.consultas.margin_rules import recalculate_benefit_margins, money
 from app.services.extratos.siape_parser import (
     detectar_extrato_siape,
     parse_siape_extrato,
 )
 
 router = APIRouter()
+
+
+def normalizar_margens_inss_extrato(
+    extracted_data: dict,
+) -> dict:
+    """
+    Aplica ao extrato INSS a mesma regra central:
+
+    35% - emprestimos consignados
+     5% - RMC
+     5% - RCC
+    45% - margem consignavel total
+
+    RMC e RCC nao reduzem os 35% destinados
+    aos emprestimos.
+    """
+    data = dict(
+        extracted_data or {}
+    )
+
+    margem_emprestimo = money(
+        data.get("margem_emprestimo")
+        or data.get("margem_maxima")
+    )
+
+    # Guarda os numeros literalmente lidos
+    # do extrato para auditoria.
+    data["margem_maxima_extrato"] = money(
+        data.get("margem_maxima")
+    )
+
+    data[
+        "margem_comprometida_extrato"
+    ] = money(
+        data.get("margem_comprometida")
+    )
+
+    if margem_emprestimo <= 0:
+        return data
+
+    # O MAXIMO DE COMPROMETIMENTO do bloco
+    # de emprestimos representa os 35%.
+    salario_estimado = (
+        margem_emprestimo / 0.35
+    )
+
+    comprometido_emprestimos = money(
+        data.get("margem_comprometida")
+    )
+
+    # Caso o valor global nao tenha sido
+    # localizado, usa a soma das parcelas.
+    if comprometido_emprestimos <= 0:
+
+        comprometido_emprestimos = money(
+            sum(
+                money(
+                    contrato.get("parcela")
+                )
+                for contrato in (
+                    data.get(
+                        "emprestimos_ativos"
+                    )
+                    or []
+                )
+                if isinstance(
+                    contrato,
+                    dict,
+                )
+            )
+        )
+
+    emprestimos = []
+
+    if comprometido_emprestimos > 0:
+        emprestimos.append({
+            "parcela":
+                comprometido_emprestimos,
+            "situacao":
+                "ATIVO",
+        })
+
+    cartoes = [
+        item
+        for item in (
+            data.get("cartoes")
+            or []
+        )
+        if isinstance(item, dict)
+    ]
+
+    payload = {
+        "cliente": {
+            "salario":
+                salario_estimado,
+        },
+
+        "margens": {
+            "salario":
+                salario_estimado,
+        },
+
+        "emprestimos":
+            emprestimos,
+
+        "cartoes":
+            cartoes,
+
+        "resumo": {},
+    }
+
+    normalized = (
+        recalculate_benefit_margins(
+            payload
+        )
+    )
+
+    margens = (
+        normalized.get("margens")
+        or {}
+    )
+
+    # 45% TOTAL
+    data[
+        "margem_total_consignavel"
+    ] = money(
+        margens.get(
+            "margem_total_consignavel"
+        )
+    )
+
+    # Compatibilidade com componentes
+    # antigos do Simulador.
+    data[
+        "margem_consignavel"
+    ] = data[
+        "margem_total_consignavel"
+    ]
+
+    # 35% EMPRESTIMOS
+    data[
+        "margem_emprestimo"
+    ] = money(
+        margens.get(
+            "margem_emprestimo"
+        )
+    )
+
+    data[
+        "margem_livre"
+    ] = money(
+        margens.get(
+            "margem_livre"
+        )
+    )
+
+    data[
+        "margem_disponivel"
+    ] = data[
+        "margem_livre"
+    ]
+
+    # 5% RMC
+    data["margem_rmc"] = money(
+        margens.get("margem_rmc")
+    )
+
+    data["rmc_utilizado"] = money(
+        margens.get("rmc_utilizado")
+    )
+
+    data["rmc_disponivel"] = money(
+        margens.get("rmc_disponivel")
+    )
+
+    data["possui_rmc"] = bool(
+        margens.get("possui_rmc")
+    )
+
+    # 5% RCC
+    data["margem_rcc"] = money(
+        margens.get("margem_rcc")
+    )
+
+    data["rcc_utilizado"] = money(
+        margens.get("rcc_utilizado")
+    )
+
+    data["rcc_disponivel"] = money(
+        margens.get("rcc_disponivel")
+    )
+
+    data["possui_rcc"] = bool(
+        margens.get("possui_rcc")
+    )
+
+    data["margens_cartao"] = {
+        "rmc_disponivel":
+            data["rmc_disponivel"],
+
+        "rcc_disponivel":
+            data["rcc_disponivel"],
+    }
+
+    data[
+        "total_comprometido"
+    ] = money(
+        margens.get(
+            "total_comprometido"
+        )
+    )
+
+    data[
+        "salario_estimado"
+    ] = money(
+        salario_estimado
+    )
+
+    return data
+
 
 class PdfExtractorService:
     @staticmethod
@@ -128,7 +349,8 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                 "margem_disponivel": 0.0,
                 "data_extrato": "",
                 "bloqueado_emprestimo": None,
-                "emprestimos_ativos": []
+                "emprestimos_ativos": [],
+                "cartoes": []
             }
 
             with pdfplumber.open(pdf_stream) as pdf:
@@ -247,7 +469,57 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                     banco_raw = clean_row[1] if len(clean_row) > 1 else ""
                                 
                                     # Filtrar RMC e RCC
-                                    if "RMC" in banco_raw.upper() or "RCC" in banco_raw.upper() or "CARTÃO" in banco_raw.upper() or "CARTAO" in banco_raw.upper():
+                                    banco_upper = banco_raw.upper()
+
+                                    # RMC e RCC nao sao emprestimos.
+                                    # Registramos o cartao antes de
+                                    # retirar a linha da lista de contratos.
+                                    if (
+                                        "RMC" in banco_upper
+                                        or "RCC" in banco_upper
+                                        or "CART?O" in banco_upper
+                                        or "CARTAO" in banco_upper
+                                    ):
+                                        tipo_cartao = ""
+
+                                        if "RMC" in banco_upper:
+                                            tipo_cartao = (
+                                                "Cartao Consignado (RMC)"
+                                            )
+
+                                        elif "RCC" in banco_upper:
+                                            tipo_cartao = (
+                                                "Cartao Beneficio (RCC)"
+                                            )
+
+                                        if tipo_cartao:
+                                            tipos_existentes = {
+                                                str(
+                                                    item.get("tipo")
+                                                    or ""
+                                                )
+                                                for item in extracted_data[
+                                                    "cartoes"
+                                                ]
+                                                if isinstance(
+                                                    item,
+                                                    dict,
+                                                )
+                                            }
+
+                                            if (
+                                                tipo_cartao
+                                                not in tipos_existentes
+                                            ):
+                                                extracted_data[
+                                                    "cartoes"
+                                                ].append({
+                                                    "tipo":
+                                                        tipo_cartao,
+                                                    "situacao":
+                                                        "ATIVO",
+                                                })
+
                                         continue
                                 
                                     inicio_desconto = clean_row[5] if len(clean_row) > 5 else ""
@@ -306,7 +578,9 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                     pass
 
             # Calcular margem
-            extracted_data["margem_disponivel"] = round(extracted_data["margem_maxima"] - extracted_data["margem_comprometida"], 2)
+            extracted_data = normalizar_margens_inss_extrato(
+                extracted_data
+            )
             return extracted_data
 
         extracted_data = await asyncio.to_thread(

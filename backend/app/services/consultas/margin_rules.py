@@ -6,8 +6,9 @@ from typing import Any, Dict
 
 LOAS_SPECIES = {87, 88}
 CARD_MARGIN_PERCENT = Decimal("0.05")
-DEFAULT_LOAN_MARGIN_PERCENT = Decimal("0.40")
+DEFAULT_LOAN_MARGIN_PERCENT = Decimal("0.35")
 LOAS_LOAN_MARGIN_PERCENT = Decimal("0.35")
+TOTAL_MARGIN_PERCENT = Decimal("0.45")
 MAX_CARD_SLOTS = 2
 
 INACTIVE_STATUS_MARKERS = (
@@ -94,14 +95,65 @@ def is_active_record(record: Dict[str, Any]) -> bool:
     return not any(marker in status for marker in INACTIVE_STATUS_MARKERS)
 
 
-def recalculate_benefit_margins(data: Dict[str, Any]) -> Dict[str, Any]:
+def _card_margin_kind(
+    record: Dict[str, Any],
+) -> str:
     """
-    Aplica a regra oficial:
+    Identifica qual reserva consignavel o cartao utiliza.
 
-    - Espécies 87 e 88: 35% para empréstimos.
-    - Demais espécies: 40% para empréstimos.
-    - Cada cartão ativo compromete 5% da renda.
-    - Total comprometido = empréstimos ativos + cartões ativos.
+    RMC = 5% Cartao Consignado.
+    RCC = 5% Cartao Beneficio.
+    """
+    tipo = normalize_text(
+        record.get("tipo")
+        or record.get("tipo_cartao")
+        or record.get("descricao")
+    )
+
+    if (
+        "RMC" in tipo
+        or "CONSIGNADO" in tipo
+    ):
+        return "RMC"
+
+    if (
+        "RCC" in tipo
+        or "BENEFICIO" in tipo
+    ):
+        return "RCC"
+
+    tipo_codigo = extract_species_code(
+        record.get("tipo_codigo")
+    )
+
+    # Promosys:
+    # tipo 76 = Cartao Consignado / RMC.
+    if tipo_codigo == 76:
+        return "RMC"
+
+    # No retorno Promosys os demais tipos de cartao
+    # sao normalizados como Cartao Beneficio.
+    if tipo_codigo > 0:
+        return "RCC"
+
+    return ""
+
+
+def recalculate_benefit_margins(
+    data: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Aplica a regra consignavel de 45%:
+
+    - 35% para emprestimos consignados;
+    - 5% reservado para Cartao Consignado RMC;
+    - 5% reservado para Cartao Beneficio RCC.
+
+    As reservas RMC/RCC sao independentes da margem
+    de 35% dos emprestimos.
+
+    Margem livre de emprestimo =
+        35% da renda - parcelas de emprestimos ativos.
     """
     if not isinstance(data, dict):
         return data
@@ -117,33 +169,48 @@ def recalculate_benefit_margins(data: Dict[str, Any]) -> Dict[str, Any]:
         or data.get("salario")
     )
 
-    especie = (
-        cliente.get("especie")
-        or data.get("especie")
-        or data.get("beneficio", {}).get("especie")
+    salario_decimal = Decimal(
+        str(salario)
     )
 
-    codigo_especie = extract_species_code(especie)
-    percentual_emprestimo = (
-        LOAS_LOAN_MARGIN_PERCENT
-        if codigo_especie in LOAS_SPECIES
-        else DEFAULT_LOAN_MARGIN_PERCENT
-    )
+    # ========================================================
+    # LIMITES CONSIGNAVEIS
+    # ========================================================
 
-    salario_decimal = Decimal(str(salario))
+    margem_total_consignavel = money(
+        salario_decimal
+        * TOTAL_MARGIN_PERCENT
+    )
 
     margem_emprestimo = money(
-        salario_decimal * percentual_emprestimo
+        salario_decimal
+        * DEFAULT_LOAN_MARGIN_PERCENT
     )
 
-    margem_cartao_unitaria = money(
-        salario_decimal * CARD_MARGIN_PERCENT
+    margem_rmc = money(
+        salario_decimal
+        * CARD_MARGIN_PERCENT
     )
+
+    margem_rcc = money(
+        salario_decimal
+        * CARD_MARGIN_PERCENT
+    )
+
+    # Compatibilidade com telas/campos antigos.
+    margem_cartao_unitaria = margem_rmc
+
+    # ========================================================
+    # EMPRESTIMOS ATIVOS
+    # ========================================================
 
     emprestimos_ativos = [
         contrato
         for contrato in emprestimos
-        if isinstance(contrato, dict) and is_active_record(contrato)
+        if (
+            isinstance(contrato, dict)
+            and is_active_record(contrato)
+        )
     ]
 
     total_emprestimos_ativos = money(
@@ -153,75 +220,226 @@ def recalculate_benefit_margins(data: Dict[str, Any]) -> Dict[str, Any]:
                     str(
                         money(
                             contrato.get("parcela")
-                            or contrato.get("valor_parcela")
-                            or contrato.get("Vl_Parcela")
+                            or contrato.get(
+                                "valor_parcela"
+                            )
+                            or contrato.get(
+                                "Vl_Parcela"
+                            )
                         )
                     )
                 )
-                for contrato in emprestimos_ativos
+                for contrato
+                in emprestimos_ativos
             ),
             Decimal("0"),
         )
     )
 
-    cartoes_ativos = [
-        cartao
-        for cartao in cartoes
-        if isinstance(cartao, dict) and is_active_record(cartao)
-    ]
+    # IMPORTANTE:
+    # RMC/RCC nao reduzem os 35% de emprestimo.
+    margem_livre = money(
+        Decimal(str(margem_emprestimo))
+        - Decimal(
+            str(total_emprestimos_ativos)
+        )
+    )
+
+    # ========================================================
+    # RMC / RCC
+    # ========================================================
+
+    # Promosys/MultiCorban tambem informam RMC/RCC
+    # diretamente nas margens. Se o provedor sinalizou
+    # valor positivo, o respectivo slot de 5% ja esta
+    # comprometido mesmo que nao exista item em cartoes.
+    possui_rmc = (
+        money(
+            margens.get("rmc_promosys")
+        ) > 0
+    )
+
+    possui_rcc = (
+        money(
+            margens.get("rcc_promosys")
+        ) > 0
+    )
 
     for cartao in cartoes:
         if not isinstance(cartao, dict):
             continue
 
-        cartao_ativo = is_active_record(cartao)
+        kind = _card_margin_kind(
+            cartao
+        )
 
-        # Valor usado no cálculo da margem, não o limite financeiro da API.
-        cartao["limite_cartao"] = margem_cartao_unitaria
-        cartao["utilizado"] = margem_cartao_unitaria if cartao_ativo else 0.0
-        cartao["disponivel"] = 0.0 if cartao_ativo else margem_cartao_unitaria
+        if not kind:
+            continue
 
-    quantidade_cartoes_ativos = len(cartoes_ativos)
+        cartao_ativo = is_active_record(
+            cartao
+        )
+
+        limite = (
+            margem_rmc
+            if kind == "RMC"
+            else margem_rcc
+        )
+
+        cartao["limite_cartao"] = limite
+        cartao["utilizado"] = (
+            limite
+            if cartao_ativo
+            else 0.0
+        )
+        cartao["disponivel"] = (
+            0.0
+            if cartao_ativo
+            else limite
+        )
+
+        if not cartao_ativo:
+            continue
+
+        if kind == "RMC":
+            possui_rmc = True
+
+        elif kind == "RCC":
+            possui_rcc = True
+
+    # Cada modalidade ocupa no maximo o seu
+    # proprio slot de 5%, independentemente da
+    # quantidade de registros retornados.
+    rmc_utilizado = (
+        margem_rmc
+        if possui_rmc
+        else 0.0
+    )
+
+    rcc_utilizado = (
+        margem_rcc
+        if possui_rcc
+        else 0.0
+    )
+
+    rmc_disponivel = (
+        0.0
+        if possui_rmc
+        else margem_rmc
+    )
+
+    rcc_disponivel = (
+        0.0
+        if possui_rcc
+        else margem_rcc
+    )
+
+    quantidade_cartoes_ativos = (
+        int(possui_rmc)
+        + int(possui_rcc)
+    )
 
     total_cartoes_ativos = money(
-        Decimal(str(margem_cartao_unitaria))
-        * Decimal(str(quantidade_cartoes_ativos))
-    )
-
-    total_comprometido = money(
-        Decimal(str(total_emprestimos_ativos))
-        + Decimal(str(total_cartoes_ativos))
-    )
-
-    margem_livre_calculada = money(
-        Decimal(str(margem_emprestimo))
-        - Decimal(str(total_comprometido))
-    )
-
-    margem_livre = margem_livre_calculada
-
-    total_limite_cartoes = money(
-        Decimal(str(margem_cartao_unitaria))
-        * Decimal(str(MAX_CARD_SLOTS))
+        Decimal(str(rmc_utilizado))
+        + Decimal(str(rcc_utilizado))
     )
 
     cartao_disponivel = money(
-        max(
-            Decimal("0"),
-            Decimal(str(total_limite_cartoes))
-            - Decimal(str(total_cartoes_ativos)),
-        )
+        Decimal(str(rmc_disponivel))
+        + Decimal(str(rcc_disponivel))
     )
+
+    # A Consulta CPF utiliza um objeto separado
+    # chamado margens_cartao para exibir RMC/RCC.
+    # Mantemos esse objeto sincronizado com a
+    # mesma regra central de 5% + 5%.
+    margens_cartao = data.get(
+        "margens_cartao"
+    )
+
+    if not isinstance(
+        margens_cartao,
+        dict,
+    ):
+        margens_cartao = {}
+
+    margens_cartao.update({
+        "rmc_disponivel":
+            rmc_disponivel,
+        "rcc_disponivel":
+            rcc_disponivel,
+    })
+
+    # Mantemos este campo para resumo financeiro.
+    # Ele representa o comprometimento TOTAL:
+    # emprestimos + RMC + RCC.
+    total_comprometido = money(
+        Decimal(
+            str(total_emprestimos_ativos)
+        )
+        + Decimal(str(rmc_utilizado))
+        + Decimal(str(rcc_utilizado))
+    )
+
+    # ========================================================
+    # RETORNO PADRONIZADO
+    # ========================================================
 
     margens.update({
         "salario": salario,
-        "margem_emprestimo": margem_emprestimo,
-        "total_comprometido": total_comprometido,
-        "margem_livre": margem_livre,
-        "margem_cartao": margem_cartao_unitaria,
-        "possui_cartao": quantidade_cartoes_ativos > 0,
-        "cartao_utilizado": total_cartoes_ativos,
-        "cartao_disponivel": cartao_disponivel,
+
+        # 45% total
+        "margem_total_consignavel":
+            margem_total_consignavel,
+
+        # 35% emprestimos
+        "margem_emprestimo":
+            margem_emprestimo,
+
+        "margem_livre":
+            margem_livre,
+
+        # 5% RMC
+        "margem_rmc":
+            margem_rmc,
+
+        "rmc_utilizado":
+            rmc_utilizado,
+
+        "rmc_disponivel":
+            rmc_disponivel,
+
+        "possui_rmc":
+            possui_rmc,
+
+        # 5% RCC
+        "margem_rcc":
+            margem_rcc,
+
+        "rcc_utilizado":
+            rcc_utilizado,
+
+        "rcc_disponivel":
+            rcc_disponivel,
+
+        "possui_rcc":
+            possui_rcc,
+
+        # Compatibilidade existente
+        "margem_cartao":
+            margem_cartao_unitaria,
+
+        "possui_cartao":
+            possui_rmc or possui_rcc,
+
+        "cartao_utilizado":
+            total_cartoes_ativos,
+
+        "cartao_disponivel":
+            cartao_disponivel,
+
+        "total_comprometido":
+            total_comprometido,
     })
 
     cliente.update({
@@ -230,13 +448,25 @@ def recalculate_benefit_margins(data: Dict[str, Any]) -> Dict[str, Any]:
     })
 
     resumo = data.get("resumo")
+
     if isinstance(resumo, dict):
-        resumo["total_parcelas_emprestimos"] = total_emprestimos_ativos
-        resumo["total_emprestimos"] = len(emprestimos_ativos)
-        resumo["total_cartoes"] = quantidade_cartoes_ativos
+        resumo[
+            "total_parcelas_emprestimos"
+        ] = total_emprestimos_ativos
+
+        resumo[
+            "total_emprestimos"
+        ] = len(emprestimos_ativos)
+
+        resumo[
+            "total_cartoes"
+        ] = quantidade_cartoes_ativos
 
     data["cliente"] = cliente
     data["margens"] = margens
+    data["margens_cartao"] = (
+        margens_cartao
+    )
     data["emprestimos"] = emprestimos
     data["cartoes"] = cartoes
 

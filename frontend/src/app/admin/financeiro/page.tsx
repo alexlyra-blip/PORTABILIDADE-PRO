@@ -25,6 +25,41 @@ const initialForm = {
   installment_mode: "customer",
 };
 
+const getRemainingExpirationDays = (
+  expiresAt,
+  fallback = 7
+) => {
+  if (!expiresAt) return fallback;
+
+  const expirationTimestamp =
+    new Date(expiresAt).getTime();
+
+  if (
+    !Number.isFinite(
+      expirationTimestamp
+    )
+  ) {
+    return fallback;
+  }
+
+  const millisecondsPerDay =
+    24 * 60 * 60 * 1000;
+
+  const remainingDays = Math.ceil(
+    (
+      expirationTimestamp
+      - Date.now()
+    )
+    / millisecondsPerDay
+  );
+
+  return Math.max(
+    1,
+    remainingDays
+  );
+};
+
+
 const money = (value) =>
   new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -444,7 +479,12 @@ export default function FinanceiroPage() {
       consultation_quantity:
         payment.consultation_quantity ?? "",
       amount: String(payment.amount || "").replace(".", ","),
-      expiration_days: 7,
+      expiration_days:
+        payment.expiration_days ??
+        getRemainingExpirationDays(
+          payment.expires_at,
+          7
+        ),
       internal_note: payment.internal_note || "",
       max_installments: 12,
       default_installments: "",
@@ -668,7 +708,11 @@ export default function FinanceiroPage() {
   const startEditFreeLink = (link) => {
     setEditingFreeLink({
       ...link,
-      expiration_days: 30,
+      expiration_days:
+        getRemainingExpirationDays(
+          link.expires_at,
+          30
+        ),
       default_installments:
         link.default_installments ?? "",
     });

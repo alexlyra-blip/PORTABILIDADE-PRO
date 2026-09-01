@@ -213,7 +213,9 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
 
         especie = str(beneficiario.get("Especie") or "")
         is_loas = especie in ["87", "88"]
-        percent = 0.35 if is_loas else 0.40
+        # INSS: 35% para emprestimos.
+        # RMC e RCC sao reservas separadas de 5%.
+        percent = 0.35
 
         # Procurar margem consignável em vários campos possíveis que a consulta do Multicorban pode entregar
         margem_consignavel_api = None

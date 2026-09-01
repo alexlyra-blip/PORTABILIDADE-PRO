@@ -73,7 +73,11 @@ class PaymentPersistenceService:
             ),
             internal_note=data.internal_note,
             expires_at=expires_at,
-            mercado_pago_payload=mp_response,
+            mercado_pago_payload={
+                **mp_response,
+                "_portabilidade_pro_expiration_days":
+                    int(data.expiration_days or 7),
+            },
         )
 
         db.add(payment)
@@ -138,9 +142,21 @@ class PaymentPersistenceService:
             mercado_pago_payment.get("payment_type_id")
         )
 
-        payment.mercado_pago_payload = (
-            mercado_pago_payment
+        previous_payload = (
+            payment.mercado_pago_payload
+            if isinstance(
+                payment.mercado_pago_payload,
+                dict,
+            )
+            else {}
         )
+
+        # O retorno do Mercado Pago atualiza os dados
+        # financeiros sem apagar metadados internos.
+        payment.mercado_pago_payload = {
+            **previous_payload,
+            **mercado_pago_payment,
+        }
 
         date_approved = cls.parse_datetime(
             mercado_pago_payment.get("date_approved")

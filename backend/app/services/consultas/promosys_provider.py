@@ -330,7 +330,10 @@ class PromosysProvider(ConsultaBeneficioProvider):
         salario = safe_float(raw.get("MR"))
         total_comprometido = safe_float(beneficio.get("TotalComprometido"))
 
-        margem_emprestimo = money(salario * 0.40)
+        # A margem de emprestimo corresponde
+        # exclusivamente aos 35%.
+        # RMC e RCC possuem reservas independentes.
+        margem_emprestimo = money(salario * 0.35)
         margem_cartao = money(salario * 0.05)
         margem_livre = money(margem_emprestimo - total_comprometido)
 

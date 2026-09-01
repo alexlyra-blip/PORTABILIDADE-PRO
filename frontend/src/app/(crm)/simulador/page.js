@@ -950,19 +950,24 @@ function SimuladorPageContent() {
     };
 
     const margemDisponivelExtrato = normalizarNumeroExtrato(
-      extractedData.margem_disponivel,
-      extractedData.margem_livre
+      extractedData.margem_livre,
+      extractedData.margem_disponivel
     );
 
     const margemConsignavelExtrato = normalizarNumeroExtrato(
-      extractedData.margem_maxima,
+      extractedData.margem_total_consignavel,
       extractedData.margem_consignavel,
-      extractedData.margem_emprestimo
+      extractedData.margem_maxima
+    );
+
+    const margemEmprestimoExtrato = normalizarNumeroExtrato(
+      extractedData.margem_emprestimo,
+      extractedData.margem_maxima
     );
 
     const totalComprometidoExtrato = normalizarNumeroExtrato(
-      extractedData.margem_comprometida,
-      extractedData.total_comprometido
+      extractedData.total_comprometido,
+      extractedData.margem_comprometida
     );
 
     const coeficienteExtrato = normalizarNumeroExtrato(
@@ -989,8 +994,21 @@ function SimuladorPageContent() {
     setFormData((prev) => ({
       ...prev,
       margem_livre: margemDisponivelExtrato,
-      margem_consignavel: margemConsignavelExtrato,
-      total_comprometido: totalComprometidoExtrato,
+
+      // 35% para emprestimos
+      margem_emprestimo:
+        margemEmprestimoExtrato,
+
+      // 45% total = 35 + 5 + 5
+      margem_total_consignavel:
+        margemConsignavelExtrato,
+
+      // Compatibilidade
+      margem_consignavel:
+        margemConsignavelExtrato,
+
+      total_comprometido:
+        totalComprometidoExtrato,
       coeficiente_utilizado: coeficienteExtrato,
       valor_liberado_margem: valorLiberadoExtrato
     }));
@@ -2875,12 +2893,12 @@ function SimuladorPageContent() {
           !isSiapeModal &&
           ["87", "88"].includes(codigoEspecie);
 
-        const percent = isLOAS ? 0.35 : 0.40;
+        const percent = 0.45;
 
         const margemConsignavel = isSiapeModal
           ? 0
           : Number(
-              margensAtivas.margem_emprestimo ??
+              margensAtivas.margem_total_consignavel ??
               margensAtivas.margem_consignavel ??
               (salario * percent)
             );
@@ -3234,7 +3252,7 @@ function SimuladorPageContent() {
                     </h4>
 
                     <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[9px] font-black uppercase">
-                      {isSiapeModal ? "Margem SIAPE" : isLOAS ? "LOAS 35%" : "Margem 40%"}
+                      {isSiapeModal ? "Margem SIAPE" : isLOAS ? "Margem Consignavel 45%" : "Margem Consignavel 45%"}
                     </span>
                   </div>
 
