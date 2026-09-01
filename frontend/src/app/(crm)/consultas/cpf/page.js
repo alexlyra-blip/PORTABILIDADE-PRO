@@ -1930,6 +1930,316 @@ export default function ConsultaCPFPage() {
               </div>
             </div>
 
+
+            {/* MARGENS_CARTAO_RESUMO_INSS */}
+            {!isSiape && (() => {
+              const margensCartao =
+                activeBenefit?.margens || {};
+
+              const margensCartaoLegacy =
+                activeBenefit?.margens_cartao || {};
+
+              const itensMargemCartao = [
+                {
+                  key: "RMC",
+                  titulo:
+                    "Reserva de Margem Consign?vel",
+
+                  total: Number(
+                    margensCartao.margem_rmc ?? 0
+                  ),
+
+                  utilizado: Number(
+                    margensCartao.rmc_utilizado ?? 0
+                  ),
+
+                  disponivel: Number(
+                    margensCartao.rmc_disponivel ??
+                    margensCartaoLegacy.rmc_disponivel ??
+                    0
+                  ),
+
+                  possui: Boolean(
+                    margensCartao.possui_rmc
+                  )
+                },
+
+                {
+                  key: "RCC",
+                  titulo:
+                    "Reserva de Cart?o Consignado",
+
+                  total: Number(
+                    margensCartao.margem_rcc ?? 0
+                  ),
+
+                  utilizado: Number(
+                    margensCartao.rcc_utilizado ?? 0
+                  ),
+
+                  disponivel: Number(
+                    margensCartao.rcc_disponivel ??
+                    margensCartaoLegacy.rcc_disponivel ??
+                    0
+                  ),
+
+                  possui: Boolean(
+                    margensCartao.possui_rcc
+                  )
+                }
+              ]
+                .map((item) => {
+                  const utilizada =
+                    item.possui ||
+                    item.utilizado > 0;
+
+                  const valor = utilizada
+                    ? (
+                        item.utilizado > 0
+                          ? item.utilizado
+                          : item.total
+                      )
+                    : (
+                        item.disponivel > 0
+                          ? item.disponivel
+                          : item.total
+                      );
+
+                  return {
+                    ...item,
+                    utilizada,
+                    valor
+                  };
+                })
+
+                .filter(
+                  (item) =>
+                    item.total > 0 ||
+                    item.utilizado > 0 ||
+                    item.disponivel > 0
+                )
+
+                // Disponiveis sempre aparecem primeiro.
+                .sort(
+                  (a, b) =>
+                    Number(a.utilizada) -
+                    Number(b.utilizada)
+                );
+
+
+              if (
+                itensMargemCartao.length === 0
+              ) {
+                return null;
+              }
+
+
+              return (
+                <div className="
+                  bg-white
+                  rounded-[2.5rem]
+                  shadow-xl
+                  border
+                  border-slate-100
+                  p-6
+                  md:p-7
+                  print-no-break
+                ">
+                  <div className="
+                    flex
+                    items-center
+                    gap-3
+                    mb-5
+                  ">
+                    <div className="
+                      w-10
+                      h-10
+                      rounded-xl
+                      bg-violet-50
+                      text-violet-600
+                      flex
+                      items-center
+                      justify-center
+                      border
+                      border-violet-100
+                    ">
+                      <Icons.CreditCard
+                        size={20}
+                      />
+                    </div>
+
+                    <div>
+                      <h3 className="
+                        text-lg
+                        font-black
+                        text-slate-800
+                        uppercase
+                        tracking-tight
+                      ">
+                        Margens de Cart?o
+                        {" "}
+                        (RMC / RCC)
+                      </h3>
+
+                      <p className="
+                        text-[10px]
+                        font-bold
+                        text-slate-400
+                        uppercase
+                        tracking-widest
+                      ">
+                        Dispon?veis ou utilizadas
+                      </p>
+                    </div>
+                  </div>
+
+
+                  <div className="
+                    grid
+                    grid-cols-1
+                    md:grid-cols-2
+                    gap-3
+                  ">
+                    {itensMargemCartao.map(
+                      (item) => (
+                        <div
+                          key={item.key}
+                          className={`
+                            flex
+                            items-center
+                            justify-between
+                            gap-4
+                            rounded-2xl
+                            border
+                            p-4
+                            ${
+                              item.utilizada
+                                ? "bg-rose-50/60 border-rose-100"
+                                : "bg-emerald-50/60 border-emerald-100"
+                            }
+                          `}
+                        >
+                          <div className="
+                            flex
+                            items-center
+                            gap-3
+                            min-w-0
+                          ">
+                            <div
+                              className={`
+                                w-11
+                                h-11
+                                rounded-xl
+                                flex
+                                items-center
+                                justify-center
+                                shrink-0
+                                ${
+                                  item.utilizada
+                                    ? "bg-rose-100 text-rose-600"
+                                    : "bg-emerald-100 text-emerald-600"
+                                }
+                              `}
+                            >
+                              <Icons.CreditCard
+                                size={19}
+                              />
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="
+                                flex
+                                items-center
+                                gap-2
+                                mb-1
+                              ">
+                                <span className="
+                                  text-xs
+                                  font-black
+                                  text-slate-800
+                                ">
+                                  {item.key}
+                                </span>
+
+                                <span
+                                  className={`
+                                    px-2.5
+                                    py-1
+                                    rounded-full
+                                    text-[8px]
+                                    font-black
+                                    uppercase
+                                    tracking-widest
+                                    ${
+                                      item.utilizada
+                                        ? "bg-rose-100 text-rose-700"
+                                        : "bg-emerald-100 text-emerald-700"
+                                    }
+                                  `}
+                                >
+                                  {item.utilizada
+                                    ? "Utilizada"
+                                    : "Dispon?vel"}
+                                </span>
+                              </div>
+
+                              <p className="
+                                text-[9px]
+                                font-bold
+                                text-slate-400
+                                uppercase
+                                tracking-wider
+                                truncate
+                              ">
+                                {item.titulo}
+                              </p>
+                            </div>
+                          </div>
+
+
+                          <div className="
+                            text-right
+                            shrink-0
+                          ">
+                            <p
+                              className={`
+                                text-lg
+                                md:text-xl
+                                font-black
+                                whitespace-nowrap
+                                ${
+                                  item.utilizada
+                                    ? "text-rose-700"
+                                    : "text-emerald-700"
+                                }
+                              `}
+                            >
+                              {formatBRL(
+                                item.valor
+                              )}
+                            </p>
+
+                            <p className="
+                              text-[8px]
+                              font-bold
+                              text-slate-400
+                              uppercase
+                              tracking-wider
+                              mt-0.5
+                            ">
+                              {item.utilizada
+                                ? "Margem utilizada"
+                                : "Margem dispon?vel"}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className={`grid grid-cols-1 gap-6 ${
               convenio === "GOVERNO" || convenio === "CLT PRIVADO"
                 ? "md:grid-cols-2 print:grid-cols-2"
