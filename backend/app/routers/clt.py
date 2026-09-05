@@ -36,6 +36,9 @@ class CltConsultaRequest(BaseModel):
 
     email: Optional[str] = None
 
+    # Necessaria para autorizacao C6 Credito do Trabalhador.
+    data_nascimento: Optional[str] = None
+
     vinculo_index: Optional[int] = Field(
         default=None,
         ge=1,
@@ -112,6 +115,17 @@ async def carregar_lotus_credentials(
         provider="LOTUS",
     )
 
+async def carregar_c6_credentials(
+    db: AsyncSession,
+    user_id: int,
+):
+    return await BankCredentialsService.get_decrypted_credentials(
+        db,
+        user_id=user_id,
+        provider="C6",
+    )
+
+
 def validar_permissao(current_user) -> None:
     allowed_roles = {
         "admin",
@@ -134,10 +148,12 @@ async def consultar_core(
     request: CltConsultaRequest,
     lotus_credentials=None,
     presenca_credentials=None,
+    c6_credentials=None,
 ):
     orchestrator = CltOrchestrator(
         lotus_credentials=lotus_credentials,
         presenca_credentials=presenca_credentials,
+        c6_credentials=c6_credentials,
     )
 
     try:
@@ -146,6 +162,7 @@ async def consultar_core(
             nome_informado=request.nome,
             telefone_informado=request.telefone,
             email_informado=request.email,
+            data_nascimento_informada=request.data_nascimento,
             vinculo_index=request.vinculo_index,
             valor_parcela=request.valor_parcela,
             valor_solicitado=request.valor_solicitado,
@@ -337,10 +354,16 @@ async def consultar_clt(
         current_user.id,
     )
 
+    c6_credentials = await carregar_c6_credentials(
+        db,
+        current_user.id,
+    )
+
     return await consultar_core(
         request,
         lotus_credentials=lotus_credentials,
         presenca_credentials=presenca_credentials,
+        c6_credentials=c6_credentials,
     )
 
 
