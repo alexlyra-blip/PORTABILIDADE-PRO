@@ -1473,25 +1473,32 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             or ""
         ).strip()
 
+        # CLARA_V2_NO_ACTIVE_LOANS
+        no_loans_reply = None
+
         if not loans:
-            if _clara_float(
+            margin_value_no_loans = _clara_float(
                 margem_livre
-            ) > 0:
-                benefit_loans_replies.append(
-                    "\u2139\ufe0f *Nenhum contrato ativo "
-                    "encontrado para portabilidade.*\n"
-                    "\U0001F4B5 *Margem Livre "
-                    "dispon\u00edvel:* "
-                    f"{fmt_brl(margem_livre)}"
-                )
-            else:
-                benefit_loans_replies.append(
-                    "\u274c *Cliente n\u00e3o possui "
-                    "contratos ativos para realizar "
-                    "portabilidade.*\n"
-                    "\U0001F4C9 *Margem Livre:* "
-                    f"{fmt_brl(margem_livre)}"
-                )
+            )
+
+            released_no_loans = max(
+                0.0,
+                _clara_float(
+                    liberado_aprox
+                ),
+            )
+
+            no_loans_reply = (
+                f"\U0001F4CB *BENEF?CIO "
+                f"{idx_b + 1}: NB "
+                f"{benefit_number}*\n\n"
+                "\u2139\ufe0f *Nenhum contrato ativo "
+                "encontrado para portabilidade.*\n\n"
+                "\U0001F4B5 *Margem Livre:* "
+                f"{fmt_brl(margin_value_no_loans)}\n"
+                "\U0001F4B0 *Valor aproximado liberado:* "
+                f"{fmt_brl(released_no_loans)}"
+            )
 
         # Run simulation for each loan
         for idx_l, c in enumerate(loans):
@@ -1741,6 +1748,12 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                     )
                 )
 
+                # CLARA_V2_HIDE_REJECTED_AUTO
+                # Na consulta automatica por CPF, somente
+                # oportunidades aprovadas sao entregues
+                # ao WhatsApp.
+                port_value = 0.0
+
                 if selected_offer:
                     port_value = (
                         _clara_float(
@@ -1750,11 +1763,18 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                         )
                     )
 
-                    if port_value > 0:
-                        benefit_port_count += 1
-                        benefit_port_total += (
-                            port_value
-                        )
+                if (
+                    not selected_offer
+                    or port_value <= 0
+                ):
+                    # Contrato recusado ou sem troco:
+                    # nao aparece na mensagem automatica.
+                    continue
+
+                benefit_port_count += 1
+                benefit_port_total += (
+                    port_value
+                )
 
                 loan_detail = (
                     f"\U0001F4CC *CONTRATO {idx_l + 1}*\n"
@@ -1804,12 +1824,15 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                     f"{sim_err}"
                 )
 
-                benefit_loans_replies.append(
-                    f"\U0001F4CC *CONTRATO "
-                    f"{idx_l + 1} "
-                    f"({c.get('banco')}):* "
-                    "Erro ao calcular portabilidade."
-                )
+                # Erro fica somente no log.
+                # Nao expor falha tecnica ao cliente.
+
+        if not loans:
+            reply += (
+                "\n\n"
+                + (no_loans_reply or "")
+            )
+            continue
 
         # ========================================================
         # RESUMO POR BENEFICIO
