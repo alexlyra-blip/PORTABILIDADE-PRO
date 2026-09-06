@@ -406,6 +406,42 @@ async def query_rules(message: str, db: AsyncSession, user_id: int = None) -> Op
 
     return None
 
+def _clara_fmt_brl(value):
+    """Formata valor monetario no padrao brasileiro."""
+    if value is None or value == "":
+        return "R$ 0,00"
+
+    try:
+        return (
+            f"R$ {float(value):,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
+    except (TypeError, ValueError):
+        return f"R$ {value}"
+
+
+def _clara_fmt_percent(value):
+    """Formata percentual com virgula decimal."""
+    if value is None or value == "":
+        return "0"
+
+    raw = (
+        str(value)
+        .strip()
+        .replace("%", "")
+        .replace(",", ".")
+    )
+
+    try:
+        text = f"{float(raw):.2f}"
+        text = text.rstrip("0").rstrip(".")
+        return text.replace(".", ",")
+    except (TypeError, ValueError):
+        return str(value).replace(".", ",")
+
+
 async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: int, compact: bool = False, b_idx: int = 1, c_idx: int = 1, is_manual: bool = False) -> str:
     try:
         # Convert and construct inputs
@@ -475,12 +511,12 @@ async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: i
                 f"⭐ *MELHOR OFERTA: {best_offer['banco']}*\n"
                 f"📊 {qty_tabelas} tabela(s) de {best_offer['prazo']} meses da {best_offer['banco']} disponível(is)\n\n"
                 f"• 🏷️ *Tabela:* {best_offer['tabela']}\n"
-                f"• 💵 *Parcela:* R$ {best_offer['valor_parcela']:.2f}\n"
+                f"• 💵 *Parcela:* {_clara_fmt_brl(best_offer['valor_parcela'])}\n"
                 f"• 📅 *Prazo:* {best_offer['prazo']} meses\n"
-                f"• ✍️ *Novo Contrato:* R$ {best_offer['valor_total_contrato']:.2f}\n"
-                f"• 🏦 *Saldo Devedor:* R$ {float(session['saldo_devedor']):.2f}\n"
-                f"• 📈 *Taxa:* {best_offer['taxa_juros']}% a.m.\n\n"
-                f"💰 *TROCO LIBERADO: R$ {best_offer['valor_liberado']:.2f}* 🤑\n\n"
+                f"• ✍️ *Novo Contrato:* {_clara_fmt_brl(best_offer['valor_total_contrato'])}\n"
+                f"• 🏦 *Saldo Devedor:* {_clara_fmt_brl(session['saldo_devedor'])}\n"
+                f"• 📈 *Taxa:* {_clara_fmt_percent(best_offer['taxa_juros'])}% a.m.\n\n"
+                f"💰 *TROCO LIBERADO: {_clara_fmt_brl(best_offer['valor_liberado'])}* 🤑\n\n"
                 f"🏛️ *Outros bancos:* {other_banks_str}\n"
             )
         else:
@@ -490,12 +526,12 @@ async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: i
                 f"📊 {qty_tabelas} tabela(s) de {best_offer['prazo']} meses da {best_offer['banco']} disponível(is)\n\n"
                 "📋 *DETALHES DA OPERAÇÃO:*\n"
                 f"• 🏷️ *Tabela:* {best_offer['tabela']}\n"
-                f"• 💵 *Valor da Parcela:* R$ {best_offer['valor_parcela']:.2f}\n"
+                f"• 💵 *Valor da Parcela:* {_clara_fmt_brl(best_offer['valor_parcela'])}\n"
                 f"• 📅 *Prazo:* {best_offer['prazo']} meses\n"
-                f"• ✍️ *Novo Contrato:* R$ {best_offer['valor_total_contrato']:.2f}\n"
-                f"• 🏦 *Saldo Devedor:* R$ {float(session['saldo_devedor']):.2f}\n"
-                f"• 📈 *Taxa do Refin:* {best_offer['taxa_juros']}% a.m.\n\n"
-                f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: R$ {best_offer['valor_liberado']:.2f}* 🤑💵\n\n"
+                f"• ✍️ *Novo Contrato:* {_clara_fmt_brl(best_offer['valor_total_contrato'])}\n"
+                f"• 🏦 *Saldo Devedor:* {_clara_fmt_brl(session['saldo_devedor'])}\n"
+                f"• 📈 *Taxa do Refin:* {_clara_fmt_percent(best_offer['taxa_juros'])}% a.m.\n\n"
+                f"💰 *VALOR DO TROCO ESTIMADO LIBERADO: {_clara_fmt_brl(best_offer['valor_liberado'])}* 🤑💵\n\n"
                 f"🏛️ *Outros bancos também elegíveis:* {other_banks_str}\n\n"
                 "Posso te ajudar com mais alguma dúvida sobre essa simulação, ou você gostaria de ver outra tabela?\n"
                 "Se o atendimento já estiver concluído, basta digitar *'obrigado'* ou *'encerrar'* para finalizar! 🙏"
@@ -1320,6 +1356,7 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         session[
             "resumo_ofertas_beneficios"
         ] = []
+        session["resumo_ofertas_geral"] = {}
 
     # CLARA_C6_AUTO_REFIN_END
 
@@ -1363,6 +1400,13 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         except:
             return f"R$ {val}"
 
+    # CLARA_V2_GLOBAL_SUMMARY_BEGIN
+    overall_margin_released = 0.0
+    overall_refin_count = 0
+    overall_refin_total = 0.0
+    overall_port_count = 0
+    overall_port_total = 0.0
+
     for idx_b, b in enumerate(beneficios):
         nb = b.get("cliente", {}).get("beneficio") or b.get("numero", "N/A")
         especie = b.get("cliente", {}).get("especie") or "N/A"
@@ -1375,6 +1419,11 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         salario = b.get("margens", {}).get("salario", 0.0)
         margem_livre = b.get("margens", {}).get("margem_livre", 0.0)
         liberado_aprox = await calcular_valor_liberado_margem(margem_livre)
+
+        overall_margin_released += max(
+            0.0,
+            _clara_float(liberado_aprox),
+        )
         margem_aprox_txt = f"_(Libera aprox. {fmt_brl(liberado_aprox)})_" if liberado_aprox > 0 else ""
         
         benefit_header = (
@@ -1827,6 +1876,12 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 # Erro fica somente no log.
                 # Nao expor falha tecnica ao cliente.
 
+        # CLARA_V2_GLOBAL_OPERATION_TOTALS
+        overall_refin_count += benefit_refin_count
+        overall_refin_total += benefit_refin_total
+        overall_port_count += benefit_port_count
+        overall_port_total += benefit_port_total
+
         if not loans:
             reply += (
                 "\n\n"
@@ -1855,53 +1910,10 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             + benefit_port_total
         )
 
-        summary_lines = [
-            "\U0001F4CA *RESUMO DAS OFERTAS*",
-        ]
-
-        if margin_value > 0:
-            margin_summary = (
-                "\U0001F4B5 *Margem Livre:* "
-                f"{fmt_brl(margin_value)}"
-            )
-
-            if margin_released > 0:
-                margin_summary += (
-                    " _(Libera aprox. "
-                    f"{fmt_brl(margin_released)})_"
-                )
-
-            summary_lines.append(
-                margin_summary
-            )
-
-        if benefit_refin_count > 0:
-            summary_lines.append(
-                "\U0001F3E6 "
-                "*Refinanciamento(s) C6:* "
-                f"{benefit_refin_count} "
-                "| *Total Liberado:* "
-                f"{fmt_brl(benefit_refin_total)}"
-            )
-
-        if benefit_port_count > 0:
-            summary_lines.append(
-                "\U0001F504 "
-                "*Portabilidade(s):* "
-                f"{benefit_port_count} "
-                "| *Total Liberado:* "
-                f"{fmt_brl(benefit_port_total)}"
-            )
-
-        summary_lines.append(
-            "\U0001F4B0 "
-            "*Total Geral Liberado:* "
-            f"{fmt_brl(total_general)}"
-        )
-
-        benefit_loans_replies.append(
-            "\n".join(summary_lines)
-        )
+        # CLARA_V2_NO_BENEFIT_VISUAL_SUMMARY
+        # Mantem os dados individuais na session.
+        # O cliente recebe um unico resumo consolidado
+        # apos todos os beneficios.
 
         if session is not None:
             session.setdefault(
@@ -1949,6 +1961,102 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 benefit_loans_replies
             )
         )
+
+    # CLARA_V2_GLOBAL_SUMMARY_RENDER
+    has_global_offers = (
+        overall_refin_count > 0
+        or overall_port_count > 0
+    )
+
+    if has_global_offers:
+        overall_total = (
+            overall_margin_released
+            + overall_refin_total
+            + overall_port_total
+        )
+
+        benefit_count = len(beneficios)
+
+        benefit_word = (
+            "benef\u00edcio"
+            if benefit_count == 1
+            else "benef\u00edcios"
+        )
+
+        global_summary_lines = [
+            "",
+            "--------------------",
+            "\U0001F4CA *RESUMO GERAL DO CLIENTE*",
+            (
+                "\U0001F4B5 *Margem dispon\u00edvel:* "
+                f"{benefit_count} {benefit_word} "
+                "| *Libera aprox.:* "
+                f"{fmt_brl(overall_margin_released)}"
+            ),
+        ]
+
+        if overall_refin_count > 0:
+            global_summary_lines.append(
+                "\U0001F3E6 "
+                "*Refinanciamento(s) C6:* "
+                f"{overall_refin_count} "
+                "| *Total Liberado:* "
+                f"{fmt_brl(overall_refin_total)}"
+            )
+
+        if overall_port_count > 0:
+            global_summary_lines.append(
+                "\U0001F504 "
+                "*Portabilidade(s):* "
+                f"{overall_port_count} "
+                "| *Total Liberado:* "
+                f"{fmt_brl(overall_port_total)}"
+            )
+
+        global_summary_lines.append(
+            "\U0001F4B0 "
+            "*Total Geral Liberado:* "
+            f"{fmt_brl(overall_total)}"
+        )
+
+        reply += (
+            "\n"
+            + "\n".join(
+                global_summary_lines
+            )
+        )
+
+        if session is not None:
+            session[
+                "resumo_ofertas_geral"
+            ] = {
+                "beneficios":
+                    benefit_count,
+                "margem_liberada":
+                    round(
+                        overall_margin_released,
+                        2,
+                    ),
+                "qtd_refins_c6":
+                    overall_refin_count,
+                "total_refins_c6":
+                    round(
+                        overall_refin_total,
+                        2,
+                    ),
+                "qtd_portabilidades":
+                    overall_port_count,
+                "total_portabilidades":
+                    round(
+                        overall_port_total,
+                        2,
+                    ),
+                "total_geral":
+                    round(
+                        overall_total,
+                        2,
+                    ),
+            }
 
     reply += (
         "\n\nPosso te ajudar com mais alguma dúvida sobre essas simulações, ou você gostaria de ver as opções de outro banco?\n"

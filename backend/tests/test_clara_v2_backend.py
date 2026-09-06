@@ -536,3 +536,123 @@ def test_cpf_sem_contratos_retorna_margem_e_valor_liberado():
         "continue"
         in guard
     )
+
+
+def test_cpf_automatico_usa_resumo_geral_consolidado():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "CLARA_V2_GLOBAL_SUMMARY_BEGIN"
+        in segment
+    )
+
+    assert (
+        "CLARA_V2_GLOBAL_OPERATION_TOTALS"
+        in segment
+    )
+
+    assert (
+        "CLARA_V2_GLOBAL_SUMMARY_RENDER"
+        in segment
+    )
+
+    assert (
+        "RESUMO GERAL DO CLIENTE"
+        in segment
+    )
+
+    assert (
+        "overall_margin_released"
+        in segment
+    )
+
+    assert (
+        "overall_refin_total"
+        in segment
+    )
+
+    assert (
+        "overall_port_total"
+        in segment
+    )
+
+    assert (
+        "resumo_ofertas_geral"
+        in segment
+    )
+
+    assert (
+        "CLARA_V2_NO_BENEFIT_VISUAL_SUMMARY"
+        in segment
+    )
+
+
+def test_ofertas_clara_usam_formatacao_brasileira():
+    source = _source()
+
+    start = source.index(
+        "async def run_simulation_and_respond("
+    )
+
+    end = source.index(
+        "async def simulate_for_cpf(",
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "_clara_fmt_brl("
+        "best_offer['valor_parcela']"
+        ")"
+        in segment
+    )
+
+    assert (
+        "_clara_fmt_brl("
+        "best_offer['valor_total_contrato']"
+        ")"
+        in segment
+    )
+
+    assert (
+        "_clara_fmt_brl("
+        "session['saldo_devedor']"
+        ")"
+        in segment
+    )
+
+    assert (
+        "_clara_fmt_brl("
+        "best_offer['valor_liberado']"
+        ")"
+        in segment
+    )
+
+    assert (
+        "_clara_fmt_percent("
+        "best_offer['taxa_juros']"
+        ")"
+        in segment
+    )
+
+    assert (
+        "R$ {best_offer['valor_parcela']:.2f}"
+        not in segment
+    )
+
+    assert (
+        "R$ {best_offer['valor_liberado']:.2f}"
+        not in segment
+    )
