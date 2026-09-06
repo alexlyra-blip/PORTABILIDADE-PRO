@@ -1000,7 +1000,8 @@ def detectar_cliente_nao_assinante(
 
 async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user_id: int, session: dict = None) -> str:
     from app.models.sqlalchemy_models import ConsultaCpfCache
-    from app.routers.consultas import get_provider
+    from app.routers.consultas import _execute_cpf_query_flow
+    from app.utils.config_helper import get_active_provider
     import json
     from datetime import datetime, timedelta, timezone
     
@@ -1010,83 +1011,100 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         
     masked_cpf = f"{clean_cpf[:3]}******{clean_cpf[-2:]}" if len(clean_cpf) >= 5 else "***"
     
-    # 1. Check cache first
-    dados_json = None
-    cache_entry = None
-    try:
-        stmt = select(ConsultaCpfCache).where(ConsultaCpfCache.cpf == clean_cpf)
-        result = await db.execute(stmt)
-        cache_entry = result.scalar_one_or_none()
-        
-        if cache_entry:
-            now_utc = datetime.now(timezone.utc)
-            created_at = cache_entry.updated_at or cache_entry.created_at
-            if created_at.tzinfo is None:
-                created_at = created_at.replace(tzinfo=timezone.utc)
-                
-            if (now_utc - created_at) <= timedelta(days=30):
-                try:
-                    dados_json = json.loads(cache_entry.dados_json)
-                    print(f"[CACHE] Usando cache para o CPF {masked_cpf} no Chat")
-                except Exception as e:
-                    print(f"[WARNING] Erro ao ler JSON do cache para CPF {masked_cpf}: {e}")
-    except Exception as cache_err:
-        print(f"[WARNING] Erro ao ler cache no chat para CPF {masked_cpf}: {cache_err}")
+    # ========================================================
+    # CLARA V2 - CONSULTA CPF UNIFICADA COM O SISTEMA WEB
+    # ========================================================
+    #
+    # O provider e definido pelo Admin e e o mesmo usado
+    # pela pagina Consulta CPF:
+    #
+    # multicorban -> MultiCorban
+    # promosys    -> Promosys
+    #
+    # A propria _execute_cpf_query_flow cuida da consulta,
+    # normalizacao e cache da mesma forma que o sistema web.
+    #
+    provider_type = ""
 
-    # 2. Query Promosys if cache is missing or expired
-    if not dados_json:
-        try:
-            provider = get_provider()
-            beneficios_info = await provider.consultar_beneficios(clean_cpf)
-            beneficios_list = beneficios_info.get("beneficios", [])
-            
-            if not beneficios_list:
-                return f"❌ *CPF {masked_cpf}:* Nenhum benefício ativo encontrado na Promosys."
-                
-            # Query each benefit
-            detailed_beneficios = []
-            for nb in beneficios_list:
-                try:
-                    res = await provider.consultar_por_beneficio(nb)
-                    if "telefones" in res and isinstance(res["telefones"], list):
-                        res["telefones"] = [t for t in res["telefones"] if t]
-                    detailed_beneficios.append(res)
-                except Exception as e:
-                    print(f"[WARNING] Erro ao consultar benefício {nb} no chat: {e}")
-                    
-            if not detailed_beneficios:
-                return f"❌ *CPF {masked_cpf}:* Não foi possível carregar os detalhes do benefício."
-                
-            # Construct standard response payload to cache
-            beneficio_principal = detailed_beneficios[0]
-            dados_json = {
-                "success": True,
-                "cpf": clean_cpf,
-                "total_beneficios": len(detailed_beneficios),
-                "beneficio_principal": beneficio_principal,
-                "beneficios": detailed_beneficios
-            }
-            
-            # Save or update cache
-            try:
-                if cache_entry:
-                    cache_entry.dados_json = json.dumps(dados_json)
-                    cache_entry.updated_at = datetime.now(timezone.utc)
-                else:
-                    new_entry = ConsultaCpfCache(
-                        cpf=clean_cpf,
-                        dados_json=json.dumps(dados_json),
-                        created_at=datetime.now(timezone.utc),
-                        updated_at=datetime.now(timezone.utc)
-                    )
-                    db.add(new_entry)
-                await db.commit()
-            except Exception as save_err:
-                print(f"[WARNING] Erro ao salvar cache no chat para CPF {masked_cpf}: {save_err}")
-                
-        except Exception as e:
-            print(f"[WARNING] Erro ao consultar Promosys no chat: {e}")
-            return f"❌ *Erro de Integração:* Não conseguimos consultar o CPF {masked_cpf} na Promosys no momento. Tente novamente mais tarde."
+    try:
+        provider_type = await get_active_provider(db)
+
+        provider_type = str(
+            provider_type or ""
+        ).strip().lower()
+
+        if provider_type not in (
+            "multicorban",
+            "promosys",
+        ):
+            return (
+                "? *Consulta CPF indispon?vel:* "
+                "nenhum provedor v?lido est? selecionado "
+                "no painel administrativo."
+            )
+
+        # O core da Consulta CPF fecha a sessao recebida
+        # antes da chamada externa. Usamos uma sessao exclusiva
+        # para preservar a sessao principal do atendimento,
+        # utilizada posteriormente pelo Refin C6 e simulacoes.
+        async with AsyncSessionLocal() as consulta_db:
+            consulta_result = await _execute_cpf_query_flow(
+                clean_cpf,
+                consulta_db,
+                "INSS",
+                provider_type,
+            )
+
+        if hasattr(
+            consulta_result,
+            "model_dump",
+        ):
+            dados_json = (
+                consulta_result.model_dump()
+            )
+
+        elif isinstance(
+            consulta_result,
+            dict,
+        ):
+            dados_json = consulta_result
+
+        else:
+            return (
+                "? *Erro de Integra??o:* "
+                "o provedor de consulta CPF retornou "
+                "um formato inesperado."
+            )
+
+        print(
+            "[CLARA V2] Consulta CPF usando provider "
+            f"ativo do Admin: {provider_type}"
+        )
+
+    except Exception as e:
+        print(
+            "[WARNING] Erro na consulta CPF da Clara "
+            f"via provider {provider_type or 'nao-configurado'}: "
+            f"{e}"
+        )
+
+        provider_label = (
+            "MultiCorban"
+            if provider_type == "multicorban"
+            else (
+                "Promosys"
+                if provider_type == "promosys"
+                else "configurado"
+            )
+        )
+
+        return (
+            "? *Erro de Integra??o:* "
+            f"n?o conseguimos consultar o CPF "
+            f"{masked_cpf} pelo provedor "
+            f"{provider_label} no momento. "
+            "Tente novamente mais tarde."
+        )
 
     # CLARA_C6_AUTO_REFIN_BEGIN
     # --------------------------------------------------------

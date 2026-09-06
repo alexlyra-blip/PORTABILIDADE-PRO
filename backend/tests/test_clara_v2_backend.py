@@ -236,3 +236,141 @@ def test_marcadores_v2_presentes():
     assert "CLARA_V2_MANUAL_FLOW" in source
     assert "CLARA_V2_RESPONSE_META" in source
     assert "waiting_inss_cpf_or_bank" in source
+
+def test_cpf_automatico_usa_mesmo_provider_da_consulta_web():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "from app.routers.consultas import "
+        "_execute_cpf_query_flow"
+        in segment
+    )
+
+    assert (
+        "from app.utils.config_helper import "
+        "get_active_provider"
+        in segment
+    )
+
+    assert (
+        "provider_type = await get_active_provider(db)"
+        in segment
+    )
+
+    assert (
+        "consulta_result = await _execute_cpf_query_flow("
+        in segment
+    )
+
+    assert (
+        "async with AsyncSessionLocal() as consulta_db:"
+        in segment
+    )
+
+    assert (
+        "clean_cpf,"
+        in segment
+        and "consulta_db,"
+        in segment
+        and "provider_type,"
+        in segment
+    )
+
+    assert (
+        '"INSS",'
+        in segment
+    )
+
+    assert (
+        'get_provider_by_type("promosys")'
+        not in segment
+    )
+
+    assert (
+        "provider = get_provider()"
+        not in segment
+    )
+
+    consultas_source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "consultas.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "provider_type = await get_active_provider(db)"
+        in consultas_source
+    )
+
+    assert (
+        "async def _execute_cpf_query_flow("
+        in consultas_source
+    )
+
+def test_cpf_automatico_preserva_refin_c6():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "CLARA_C6_AUTO_REFIN_BEGIN"
+        in segment
+    )
+
+    assert (
+        "BankCredentialsService"
+        in segment
+    )
+
+    assert (
+        "resolve_decrypted_credentials_for_user"
+        in segment
+    )
+
+    assert (
+        "C6BankService"
+        in segment
+    )
+
+    assert (
+        "C6BankError"
+        in segment
+    )
+
+    assert (
+        "c6_service = None"
+        in segment
+    )
+
+    assert (
+        "provider_type = await get_active_provider(db)"
+        in segment
+    )
+
+    assert (
+        "async with AsyncSessionLocal() as consulta_db:"
+        in segment
+    )
