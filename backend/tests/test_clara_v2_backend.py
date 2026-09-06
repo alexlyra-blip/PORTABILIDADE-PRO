@@ -656,3 +656,264 @@ def test_ofertas_clara_usam_formatacao_brasileira():
         "R$ {best_offer['valor_liberado']:.2f}"
         not in segment
     )
+
+
+def test_clara_v2_dados_cliente_sao_compactos():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "_clara_mask_cpf(clean_cpf)"
+        in segment
+    )
+
+    assert (
+        "client_address"
+        not in segment
+    )
+
+    assert (
+        "bloqueio.upper()"
+        not in segment
+    )
+
+    assert (
+        "def _clara_mask_cpf("
+        in source
+    )
+
+
+def test_clara_v2_renumera_apenas_contratos_exibidos():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "displayed_contract_count = 0"
+        in segment
+    )
+
+    assert (
+        segment.count(
+            "displayed_contract_count += 1"
+        )
+        == 2
+    )
+
+    assert (
+        segment.count(
+            "*CONTRATO "
+            "{displayed_contract_count}*"
+        )
+        == 2
+    )
+
+    assert (
+        "*CONTRATO {idx_l + 1}*"
+        not in segment
+    )
+
+    assert (
+        segment.count(
+            "_clara_format_contract_display("
+            "c.get('contrato'))"
+        )
+        == 2
+    )
+
+
+def test_clara_v2_portabilidade_prioriza_108_96_84():
+    source = _source()
+
+    start = source.index(
+        "async def run_simulation_and_respond("
+    )
+
+    end = source.index(
+        "async def simulate_for_cpf(",
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "CLARA_V2_TERM_PRIORITY"
+        in segment
+    )
+
+    assert (
+        "preferred_terms = ("
+        in segment
+    )
+
+    assert "108," in segment
+    assert "96," in segment
+    assert "84," in segment
+
+    assert (
+        'session["selected_offer"] = best_offer'
+        in segment
+    )
+
+    compact_start = segment.index(
+        "if compact:"
+    )
+
+    compact_end = segment.index(
+        "else:",
+        compact_start,
+    )
+
+    compact = segment[
+        compact_start:compact_end
+    ]
+
+    assert (
+        "session['saldo_devedor']"
+        not in compact
+    )
+
+
+def test_clara_v2_refin_c6_tenta_108_96_84():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    refin = segment.index(
+        "PRIORIDADE: REFIN C6 "
+        "108X -> 96X -> 84X"
+    )
+
+    fallback = segment.index(
+        "run_simulation_and_respond(",
+        refin,
+    )
+
+    block = segment[
+        refin:fallback
+    ]
+
+    assert (
+        "for c6_requested_term in ("
+        in block
+    )
+
+    assert "108," in block
+    assert "96," in block
+    assert "84," in block
+
+    assert (
+        "prazo=(\n"
+        "                                        "
+        "c6_requested_term"
+        in block
+    )
+
+    assert (
+        "c6_selected_term"
+        in block
+    )
+
+
+def test_clara_v2_mensagens_convenio_sem_caracteres_quebrados():
+    source = _source()
+
+    assert (
+        r"\u2705 *Conv\u00eanio INSS selecionado."
+        in source
+    )
+
+    assert (
+        "Conv?nio INSS selecionado"
+        not in source
+    )
+
+    assert (
+        "simula??o manual"
+        not in source
+    )
+
+
+def test_clara_v2_nao_possui_textos_corrompidos():
+    source = _source()
+
+    broken_tokens = (
+        "autom?tica",
+        "indispon?vel",
+        "v?lido",
+        "est? selecionado",
+        "Integra??o",
+        "n?o conseguimos",
+        "BENEF?CIO",
+        "Op??o",
+        "inv?lida",
+        "qual ? o seu",
+        "1?? INSS",
+        "2?? SIAPE",
+        "3?? GOVERNO",
+        "4?? FOR?AS",
+        "5?? CLT",
+        '"n?o"',
+        '"n?o sei"',
+    )
+
+    for token in broken_tokens:
+        assert token not in source
+
+    assert (
+        r"consulta autom\u00e1tica"
+        in source
+    )
+
+    assert (
+        r"Consulta CPF indispon\u00edvel"
+        in source
+    )
+
+    assert (
+        r"Erro de Integra\u00e7\u00e3o"
+        in source
+    )
+
+    assert (
+        r"*BENEF\u00cdCIO "
+        in source
+    )
+
+    assert (
+        r"Op\u00e7\u00e3o inv\u00e1lida"
+        in source
+    )
+
+    assert (
+        r"FOR\u00c7AS ARMADAS"
+        in source
+    )

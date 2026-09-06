@@ -442,6 +442,38 @@ def _clara_fmt_percent(value):
         return str(value).replace(".", ",")
 
 
+def _clara_mask_cpf(cpf):
+    digits = "".join(
+        filter(
+            str.isdigit,
+            str(cpf or ""),
+        )
+    )
+
+    if len(digits) != 11:
+        return digits or str(cpf or "")
+
+    return (
+        f"{digits[:3]}.***.***-"
+        f"{digits[-2:]}"
+    )
+
+
+def _clara_format_contract_display(value):
+    text = str(value or "").strip()
+
+    if not text:
+        return ""
+
+    # Remove zeros a esquerda apenas de
+    # contratos totalmente numericos.
+    # Contratos alfanumericos permanecem intactos.
+    if text.isdigit():
+        return text.lstrip("0") or "0"
+
+    return text
+
+
 async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: int, compact: bool = False, b_idx: int = 1, c_idx: int = 1, is_manual: bool = False) -> str:
     try:
         # Convert and construct inputs
@@ -487,24 +519,103 @@ async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: i
         # Lógica para "Melhor Tabela" pedida pelo cliente:
         # Priorizar tabelas com prazo 108, mas SEMPRE respeitando a prioridade da promotora/banco (que já vem do motor).
         # O motor já envia 'ofertas' ordenadas por: admin_priority -> promotora_priority -> priority -> -valor_liberado
+        # CLARA_V2_TERM_PRIORITY
+        # Prioridade absoluta de prazo:
+        # 108X -> 96X -> 84X.
+        # Dentro do mesmo prazo, preserva
+        # a ordem original entregue pelo motor.
+        preferred_terms = (
+            108,
+            96,
+            84,
+        )
+
+        preferred_offers = []
+        selected_term = None
+
+        for preferred_term in preferred_terms:
+            term_offers = [
+                offer
+                for offer in ofertas
+                if int(
+                    _clara_float(
+                        offer.get("prazo")
+                    )
+                ) == preferred_term
+            ]
+
+            if term_offers:
+                preferred_offers = term_offers
+                selected_term = preferred_term
+                break
+
+        # Se o motor devolver algum prazo diferente
+        # dos preferenciais, nao perde a oportunidade.
+        if not preferred_offers:
+            preferred_offers = list(ofertas)
+
         first_tables_by_bank = []
         banks_seen = set()
-        for o in ofertas:
-            if o["banco"] not in banks_seen:
-                banks_seen.add(o["banco"])
-                first_tables_by_bank.append(o)
-                
-        # Ordena apenas para jogar prazos 108 para cima, MAS preservando a ordem relativa original do motor
-        # Python 'sort' is stable, so sorting by a boolean keeps the original priority order for ties.
-        first_tables_by_bank.sort(key=lambda x: x.get("prazo") != 108)
+
+        for offer in preferred_offers:
+            bank_key = str(
+                offer.get("banco")
+                or ""
+            ).strip().lower()
+
+            if bank_key not in banks_seen:
+                banks_seen.add(
+                    bank_key
+                )
+                first_tables_by_bank.append(
+                    offer
+                )
+
         best_offer = first_tables_by_bank[0]
+
+        # Guarda exatamente a oferta apresentada.
+        # O automatico usa o mesmo registro para
+        # contagem e valor liberado.
+        session["selected_offer"] = best_offer
         
         session["active_bank"] = best_offer["banco"]
         
         qty_tabelas = len([o for o in ofertas if o["banco"].lower() == best_offer["banco"].lower() and o.get("prazo") == best_offer.get("prazo")])
         
-        other_banks = list(set(o["banco"] for o in ofertas if o["banco"].lower() != best_offer["banco"].lower()))
-        other_banks_str = ", ".join(other_banks) if other_banks else "Nenhum"
+        other_banks = []
+        other_banks_seen = set()
+
+        best_bank_key = str(
+            best_offer.get("banco")
+            or ""
+        ).strip().lower()
+
+        for offer in preferred_offers:
+            bank = str(
+                offer.get("banco")
+                or ""
+            ).strip()
+
+            bank_key = bank.lower()
+
+            if (
+                bank_key
+                and bank_key != best_bank_key
+                and bank_key
+                not in other_banks_seen
+            ):
+                other_banks_seen.add(
+                    bank_key
+                )
+                other_banks.append(
+                    bank
+                )
+
+        other_banks_str = (
+            ", ".join(other_banks)
+            if other_banks
+            else "Nenhum"
+        )
         
         if compact:
             reply = (
@@ -514,7 +625,6 @@ async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: i
                 f"• 💵 *Parcela:* {_clara_fmt_brl(best_offer['valor_parcela'])}\n"
                 f"• 📅 *Prazo:* {best_offer['prazo']} meses\n"
                 f"• ✍️ *Novo Contrato:* {_clara_fmt_brl(best_offer['valor_total_contrato'])}\n"
-                f"• 🏦 *Saldo Devedor:* {_clara_fmt_brl(session['saldo_devedor'])}\n"
                 f"• 📈 *Taxa:* {_clara_fmt_percent(best_offer['taxa_juros'])}% a.m.\n\n"
                 f"💰 *TROCO LIBERADO: {_clara_fmt_brl(best_offer['valor_liberado'])}* 🤑\n\n"
                 f"🏛️ *Outros bancos:* {other_banks_str}\n"
@@ -738,8 +848,8 @@ def get_current_step_instruction(session: dict) -> str:
         return "🚀 Iniciando Simulação de Portabilidade!\n\nPara começarmos, por favor me informe qual é o seu *Convênio*? 👇\n\n1️⃣ *INSS*\n2️⃣ *SIAPE*\n3️⃣ *GOVERNO*\n4️⃣ *FORÇAS ARMADAS*\n5️⃣ *CLT PRIVADO*"
     elif state == "waiting_inss_cpf_or_bank":
         return (
-            "?? Informe o *CPF do cliente* para "
-            "consulta autom?tica ou informe o "
+            "\U0001F50E Informe o *CPF do cliente* para "
+            "consulta autom\u00e1tica ou informe o "
             "*Banco de Origem* para continuar "
             "manualmente:"
         )
@@ -1074,8 +1184,8 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             "promosys",
         ):
             return (
-                "? *Consulta CPF indispon?vel:* "
-                "nenhum provedor v?lido est? selecionado "
+                "\u26a0\ufe0f *Consulta CPF indispon\u00edvel:* "
+                "nenhum provedor v\u00e1lido est\u00e1 selecionado "
                 "no painel administrativo."
             )
 
@@ -1107,7 +1217,7 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
 
         else:
             return (
-                "? *Erro de Integra??o:* "
+                "\u26a0\ufe0f *Erro de Integra\u00e7\u00e3o:* "
                 "o provedor de consulta CPF retornou "
                 "um formato inesperado."
             )
@@ -1135,8 +1245,8 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         )
 
         return (
-            "? *Erro de Integra??o:* "
-            f"n?o conseguimos consultar o CPF "
+            "\u26a0\ufe0f *Erro de Integra\u00e7\u00e3o:* "
+            f"n\u00e3o conseguimos consultar o CPF "
             f"{masked_cpf} pelo provedor "
             f"{provider_label} no momento. "
             "Tente novamente mais tarde."
@@ -1373,17 +1483,13 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         
     client_name = beneficios[0].get("cliente", {}).get("nome", "Cliente")
     client_age = beneficios[0].get("cliente", {}).get("idade", 50)
-    client_address = beneficios[0].get("cliente", {}).get("endereco", "")
     
     reply = (
         f"👤 *DADOS DO CLIENTE*\n"
         f"• *Nome:* {client_name.upper()}\n"
-        f"• *CPF:* {masked_cpf}\n"
+        f"• *CPF:* {_clara_mask_cpf(clean_cpf)}\n"
         f"• *Idade:* {client_age} anos\n"
     )
-    if client_address:
-        reply += f"• *Endereço:* {client_address.upper()}\n"
-        
     if is_illiterate:
         reply += f"• *Analfabeto:* _*SIM*_ ✍️\n"
     else:
@@ -1432,7 +1538,6 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             f"• *Situação:* {situacao}\n"
             f"• *Espécie:* {especie}\n"
             f"• *UF:* {uf} | *DDB:* {ddb}\n"
-            f"• *Bloqueado Empréstimo:* {bloqueio.upper()}\n"
             f"• *Salário:* {fmt_brl(salario)}\n"
             f"• *Margem Livre:* {fmt_brl(margem_livre)} "
         )
@@ -1442,6 +1547,7 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         
         loans = b.get("emprestimos", []) or []
         benefit_loans_replies = []
+        displayed_contract_count = 0
 
         benefit_refin_count = 0
         benefit_refin_total = 0.0
@@ -1538,7 +1644,7 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             )
 
             no_loans_reply = (
-                f"\U0001F4CB *BENEF?CIO "
+                f"\U0001F4CB *BENEF\u00cdCIO "
                 f"{idx_b + 1}: NB "
                 f"{benefit_number}*\n\n"
                 "\u2139\ufe0f *Nenhum contrato ativo "
@@ -1573,7 +1679,7 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             )
 
             # ====================================================
-            # PRIORIDADE: REFIN C6 108X
+            # PRIORIDADE: REFIN C6 108X -> 96X -> 84X
             # ====================================================
 
             if (
@@ -1581,34 +1687,79 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 and c6_service is not None
             ):
                 try:
-                    c6_result = await (
-                        c6_service
-                        .simular_refin_inss(
-                            cpf=clean_cpf,
-                            beneficio=(
-                                benefit_number
-                            ),
-                            contrato=str(
-                                c.get("contrato")
-                                or ""
-                            ),
-                            data_nascimento=(
-                                birth_date
-                            ),
-                            renda=income_value,
-                            parcela=_clara_float(
-                                c.get("parcela")
-                            ),
-                            prazo=108,
-                        )
-                    )
+                    c6_result = None
+                    c6_offer = None
+                    c6_value = 0.0
+                    c6_selected_term = None
 
-                    (
-                        c6_offer,
-                        c6_value,
-                    ) = _extract_c6_offer(
-                        c6_result
-                    )
+                    for c6_requested_term in (
+                        108,
+                        96,
+                        84,
+                    ):
+                        try:
+                            candidate_result = await (
+                                c6_service
+                                .simular_refin_inss(
+                                    cpf=clean_cpf,
+                                    beneficio=(
+                                        benefit_number
+                                    ),
+                                    contrato=str(
+                                        c.get("contrato")
+                                        or ""
+                                    ),
+                                    data_nascimento=(
+                                        birth_date
+                                    ),
+                                    renda=income_value,
+                                    parcela=_clara_float(
+                                        c.get("parcela")
+                                    ),
+                                    prazo=(
+                                        c6_requested_term
+                                    ),
+                                )
+                            )
+
+                        except C6BankError as term_error:
+                            print(
+                                "[INFO] Refin C6 "
+                                f"{c6_requested_term}X "
+                                "indisponivel para contrato "
+                                f"{c.get('contrato')}: "
+                                f"{term_error}"
+                            )
+                            continue
+
+                        except Exception as term_error:
+                            print(
+                                "[WARNING] Erro Refin C6 "
+                                f"{c6_requested_term}X "
+                                "para contrato "
+                                f"{c.get('contrato')}: "
+                                f"{term_error}"
+                            )
+                            continue
+
+                        (
+                            candidate_offer,
+                            candidate_value,
+                        ) = _extract_c6_offer(
+                            candidate_result
+                        )
+
+                        if (
+                            candidate_offer is not None
+                            and candidate_value > 0
+                        ):
+                            c6_result = candidate_result
+                            c6_offer = candidate_offer
+                            c6_value = candidate_value
+                            c6_selected_term = (
+                                c6_requested_term
+                            )
+                            break
 
                     if (
                         c6_offer is not None
@@ -1622,9 +1773,9 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                                 or c6_offer.get(
                                     "installment_quantity"
                                 )
-                                or 108
+                                or c6_selected_term or 108
                             )
-                        ) or 108
+                        ) or c6_selected_term or 108
 
                         c6_table = str(
                             c6_offer.get(
@@ -1650,10 +1801,12 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                             c6_value
                         )
 
+                        displayed_contract_count += 1
+
                         loan_detail = (
-                            f"\U0001F4CC *CONTRATO {idx_l + 1}*\n"
+                            f"\U0001F4CC *CONTRATO {displayed_contract_count}*\n"
                             f"\u2022 *Origem:* {c.get('banco')}\n"
-                            f"\u2022 *Contrato:* {c.get('contrato')}\n"
+                            f"\u2022 *Contrato:* {_clara_format_contract_display(c.get('contrato'))}\n"
                             f"\u2022 *Parcelas Restantes:* {remaining}\n"
                             f"\u2022 *Parcela Atual:* "
                             f"{fmt_brl(c.get('parcela'))}\n"
@@ -1797,7 +1950,16 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                     )
                 )
 
-                # CLARA_V2_HIDE_REJECTED_AUTO
+                                # Usa exatamente a oferta escolhida
+                # por run_simulation_and_respond.
+                selected_offer = (
+                    sim_session.get(
+                        "selected_offer"
+                    )
+                    or selected_offer
+                )
+
+# CLARA_V2_HIDE_REJECTED_AUTO
                 # Na consulta automatica por CPF, somente
                 # oportunidades aprovadas sao entregues
                 # ao WhatsApp.
@@ -1825,10 +1987,12 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                     port_value
                 )
 
+                displayed_contract_count += 1
+
                 loan_detail = (
-                    f"\U0001F4CC *CONTRATO {idx_l + 1}*\n"
+                    f"\U0001F4CC *CONTRATO {displayed_contract_count}*\n"
                     f"\u2022 *Origem:* {c.get('banco')}\n"
-                    f"\u2022 *Contrato:* {c.get('contrato')}\n"
+                    f"\u2022 *Contrato:* {_clara_format_contract_display(c.get('contrato'))}\n"
                     f"\u2022 *Parcelas Restantes:* {remaining}\n"
                     f"\u2022 *Parcela Atual:* "
                     f"{fmt_brl(c.get('parcela'))}\n"
@@ -2351,11 +2515,11 @@ async def chat_interaction(
                     )
 
                     reply_text = (
-                        "? *Conv?nio INSS selecionado.*\n\n"
-                        "?? Informe o *CPF do cliente* para "
+                        "\u2705 *Conv\u00eanio INSS selecionado.*\n\n"
+                        "\U0001F50E Informe o *CPF do cliente* para "
                         "consultar e simular automaticamente.\n\n"
-                        "?? Se preferir continuar pela "
-                        "simula??o manual, informe diretamente "
+                        "\U0001F3E6 Se preferir continuar pela "
+                        "simula\u00e7\u00e3o manual, informe diretamente "
                         "o *Banco de Origem* do contrato."
                     )
 
@@ -2365,8 +2529,8 @@ async def chat_interaction(
                     )
 
                     reply_text = (
-                        f"? *Conv?nio {conv} selecionado.*\n\n"
-                        "?? Agora, por favor, informe o nome "
+                        f"\u2705 *Conv\u00eanio {conv} selecionado.*\n\n"
+                        "\U0001F3E6 Agora, por favor, informe o nome "
                         "do *Banco de Origem* (atual):"
                     )
 
@@ -2398,14 +2562,14 @@ async def chat_interaction(
                 } | chat_response_meta())
 
             reply_text = (
-                "?? *Op??o inv?lida.*\n\n"
-                "Por favor, me informe qual ? o seu "
-                "*Conv?nio*? ??\n\n"
-                "*1?? INSS*\n"
-                "*2?? SIAPE*\n"
-                "*3?? GOVERNO*\n"
-                "*4?? FOR?AS ARMADAS*\n"
-                "*5?? CLT PRIVADO*"
+                "\u274c *Op\u00e7\u00e3o inv\u00e1lida.*\n\n"
+                "Por favor, me informe qual \u00e9 o seu "
+                "*Conv\u00eanio*? \U0001F447\n\n"
+                "*1\ufe0f\u20e3 INSS*\n"
+                "*2\ufe0f\u20e3 SIAPE*\n"
+                "*3\ufe0f\u20e3 GOVERNO*\n"
+                "*4\ufe0f\u20e3 FOR\u00c7AS ARMADAS*\n"
+                "*5\ufe0f\u20e3 CLT PRIVADO*"
             )
 
             session["messages"].append({
@@ -2475,7 +2639,7 @@ async def chat_interaction(
             session["analfabeto"] = (
                 "sim"
                 if is_illiterate
-                else "n?o"
+                else "n\u00e3o"
             )
                 
             session.pop("simulacao_selecao_atual", None)
@@ -2595,7 +2759,7 @@ async def chat_interaction(
                         "",
                         "ignorar",
                         "nao sei",
-                        "n?o sei",
+                        "n\u00e3o sei",
                         "none",
                         "null",
                     ):
@@ -2625,7 +2789,7 @@ async def chat_interaction(
                     if margem_texto in (
                         "",
                         "nao",
-                        "n?o",
+                        "n\u00e3o",
                         "n",
                         "0",
                         "0.0",
@@ -2659,7 +2823,7 @@ async def chat_interaction(
                             "true",
                             "1",
                         )
-                        else "n?o"
+                        else "n\u00e3o"
                     )
 
                     reply_text = await (
