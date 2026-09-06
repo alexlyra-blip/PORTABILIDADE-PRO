@@ -374,3 +374,165 @@ def test_cpf_automatico_preserva_refin_c6():
         "async with AsyncSessionLocal() as consulta_db:"
         in segment
     )
+
+def test_cpf_automatico_oculta_contratos_sem_oferta():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "CLARA_V2_HIDE_REJECTED_AUTO"
+        in segment
+    )
+
+    assert (
+        "not selected_offer"
+        in segment
+    )
+
+    assert (
+        "port_value <= 0"
+        in segment
+    )
+
+    # Erros/reprovacoes automaticos nao devem
+    # ser enviados ao WhatsApp.
+    assert (
+        '"Erro ao calcular portabilidade."'
+        not in segment
+    )
+
+    # A mensagem generica continua existindo
+    # para simulacoes manuais solicitadas pelo
+    # usuario.
+    assert (
+        "Nenhuma oferta aprovada para este contrato"
+        in source
+    )
+
+
+def test_cpf_automatico_prioriza_refin_c6_antes_da_portabilidade():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    c6_position = segment.index(
+        ".simular_refin_inss("
+    )
+
+    port_position = segment.index(
+        "selected_offer ="
+    )
+
+    assert c6_position < port_position
+
+    assert (
+        "c6_value > 0"
+        in segment
+    )
+
+    assert (
+        "CLARA_V2_HIDE_REJECTED_AUTO"
+        in segment
+    )
+
+def test_cpf_sem_contratos_retorna_margem_e_valor_liberado():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    no_loans = segment.index(
+        "CLARA_V2_NO_ACTIVE_LOANS"
+    )
+
+    summary = segment.index(
+        "RESUMO POR BENEFICIO",
+        no_loans,
+    )
+
+    part = segment[
+        no_loans:summary
+    ]
+
+    assert "no_loans_reply" in part
+
+    assert (
+        "Nenhum contrato ativo "
+        in part
+    )
+
+    assert (
+        "encontrado para portabilidade"
+        in part
+    )
+
+    assert "Margem Livre" in part
+
+    assert (
+        "Valor aproximado liberado"
+        in part
+    )
+
+    assert (
+        "fmt_brl(margin_value_no_loans)"
+        in part
+    )
+
+    assert (
+        "fmt_brl(released_no_loans)"
+        in part
+    )
+
+    assert (
+        "reply += ("
+        in part
+    )
+
+    assert (
+        '+ (no_loans_reply or "")'
+        in part
+    )
+
+    # O cabe?alho normal do benef?cio tamb?m cont?m
+    # margem. No cen?rio sem contratos ele N?O pode
+    # ser usado, evitando duplicidade.
+    guard = part[
+        part.rindex("if not loans:"):
+    ]
+
+    assert (
+        "benefit_header"
+        not in guard
+    )
+
+    assert (
+        "continue"
+        in guard
+    )
