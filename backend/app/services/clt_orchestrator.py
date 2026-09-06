@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from app.services.consultas.multicorban_provider import (
@@ -8,6 +9,10 @@ from app.services.presenca_bank_service import (
     PresencaBankService,
 )
 from app.services.lotus_clt_service import LotusCltService
+from app.services.c6_bank_service import (
+    C6BankError,
+    C6BankService,
+)
 
 
 class CltOrchestrator:
@@ -22,11 +27,13 @@ class CltOrchestrator:
         self,
         lotus_credentials: Optional[Dict[str, Any]] = None,
         presenca_credentials: Optional[Dict[str, Any]] = None,
+        c6_credentials: Optional[Dict[str, Any]] = None,
     ):
         self.multicorban = MultiCorbanProvider()
 
         lotus_credentials = lotus_credentials or {}
         presenca_credentials = presenca_credentials or {}
+        c6_credentials = c6_credentials or {}
 
         self.presenca = PresencaBankService(
             login=presenca_credentials.get("login"),
@@ -36,6 +43,10 @@ class CltOrchestrator:
         self.lotus = LotusCltService(
             email=lotus_credentials.get("login"),
             password=lotus_credentials.get("password"),
+        )
+
+        self.c6 = C6BankService(
+            credentials=c6_credentials,
         )
 
     @staticmethod
@@ -225,6 +236,7 @@ class CltOrchestrator:
         nome_informado: Optional[str] = None,
         telefone_informado: Optional[str] = None,
         email_informado: Optional[str] = None,
+        data_nascimento_informada: Optional[str] = None,
         vinculo_index: Optional[int] = None,
         valor_parcela: Optional[float] = None,
         valor_solicitado: Optional[float] = None,
@@ -235,6 +247,31 @@ class CltOrchestrator:
 
         if len(cpf_clean) != 11:
             raise ValueError("CPF inválido.")
+
+        data_nascimento_raw = str(
+            data_nascimento_informada
+            or ""
+        ).strip()
+
+        data_nascimento = ""
+
+        if data_nascimento_raw:
+            for formato_data in (
+                "%Y-%m-%d",
+                "%d/%m/%Y",
+            ):
+                try:
+                    data_nascimento = (
+                        datetime.strptime(
+                            data_nascimento_raw,
+                            formato_data,
+                        ).strftime(
+                            "%Y-%m-%d"
+                        )
+                    )
+                    break
+                except ValueError:
+                    continue
 
         dados_multicorban = {
             "nome": "",
@@ -423,12 +460,207 @@ class CltOrchestrator:
                     "ofertas": [],
                 }
 
-        banco_presenca, banco_lotus = await asyncio.gather(
+        async def executar_c6():
+            # C6 participa somente quando
+            # houver credenciais configuradas.
+            if (
+                not self.c6.username
+                or not self.c6.password
+            ):
+                return None
+
+            campos_pendentes = []
+
+            if not nome:
+                campos_pendentes.append("nome")
+
+            if not data_nascimento:
+                campos_pendentes.append(
+                    "data_nascimento"
+                )
+
+            if campos_pendentes:
+                return {
+                    "banco_id": "c6_bank",
+                    "banco": "C6 Bank",
+                    "status": "dados_incompletos",
+                    "mensagem": (
+                        "Informe os dados obrigatorios "
+                        "para consultar o C6 Bank."
+                    ),
+                    "campos_pendentes": campos_pendentes,
+                    "ofertas": [],
+                }
+
+            # Primeiro consulta o status atual.
+            try:
+                status_result = (
+                    await self.c6.consultar_status_autorizacao(
+                        cpf_clean
+                    )
+                )
+
+                c6_status = str(
+                    status_result.get("status")
+                    or ""
+                ).strip().upper()
+
+                print(
+                    "[C6 CLT STATUS]",
+                    {
+                        "status": c6_status or None,
+                        "observacao": (
+                            status_result.get("observacao")
+                            or None
+                        ),
+                        "data_expiracao": (
+                            (status_result.get("raw_status") or {}).get(
+                                "data_expiracao"
+                            )
+                        ),
+                    },
+                )
+
+                raw_status = (
+                    status_result.get("raw_status")
+                    or {}
+                )
+
+                # Autorizacao confirmada pelo C6.
+                if c6_status in {
+                    "AUTHORIZED",
+                    "AUTORIZADO",
+                }:
+                    return {
+                        **status_result,
+                        "status": "authorized",
+                        "authorization_status": c6_status,
+                        "requires_authorization": False,
+                        "data_expiracao": (
+                            raw_status.get("data_expiracao")
+                        ),
+                        "mensagem": (
+                            "Autorizacao C6 confirmada. "
+                            "Simulacao C6 ainda nao executada."
+                        ),
+                        "ofertas": [],
+                    }
+
+                # Existe uma autorizacao criada e o C6
+                # ainda esta processando a conclusao.
+                # NUNCA gerar outro link neste estado.
+                if c6_status in {
+                    "AGUARDANDO_AUTORIZACAO",
+                    "AWAITING_AUTHORIZATION",
+                    "WAITING_FOR_AUTHORIZATION",
+                    "AWAITING",
+                    "PENDING",
+                    "WAITING",
+                }:
+                    return {
+                        **status_result,
+                        "status": "awaiting_authorization",
+                        "authorization_status": c6_status,
+                        "requires_authorization": True,
+                        "authorization_pending": True,
+                        "mensagem": (
+                            "Autorizacao C6 ja existente. "
+                            "Aguardando confirmacao do banco. "
+                            "Nenhum novo link foi gerado."
+                        ),
+                        "ofertas": [],
+                    }
+
+                # Apenas estados realmente negativos
+                # seguem para uma nova autorizacao.
+                if c6_status not in {
+                    "NAO_AUTORIZADO",
+                    "UNAUTHORIZED",
+                    "REPROVED",
+                    "REJECTED",
+                    "EXPIRED",
+                    "EXPIRADO",
+                }:
+                    return {
+                        **status_result,
+                        "status": "processing",
+                        "authorization_status": c6_status,
+                        "requires_authorization": False,
+                        "mensagem": (
+                            "Status de autorizacao C6 "
+                            "ainda em processamento."
+                        ),
+                        "ofertas": [],
+                    }
+
+            except C6BankError:
+                # Quando ainda nao existe autorizacao
+                # cadastrada, o fluxo pode gerar o
+                # primeiro link normalmente.
+                pass
+
+            except Exception:
+                # Mantem isolamento do C6 em relacao
+                # aos demais bancos.
+                pass
+
+            # Cliente ainda nao esta autorizado.
+            # Gera o link de liveness do C6.
+            try:
+                result = (
+                    await self.c6.gerar_link_autorizacao(
+                        cpf=cpf_clean,
+                        nome=nome,
+                        data_nascimento=data_nascimento,
+                        telefone=telefone or None,
+                    )
+                )
+
+                return {
+                    **result,
+                    "ofertas": [],
+                }
+
+            except C6BankError as exc:
+                return {
+                    "banco_id": "c6_bank",
+                    "banco": "C6 Bank",
+                    "status": "erro_banco",
+                    "mensagem": str(exc),
+                    "codigo": exc.code,
+                    "http_status": exc.status_code,
+                    "ofertas": [],
+                }
+
+            except Exception as exc:
+                return {
+                    "banco_id": "c6_bank",
+                    "banco": "C6 Bank",
+                    "status": "erro_banco",
+                    "mensagem": (
+                        "Nao foi possivel concluir "
+                        "a autorizacao C6."
+                    ),
+                    "erro_tipo": type(exc).__name__,
+                    "ofertas": [],
+                }
+
+
+        banco_presenca, banco_lotus, banco_c6 = await asyncio.gather(
             executar_presenca(),
             executar_lotus(),
+            executar_c6(),
         )
 
-        bancos = [banco_presenca, banco_lotus]
+        bancos = [
+            bank
+            for bank in (
+                banco_presenca,
+                banco_lotus,
+                banco_c6,
+            )
+            if bank is not None
+        ]
         autorizacoes = []
         for bank in bancos:
             url = bank.get("authorization_url")
@@ -442,15 +674,29 @@ class CltOrchestrator:
                     }
                 )
 
+        bank_pending_fields = sorted({
+            field
+            for bank in bancos
+            for field in (
+                bank.get("campos_pendentes")
+                or []
+            )
+            if field
+        })
+
         statuses = [str(bank.get("status") or "") for bank in bancos]
         if "requires_selection" in statuses:
             overall_status = "requires_selection"
+        elif "dados_incompletos" in statuses:
+            overall_status = "dados_incompletos"
         elif "awaiting_authorization" in statuses:
             overall_status = "awaiting_authorization"
         elif "processing" in statuses:
             overall_status = "processing"
         elif "ajuste_simulacao" in statuses:
             overall_status = "ajuste_simulacao"
+        elif "authorized" in statuses:
+            overall_status = "authorized"
         elif "completed" in statuses:
             overall_status = "completed"
         elif all(status == "erro_banco" for status in statuses):
@@ -472,7 +718,10 @@ class CltOrchestrator:
         return {
             "success": True,
             "status": overall_status,
-            "requires_customer_data": False,
+            "requires_customer_data": bool(
+                bank_pending_fields
+            ),
+            "campos_pendentes": bank_pending_fields,
             "cliente": {
                 "cpf": cpf_clean,
                 "nome": nome,
