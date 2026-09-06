@@ -700,6 +700,13 @@ def get_current_step_instruction(session: dict) -> str:
         return "Digite o nome do banco que deseja consultar (Ex: C6, Pan, Bradesco):"
     elif state == "waiting_convenio":
         return "🚀 Iniciando Simulação de Portabilidade!\n\nPara começarmos, por favor me informe qual é o seu *Convênio*? 👇\n\n1️⃣ *INSS*\n2️⃣ *SIAPE*\n3️⃣ *GOVERNO*\n4️⃣ *FORÇAS ARMADAS*\n5️⃣ *CLT PRIVADO*"
+    elif state == "waiting_inss_cpf_or_bank":
+        return (
+            "?? Informe o *CPF do cliente* para "
+            "consulta autom?tica ou informe o "
+            "*Banco de Origem* para continuar "
+            "manualmente:"
+        )
     elif state == "waiting_banco_origem":
         return "🏦 Agora, por favor, informe o nome do *Banco de Origem* (atual):"
     elif state == "waiting_idade":
@@ -865,6 +872,130 @@ Senão, peça o próximo dado faltante usando o texto EXATO correspondente da li
             return f"⚠️ Erro no modelo Gemini. Modelos disponíveis na sua API: {models_list}. (Erro original: {type(e).__name__} - {e})"
         except Exception as list_e:
             return f"⚠️ Erro ao acessar a inteligência (e falha ao listar modelos). Erro: {type(e).__name__} - {e}"
+
+
+# CLARA_V2_MANUAL_FLOW
+def detectar_cliente_nao_assinante(
+    message: str,
+) -> bool:
+    """
+    Detecta indicacao explicita de que o cliente
+    nao sabe ou nao pode assinar.
+
+    Sem indicacao de impedimento, o CPF direto
+    e considerado cliente alfabetizado/assinante.
+    """
+    import unicodedata
+
+    texto = str(
+        message or ""
+    ).strip().lower()
+
+    texto = "".join(
+        caractere
+        for caractere in unicodedata.normalize(
+            "NFD",
+            texto,
+        )
+        if unicodedata.category(
+            caractere
+        ) != "Mn"
+    )
+
+    texto = " ".join(
+        texto.split()
+    )
+
+    # ----------------------------------------------------------
+    # 1. Negacoes explicitas de analfabetismo.
+    #
+    # Precisam vir ANTES da palavra isolada "analfabeto".
+    # ----------------------------------------------------------
+    termos_assinante_prioritarios = (
+        "nao e analfabeto",
+        "nao e analfabeta",
+        "nao eh analfabeto",
+        "nao eh analfabeta",
+        "nao e iletrado",
+        "nao e iletrada",
+        "nao eh iletrado",
+        "nao eh iletrada",
+    )
+
+    if any(
+        termo in texto
+        for termo in termos_assinante_prioritarios
+    ):
+        return False
+
+    # ----------------------------------------------------------
+    # 2. Frases explicitas indicando impossibilidade
+    #    ou incapacidade de assinatura.
+    #
+    # Precisam vir ANTES de "sabe assinar" e
+    # "consegue assinar".
+    # ----------------------------------------------------------
+    termos_nao_assina_prioritarios = (
+        "nao assina",
+        "nao assinante",
+        "nao sabe assinar",
+        "nao consegue assinar",
+        "nao pode assinar",
+        "nao tem condicao de assinar",
+        "nao tem condicoes de assinar",
+        "sem condicao de assinar",
+        "sem condicoes de assinar",
+        "sem assinatura",
+        "impossibilitado de assinar",
+        "impossibilitada de assinar",
+        "impossibilidade de assinar",
+        "incapaz de assinar",
+        "impedido de assinar",
+        "impedida de assinar",
+    )
+
+    if any(
+        termo in texto
+        for termo in termos_nao_assina_prioritarios
+    ):
+        return True
+
+    # ----------------------------------------------------------
+    # 3. Indicacoes positivas de que o cliente assina.
+    # ----------------------------------------------------------
+    termos_assina = (
+        "cliente assina",
+        "assina normalmente",
+        "sabe assinar",
+        "consegue assinar",
+        "alfabetizado",
+        "alfabetizada",
+    )
+
+    if any(
+        termo in texto
+        for termo in termos_assina
+    ):
+        return False
+
+    # ----------------------------------------------------------
+    # 4. Termos genericos de analfabetismo / iletramento.
+    # ----------------------------------------------------------
+    termos_nao_assina = (
+        "analfabeto",
+        "analfabeta",
+        "analfabetos",
+        "analfabetas",
+        "iletrado",
+        "iletrada",
+        "iletrados",
+        "iletradas",
+    )
+
+    return any(
+        termo in texto
+        for termo in termos_nao_assina
+    )
 
 
 async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user_id: int, session: dict = None) -> str:
@@ -1852,6 +1983,8 @@ async def chat_interaction(
         first_name = matched_user.name.split()[0] if matched_user.name else "Corretor"
         
         # Initialize session if not exists
+        # Por padrao a mensagem pertence ao atendimento atual.
+        novo_atendimento = False
         if sender not in CHAT_SESSIONS:
             query = select(WhatsappChatLog).where(
                 WhatsappChatLog.sender_phone == sender,
@@ -1885,6 +2018,9 @@ async def chat_interaction(
                 if hasattr(active_log, "context_data") and active_log.context_data:
                     CHAT_SESSIONS[sender]["ultima_simulacao"] = active_log.context_data
             else:
+                # Nao existe atendimento ativo anterior.
+                # Esta e a primeira resposta do novo protocolo.
+                novo_atendimento = True
                 CHAT_SESSIONS[sender] = {
                     "state": "idle",
                     "protocol": generate_protocol(matched_user.name),
@@ -1896,6 +2032,29 @@ async def chat_interaction(
                 }
             
         session = CHAT_SESSIONS[sender]
+        # CLARA_V2_RESPONSE_META
+        # Metadata utilizada pelo fluxo n8n Portabilidade PRO V2.
+        if not session.get("protocol"):
+            session["protocol"] = generate_protocol(
+                matched_user.name
+            ).strip()
+
+        def chat_response_meta():
+            return {
+                "sender": sender,
+                "protocol": session.get("protocol"),
+                "novo_atendimento": bool(
+                    novo_atendimento
+                ),
+                "usuario": {
+                    "id": matched_user.id,
+                    "nome": (
+                        matched_user.name
+                        or first_name
+                    ),
+                    "primeiro_nome": first_name,
+                },
+            }
         if "messages" not in session:
             session["messages"] = []
 
@@ -1925,7 +2084,7 @@ async def chat_interaction(
             await save_chat_log(db, session, sender, True)
             if sender in CHAT_SESSIONS:
                 del CHAT_SESSIONS[sender]
-            return {"status": "success", "reply": reply_text, "sender": sender}
+            return ({"status": "success", "reply": reply_text, "sender": sender} | chat_response_meta())
 
         # N8N payload check / PDF file processing (extrato input)
         if "[DADOS_PDF_N8N]" in message:
@@ -1947,7 +2106,7 @@ async def chat_interaction(
                     reply_text = "⚠️ *Não encontramos contratos ativos neste extrato.*"
                     session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
                     await save_chat_log(db, session, sender, False)
-                    return {"status": "success", "reply": reply_text, "sender": sender}
+                    return ({"status": "success", "reply": reply_text, "sender": sender} | chat_response_meta())
                 
                 all_replies = []
                 for idx, c in enumerate(contratos[:5]):
@@ -1975,11 +2134,11 @@ async def chat_interaction(
                 session["messages"].append({"role": "user", "text": "[Dados do Extrato PDF recebidos via N8N e simulados com sucesso]", "timestamp": datetime.now().isoformat()})
                 session["messages"].append({"role": "bot", "text": final_reply, "timestamp": datetime.now().isoformat()})
                 await save_chat_log(db, session, sender, False)
-                return {
+                return ({
                     "status": "success",
                     "reply": final_reply,
                     "sender": sender
-                }
+                } | chat_response_meta())
             except Exception as e:
                 import traceback
                 traceback.print_exc()
@@ -2001,11 +2160,11 @@ async def chat_interaction(
                     reply_text = "📄 *Extrato INSS Recebido!*\nIdentificamos o seu convênio como INSS.\n\nQual é o nome do *Banco de Origem* (atual) que deseja portar?"
                     session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
                     await save_chat_log(db, session, sender, False)
-                    return {
+                    return ({
                         "status": "success",
                         "reply": reply_text,
                         "sender": sender
-                    }
+                    } | chat_response_meta())
 
         # ----------------------------------------------------------------------
         # ORDER OF PRIORITY PROCESSING
@@ -2025,41 +2184,107 @@ async def chat_interaction(
             await save_chat_log(db, session, sender, True)
             if sender in CHAT_SESSIONS:
                 del CHAT_SESSIONS[sender]
-            return {"status": "success", "reply": reply_text, "sender": sender}
+            return ({"status": "success", "reply": reply_text, "sender": sender} | chat_response_meta())
 
         # Priority 2: Respostas de estados pendentes
         # Case A: aguardando_convenio
         if session.get("state") == "aguardando_convenio":
-            conv = normalize_convenio(msg_lower)
+            conv = normalize_convenio(
+                msg_lower
+            )
+
             if conv:
                 session["convenio"] = conv
-                session["state"] = "waiting_data_collection"
-                
-                # Avança para pedir o Banco de Origem
-                reply_text = (
-                    f"✅ *Convênio {conv} selecionado.*\n\n"
-                    "🏦 Agora, por favor, informe o nome do *Banco de Origem* (atual):"
-                )
-                session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
-                session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
-                await save_chat_log(db, session, sender, False)
-                return {"status": "success", "reply": reply_text, "sender": sender}
-            else:
-                # Repete a pergunta do convênio
-                reply_text = (
-                    "⚠️ *Opção inválida.*\n\n"
-                    "Por favor, me informe qual é o seu *Convênio*? 👇\n\n"
-                    "*1️⃣ INSS*\n"
-                    "*2️⃣ SIAPE*\n"
-                    "*3️⃣ GOVERNO*\n"
-                    "*4️⃣ FORÇAS ARMADAS*\n"
-                    "*5️⃣ CLT PRIVADO*"
-                )
-                session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
-                session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
-                await save_chat_log(db, session, sender, False)
-                return {"status": "success", "reply": reply_text, "sender": sender}
 
+                if conv == "INSS":
+                    session["state"] = (
+                        "waiting_inss_cpf_or_bank"
+                    )
+
+                    reply_text = (
+                        "? *Conv?nio INSS selecionado.*\n\n"
+                        "?? Informe o *CPF do cliente* para "
+                        "consultar e simular automaticamente.\n\n"
+                        "?? Se preferir continuar pela "
+                        "simula??o manual, informe diretamente "
+                        "o *Banco de Origem* do contrato."
+                    )
+
+                else:
+                    session["state"] = (
+                        "waiting_data_collection"
+                    )
+
+                    reply_text = (
+                        f"? *Conv?nio {conv} selecionado.*\n\n"
+                        "?? Agora, por favor, informe o nome "
+                        "do *Banco de Origem* (atual):"
+                    )
+
+                session["messages"].append({
+                    "role": "user",
+                    "text": message,
+                    "timestamp":
+                        datetime.now().isoformat(),
+                })
+
+                session["messages"].append({
+                    "role": "bot",
+                    "text": reply_text,
+                    "timestamp":
+                        datetime.now().isoformat(),
+                })
+
+                await save_chat_log(
+                    db,
+                    session,
+                    sender,
+                    False,
+                )
+
+                return ({
+                    "status": "success",
+                    "reply": reply_text,
+                    "sender": sender,
+                } | chat_response_meta())
+
+            reply_text = (
+                "?? *Op??o inv?lida.*\n\n"
+                "Por favor, me informe qual ? o seu "
+                "*Conv?nio*? ??\n\n"
+                "*1?? INSS*\n"
+                "*2?? SIAPE*\n"
+                "*3?? GOVERNO*\n"
+                "*4?? FOR?AS ARMADAS*\n"
+                "*5?? CLT PRIVADO*"
+            )
+
+            session["messages"].append({
+                "role": "user",
+                "text": message,
+                "timestamp":
+                    datetime.now().isoformat(),
+            })
+
+            session["messages"].append({
+                "role": "bot",
+                "text": reply_text,
+                "timestamp":
+                    datetime.now().isoformat(),
+            })
+
+            await save_chat_log(
+                db,
+                session,
+                sender,
+                False,
+            )
+
+            return ({
+                "status": "success",
+                "reply": reply_text,
+                "sender": sender,
+            } | chat_response_meta())
         # Case B: waiting_rules_bank
         if session.get("state") == "waiting_rules_bank":
             rules_reply = await query_rules(message, db, user_id)
@@ -2082,7 +2307,7 @@ async def chat_interaction(
             session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
             session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
             await save_chat_log(db, session, sender, False)
-            return {"status": "success", "reply": reply_text, "sender": sender}
+            return ({"status": "success", "reply": reply_text, "sender": sender} | chat_response_meta())
 
         # Priority 3: CPF directo
         cpf_matches = re.findall(r'\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b', message)
@@ -2091,21 +2316,242 @@ async def chat_interaction(
             
         if cpf_matches:
             clean_cpf = re.sub(r'\D', '', cpf_matches[0])
-            is_illiterate = "analfabeto" in msg_lower or "analfabetos" in msg_lower or session.get("analfabeto") == "sim"
-            if is_illiterate:
-                session["analfabeto"] = "sim"
+            is_illiterate = detectar_cliente_nao_assinante(
+                message
+            )
+
+            # CPF direto e sempre uma consulta automatica INSS.
+            session["convenio"] = "INSS"
+
+            session["analfabeto"] = (
+                "sim"
+                if is_illiterate
+                else "n?o"
+            )
                 
             session.pop("simulacao_selecao_atual", None)
             reply = await simulate_for_cpf(clean_cpf, is_illiterate, db, user_id=matched_user.id, session=session)
             session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
             session["messages"].append({"role": "bot", "text": reply, "timestamp": datetime.now().isoformat()})
             await save_chat_log(db, session, sender, False)
-            return {
+            return ({
                 "status": "success",
                 "reply": reply,
                 "sender": sender
-            }
+            } | chat_response_meta())
 
+        # Clara V2 - coleta manual da simulacao.
+        #
+        # CPF e tratado anteriormente pela Priority 3.
+        # Se o usuario informou banco em vez de CPF no INSS,
+        # seguimos a coleta manual existente via Gemini.
+        if session.get("state") == "waiting_inss_cpf_or_bank":
+            session["state"] = "waiting_data_collection"
+
+        if session.get("state") == "waiting_data_collection":
+            # Permite que consultas explicitas de regras continuem
+            # seguindo para os interceptadores abaixo.
+            consulta_regra_manual = (
+                "regra" in msg_lower
+                or "regras" in msg_lower
+                or "aceita" in msg_lower
+            )
+
+            if not consulta_regra_manual:
+                ai_reply = get_gemini_response(
+                    session,
+                    message,
+                )
+
+                ai_text = str(
+                    ai_reply or ""
+                ).strip()
+
+                json_text = ai_text
+
+                # Aceita JSON puro ou cercado por ```json.
+                if "```" in json_text:
+                    match_json = re.search(
+                        r"```(?:json)?\s*(\{.*?\})\s*```",
+                        json_text,
+                        flags=re.DOTALL | re.IGNORECASE,
+                    )
+
+                    if match_json:
+                        json_text = match_json.group(1)
+
+                parsed = None
+
+                if json_text.lstrip().startswith("{"):
+                    try:
+                        parsed = json.loads(
+                            json_text
+                        )
+                    except Exception:
+                        parsed = None
+
+                if (
+                    isinstance(parsed, dict)
+                    and parsed.get("action") == "simulate"
+                    and isinstance(
+                        parsed.get("data"),
+                        dict,
+                    )
+                ):
+                    data = parsed["data"]
+
+                    session["convenio"] = (
+                        data.get("convenio")
+                        or session.get("convenio")
+                        or "INSS"
+                    )
+
+                    session["banco_origem"] = str(
+                        data.get("banco_origem")
+                        or ""
+                    ).strip()
+
+                    session["idade"] = str(
+                        data.get("idade")
+                        or ""
+                    )
+
+                    session["parcela"] = str(
+                        data.get("parcela")
+                        or ""
+                    )
+
+                    session["saldo_devedor"] = str(
+                        data.get("saldo_devedor")
+                        or ""
+                    )
+
+                    session["total_term"] = str(
+                        data.get("total_term")
+                        or ""
+                    )
+
+                    session["remaining_term"] = str(
+                        data.get("remaining_term")
+                        or ""
+                    )
+
+                    especie = data.get(
+                        "benefit_species"
+                    )
+
+                    if str(
+                        especie or ""
+                    ).strip().lower() in (
+                        "",
+                        "ignorar",
+                        "nao sei",
+                        "n?o sei",
+                        "none",
+                        "null",
+                    ):
+                        especie = None
+
+                    session["benefit_species"] = (
+                        str(especie)
+                        if especie is not None
+                        else None
+                    )
+
+                    session[
+                        "data_concessao_beneficio"
+                    ] = data.get(
+                        "data_concessao_beneficio"
+                    )
+
+                    margem = data.get(
+                        "margem_extrapolada",
+                        "nao",
+                    )
+
+                    margem_texto = str(
+                        margem or ""
+                    ).strip().lower()
+
+                    if margem_texto in (
+                        "",
+                        "nao",
+                        "n?o",
+                        "n",
+                        "0",
+                        "0.0",
+                        "0,00",
+                    ):
+                        valor_margem = 0.0
+                    else:
+                        valor_margem = abs(
+                            parse_float(
+                                str(margem)
+                            )
+                            or 0.0
+                        )
+
+                    session[
+                        "valor_margem_negativa"
+                    ] = str(valor_margem)
+
+                    analfabeto = str(
+                        data.get(
+                            "analfabeto"
+                        )
+                        or "nao"
+                    ).strip().lower()
+
+                    session["analfabeto"] = (
+                        "sim"
+                        if analfabeto in (
+                            "sim",
+                            "s",
+                            "true",
+                            "1",
+                        )
+                        else "n?o"
+                    )
+
+                    reply_text = await (
+                        run_simulation_and_respond(
+                            session,
+                            db,
+                            user_id=matched_user.id,
+                            compact=False,
+                            is_manual=True,
+                        )
+                    )
+
+                else:
+                    reply_text = ai_text
+
+                session["messages"].append({
+                    "role": "user",
+                    "text": message,
+                    "timestamp":
+                        datetime.now().isoformat(),
+                })
+
+                session["messages"].append({
+                    "role": "bot",
+                    "text": reply_text,
+                    "timestamp":
+                        datetime.now().isoformat(),
+                })
+
+                await save_chat_log(
+                    db,
+                    session,
+                    sender,
+                    False,
+                )
+
+                return ({
+                    "status": "success",
+                    "reply": reply_text,
+                    "sender": sender,
+                } | chat_response_meta())
         # Priority 4: Interceptor de simulação ativa (tabelas, regras, etc.)
         from app.services.chat_simulacao_interceptor import processar_comando_simulacao
         intercepted_reply = processar_comando_simulacao(session, msg_lower, message)
@@ -2113,11 +2559,11 @@ async def chat_interaction(
             session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
             session["messages"].append({"role": "bot", "text": intercepted_reply, "timestamp": datetime.now().isoformat()})
             await save_chat_log(db, session, sender, False)
-            return {
+            return ({
                 "status": "success",
                 "reply": intercepted_reply,
                 "sender": sender
-            }
+            } | chat_response_meta())
 
         # Priority 5: Comandos gerais
         # Intercept Rules Queries at any time
@@ -2132,11 +2578,11 @@ async def chat_interaction(
                     reply_text = rules_reply
                 session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
                 await save_chat_log(db, session, sender, False)
-                return {
+                return ({
                     "status": "success",
                     "reply": reply_text,
                     "sender": sender
-                }
+                } | chat_response_meta())
 
         # Início de simulação
         if msg_lower in ["1", "simular", "simula", "simulacao", "simulação"]:
@@ -2154,7 +2600,7 @@ async def chat_interaction(
             session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
             session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
             await save_chat_log(db, session, sender, False)
-            return {"status": "success", "reply": reply_text, "sender": sender}
+            return ({"status": "success", "reply": reply_text, "sender": sender} | chat_response_meta())
 
         # Consulta de regras por menu
         if session.get("state") in ["idle", "waiting_initial_choice", None]:
@@ -2181,11 +2627,11 @@ async def chat_interaction(
 
                 await save_chat_log(db, session, sender, False)
 
-                return {
+                return ({
                     "status": "success",
                     "reply": reply_text,
                     "sender": sender
-                }
+                } | chat_response_meta())
 
             if msg_lower in ["2", "regras", "regra", "banco", "bancos"]:
                 session["state"] = "waiting_rules_bank"
@@ -2196,7 +2642,7 @@ async def chat_interaction(
                 session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
                 session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
                 await save_chat_log(db, session, sender, False)
-                return {"status": "success", "reply": reply_text, "sender": sender}
+                return ({"status": "success", "reply": reply_text, "sender": sender} | chat_response_meta())
             elif msg_lower in ["3", "perguntar", "pergunta", "duvida", "dúvida"]:
                 session["state"] = "waiting_rules_bank"
                 reply_text = (
@@ -2208,11 +2654,11 @@ async def chat_interaction(
                     "• _Regras do C6_\n\n"
                     "Pode digitar a sua pergunta agora: 👇"
                 )
-                return {
+                return ({
                     "status": "success",
                     "reply": reply_text,
                     "sender": sender
-                }
+                } | chat_response_meta())
             
         reply_text = (
             "Entendido! Se quiser realizar uma nova simulação, digite *simular*.\n"
@@ -2221,19 +2667,19 @@ async def chat_interaction(
         )
         session["messages"].append({"role": "bot", "text": reply_text, "timestamp": datetime.now().isoformat()})
         await save_chat_log(db, session, sender, False)
-        return {
+        return ({
             "status": "success",
             "reply": reply_text,
             "sender": sender
-        }
+        } | chat_response_meta())
 
     # Default fallback
     session["messages"].append({"role": "bot", "text": "💡 *Dica:* Para realizar uma nova simulação de portabilidade a qualquer momento, basta digitar **simular** ou **reset**! 🚀", "timestamp": datetime.now().isoformat()})
     await save_chat_log(db, session, sender, False)
-    return {
+    return ({
         "status": "success",
         "reply": "💡 *Dica:* Para realizar uma nova simulação de portabilidade a qualquer momento, basta digitar **simular** ou **reset**! 🚀"
-    }
+    } | chat_response_meta())
 
 
 
