@@ -226,9 +226,8 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 if key in dict_obj and dict_obj[key] is not None:
                     try:
                         val = safe_float(dict_obj[key])
-                        if val != 0.0:
-                            margem_consignavel_api = val
-                            break
+                        margem_consignavel_api = val
+                        break
                     except:
                         pass
             if margem_consignavel_api is not None:
@@ -264,9 +263,10 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 if key in dict_obj and dict_obj[key] is not None:
                     try:
                         val = safe_float(dict_obj[key])
-                        if val != 0.0:
-                            margem_livre_api = val
-                            break
+                        if -0.05 <= val < 0.0:
+                            val = 0.0
+                        margem_livre_api = val
+                        break
                     except:
                         pass
             if margem_livre_api is not None:
@@ -275,7 +275,10 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         if margem_livre_api is not None:
             margem_livre = margem_livre_api
         else:
-            margem_livre = margem_consignavel - total_comprometido
+            diff_calc = margem_consignavel - total_loans_installments
+            if -0.05 <= diff_calc < 0.0:
+                diff_calc = 0.0
+            margem_livre = diff_calc
 
         endereco_partes = []
         if beneficiario.get("Endereco"):

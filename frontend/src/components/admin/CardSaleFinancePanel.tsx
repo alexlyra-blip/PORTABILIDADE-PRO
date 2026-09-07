@@ -803,13 +803,13 @@ export default function CardSaleFinancePanel({
       rawPaymentType.includes("credit")
       || rawMethod.includes("credit")
     ) {
-      paymentMethod = "Cart?o de cr?dito";
+      paymentMethod = "Cartão de crédito";
     }
     else if (
       rawPaymentType.includes("debit")
       || rawMethod.includes("debit")
     ) {
-      paymentMethod = "Cart?o de d?bito";
+      paymentMethod = "Cartão de débito";
     }
     else if (
       rawPaymentType.includes("pix")

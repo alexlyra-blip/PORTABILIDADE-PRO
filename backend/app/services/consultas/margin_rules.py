@@ -238,12 +238,18 @@ def recalculate_benefit_margins(
 
     # IMPORTANTE:
     # RMC/RCC nao reduzem os 35% de emprestimo.
-    margem_livre = money(
+    diff_livre = (
         Decimal(str(margem_emprestimo))
-        - Decimal(
-            str(total_emprestimos_ativos)
-        )
+        - Decimal(str(total_emprestimos_ativos))
     )
+
+    # Tolerancia de arredondamento bancario de centavos:
+    # Se a diferenca for um residuo negativo infimo (ate -0.05) devido a soma
+    # de centavos arredondados das parcelas dos bancos, a margem disponivel e 0.00
+    if Decimal("-0.05") <= diff_livre < Decimal("0"):
+        diff_livre = Decimal("0.00")
+
+    margem_livre = money(diff_livre)
 
     # ========================================================
     # RMC / RCC

@@ -335,7 +335,11 @@ class PromosysProvider(ConsultaBeneficioProvider):
         # RMC e RCC possuem reservas independentes.
         margem_emprestimo = money(salario * 0.35)
         margem_cartao = money(salario * 0.05)
-        margem_livre = money(margem_emprestimo - total_comprometido)
+
+        margem_livre_diff = margem_emprestimo - total_comprometido
+        if -0.05 <= margem_livre_diff < 0:
+            margem_livre_diff = 0.0
+        margem_livre = money(margem_livre_diff)
 
         rmc_promosys = safe_float(beneficio.get("ValorRMC"))
         rcc_promosys = safe_float(beneficio.get("ValorRCC"))
@@ -443,7 +447,7 @@ class PromosysProvider(ConsultaBeneficioProvider):
             "cliente": {
                 "nome": safe_str(raw.get("NOME")),
                 "cpf": safe_str(raw.get("FULL_CPF")) or cpf,
-                "beneficio": safe_str(beneficio.get("nb")),
+                "beneficio": safe_str(beneficio.get("nb") or beneficio.get("NB") or beneficio.get("Numero") or raw.get("NB") or raw.get("nb") or (raw.get("BENEFICIO") if isinstance(raw.get("BENEFICIO"), (str, int)) else "")),
                 "idade": safe_int(raw.get("IDADE")),
                 "especie": safe_str(raw.get("ESP")),
                 "salario": money(salario),

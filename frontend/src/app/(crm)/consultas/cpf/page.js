@@ -258,6 +258,9 @@ export default function ConsultaCPFPage() {
     setC6RefinSelectedByContract,
   ] = useState({});
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
+  const [quotaInput, setQuotaInput] = useState("");
+  const [savingQuota, setSavingQuota] = useState(false);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -289,6 +292,22 @@ export default function ConsultaCPFPage() {
         .replace(/\.(\d{3})(\d)/, ".$1/$2")
         .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
     }
+  };
+
+  const maskBeneficio = (val) => {
+    if (!val) return "";
+    let v = String(val).replace(/\D/g, "").slice(0, 10);
+    return v
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d{1})/, "$1.$2.$3-$4");
+  };
+
+  const maskDocumento = (val) => {
+    if (!val) return "";
+    const clean = String(val).replace(/\D/g, "");
+    if (clean.length === 10) return maskBeneficio(clean);
+    return maskCpfCnpj(clean);
   };
 
   useEffect(() => {
@@ -431,9 +450,15 @@ export default function ConsultaCPFPage() {
         const res = await api.get("/consultas/multicorban/saldo");
 
         setCreditos({
-          creditos: res.creditos_online,
-          creditos_offline: res.creditos_offline,
-          creditos_geracao_leads: res.geracao_leads,
+          creditos: res.creditos_online ?? res.creditos,
+          creditos_offline: res.creditos_offline || 0,
+          creditos_geracao_leads: res.geracao_leads || 0,
+          total_consultas: res.total_consultas,
+          consultas_consumidas: res.consultas_consumidas,
+          dia_renovacao: res.dia_renovacao,
+          proxima_renovacao: res.proxima_renovacao,
+          ciclo_inicio: res.ciclo_inicio,
+          ciclo_fim: res.ciclo_fim,
           isMultiCorban: true
         });
       } else {
@@ -457,6 +482,46 @@ export default function ConsultaCPFPage() {
       }
     } finally {
       setLoadingProvider(false);
+    }
+  };
+
+  const handleOpenQuotaModal = () => {
+    setQuotaInput(String(creditos?.total_consultas || 1000));
+    setShowQuotaModal(true);
+  };
+
+  const handleSaveQuota = async (e) => {
+    e.preventDefault();
+    const val = parseInt(quotaInput, 10);
+    if (!val || val <= 0) {
+      toast.warning("Por favor, informe um número válido de consultas (maior que zero).");
+      return;
+    }
+    setSavingQuota(true);
+    try {
+      const res = await api.post("/consultas/multicorban/config", {
+        total_consultas: val,
+        dia_renovacao: 15
+      });
+      setCreditos({
+        creditos: res.creditos_online ?? res.creditos,
+        creditos_offline: res.creditos_offline || 0,
+        creditos_geracao_leads: res.geracao_leads || 0,
+        total_consultas: res.total_consultas,
+        consultas_consumidas: res.consultas_consumidas,
+        dia_renovacao: res.dia_renovacao,
+        proxima_renovacao: res.proxima_renovacao,
+        ciclo_inicio: res.ciclo_inicio,
+        ciclo_fim: res.ciclo_fim,
+        isMultiCorban: true
+      });
+      setShowQuotaModal(false);
+      toast.success("Total de consultas do plano atualizado com sucesso!");
+    } catch (err) {
+      console.error("Erro ao atualizar cota:", err);
+      toast.error("Erro ao atualizar o total de consultas do plano.");
+    } finally {
+      setSavingQuota(false);
     }
   };
 
@@ -502,21 +567,43 @@ export default function ConsultaCPFPage() {
   };
 
   const handleHistoryClick = async (query) => {
-    const formattedCpf = maskCpfCnpj(query.documento);
-    setCpf(formattedCpf);
+    const rawDoc = String(query.documento || "").replace(/\D/g, "");
+    const isBeneficio = rawDoc.length === 10;
+    const isCnpj = rawDoc.length === 14;
+
+    if (isBeneficio) {
+      setSearchType("BENEFICIO");
+      setCpf(maskBeneficio(rawDoc));
+    } else if (isCnpj) {
+      setSearchType("CNPJ");
+      setCpf(maskCpfCnpj(rawDoc));
+    } else {
+      setSearchType("CPF");
+      setCpf(maskCpfCnpj(rawDoc));
+    }
 
     // Auto submit
     setLoading(true);
     setDados(null);
     try {
-      const payload = {
-        cpf: formattedCpf.replace(/\D/g, ""),
-        convenio: query.convenio,
-      };
+      let endpoint;
+      let payload;
 
-      const endpoint = activeProvider === "multicorban"
-        ? "/consultas/cpf"
-        : "/consultas/promosys/cpf";
+      if (isBeneficio) {
+        endpoint = "/consultas/beneficio";
+        payload = {
+          beneficio: rawDoc,
+          convenio: query.convenio || "INSS",
+        };
+      } else {
+        endpoint = activeProvider === "multicorban"
+          ? "/consultas/cpf"
+          : "/consultas/promosys/cpf";
+        payload = {
+          cpf: rawDoc,
+          convenio: isCnpj ? "CNPJ" : query.convenio,
+        };
+      }
 
       const response = await api.post(endpoint, payload);
       await secondaryLogosLoadRef.current;
@@ -546,34 +633,54 @@ export default function ConsultaCPFPage() {
     }
 
     if (!activeProvider) {
-      toast.warning("Provedor de consulta CPF não configurado pelo administrador.");
+      toast.warning("Provedor de consulta não configurado pelo administrador.");
       return;
     }
 
     const cleanDoc = cpf.replace(/\D/g, '');
+    const isBeneficio = searchType === "BENEFICIO";
     const isCnpj = searchType === "CNPJ" || cleanDoc.length > 11;
-    if (isCnpj && cleanDoc.length < 14) {
-      toast.warning("Por favor, informe um CNPJ válido com 14 dígitos.");
-      return;
-    }
-    if (!isCnpj && cleanDoc.length < 11) {
-      toast.warning("Por favor, informe um CPF válido com 11 dígitos.");
-      return;
+
+    if (isBeneficio) {
+      if (cleanDoc.length < 8) {
+        toast.warning("Por favor, informe um número de benefício válido.");
+        return;
+      }
+    } else if (isCnpj) {
+      if (cleanDoc.length < 14) {
+        toast.warning("Por favor, informe um CNPJ válido com 14 dígitos.");
+        return;
+      }
+    } else {
+      if (cleanDoc.length < 11) {
+        toast.warning("Por favor, informe um CPF válido com 11 dígitos.");
+        return;
+      }
     }
 
     setLoading(true);
     setDados(null);
     try {
-      const res = await api.post('/consultas/cpf', {
-        cpf: cleanDoc,
-        convenio: isCnpj ? "CNPJ" : (activeProvider === "multicorban" ? convenio : "INSS")
-      });
+      let res;
+      if (isBeneficio) {
+        res = await api.post('/consultas/beneficio', {
+          beneficio: cleanDoc,
+          convenio: activeProvider === "multicorban" ? convenio : "INSS"
+        });
+      } else {
+        res = await api.post('/consultas/cpf', {
+          cpf: cleanDoc,
+          convenio: isCnpj ? "CNPJ" : (activeProvider === "multicorban" ? convenio : "INSS")
+        });
+      }
+
       if (res && (res.cliente || res.beneficio_principal || (res.beneficios && res.beneficios.length > 0))) {
         await secondaryLogosLoadRef.current;
         setDados(res);
         setActiveBenefitIndex(0);
         await fetchBalance(activeProvider);
-        toast.success(isCnpj ? "Consulta de CNPJ concluída com sucesso!" : "Consulta de CPF concluída com sucesso!");
+        const tipoLabel = isBeneficio ? "Benefício" : (isCnpj ? "CNPJ" : "CPF");
+        toast.success(`Consulta de ${tipoLabel} concluída com sucesso!`);
       } else {
         toast.warning("Consulta não retornou dados.");
       }
@@ -1390,12 +1497,16 @@ export default function ConsultaCPFPage() {
         margens.descontos ?? 0
       );
 
-      const margemDisponivel = Number(
+      let margemDisponivel = Number(
         margens.margem_disponivel ??
         margens.margem_livre ??
         cliente.margem_livre ??
         0
       );
+
+      if (margemDisponivel < 0 && margemDisponivel >= -0.05) {
+        margemDisponivel = 0;
+      }
 
       const showMargem = Math.max(
         0,
@@ -1470,10 +1581,15 @@ export default function ConsultaCPFPage() {
       margens.total_comprometido || 0
     );
 
-    const margemLivreReal =
+    let margemLivreReal =
       margens.margem_livre !== undefined
         ? Number(margens.margem_livre)
         : margemEmprestimo - Number(activeBenefit.resumo?.total_parcelas_emprestimos || 0);
+
+    // Ajuste de resíduo de centavos bancários: -0.05 a 0 normaliza para 0.00
+    if (margemLivreReal < 0 && margemLivreReal >= -0.05) {
+      margemLivreReal = 0;
+    }
 
     const showMargem = Math.max(
       0,
@@ -1690,19 +1806,145 @@ export default function ConsultaCPFPage() {
             </div>
 
             {/* Contadores de Créditos */}
-            <div className="flex gap-4 z-10 w-full md:w-auto self-end md:self-auto">
-              <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
-                <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Créditos Online</p>
-                <p className="text-lg font-black">{creditos?.creditos !== null && creditos?.creditos !== undefined ? creditos?.creditos : "—"}</p>
+            {activeProvider === "multicorban" ? (
+              <div className="flex flex-wrap md:flex-nowrap gap-3 z-10 w-full md:w-auto self-end md:self-auto items-center">
+                <div className="flex-1 md:flex-initial px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center shadow-lg">
+                  <p className="text-[9px] font-black uppercase text-amber-300 tracking-wider">Créditos Disponíveis</p>
+                  <p className="text-xl font-black text-amber-400">
+                    {creditos?.creditos !== null && creditos?.creditos !== undefined ? creditos?.creditos : "—"}
+                  </p>
+                </div>
+
+                <div className="flex-1 md:flex-initial px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Total do Plano</p>
+                    <button
+                      type="button"
+                      onClick={handleOpenQuotaModal}
+                      title="Ajustar total de consultas"
+                      className="text-slate-400 hover:text-amber-300 transition-colors p-0.5 rounded cursor-pointer"
+                    >
+                      <Icons.Edit size={11} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                    <p className="text-lg font-black text-white">
+                      {creditos?.total_consultas !== null && creditos?.total_consultas !== undefined ? creditos?.total_consultas : "1.000"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleOpenQuotaModal}
+                      className="text-[9px] font-black text-amber-400 hover:text-amber-300 hover:underline uppercase tracking-wider cursor-pointer ml-1"
+                    >
+                      Ajustar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-1 md:flex-initial px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Consultas no Mês</p>
+                  <p className="text-lg font-black text-slate-200">
+                    {creditos?.consultas_consumidas !== null && creditos?.consultas_consumidas !== undefined ? creditos?.consultas_consumidas : "0"}
+                  </p>
+                </div>
+
+                <div className="flex-1 md:flex-initial px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <p className="text-[9px] font-black uppercase text-emerald-300 tracking-wider">Renovação</p>
+                  <p className="text-xs font-black text-emerald-400 mt-1">
+                    Todo dia {creditos?.dia_renovacao || 15}
+                  </p>
+                  {creditos?.proxima_renovacao && (
+                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">
+                      Próx: {creditos.proxima_renovacao}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
-                <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Créditos Offline</p>
-                <p className="text-lg font-black">{creditos?.creditos_offline !== null && creditos?.creditos_offline !== undefined ? creditos?.creditos_offline : "—"}</p>
+            ) : (
+              <div className="flex gap-4 z-10 w-full md:w-auto self-end md:self-auto">
+                <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Créditos Online</p>
+                  <p className="text-lg font-black">{creditos?.creditos !== null && creditos?.creditos !== undefined ? creditos?.creditos : "—"}</p>
+                </div>
+                <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Créditos Offline</p>
+                  <p className="text-lg font-black">{creditos?.creditos_offline !== null && creditos?.creditos_offline !== undefined ? creditos?.creditos_offline : "—"}</p>
+                </div>
+                <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Geração Leads</p>
+                  <p className="text-lg font-black">{creditos?.creditos_geracao_leads !== null && creditos?.creditos_geracao_leads !== undefined ? creditos?.creditos_geracao_leads : "—"}</p>
+                </div>
               </div>
-              <div className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
-                <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Geração Leads</p>
-                <p className="text-lg font-black">{creditos?.creditos_geracao_leads !== null && creditos?.creditos_geracao_leads !== undefined ? creditos?.creditos_geracao_leads : "—"}</p>
+            )}
+          </div>
+        )}
+
+        {/* Modal de Ajuste de Total de Consultas MultiCorban */}
+        {showQuotaModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-100 space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">
+                    <Icons.Shield size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">
+                      Ajustar Total de Consultas
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      MultiCorban • Renovação todo dia 15
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowQuotaModal(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  <Icons.X size={18} />
+                </button>
               </div>
+
+              <form onSubmit={handleSaveQuota} className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-black uppercase text-slate-500 tracking-wider mb-2">
+                    Total Contratado de Consultas (Mensal)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={quotaInput}
+                    onChange={(e) => setQuotaInput(e.target.value)}
+                    placeholder="Ex: 1000"
+                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white outline-none font-black text-slate-800 text-lg transition-all"
+                    required
+                    autoFocus
+                  />
+                  <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                    Este total será renovado automaticamente todo dia <strong>15 de cada mês</strong>, reiniciando a contagem de consultas consumidas.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowQuotaModal(false)}
+                    disabled={savingQuota}
+                    className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingQuota}
+                    className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-600/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {savingQuota ? "Salvando..." : "Salvar Alterações"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -1711,20 +1953,65 @@ export default function ConsultaCPFPage() {
         <form onSubmit={handleConsultar} className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col md:flex-row gap-4 items-end print:hidden">
           <div className="flex-1 space-y-2 w-full">
             <div className="flex justify-between items-center ml-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{searchType === "CNPJ" ? "CNPJ da Empresa" : "CPF do Cliente"}</label>
-              {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => {setSearchType("CPF"); setCpf("");}} className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest transition-all ${searchType === "CPF" ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>CPF</button>
-                  <button type="button" onClick={() => {setSearchType("CNPJ"); setCpf("");}} className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest transition-all ${searchType === "CNPJ" ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>CNPJ</button>
-                </div>
-              )}
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {searchType === "BENEFICIO"
+                  ? "Número do Benefício"
+                  : (searchType === "CNPJ" ? "CNPJ da Empresa" : "CPF do Cliente")}
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setSearchType("CPF"); setCpf(""); }}
+                  className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest transition-all cursor-pointer ${
+                    searchType === "CPF"
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  }`}
+                >
+                  CPF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSearchType("BENEFICIO"); setCpf(""); }}
+                  className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest transition-all cursor-pointer ${
+                    searchType === "BENEFICIO"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  }`}
+                >
+                  BENEFÍCIO
+                </button>
+                {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchType("CNPJ"); setCpf(""); }}
+                    className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest transition-all cursor-pointer ${
+                      searchType === "CNPJ"
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    }`}
+                  >
+                    CNPJ
+                  </button>
+                )}
+              </div>
             </div>
             <input
               type="text"
               value={cpf}
-              onChange={(e) => setCpf(maskCpfCnpj(e.target.value))}
-              placeholder={searchType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00"}
-              maxLength={searchType === "CNPJ" ? 18 : 14}
+              onChange={(e) => {
+                if (searchType === "BENEFICIO") {
+                  setCpf(maskBeneficio(e.target.value));
+                } else {
+                  setCpf(maskCpfCnpj(e.target.value));
+                }
+              }}
+              placeholder={
+                searchType === "BENEFICIO"
+                  ? "000.000.000-0"
+                  : (searchType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00")
+              }
+              maxLength={searchType === "CNPJ" ? 18 : (searchType === "BENEFICIO" ? 13 : 14)}
               className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-lg"
             />
           </div>
@@ -1775,10 +2062,10 @@ export default function ConsultaCPFPage() {
                     key={query.id}
                     type="button"
                     onClick={() => handleHistoryClick(query)}
-                    className="px-4 py-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl transition-all text-left group"
+                    className="px-4 py-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl transition-all text-left group cursor-pointer"
                   >
                     <p className="text-xs font-black text-slate-700 group-hover:text-blue-700 uppercase">{query.nome || "DESCONHECIDO"}</p>
-                    <p className="text-[10px] font-bold text-slate-500 group-hover:text-blue-500">{maskCpfCnpj(query.documento)}</p>
+                    <p className="text-[10px] font-bold text-slate-500 group-hover:text-blue-500">{maskDocumento(query.documento)}</p>
                   </button>
                 ))}
               </div>
@@ -1943,7 +2230,7 @@ export default function ConsultaCPFPage() {
                 {
                   key: "RMC",
                   titulo:
-                    "Reserva de Margem Consign?vel",
+                    "Reserva de Margem Consignável",
 
                   total: Number(
                     margensCartao.margem_rmc ?? 0
@@ -1967,7 +2254,7 @@ export default function ConsultaCPFPage() {
                 {
                   key: "RCC",
                   titulo:
-                    "Reserva de Cart?o Consignado",
+                    "Reserva de Cartão Benefício",
 
                   total: Number(
                     margensCartao.margem_rcc ?? 0
@@ -2076,7 +2363,7 @@ export default function ConsultaCPFPage() {
                         uppercase
                         tracking-tight
                       ">
-                        Margens de Cart?o
+                        Margens de Cartão
                         {" "}
                         (RMC / RCC)
                       </h3>
@@ -2088,7 +2375,7 @@ export default function ConsultaCPFPage() {
                         uppercase
                         tracking-widest
                       ">
-                        Dispon?veis ou utilizadas
+                        Disponíveis ou utilizadas
                       </p>
                     </div>
                   </div>
@@ -2179,7 +2466,7 @@ export default function ConsultaCPFPage() {
                                 >
                                   {item.utilizada
                                     ? "Utilizada"
-                                    : "Dispon?vel"}
+                                    : "Disponível"}
                                 </span>
                               </div>
 
@@ -2229,7 +2516,7 @@ export default function ConsultaCPFPage() {
                             ">
                               {item.utilizada
                                 ? "Margem utilizada"
-                                : "Margem dispon?vel"}
+                                : "Margem disponível"}
                             </p>
                           </div>
                         </div>

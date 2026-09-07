@@ -1,3 +1,6 @@
+import os
+os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://mock:mock@localhost:5432/mock")
+
 from importlib.util import (
     module_from_spec,
     spec_from_file_location,
@@ -703,3 +706,58 @@ def test_schema_consulta_margem_preserva_campos_45():
         ]
         is True
     )
+
+
+def test_margem_livre_residuo_centavos_normaliza_zero():
+    # Salário 1518.00 -> 35% de empréstimo = 531.30
+    # Duas parcelas que somam 531.31 (diferença de -0.01 por arredondamento de banco)
+    payload = {
+        "cliente": {
+            "salario": 1518.00,
+        },
+        "margens": {
+            "salario": 1518.00,
+        },
+        "emprestimos": [
+            {"parcela": 265.65, "situacao": "ATIVO"},
+            {"parcela": 265.66, "situacao": "ATIVO"},
+        ],
+        "cartoes": [],
+        "resumo": {},
+    }
+
+    result = recalculate_benefit_margins(payload)
+    margens = result["margens"]
+
+    assert margens["margem_emprestimo"] == 531.30
+    assert margens["margem_livre"] == 0.00
+
+
+def test_calculate_renewal_cycle_dia_15():
+    from datetime import datetime
+    from app.utils.config_helper import calculate_renewal_cycle
+
+    # Teste 1: Data antes do dia 15 (ex: 10 de Setembro)
+    ref_before = datetime(2026, 9, 10, 14, 30)
+    start_1, end_1 = calculate_renewal_cycle(renewal_day=15, ref_date=ref_before)
+    assert start_1 == datetime(2026, 8, 15, 0, 0)
+    assert end_1 == datetime(2026, 9, 15, 0, 0)
+
+    # Teste 2: Exatamente no dia 15 (ex: 15 de Setembro) -> Renova para o novo ciclo
+    ref_on = datetime(2026, 9, 15, 0, 0)
+    start_2, end_2 = calculate_renewal_cycle(renewal_day=15, ref_date=ref_on)
+    assert start_2 == datetime(2026, 9, 15, 0, 0)
+    assert end_2 == datetime(2026, 10, 15, 0, 0)
+
+    # Teste 3: Data após o dia 15 (ex: 20 de Setembro)
+    ref_after = datetime(2026, 9, 20, 10, 0)
+    start_3, end_3 = calculate_renewal_cycle(renewal_day=15, ref_date=ref_after)
+    assert start_3 == datetime(2026, 9, 15, 0, 0)
+    assert end_3 == datetime(2026, 10, 15, 0, 0)
+
+    # Teste 4: Virada de ano (Janeiro antes do dia 15 -> ciclo começou em Dezembro do ano anterior)
+    ref_jan = datetime(2026, 1, 5, 12, 0)
+    start_jan, end_jan = calculate_renewal_cycle(renewal_day=15, ref_date=ref_jan)
+    assert start_jan == datetime(2025, 12, 15, 0, 0)
+    assert end_jan == datetime(2026, 1, 15, 0, 0)
+

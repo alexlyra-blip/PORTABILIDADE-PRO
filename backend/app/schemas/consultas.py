@@ -181,6 +181,7 @@ class BeneficiosResponse(BaseModel):
 
 class BeneficioRequest(BaseModel):
     beneficio: str
+    convenio: Optional[str] = "INSS"
 
 class CreditosResponse(BaseModel):
     success: bool

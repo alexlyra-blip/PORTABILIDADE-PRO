@@ -478,6 +478,7 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                         "RMC" in banco_upper
                                         or "RCC" in banco_upper
                                         or "CART?O" in banco_upper
+                                        or "CARTÃO" in banco_upper
                                         or "CARTAO" in banco_upper
                                     ):
                                         tipo_cartao = ""
