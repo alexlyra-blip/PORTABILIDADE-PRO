@@ -25,7 +25,12 @@ from app.services.consultas.margin_rules import recalculate_consulta_payload
 from app.services.consultas.multicorban_provider import MultiCorbanProvider
 from app.services.bank_credentials_service import BankCredentialsService
 from app.services.c6_bank_service import C6BankError, C6BankService
-from app.utils.config_helper import get_active_provider
+from app.utils.config_helper import (
+    get_active_provider,
+    get_multicorban_quota_config,
+    set_multicorban_quota_config,
+    calculate_renewal_cycle,
+)
 from app.services.margem_service import calcular_valor_liberado_margem, obter_coeficiente_fator, resolve_margin_convenio
 
 logger = logging.getLogger("consultas_router")
@@ -614,6 +619,214 @@ async def _execute_cpf_query_flow(
 
     return multi_response
 
+
+async def _execute_beneficio_query_flow(
+    beneficio: str,
+    db: AsyncSession,
+    convenio: str = "INSS",
+    provider_type: str = "promosys",
+) -> ConsultaCpfMultiResponse:
+    clean_nb = "".join(filter(str.isdigit, str(beneficio or "")))
+
+    if not clean_nb:
+        raise HTTPException(
+            status_code=400,
+            detail="Número do benefício é obrigatório.",
+        )
+
+    convenio = str(
+        convenio or "INSS"
+    ).strip().upper()
+    margin_convenio = resolve_margin_convenio(convenio)
+
+    provider_type = str(
+        provider_type or "promosys"
+    ).strip().lower()
+
+    masked_nb = (
+        f"***{clean_nb[-4:]}"
+        if len(clean_nb) >= 4
+        else "***"
+    )
+
+    # Fechar conexão do banco antes de chamada externa
+    await db.close()
+
+    provider = get_provider_by_type(provider_type)
+
+    try:
+        if provider_type == "multicorban":
+            res = await provider.consultar_por_beneficio(
+                clean_nb,
+                convenio=convenio,
+            )
+        else:
+            res = await provider.consultar_por_beneficio(
+                clean_nb
+            )
+    except ValueError as error:
+        err_msg = str(error)
+
+        if (
+            "token" in err_msg.lower()
+            or "autentica" in err_msg.lower()
+            or "credencia" in err_msg.lower()
+        ):
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    "Falha de autenticação no provedor "
+                    f"{provider_type}."
+                ),
+            )
+
+        if (
+            "não encontrado" in err_msg.lower()
+            or "nenhum" in err_msg.lower()
+            or "inexistente" in err_msg.lower()
+        ):
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Benefício {clean_nb} não encontrado "
+                    f"no provedor {provider_type}."
+                ),
+            )
+
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"Erro no provedor {provider_type} "
+                f"ao consultar benefício: {err_msg}"
+            ),
+        )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Erro de comunicação com o provedor "
+                f"{provider_type}: {str(error)}"
+            ),
+        )
+
+    if not res:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Nenhum dado retornado para o benefício {clean_nb}."
+            ),
+        )
+
+    res["convenio"] = (
+        res.get("convenio")
+        or convenio
+    )
+
+    if "telefones" in res and isinstance(res["telefones"], list):
+        res["telefones"] = [
+            telefone
+            for telefone in res["telefones"]
+            if telefone
+        ]
+
+    async with AsyncSessionLocal() as temp_db:
+        coef_fator = await obter_coeficiente_fator(
+            temp_db,
+            convenio=margin_convenio,
+        )
+
+        margens = res.get("margens") or {}
+        cliente = res.get("cliente") or {}
+
+        margem_livre = margens.get("margem_livre")
+        if margem_livre is None:
+            margem_livre = cliente.get("margem_livre", 0.0)
+
+        valor_liberado = await calcular_valor_liberado_margem(
+            margem_livre or 0.0,
+            temp_db,
+            convenio=margin_convenio,
+        )
+
+        if margens:
+            margens["valor_liberado_margem"] = valor_liberado
+            margens["coeficiente_utilizado"] = coef_fator
+
+        if cliente:
+            cliente["valor_liberado_margem"] = valor_liberado
+            cliente["coeficiente_utilizado"] = coef_fator
+
+    detalhe = BeneficioDetalhado(
+        numero=clean_nb,
+        convenio=res.get("convenio", convenio),
+        cliente=res["cliente"],
+        margens=res["margens"],
+        beneficio=res["beneficio"],
+        banco_pagador=res.get("banco_pagador"),
+        emprestimos=res.get("emprestimos", []),
+        cartoes=res.get("cartoes", []),
+        margens_cartao=res.get("margens_cartao", {}),
+        telefones=res.get("telefones", []),
+        resumo=res.get("resumo"),
+    )
+
+    beneficio_principal = ConsultaResponse(**res)
+
+    cliente_cpf = "".join(
+        filter(
+            str.isdigit,
+            str((res.get("cliente") or {}).get("cpf") or ""),
+        )
+    )
+    if not cliente_cpf:
+        cliente_cpf = clean_nb
+
+    multi_response = ConsultaCpfMultiResponse(
+        success=True,
+        cpf=cliente_cpf,
+        total_beneficios=1,
+        is_cnpj_query=False,
+        beneficios=[detalhe],
+        beneficio_principal=beneficio_principal,
+        **res,
+    )
+
+    # Cache opcional por CPF caso o retorno contenha CPF válido de 11 dígitos
+    if len(cliente_cpf) == 11:
+        resultado_dict = multi_response.model_dump()
+        resultado_dict["_cache_version"] = CONSULTA_CPF_CACHE_VERSION
+        dados_str = json.dumps(resultado_dict)
+
+        try:
+            async with AsyncSessionLocal() as write_db:
+                stmt = select(ConsultaCpfCache).where(
+                    ConsultaCpfCache.cpf == cliente_cpf
+                )
+                res_cache = await write_db.execute(stmt)
+                existing_cache = res_cache.scalar_one_or_none()
+
+                if existing_cache:
+                    existing_cache.dados_json = dados_str
+                    existing_cache.updated_at = func.now()
+                else:
+                    nova_consulta = ConsultaCpfCache(
+                        cpf=cliente_cpf,
+                        dados_json=dados_str,
+                    )
+                    write_db.add(nova_consulta)
+
+                await write_db.commit()
+
+        except Exception as cache_write_err:
+            print(
+                "[WARNING] Falha ao gravar cache no banco "
+                f"para consulta por benefício: {cache_write_err}"
+            )
+
+    return multi_response
+
+
 @router.get("/historico")
 async def get_historico_consultas(
     convenio: str = "INSS",
@@ -666,6 +879,16 @@ async def consultar_cpf_unificado(
             ),
         )
 
+    clean_input = "".join(filter(str.isdigit, str(request.cpf or "")))
+
+    # Suporte automático caso um número de benefício (10 dígitos) seja inserido
+    if len(clean_input) == 10:
+        return await consultar_beneficio_unificado(
+            BeneficioRequest(beneficio=clean_input, convenio=request.convenio),
+            db=db,
+            current_user=current_user
+        )
+
     if provider_type == "multicorban":
         conv_upper = str(request.convenio or "INSS").upper()
         if conv_upper not in ["INSS", "SIAPE", "GOVERNO", "CLT", "CLT PRIVADO", "CNPJ"]:
@@ -673,7 +896,6 @@ async def consultar_cpf_unificado(
                 status_code=400,
                 detail=f"Convênio '{request.convenio}' não é suportado pelo provedor MultiCorban."
             )
-
 
     try:
         response_data = await _execute_cpf_query_flow(
@@ -716,6 +938,70 @@ async def consultar_cpf_unificado(
         tb = traceback.format_exc()
         logger.error(f"Erro na rota unificada CPF: {str(e)}\n{tb}")
         raise HTTPException(status_code=500, detail=f"Erro interno de processamento.")
+
+
+# ROTA UNIFICADA BENEFÍCIO
+@router.post("/beneficio", response_model=ConsultaCpfMultiResponse)
+async def consultar_beneficio_unificado(
+    request: BeneficioRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
+        raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
+
+    provider_type = await get_active_provider(db)
+
+    if not provider_type:
+        raise HTTPException(
+            status_code=503,
+            detail="Provedor de consulta não configurado pelo administrador."
+        )
+
+    if provider_type == "multicorban":
+        conv_upper = str(request.convenio or "INSS").upper()
+        if conv_upper not in ["INSS", "SIAPE", "GOVERNO", "CLT", "CLT PRIVADO", "CNPJ"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Convênio '{request.convenio}' não é suportado pelo provedor MultiCorban."
+            )
+
+    try:
+        response_data = await _execute_beneficio_query_flow(
+            request.beneficio,
+            db,
+            request.convenio or "INSS",
+            provider_type,
+        )
+
+        try:
+            nome_cliente = "Desconhecido"
+            if hasattr(response_data, "cliente") and response_data.cliente:
+                nome_cliente = response_data.cliente.nome
+
+            clean_nb = "".join(filter(str.isdigit, str(request.beneficio or "")))
+            async with AsyncSessionLocal() as write_db:
+                log_entry = ConsultaLog(
+                    user_id=current_user.id,
+                    convenio=request.convenio or "INSS",
+                    documento=clean_nb,
+                    nome=nome_cliente
+                )
+                write_db.add(log_entry)
+                await write_db.commit()
+        except Exception as log_e:
+            logger.error(f"Erro ao salvar historico de consulta de benefício: {log_e}")
+
+        return response_data
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        logger.error(f"Erro na rota unificada Benefício: {str(e)}\n{tb}")
+        raise HTTPException(status_code=500, detail="Erro interno de processamento.")
 
 
 
@@ -987,8 +1273,16 @@ async def consultar_multicorban_offline(request: MultiCorbanOfflineRequest, curr
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+class MultiCorbanConfigUpdate(BaseModel):
+    total_consultas: int
+    dia_renovacao: Optional[int] = 15
+
+
 @router.get("/multicorban/saldo")
-async def get_multicorban_saldo(current_user = Depends(get_current_user)):
+async def get_multicorban_saldo(
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
     global multicorban_saldo_cache
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Acesso negado.")
@@ -997,21 +1291,79 @@ async def get_multicorban_saldo(current_user = Depends(get_current_user)):
     if multicorban_saldo_cache["data"] and now < multicorban_saldo_cache["expires_at"]:
         return multicorban_saldo_cache["data"]
 
-    provider = MultiCorbanProvider()
     try:
-        res = await provider.consultar_creditos()
+        quota_cfg = await get_multicorban_quota_config(db)
+        total_consultas = quota_cfg["total_consultas"]
+        dia_renovacao = quota_cfg["dia_renovacao"]
+
+        start_date, end_date = calculate_renewal_cycle(
+            renewal_day=dia_renovacao,
+            ref_date=now
+        )
+
+        # Consultas realizadas no ciclo atual (a partir do dia 15)
+        count_query = await db.execute(
+            select(func.count(ConsultaLog.id)).where(
+                ConsultaLog.created_at >= start_date,
+                ConsultaLog.created_at < end_date
+            )
+        )
+        consultas_consumidas = int(count_query.scalar() or 0)
+        creditos_disponiveis = max(0, total_consultas - consultas_consumidas)
+
+        # Tentar obter saldo externo caso a API MultiCorban retorne creditos reais
+        external_res = {}
+        provider = MultiCorbanProvider()
+        try:
+            res = await provider.consultar_creditos()
+            external_res = res or {}
+            if res.get("creditos") and int(res.get("creditos")) > 0:
+                creditos_disponiveis = int(res.get("creditos"))
+        except Exception as e:
+            logger.debug(f"API externa MultiCorban nao retornou saldo: {e}")
+
         normalized = {
             "success": True,
             "provider": "multicorban",
-            "creditos_online": res.get("creditos"),
-            "creditos_offline": res.get("creditos_offline"),
-            "geracao_leads": res.get("creditos_geracao_leads"),
-            "saldo_total": res.get("saldo_total"),
-            "raw": res.get("raw", {})
+            "creditos_online": creditos_disponiveis,
+            "creditos": creditos_disponiveis,
+            "creditos_offline": external_res.get("creditos_offline") or 0,
+            "geracao_leads": external_res.get("creditos_geracao_leads") or 0,
+            "saldo_total": creditos_disponiveis,
+            "total_consultas": total_consultas,
+            "consultas_consumidas": consultas_consumidas,
+            "dia_renovacao": dia_renovacao,
+            "ciclo_inicio": start_date.strftime("%d/%m/%Y"),
+            "ciclo_fim": end_date.strftime("%d/%m/%Y"),
+            "proxima_renovacao": end_date.strftime("%d/%m/%Y"),
+            "raw": external_res.get("raw", {})
         }
 
         multicorban_saldo_cache["data"] = normalized
-        multicorban_saldo_cache["expires_at"] = now + timedelta(seconds=45) # 45 segundos de cache
+        multicorban_saldo_cache["expires_at"] = now + timedelta(seconds=30)
         return normalized
     except Exception as e:
+        logger.error(f"Erro ao consultar saldo MultiCorban: {e}")
         raise HTTPException(status_code=502, detail=f"Erro ao consultar saldo MultiCorban: {str(e)}")
+
+
+@router.post("/multicorban/config")
+async def update_multicorban_config(
+    payload: MultiCorbanConfigUpdate,
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+
+    await set_multicorban_quota_config(
+        db,
+        total_consultas=payload.total_consultas,
+        dia_renovacao=payload.dia_renovacao or 15
+    )
+
+    global multicorban_saldo_cache
+    multicorban_saldo_cache["data"] = None
+
+    return await get_multicorban_saldo(current_user=current_user, db=db)
+
