@@ -126,6 +126,18 @@ async def startup_event():
     except Exception as e:
         print(f"[ERROR] Failed to start inactivity check loop: {e}")
     
+    # Garantir que a tabela system_settings exista para salvar configuracoes de cotas
+    try:
+        from app.database import engine
+        from app.models.sqlalchemy_models import SystemSetting
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                SystemSetting.__table__.create,
+                checkfirst=True,
+            )
+    except Exception as e:
+        print(f"[WARN] Could not check/create system_settings table at startup: {e}")
+    
     # Migracao SQLite Local para nova coluna (mantido pois eh local e nao trava)
     try:
         import sqlite3

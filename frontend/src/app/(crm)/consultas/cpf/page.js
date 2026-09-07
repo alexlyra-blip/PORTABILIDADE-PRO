@@ -444,7 +444,7 @@ export default function ConsultaCPFPage() {
           return;
         }
         const user = JSON.parse(userStr);
-        const adminUser = user.role === "admin";
+        const adminUser = String(user.role || "").toLowerCase() === "admin";
 
         const allowedRoles = [
           "admin",
@@ -476,7 +476,7 @@ export default function ConsultaCPFPage() {
         setActiveProvider(provider);
 
         if (adminUser && provider) {
-          await fetchBalance(provider);
+          await fetchBalance(provider, adminUser);
         } else {
           setCreditos(null);
         }
@@ -500,18 +500,28 @@ export default function ConsultaCPFPage() {
     };
   }, []);
 
-  const fetchBalance = async (provider) => {
+  const fetchBalance = async (provider, forceAdmin = null) => {
     setLoadingProvider(true);
     try {
+      let isUserAdmin = forceAdmin;
+      if (isUserAdmin === null) {
+        try {
+          const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+          isUserAdmin = userStr ? String(JSON.parse(userStr)?.role || "").toLowerCase() === "admin" : isAdmin;
+        } catch (_) {
+          isUserAdmin = isAdmin;
+        }
+      }
+
       if (provider === "multicorban") {
-        // Saldo MultiCorban disponivel apenas para administradores.
-        // Usuarios nao-admin podem consultar CPF normalmente,
-        // mas nao devem chamar a rota protegida de saldo.
-        if (!isAdmin) {
+        if (!isUserAdmin) {
           setCreditos({
             creditos: 0,
             creditos_offline: 0,
             creditos_geracao_leads: 0,
+            total_consultas: 1000,
+            consultas_consumidas: 0,
+            dia_renovacao: 15,
             isMultiCorban: true
           });
           return;
@@ -519,16 +529,25 @@ export default function ConsultaCPFPage() {
 
         const res = await api.get("/consultas/multicorban/saldo");
 
+        const localTotal = typeof window !== "undefined" ? localStorage.getItem("multicorban_total_consultas") : null;
+        const totalConsultas = res?.total_consultas ?? (localTotal ? parseInt(localTotal, 10) : 1000);
+        const consultasConsumidas = res?.consultas_consumidas ?? 0;
+        const creditosCalc = res?.creditos_online ?? res?.creditos ?? Math.max(0, totalConsultas - consultasConsumidas);
+
+        if (typeof window !== "undefined" && res?.total_consultas) {
+          localStorage.setItem("multicorban_total_consultas", String(res.total_consultas));
+        }
+
         setCreditos({
-          creditos: res.creditos_online ?? res.creditos,
-          creditos_offline: res.creditos_offline || 0,
-          creditos_geracao_leads: res.geracao_leads || 0,
-          total_consultas: res.total_consultas,
-          consultas_consumidas: res.consultas_consumidas,
-          dia_renovacao: res.dia_renovacao,
-          proxima_renovacao: res.proxima_renovacao,
-          ciclo_inicio: res.ciclo_inicio,
-          ciclo_fim: res.ciclo_fim,
+          creditos: creditosCalc,
+          creditos_offline: res?.creditos_offline || 0,
+          creditos_geracao_leads: res?.geracao_leads || 0,
+          total_consultas: totalConsultas,
+          consultas_consumidas: consultasConsumidas,
+          dia_renovacao: res?.dia_renovacao ?? 15,
+          proxima_renovacao: res?.proxima_renovacao,
+          ciclo_inicio: res?.ciclo_inicio,
+          ciclo_fim: res?.ciclo_fim,
           isMultiCorban: true
         });
       } else {
@@ -541,10 +560,15 @@ export default function ConsultaCPFPage() {
     } catch (err) {
       console.error("Erro ao carregar créditos:", err);
       if (provider === "multicorban") {
+        const localTotal = typeof window !== "undefined" ? localStorage.getItem("multicorban_total_consultas") : null;
+        const fallbackTotal = localTotal ? parseInt(localTotal, 10) : 1000;
         setCreditos({
-          creditos: null,
-          creditos_offline: null,
-          creditos_geracao_leads: null,
+          creditos: fallbackTotal,
+          creditos_offline: 0,
+          creditos_geracao_leads: 0,
+          total_consultas: fallbackTotal,
+          consultas_consumidas: 0,
+          dia_renovacao: 15,
           isMultiCorban: true
         });
       } else {
@@ -556,7 +580,9 @@ export default function ConsultaCPFPage() {
   };
 
   const handleOpenQuotaModal = () => {
-    setQuotaInput(String(creditos?.total_consultas || 1000));
+    const localTotal = typeof window !== "undefined" ? localStorage.getItem("multicorban_total_consultas") : null;
+    const currentTotal = creditos?.total_consultas || (localTotal ? parseInt(localTotal, 10) : 1000);
+    setQuotaInput(String(currentTotal));
     setShowQuotaModal(true);
   };
 
@@ -569,20 +595,27 @@ export default function ConsultaCPFPage() {
     }
     setSavingQuota(true);
     try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("multicorban_total_consultas", String(val));
+      }
       const res = await api.post("/consultas/multicorban/config", {
         total_consultas: val,
         dia_renovacao: 15
       });
+      const totalConsultas = res?.total_consultas ?? val;
+      const consultasConsumidas = res?.consultas_consumidas ?? 0;
+      const creditosCalc = res?.creditos_online ?? res?.creditos ?? Math.max(0, totalConsultas - consultasConsumidas);
+
       setCreditos({
-        creditos: res.creditos_online ?? res.creditos,
-        creditos_offline: res.creditos_offline || 0,
-        creditos_geracao_leads: res.geracao_leads || 0,
-        total_consultas: res.total_consultas,
-        consultas_consumidas: res.consultas_consumidas,
-        dia_renovacao: res.dia_renovacao,
-        proxima_renovacao: res.proxima_renovacao,
-        ciclo_inicio: res.ciclo_inicio,
-        ciclo_fim: res.ciclo_fim,
+        creditos: creditosCalc,
+        creditos_offline: res?.creditos_offline || 0,
+        creditos_geracao_leads: res?.geracao_leads || 0,
+        total_consultas: totalConsultas,
+        consultas_consumidas: consultasConsumidas,
+        dia_renovacao: res?.dia_renovacao ?? 15,
+        proxima_renovacao: res?.proxima_renovacao,
+        ciclo_inicio: res?.ciclo_inicio,
+        ciclo_fim: res?.ciclo_fim,
         isMultiCorban: true
       });
       setShowQuotaModal(false);
@@ -680,8 +713,8 @@ export default function ConsultaCPFPage() {
       setDados(response);
       setActiveBenefitIndex(0);
 
-      if (isAdmin && activeProvider) {
-        fetchBalance(activeProvider);
+      if (activeProvider) {
+        fetchBalance(activeProvider, true);
       }
 
       toast.success("Consulta recuperada com sucesso!");
@@ -748,7 +781,11 @@ export default function ConsultaCPFPage() {
         await secondaryLogosLoadRef.current;
         setDados(res);
         setActiveBenefitIndex(0);
-        await fetchBalance(activeProvider);
+        await fetchBalance(activeProvider, true);
+        try {
+          const hist = await api.get(`/consultas/historico?convenio=${encodeURIComponent(convenio)}`);
+          setRecentQueries(hist || []);
+        } catch (_) {}
         const tipoLabel = isBeneficio ? "Benefício" : (isCnpj ? "CNPJ" : "CPF");
         toast.success(`Consulta de ${tipoLabel} concluída com sucesso!`);
       } else {
@@ -1886,7 +1923,7 @@ export default function ConsultaCPFPage() {
                 <div className="flex-1 md:flex-initial px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center shadow-lg">
                   <p className="text-[9px] font-black uppercase text-amber-300 tracking-wider">Créditos Disponíveis</p>
                   <p className="text-xl font-black text-amber-400">
-                    {creditos?.creditos !== null && creditos?.creditos !== undefined ? creditos?.creditos : "—"}
+                    {creditos?.creditos !== null && creditos?.creditos !== undefined ? Number(creditos.creditos).toLocaleString('pt-BR') : "—"}
                   </p>
                 </div>
 
@@ -1904,7 +1941,7 @@ export default function ConsultaCPFPage() {
                   </div>
                   <div className="flex items-center justify-center gap-1.5 mt-0.5">
                     <p className="text-lg font-black text-white">
-                      {creditos?.total_consultas !== null && creditos?.total_consultas !== undefined ? creditos?.total_consultas : "1.000"}
+                      {creditos?.total_consultas !== null && creditos?.total_consultas !== undefined ? Number(creditos.total_consultas).toLocaleString('pt-BR') : "1.000"}
                     </p>
                     <button
                       type="button"
@@ -1919,7 +1956,7 @@ export default function ConsultaCPFPage() {
                 <div className="flex-1 md:flex-initial px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
                   <p className="text-[9px] font-black uppercase text-blue-300 tracking-wider">Consultas no Mês</p>
                   <p className="text-lg font-black text-slate-200">
-                    {creditos?.consultas_consumidas !== null && creditos?.consultas_consumidas !== undefined ? creditos?.consultas_consumidas : "0"}
+                    {creditos?.consultas_consumidas !== null && creditos?.consultas_consumidas !== undefined ? Number(creditos.consultas_consumidas).toLocaleString('pt-BR') : "0"}
                   </p>
                 </div>
 

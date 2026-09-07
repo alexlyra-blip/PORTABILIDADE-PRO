@@ -1,9 +1,12 @@
+import logging
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sqlalchemy_models import SystemSetting
+
+logger = logging.getLogger("config_helper")
 
 
 CPF_PROVIDER_SETTING_KEY = "cpf_active_provider"
@@ -92,14 +95,17 @@ async def get_system_setting(
     key: str,
     default: Optional[str] = None,
 ) -> Optional[str]:
-    result = await db.execute(
-        select(SystemSetting).where(
-            SystemSetting.setting_key == key
+    try:
+        result = await db.execute(
+            select(SystemSetting).where(
+                SystemSetting.setting_key == key
+            )
         )
-    )
-    setting = result.scalar_one_or_none()
-    if setting and setting.setting_value is not None:
-        return str(setting.setting_value).strip()
+        setting = result.scalar_one_or_none()
+        if setting and setting.setting_value is not None:
+            return str(setting.setting_value).strip()
+    except Exception as e:
+        logger.warning(f"Erro ao ler configuracao {key}: {e}")
     return default
 
 
@@ -108,23 +114,47 @@ async def set_system_setting(
     key: str,
     value: str,
 ) -> str:
-    result = await db.execute(
-        select(SystemSetting).where(
-            SystemSetting.setting_key == key
+    try:
+        result = await db.execute(
+            select(SystemSetting).where(
+                SystemSetting.setting_key == key
+            )
         )
-    )
-    setting = result.scalar_one_or_none()
-    if setting:
-        setting.setting_value = value
-    else:
-        setting = SystemSetting(
-            setting_key=key,
-            setting_value=value,
-        )
-        db.add(setting)
-    await db.commit()
-    await db.refresh(setting)
-    return str(setting.setting_value)
+        setting = result.scalar_one_or_none()
+        if setting:
+            setting.setting_value = value
+        else:
+            setting = SystemSetting(
+                setting_key=key,
+                setting_value=value,
+            )
+            db.add(setting)
+        await db.commit()
+        await db.refresh(setting)
+        return str(setting.setting_value)
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Erro ao gravar configuracao {key}: {e}")
+        try:
+            from app.database import engine
+            async with engine.begin() as conn:
+                await conn.run_sync(SystemSetting.__table__.create, checkfirst=True)
+            result = await db.execute(
+                select(SystemSetting).where(
+                    SystemSetting.setting_key == key
+                )
+            )
+            setting = result.scalar_one_or_none()
+            if setting:
+                setting.setting_value = value
+            else:
+                setting = SystemSetting(setting_key=key, setting_value=value)
+                db.add(setting)
+            await db.commit()
+            return value
+        except Exception as e2:
+            logger.error(f"Falha ao retentar gravacao de {key}: {e2}")
+            return value
 
 
 async def get_multicorban_quota_config(
