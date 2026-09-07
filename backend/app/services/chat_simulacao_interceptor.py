@@ -442,6 +442,86 @@ def processar_comando_simulacao(session, msg_lower, message):
             b_idx = int(b_match.group(1))
             c_idx = int(c_match.group(1))
 
+
+        # CLARA_V2_NATURAL_CONTRACT_REFERENCE
+        natural_benefit = re.search(
+            r'\bbenef[i?]cio\s*(\d+)\b',
+            msg_lower,
+            flags=re.IGNORECASE,
+        )
+
+        natural_contract = re.search(
+            r'\bcontrato\s*(\d+)\b',
+            msg_lower,
+            flags=re.IGNORECASE,
+        )
+
+        if natural_contract:
+
+            natural_c_idx = int(
+                natural_contract.group(1)
+            )
+
+            if natural_benefit:
+
+                natural_b_idx = int(
+                    natural_benefit.group(1)
+                )
+
+                b_idx = natural_b_idx
+                c_idx = natural_c_idx
+
+            elif (
+                b_idx is None
+                and c_idx is None
+            ):
+
+                matching_contracts = [
+                    (
+                        b,
+                        c,
+                    )
+                    for b, c
+                    in all_contracts
+                    if (
+                        int(
+                            c.get(
+                                "indice_contrato"
+                            )
+                            or 0
+                        )
+                        == natural_c_idx
+                    )
+                ]
+
+                if len(matching_contracts) == 1:
+
+                    selected_benefit = (
+                        matching_contracts[0][0]
+                    )
+
+                    b_idx = int(
+                        selected_benefit.get(
+                            "indice_beneficio"
+                        )
+                        or 1
+                    )
+
+                    c_idx = natural_c_idx
+
+                elif len(matching_contracts) > 1:
+
+                    return (
+                        "\u26A0\uFE0F O *Contrato "
+                        f"{natural_c_idx}* existe "
+                        "em mais de um benef\u00edcio.\n\n"
+                        "Informe tamb\u00e9m o "
+                        "benef\u00edcio.\n"
+                        "Exemplo: "
+                        "*B1 C1 TABELAS "
+                        "108X C6 CONSIG*"
+                    )
+
     # Mantem o ultimo banco escolhido pelo usuario.
     #
     # Exemplo:
@@ -704,6 +784,297 @@ def processar_comando_simulacao(session, msg_lower, message):
         )
         return reply
 
+
+# CLARA_POST_SIMULACAO_CONTRATOS
+def build_post_simulation_menu(simulations):
+    """
+    Usa apenas ofertas ja armazenadas na sessao.
+    Nao executa nova simulacao.
+    """
+    if not simulations:
+        return ""
+
+    benefit_ids = {
+        int(sim.get("b_idx") or 1)
+        for sim in simulations
+        if isinstance(sim, dict)
+    }
+
+    multi_benefit = len(benefit_ids) > 1
+
+    valid = [
+        sim
+        for sim in simulations
+        if (
+            isinstance(sim, dict)
+            and isinstance(sim.get("ofertas"), list)
+            and sim.get("ofertas")
+        )
+    ]
+
+    if not valid:
+        return ""
+
+    valid.sort(
+        key=lambda sim: (
+            int(sim.get("b_idx") or 1),
+            int(sim.get("c_idx") or 1),
+        )
+    )
+
+    blocks = [
+        "\U0001F4A1 *Deseja consultar outras possibilidades?*"
+    ]
+
+    for sim in valid:
+
+        b_idx = int(
+            sim.get("b_idx") or 1
+        )
+
+        c_idx = int(
+            sim.get("c_idx") or 1
+        )
+
+        input_data = (
+            sim.get("input_data")
+            or {}
+        )
+
+        offers = (
+            sim.get("ofertas")
+            or []
+        )
+
+        origin_bank = str(
+            input_data.get("banco")
+            or "Banco de origem"
+        ).strip()
+
+        installment = input_data.get(
+            "parcela",
+            0,
+        )
+
+        first_by_bank = []
+        seen = set()
+
+        for offer in offers:
+
+            bank = get_banco(offer)
+            key = _normalize_bank(bank)
+
+            if not key or key in seen:
+                continue
+
+            seen.add(key)
+            first_by_bank.append(offer)
+
+        if not first_by_bank:
+            continue
+
+        # Mesma regra da exibicao inicial:
+        # prioriza 108 sem escolher maior troco.
+        first_by_bank.sort(
+            key=lambda offer: (
+                get_prazo(offer) != 108
+            )
+        )
+
+        best_offer = first_by_bank[0]
+
+        best_bank = (
+            get_banco(best_offer)
+            or "Banco"
+        )
+
+        best_term = get_prazo(
+            best_offer
+        )
+
+        best_key = _normalize_bank(
+            best_bank
+        )
+
+        best_bank_offers = [
+            offer
+            for offer in offers
+            if (
+                _normalize_bank(
+                    get_banco(offer)
+                )
+                == best_key
+            )
+        ]
+
+        alternatives = []
+        removed_primary = False
+
+        for offer in best_bank_offers:
+
+            if (
+                not removed_primary
+                and offer is best_offer
+            ):
+                removed_primary = True
+                continue
+
+            alternatives.append(offer)
+
+        terms = sorted({
+            get_prazo(offer)
+            for offer in alternatives
+            if get_prazo(offer) in (84, 96, 108)
+        })
+
+        other_banks = []
+        other_seen = set()
+
+        for offer in offers:
+
+            bank = get_banco(offer)
+            key = _normalize_bank(bank)
+
+            if (
+                not key
+                or key == best_key
+                or key in other_seen
+            ):
+                continue
+
+            other_seen.add(key)
+            other_banks.append(bank)
+
+        if multi_benefit:
+
+            ref = (
+                f"B{b_idx} C{c_idx}"
+            )
+
+            title = (
+                "\U0001F4CC *BENEF\u00cdCIO "
+                f"{b_idx} / CONTRATO "
+                f"{c_idx} \u2014 "
+                f"{origin_bank}*"
+            )
+
+        else:
+
+            ref = (
+                f"CONTRATO {c_idx}"
+            )
+
+            title = (
+                "\U0001F4CC *CONTRATO "
+                f"{c_idx} \u2014 "
+                f"{origin_bank}*"
+            )
+
+        lines = [
+            title,
+            (
+                "\u2022 *Parcela:* R$ "
+                f"{format_brl(installment)}"
+            ),
+            (
+                "\u2022 *Melhor oferta:* "
+                f"{best_bank}"
+                + (
+                    f" | {best_term}X"
+                    if best_term
+                    else ""
+                )
+            ),
+        ]
+
+        if terms:
+
+            lines.append(
+                "\u2022 *Outras tabelas:* "
+                + ", ".join(
+                    f"{term}X"
+                    for term in terms
+                )
+            )
+
+        else:
+
+            lines.append(
+                "\u2022 *Outras tabelas:* "
+                "Nenhuma adicional"
+            )
+
+        if other_banks:
+
+            lines.append(
+                "\u2022 *Outros bancos:* "
+                + ", ".join(other_banks)
+            )
+
+        else:
+
+            lines.append(
+                "\u2022 *Outros bancos:* Nenhum"
+            )
+
+        if terms:
+
+            lines.append("")
+            lines.append(
+                "\U0001F4CA *Consultar tabelas:*"
+            )
+
+            for term in terms:
+
+                lines.append(
+                    f"\u2022 {ref} "
+                    f"TABELAS {term}X "
+                    f"{best_bank}"
+                )
+
+        if other_banks:
+
+            example = str(
+                other_banks[0]
+            ).strip()
+
+            if example.upper().startswith(
+                "BANCO "
+            ):
+                example = example[6:].strip()
+
+            lines.append("")
+            lines.append(
+                "\U0001F3E6 *Consultar outro banco:*"
+            )
+
+            lines.append(
+                f"\u2022 Ex.: {ref} "
+                f"BANCO {example}"
+            )
+
+        blocks.append(
+            "\n".join(lines)
+        )
+
+    if len(blocks) == 1:
+        return ""
+
+    blocks.append(
+        "\U0001F504 Para uma nova "
+        "simula\u00e7\u00e3o, digite "
+        "*SIMULAR* ou envie outro CPF.\n\n"
+        "\U0001F64F Para finalizar, digite "
+        "*OBRIGADO* ou *ENCERRAR*."
+    )
+
+    return (
+        "\n\n"
+        + ("\u2501" * 18)
+        + "\n\n"
+    ).join(blocks)
+
+
 def _processar_comando_simulacao_antigo(simulations, msg_lower, message):
     wants_tables = "tabela" in msg_lower or "tabelas" in msg_lower or "outras tabelas" in msg_lower
     if not simulations:
@@ -712,6 +1083,60 @@ def _processar_comando_simulacao_antigo(simulations, msg_lower, message):
         return None
     if "regra" in msg_lower:
         return None
+
+    # CLARA_CONTRACT_NUMBER_REFERENCE
+    explicit_pair = re.search(
+        r'\bb\s*(\d+)\s*c\s*(\d+)\b',
+        msg_lower,
+        flags=re.IGNORECASE,
+    )
+
+    contract_match = re.search(
+        r'\bcontrato\s*(\d+)\b',
+        msg_lower,
+        flags=re.IGNORECASE,
+    )
+
+    if contract_match and not explicit_pair:
+
+        requested_contract = int(
+            contract_match.group(1)
+        )
+
+        candidates = [
+            sim
+            for sim in simulations
+            if (
+                int(sim.get("c_idx") or 0)
+                == requested_contract
+            )
+        ]
+
+        if len(candidates) == 1:
+
+            selected = candidates[0]
+
+            prefix = (
+                f"b{int(selected.get('b_idx') or 1)} "
+                f"c{int(selected.get('c_idx') or 1)} "
+            )
+
+            msg_lower = (
+                prefix
+                + msg_lower
+            )
+
+        elif len(candidates) > 1:
+
+            return (
+                "\u26A0\uFE0F O *Contrato "
+                f"{requested_contract}* existe "
+                "em mais de um benef\u00edcio.\n\n"
+                "Informe tamb\u00e9m o benef\u00edcio.\n"
+                "Exemplo: *B1 C1 TABELAS "
+                "108X C6 CONSIG*"
+            )
+
     b_match = re.search(r'b(\d+)', msg_lower)
     c_match = re.search(r'c(\d+)', msg_lower)
     target_sim = None
@@ -798,7 +1223,10 @@ def _processar_comando_simulacao_antigo(simulations, msg_lower, message):
             reply += f"Existem mais {len(bank_offers)-5} tabela(s) disponíveis."
         return reply.strip()
     else:
-        best_offer = bank_offers_sorted[0]
+        best_offer = _select_primary_offer(
+            bank_offers,
+            requested_term,
+        )
         qty_tabelas = len([o for o in bank_offers if o.get("prazo") == best_offer.get("prazo")])
         
         reply = (

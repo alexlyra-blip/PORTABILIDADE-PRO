@@ -1185,7 +1185,12 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
     if not clean_cpf:
         return "❌ *CPF inválido.*"
         
-    masked_cpf = f"{clean_cpf[:3]}******{clean_cpf[-2:]}" if len(clean_cpf) >= 5 else "***"
+    # CLARA_CPF_DISPLAY_MASK
+    masked_cpf = (
+        f"{clean_cpf[:3]}.***.***-{clean_cpf[-2:]}"
+        if len(clean_cpf) == 11
+        else "***.***.***-**"
+    )
     
     # ========================================================
     # CLARA V2 - CONSULTA CPF UNIFICADA COM O SISTEMA WEB
@@ -2252,10 +2257,53 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                     ),
             }
 
-    reply += (
-        "\n\nPosso te ajudar com mais alguma dúvida sobre essas simulações, ou você gostaria de ver as opções de outro banco?\n"
-        "Se o atendimento já estiver concluído, basta digitar *'obrigado'* ou *'encerrar'* para finalizar! 🙏"
-    )
+    # CLARA_POST_MENU
+    post_menu = ""
+
+    if session is not None:
+
+        try:
+
+            from app.services.chat_simulacao_interceptor import (
+                build_post_simulation_menu,
+            )
+
+            post_menu = build_post_simulation_menu(
+                session.get(
+                    "simulations",
+                    [],
+                )
+            )
+
+        except Exception as menu_error:
+
+            print(
+                "[CLARA_POST_MENU] "
+                f"erro="
+                f"{type(menu_error).__name__}: "
+                f"{menu_error}"
+            )
+
+    if post_menu:
+
+        reply += (
+            "\n\n"
+            + post_menu
+        )
+
+    else:
+
+        # Fallback seguro caso nao exista
+        # nenhuma oferta armazenada.
+        reply += (
+            "\n\nPosso te ajudar com mais alguma "
+            "duvida sobre essas simulacoes, ou voce "
+            "gostaria de ver as opcoes de outro banco?\n"
+            "Se o atendimento ja estiver concluido, "
+            "basta digitar *'obrigado'* ou "
+            "*'encerrar'* para finalizar! ??"
+        )
+
     return reply
 
 
@@ -2672,8 +2720,62 @@ async def chat_interaction(
                 else "n\u00e3o"
             )
                 
-            session.pop("simulacao_selecao_atual", None)
-            reply = await simulate_for_cpf(clean_cpf, is_illiterate, db, user_id=matched_user.id, session=session)
+            # CLARA_NEW_CPF_RESET_CONTEXT
+            # Um novo CPF nao pode reutilizar contratos,
+            # banco ativo ou ofertas do CPF anterior.
+            session.pop(
+                "simulacao_selecao_atual",
+                None,
+            )
+
+            session.pop(
+                "pending_intent",
+                None,
+            )
+
+            session.pop(
+                "ultima_simulacao",
+                None,
+            )
+
+            session.pop(
+                "active_bank",
+                None,
+            )
+
+            session.pop(
+                "last_result",
+                None,
+            )
+
+            if isinstance(
+                session.get("context_data"),
+                dict,
+            ):
+                session["context_data"].pop(
+                    "ultima_simulacao",
+                    None,
+                )
+
+                session["context_data"].pop(
+                    "contexto_simulacao",
+                    None,
+                )
+
+                session["context_data"].pop(
+                    "pending_intent",
+                    None,
+                )
+
+            session["simulations"] = []
+
+            reply = await simulate_for_cpf(
+                clean_cpf,
+                is_illiterate,
+                db,
+                user_id=matched_user.id,
+                session=session,
+            )
             session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
             session["messages"].append({"role": "bot", "text": reply, "timestamp": datetime.now().isoformat()})
             await save_chat_log(db, session, sender, False)
