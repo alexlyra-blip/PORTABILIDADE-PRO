@@ -474,6 +474,36 @@ def _clara_format_contract_display(value):
     return text
 
 
+
+# CLARA_NUMERIC_HELPER_GLOBAL
+def _clara_float(value):
+    try:
+        if value in (None, ""):
+            return 0.0
+
+        if isinstance(value, (int, float)):
+            return float(value)
+
+        raw = (
+            str(value)
+            .strip()
+            .replace("R$", "")
+            .replace(" ", "")
+        )
+
+        if "," in raw:
+            raw = (
+                raw
+                .replace(".", "")
+                .replace(",", ".")
+            )
+
+        return float(raw)
+
+    except Exception:
+        return 0.0
+
+
 async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: int, compact: bool = False, b_idx: int = 1, c_idx: int = 1, is_manual: bool = False) -> str:
     try:
         # Convert and construct inputs
