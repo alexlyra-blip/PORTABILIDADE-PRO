@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 
 # Add backend to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://mock:mock@localhost:5432/mock")
 
 from app.services.multicorban_service import MultiCorbanService
 from app.services.consultas.multicorban_provider import MultiCorbanProvider
@@ -160,3 +161,85 @@ async def test_multicorban_provider_normalize(mock_env):
         assert normalized["banco_pagador"]["agencia"] == "1234"
         assert len(normalized["emprestimos"]) == 1
         assert normalized["emprestimos"][0]["valor_contrato"] == 1000.00 # fallback to Quitacao if ValorOriginal not set
+
+
+def test_resolve_bank_info():
+    from app.utils.bank_catalog import resolve_bank_info
+
+    # 1. Bank code 079 / 79 with numeric/empty name -> PICPAY
+    code, name = resolve_bank_info("79", "79")
+    assert code == "079"
+    assert name == "PICPAY"
+
+    code, name = resolve_bank_info("079", "")
+    assert code == "079"
+    assert name == "PICPAY"
+
+    # 2. Bank code 643 -> BANCO PINE
+    code, name = resolve_bank_info("643", "643")
+    assert code == "643"
+    assert name == "BANCO PINE"
+
+    # 3. Bank code with repeated prefix in raw_name e.g. "121 - 121 - AGIBANK" or "121 - AGIBANK"
+    code, name = resolve_bank_info("121", "121 - AGIBANK")
+    assert code == "121"
+    assert name == "AGIBANK"
+
+    # 4. Canonical overrides for Facta
+    code, name = resolve_bank_info("935", "935")
+    assert code == "935"
+    assert name == "FACTA FINANCEIRA"
+
+
+@pytest.mark.anyio
+async def test_multicorban_provider_bank_normalization(mock_env):
+    provider = MultiCorbanProvider()
+
+    raw_payload = {
+        "Beneficiario": {
+            "Nome": "MARIA TESTE",
+            "CPF": "12345678901",
+            "Beneficio": "9876543210",
+        },
+        "Emprestimos": [
+            {
+                "NomeBanco": "79",
+                "Banco": "79",
+                "Contrato": "PIC123",
+                "ValorParcela": "150.00",
+            },
+            {
+                "NomeBanco": "643 - BANCO PINE",
+                "Banco": "643",
+                "Contrato": "PINE456",
+                "ValorParcela": "200.00",
+            },
+        ],
+        "Rmc": {
+            "NomeBanco": "079",
+            "Banco": "079",
+            "Contrato": "RMC-PIC",
+            "Valor": "100.00",
+            "ValorParcela": "50.00",
+        },
+    }
+
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json = MagicMock(return_value=[raw_payload])
+        mock_post.return_value = resp
+
+        normalized = await provider.consultar_por_cpf("12345678901", convenio="INSS")
+
+        emp1 = normalized["emprestimos"][0]
+        assert emp1["codigo"] == "079"
+        assert emp1["banco"] == "PICPAY"
+
+        emp2 = normalized["emprestimos"][1]
+        assert emp2["codigo"] == "643"
+        assert emp2["banco"] == "BANCO PINE"
+
+        cartao = normalized["cartoes"][0]
+        assert cartao["codigo"] == "079"
+        assert cartao["banco"] == "PICPAY"
