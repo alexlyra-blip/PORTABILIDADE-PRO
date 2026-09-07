@@ -7,6 +7,7 @@ from app.services.consultas.base_provider import ConsultaBeneficioProvider
 from app.services.consultas.margin_rules import recalculate_benefit_margins
 from app.services.consultas.siape_normalizer import is_siape_response, normalize_siape_response
 from app.services.multicorban_service import MultiCorbanService
+from app.utils.bank_catalog import resolve_bank_info
 
 logger = logging.getLogger("multicorban_provider")
 
@@ -48,6 +49,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
 
     def __init__(self):
         self.service = MultiCorbanService()
+        self._cache = {}
 
     async def consultar_por_cpf(self, cpf: str, convenio: str = "INSS") -> Dict[str, Any]:
         clean_cpf = ''.join(filter(str.isdigit, cpf))
@@ -299,6 +301,10 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
 
         emprestimos = []
         for emp in emprestimos_list:
+            clean_cod, clean_banco = resolve_bank_info(
+                emp.get("Banco"),
+                emp.get("NomeBanco") or emp.get("BancoNome") or emp.get("Banco"),
+            )
             parcela = safe_float(emp.get("ValorParcela"))
             quitacao = safe_float(emp.get("Quitacao"))
             prazo = safe_int(emp.get("Prazo"))
@@ -316,8 +322,8 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             )
 
             emprestimos.append({
-                "banco": safe_str(emp.get("NomeBanco") or emp.get("Banco")),
-                "codigo": safe_str(emp.get("Banco")),
+                "banco": clean_banco,
+                "codigo": clean_cod,
                 "contrato": safe_str(emp.get("Contrato")),
                 "parcela": parcela,
                 "quitacao": quitacao,
@@ -336,9 +342,13 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
 
         cartoes = []
         if rmc_val > 0 or rmc_raw.get("Contrato"):
+            rmc_cod, rmc_banco = resolve_bank_info(
+                rmc_raw.get("Banco"),
+                rmc_raw.get("NomeBanco") or rmc_raw.get("BancoNome") or rmc_raw.get("Banco"),
+            )
             cartoes.append({
-                "banco": safe_str(rmc_raw.get("NomeBanco") or rmc_raw.get("Banco")),
-                "codigo": safe_str(rmc_raw.get("Banco")),
+                "banco": rmc_banco,
+                "codigo": rmc_cod,
                 "contrato": safe_str(rmc_raw.get("Contrato")),
                 "tipo": "Cartão Consignado (RMC)",
                 "parcela_promosys": rmc_val,
@@ -349,9 +359,13 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             })
 
         if rcc_val > 0 or rcc_raw.get("Contrato"):
+            rcc_cod, rcc_banco = resolve_bank_info(
+                rcc_raw.get("Banco"),
+                rcc_raw.get("NomeBanco") or rcc_raw.get("BancoNome") or rcc_raw.get("Banco"),
+            )
             cartoes.append({
-                "banco": safe_str(rcc_raw.get("NomeBanco") or rcc_raw.get("Banco")),
-                "codigo": safe_str(rcc_raw.get("Banco")),
+                "banco": rcc_banco,
+                "codigo": rcc_cod,
                 "contrato": safe_str(rcc_raw.get("Contrato")),
                 "tipo": "Cartão Benefício (RCC)",
                 "parcela_promosys": rcc_val,
@@ -470,6 +484,15 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
 
         saldo_aprox_val = safe_float(raw.get("SALDO_FGTS") or raw.get("SALDO_APROXIMADO") or beneficiario.get("SaldoFgts") or beneficiario.get("SaldoAproximado") or 0.0)
 
+        bp_codigo, bp_nome = resolve_bank_info(
+            dados_bancarios.get("Banco"),
+            dados_bancarios.get("NomeBanco")
+            or dados_bancarios.get("BancoNome")
+            or dados_bancarios.get("DescricaoBanco")
+            or dados_bancarios.get("Nome")
+            or dados_bancarios.get("Banco"),
+        )
+
         response = {
             "origem": "MULTICORBAN",
             "cliente": {
@@ -482,7 +505,7 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "salario": salario,
                 "margem_livre": margem_livre,
                 "valor_liberado_margem": 0.0,
-                "banco_pagador": safe_str(dados_bancarios.get("Banco")),
+                "banco_pagador": bp_nome,
                 "endereco": endereco_completo,
                 "data_nascimento": safe_str(beneficiario.get("DataNascimento") or raw.get("DATA_NASCIMENTO")),
                 "filiacao": safe_str(beneficiario.get("NomeMae") or beneficiario.get("Nome_Mae") or beneficiario.get("Mae") or beneficiario.get("NomeDaMae") or beneficiario.get("Nome_Da_Mae") or beneficiario.get("Filiacao") or raw.get("NOME_MAE") or ""),
@@ -522,14 +545,8 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 "ddb": safe_str(beneficiario.get("DIB"))
             },
             "banco_pagador": {
-                "codigo": safe_str(dados_bancarios.get("Banco")),
-                "nome": safe_str(
-                    dados_bancarios.get("NomeBanco")
-                    or dados_bancarios.get("BancoNome")
-                    or dados_bancarios.get("DescricaoBanco")
-                    or dados_bancarios.get("Nome")
-                    or dados_bancarios.get("Banco")
-                ),
+                "codigo": bp_codigo,
+                "nome": bp_nome,
                 "agencia": safe_str(dados_bancarios.get("Agencia")),
                 "conta": safe_str(dados_bancarios.get("ContaPagto")),
                 "tipo_pagamento": "Cartão Magnético" if safe_str(dados_bancarios.get("MeioPagamento")) == "1" else "Conta Corrente"

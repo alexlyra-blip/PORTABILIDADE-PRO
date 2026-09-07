@@ -8,24 +8,70 @@ import { useToast } from "@/components/ToastProvider";
 
 const BANK_NAME_BY_CODE = {
   "001": "BANCO DO BRASIL",
+  "003": "BANCO DA AMAZÔNIA",
+  "004": "BANCO DO NORDESTE",
+  "012": "BANCO INBURSA",
+  "021": "BANESTES",
+  "025": "BANCO ALFA",
+  "029": "ITAÚ CONSIGNADO",
   "033": "SANTANDER",
   "041": "BANRISUL",
+  "047": "BANCO DO ESTADO DO SERGIPE",
+  "069": "CREFISA",
   "070": "BRB",
+  "074": "BANCO SAFRA",
+  "077": "BANCO INTER",
+  "079": "PICPAY",
+  "081": "BANCO SEGURO",
   "104": "CAIXA",
   "121": "AGIBANK",
-  "237": "BANCO BRADESCO",
+  "149": "FACTA FINANCEIRA",
+  "169": "OLÉ CONSIGNADO",
+  "184": "ITAÚ BBA",
+  "212": "BANCO ORIGINAL",
+  "233": "BANCO CIFRA",
+  "237": "BRADESCO",
+  "250": "BANCO BCV",
   "254": "PARANÁ BANCO",
+  "268": "BARIGUI",
+  "290": "PAGBANK",
   "318": "BANCO BMG",
   "320": "CCB BRASIL",
+  "326": "PARATI",
+  "329": "QI SOCIEDADE",
+  "335": "DIGIO",
   "336": "C6 BANK",
   "341": "ITAÚ",
+  "359": "ZEMA",
+  "380": "PICPAY",
+  "386": "NU FINANCEIRA",
   "389": "BANCO MERCANTIL",
   "422": "BANCO SAFRA",
+  "465": "CAPITAL CONSIG",
+  "604": "BANCO INDUSTRIAL DO BRASIL",
+  "611": "PAULISTA",
   "623": "BANCO PAN",
   "626": "C6 CONSIGNADO",
+  "643": "BANCO PINE",
+  "655": "BANCO VOTORANTIM",
   "707": "BANCO DAYCOVAL",
   "739": "BANCO CETELEM",
+  "748": "SICREDI",
+  "752": "BNP PARIBAS",
+  "753": "NBC BANK",
   "756": "SICOOB",
+  "908": "PARATI CFI",
+  "925": "BRB CRÉDITO",
+  "935": "FACTA FINANCEIRA",
+  "966": "SABEMI",
+};
+
+const STATIC_FALLBACK_LOGOS = {
+  "079": "https://logos-world.net/wp-content/uploads/2021/02/PicPay-Logo.png",
+  "380": "https://logos-world.net/wp-content/uploads/2021/02/PicPay-Logo.png",
+  "643": "https://logodownload.org/wp-content/uploads/2022/08/banco-pine-logo.png",
+  "935": "https://factafinanceira.com.br/wp-content/uploads/2021/05/logo-facta.png",
+  "149": "https://factafinanceira.com.br/wp-content/uploads/2021/05/logo-facta.png",
 };
 
 const normalizeBankCode = (codigo) => {
@@ -39,17 +85,41 @@ const normalizeBankCode = (codigo) => {
 const formatBankName = (codigo, banco) => {
   const codeStr = normalizeBankCode(codigo);
 
-  const receivedName = String(banco || "")
+  let rawName = String(banco || "")
     .replace(/['"]/g, "")
     .trim();
 
-  const canonicalName = BANK_NAME_BY_CODE[codeStr] || receivedName;
-
-  if (codeStr && canonicalName) {
-    return `${codeStr} - ${canonicalName}`;
+  // Se o nome já começa com o código (ex: "079 - " ou "79 - "), remove o prefixo para nunca duplicar
+  if (codeStr) {
+    const rawNum = String(parseInt(codeStr, 10));
+    const prefixRegex = new RegExp(`^(?:0*${rawNum}|${codeStr})\\s*[-–—:]\\s*`, "i");
+    rawName = rawName.replace(prefixRegex, "").trim();
   }
 
-  return canonicalName;
+  // Verifica se o que sobrou é apenas o código numérico (ex: "79", "079" ou idêntico ao codeStr)
+  const isPureCode = (
+    /^\d+$/.test(rawName) &&
+    (
+      rawName === codeStr ||
+      String(parseInt(rawName, 10)) === String(parseInt(codeStr || "0", 10))
+    )
+  ) || !rawName;
+
+  // Consulta o nome canônico na lista oficial pelo código
+  const canonicalName = BANK_NAME_BY_CODE[codeStr] || (!isPureCode ? rawName : "");
+
+  if (codeStr && canonicalName) {
+    // Garante que o canonicalName também não tenha o código repetido
+    const prefixRegex = new RegExp(`^${codeStr}\\s*[-–—:]\\s*`, "i");
+    const cleanCanonical = canonicalName.replace(prefixRegex, "").trim();
+    return `${codeStr} - ${cleanCanonical}`;
+  }
+
+  if (codeStr && isPureCode) {
+    return codeStr;
+  }
+
+  return canonicalName || rawName || codeStr;
 };
 
 const SECONDARY_LOGOS_CACHE_KEY = "cached_sub_logos";
@@ -1416,25 +1486,30 @@ export default function ConsultaCPFPage() {
       "033": ["SANTANDER"],
       "041": ["BANRISUL"],
       "070": ["BRB", "BANCO DE BRASILIA"],
+      "079": ["PICPAY", "BANCO ORIGINAL", "ORIGINAL"],
       "104": ["CAIXA", "CEF", "CAIXA ECONOMICA FEDERAL"],
       "121": ["AGIBANK"],
+      "149": ["FACTA", "FACTA FINANCEIRA"],
       "237": ["BRADESCO"],
       "254": ["PARANA BANCO", "PARANA"],
       "318": ["BMG"],
       "320": ["CCB BRASIL", "CCB"],
       "336": ["C6", "C6 BANK"],
       "341": ["ITAU", "ITAU UNIBANCO"],
+      "380": ["PICPAY", "BANCO ORIGINAL", "ORIGINAL"],
       "386": ["NUBANK", "NU FINANCEIRA"],
       "389": ["MERCANTIL"],
       "422": ["SAFRA"],
       "465": ["CAPITAL CONSIG", "CAPITAL CONSIGNADO", "CAPITAL"],
       "623": ["PAN", "BANCO PAN"],
       "626": ["C6", "C6 BANK", "C6 CONSIGNADO", "BANCO FICSA"],
+      "643": ["BANCO PINE", "PINE"],
       "707": ["DAYCOVAL"],
       "739": ["CETELEM"],
       "748": ["SICREDI", "SICRED"],
       "756": ["SICOOB"],
       "925": ["BRB", "BRB CREDITO", "BANCO DE BRASILIA"],
+      "935": ["FACTA", "FACTA FINANCEIRA"],
     };
 
     const requestedNames = [
@@ -1462,7 +1537,7 @@ export default function ConsultaCPFPage() {
       ));
     });
 
-    return matchByName?.logo_url || null;
+    return matchByName?.logo_url || STATIC_FALLBACK_LOGOS[cleanCode] || null;
   };
 
   const isSiape = String(
