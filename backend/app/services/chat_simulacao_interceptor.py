@@ -851,10 +851,19 @@ def build_post_simulation_menu(simulations):
             or "Banco de origem"
         ).strip()
 
+        # CLARA_POST_MENU_INSTALLMENT_FALLBACK
         installment = input_data.get(
-            "parcela",
-            0,
+            "parcela"
         )
+
+        if installment in (
+            None,
+            "",
+        ):
+            installment = input_data.get(
+                "valor_parcela",
+                0,
+            )
 
         first_by_bank = []
         seen = set()

@@ -695,3 +695,117 @@ def test_v2_normalizado_beneficio_1_contrato_2():
         selecao.get("contrato")
         == 2
     )
+
+
+# CLARA_PRODUCTION_MENU_HOTFIX_TESTS
+
+def test_post_menu_aceita_valor_parcela_cache_pydantic():
+    simulations = [
+        {
+            "b_idx": 1,
+            "c_idx": 1,
+            "input_data": {
+                "banco": "BRB Credito",
+                "valor_parcela": 456.20,
+            },
+            "ofertas": [
+                {
+                    "banco": "FINANTO",
+                    "tabela": "PRIME",
+                    "prazo": 108,
+                    "valor_parcela": 456.20,
+                    "valor_liberado": 227.67,
+                    "taxa_juros": 1.66,
+                },
+            ],
+        },
+        {
+            "b_idx": 1,
+            "c_idx": 2,
+            "input_data": {
+                "banco": "Daycoval",
+                "valor_parcela": 158.22,
+            },
+            "ofertas": [
+                {
+                    "banco": "TOTAL CASH",
+                    "tabela": "REFIN PORT",
+                    "prazo": 108,
+                    "valor_parcela": 158.22,
+                    "valor_liberado": 151.12,
+                    "taxa_juros": 1.85,
+                },
+            ],
+        },
+    ]
+
+    menu = (
+        interceptor
+        .build_post_simulation_menu(
+            simulations
+        )
+    )
+
+    assert "CONTRATO 1" in menu
+    assert "CONTRATO 2" in menu
+
+    assert "R$ 456,20" in menu
+    assert "R$ 158,22" in menu
+
+    assert "R$ 0,00" not in menu
+
+
+def test_post_menu_nao_exibe_indices_antigos_5_7():
+    simulations = [
+        {
+            "b_idx": 1,
+            "c_idx": 1,
+            "source_c_idx": 5,
+            "input_data": {
+                "banco": "BRB Credito",
+                "parcela": 456.20,
+            },
+            "ofertas": [
+                {
+                    "banco": "FINANTO",
+                    "tabela": "PRIME",
+                    "prazo": 108,
+                    "valor_parcela": 456.20,
+                    "valor_liberado": 227.67,
+                    "taxa_juros": 1.66,
+                },
+            ],
+        },
+        {
+            "b_idx": 1,
+            "c_idx": 2,
+            "source_c_idx": 7,
+            "input_data": {
+                "banco": "Daycoval",
+                "parcela": 158.22,
+            },
+            "ofertas": [
+                {
+                    "banco": "TOTAL CASH",
+                    "tabela": "REFIN PORT",
+                    "prazo": 108,
+                    "valor_parcela": 158.22,
+                    "valor_liberado": 151.12,
+                    "taxa_juros": 1.85,
+                },
+            ],
+        },
+    ]
+
+    menu = (
+        interceptor
+        .build_post_simulation_menu(
+            simulations
+        )
+    )
+
+    assert "CONTRATO 1" in menu
+    assert "CONTRATO 2" in menu
+
+    assert "CONTRATO 5" not in menu
+    assert "CONTRATO 7" not in menu

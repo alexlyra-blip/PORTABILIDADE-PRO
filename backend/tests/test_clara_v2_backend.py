@@ -672,8 +672,26 @@ def test_clara_v2_dados_cliente_sao_compactos():
 
     segment = source[start:end]
 
+    # CLARA_WHATSAPP_CPF_LITERAL_TEST
+    assert (
+        "# CLARA_WHATSAPP_CPF_LITERAL"
+        in segment
+    )
+
+    assert (
+        'f"\\u2022 *CPF:* '
+        '```{masked_cpf}```\\n"'
+        in segment
+    )
+
     assert (
         "_clara_mask_cpf(clean_cpf)"
+        not in segment
+    )
+
+    assert (
+        'f"{clean_cpf[:3]}.***.***-'
+        '{clean_cpf[-2:]}"'
         in segment
     )
 
@@ -915,5 +933,77 @@ def test_clara_v2_nao_possui_textos_corrompidos():
 
     assert (
         r"FOR\u00c7AS ARMADAS"
+        in source
+    )
+
+
+# CLARA_PRODUCTION_FOLLOW_UP_TESTS
+
+def test_cpf_automatico_cache_usa_aliases_e_numero_exibido():
+    source = _source()
+
+    assert (
+        "# CLARA_SIMULATION_CACHE_ALIASES"
+        in source
+    )
+
+    assert (
+        "input_data.dict(\n"
+        "                by_alias=True"
+        in source
+    )
+
+    assert (
+        "# CLARA_DISPLAY_CONTRACT_COUNTER"
+        in source
+    )
+
+    assert (
+        "# CLARA_CACHE_DISPLAY_CONTRACT_NUMBER"
+        in source
+    )
+
+    assert (
+        "c_idx=displayed_contract_count + 1"
+        in source
+    )
+
+
+def test_cpf_automatico_menu_e_resposta_sao_separados():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "# CLARA_POST_MENU_SEPARATE_REPLY"
+        in segment
+    )
+
+    assert (
+        "+ post_menu"
+        not in segment
+    )
+
+    assert (
+        '"post_simulation_menu"'
+        in segment
+    )
+
+    assert (
+        "# CLARA_FOLLOW_UP_REPLY"
+        in source
+    )
+
+    assert (
+        '"follow_up_reply"'
         in source
     )
