@@ -530,7 +530,10 @@ async def run_simulation_and_respond(session: dict, db: AsyncSession, user_id: i
         session["simulations"].append({
             "b_idx": b_idx,
             "c_idx": c_idx,
-            "input_data": input_data.dict(),
+            # CLARA_SIMULATION_CACHE_ALIASES
+            "input_data": input_data.dict(
+                by_alias=True
+            ),
             "ofertas": res.get("ofertas", []),
             "rejeitados": res.get("rejeitados", [])
         })
@@ -1522,7 +1525,8 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
     reply = (
         f"👤 *DADOS DO CLIENTE*\n"
         f"• *Nome:* {client_name.upper()}\n"
-        f"• *CPF:* {_clara_mask_cpf(clean_cpf)}\n"
+        # CLARA_WHATSAPP_CPF_LITERAL
+        f"\u2022 *CPF:* ```{masked_cpf}```\n"
         f"• *Idade:* {client_age} anos\n"
     )
     if is_illiterate:
@@ -1582,6 +1586,10 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         
         loans = b.get("emprestimos", []) or []
         benefit_loans_replies = []
+
+        # CLARA_DISPLAY_CONTRACT_COUNTER
+        # A numeracao exibida reinicia em cada beneficio.
+        displayed_contract_count = 0
         displayed_contract_count = 0
 
         benefit_refin_count = 0
@@ -1974,7 +1982,8 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                         user_id=user_id,
                         compact=True,
                         b_idx=idx_b + 1,
-                        c_idx=idx_l + 1,
+                        # CLARA_CACHE_DISPLAY_CONTRACT_NUMBER
+                        c_idx=displayed_contract_count + 1,
                         is_manual=False,
                     )
                 )
@@ -2284,25 +2293,23 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 f"{menu_error}"
             )
 
-    if post_menu:
+    # CLARA_POST_MENU_SEPARATE_REPLY
+    # O resultado da simulacao termina antes do menu.
+    # O n8n recebe o menu em um campo separado.
+    if session is not None:
 
-        reply += (
-            "\n\n"
-            + post_menu
-        )
+        if post_menu:
 
-    else:
+            session[
+                "post_simulation_menu"
+            ] = post_menu
 
-        # Fallback seguro caso nao exista
-        # nenhuma oferta armazenada.
-        reply += (
-            "\n\nPosso te ajudar com mais alguma "
-            "duvida sobre essas simulacoes, ou voce "
-            "gostaria de ver as opcoes de outro banco?\n"
-            "Se o atendimento ja estiver concluido, "
-            "basta digitar *'obrigado'* ou "
-            "*'encerrar'* para finalizar! ??"
-        )
+        else:
+
+            session.pop(
+                "post_simulation_menu",
+                None,
+            )
 
     return reply
 
@@ -2776,13 +2783,57 @@ async def chat_interaction(
                 user_id=matched_user.id,
                 session=session,
             )
-            session["messages"].append({"role": "user", "text": message, "timestamp": datetime.now().isoformat()})
-            session["messages"].append({"role": "bot", "text": reply, "timestamp": datetime.now().isoformat()})
-            await save_chat_log(db, session, sender, False)
+            # CLARA_FOLLOW_UP_REPLY
+            follow_up_reply = str(
+                session.pop(
+                    "post_simulation_menu",
+                    "",
+                )
+                or ""
+            ).strip()
+
+            session["messages"].append({
+                "role": "user",
+                "text": message,
+                "timestamp":
+                    datetime.now().isoformat(),
+            })
+
+            session["messages"].append({
+                "role": "bot",
+                "text": reply,
+                "timestamp":
+                    datetime.now().isoformat(),
+            })
+
+            if follow_up_reply:
+
+                session["messages"].append({
+                    "role": "bot",
+                    "text": follow_up_reply,
+                    "timestamp":
+                        datetime.now().isoformat(),
+                })
+
+            await save_chat_log(
+                db,
+                session,
+                sender,
+                False,
+            )
+
             return ({
                 "status": "success",
                 "reply": reply,
-                "sender": sender
+                "sender": sender,
+                **(
+                    {
+                        "follow_up_reply":
+                            follow_up_reply
+                    }
+                    if follow_up_reply
+                    else {}
+                ),
             } | chat_response_meta())
 
         # Clara V2 - coleta manual da simulacao.
