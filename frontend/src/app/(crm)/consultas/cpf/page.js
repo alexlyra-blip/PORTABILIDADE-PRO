@@ -699,12 +699,10 @@ export default function ConsultaCPFPage() {
           convenio: query.convenio || "INSS",
         };
       } else {
-        endpoint = activeProvider === "multicorban"
-          ? "/consultas/cpf"
-          : "/consultas/promosys/cpf";
+        endpoint = "/consultas/cpf";
         payload = {
           cpf: rawDoc,
-          convenio: isCnpj ? "CNPJ" : query.convenio,
+          convenio: isCnpj ? "CNPJ" : (query.convenio || "INSS"),
         };
       }
 
@@ -741,12 +739,12 @@ export default function ConsultaCPFPage() {
     }
 
     const cleanDoc = cpf.replace(/\D/g, '');
-    const isBeneficio = searchType === "BENEFICIO";
+    const isBeneficio = searchType === "BENEFICIO" || cleanDoc.length === 10;
     const isCnpj = searchType === "CNPJ" || cleanDoc.length > 11;
 
     if (isBeneficio) {
-      if (cleanDoc.length < 8) {
-        toast.warning("Por favor, informe um número de benefício válido.");
+      if (cleanDoc.length < 8 || cleanDoc.length > 10) {
+        toast.warning("Por favor, informe um número de benefício válido (8 a 10 dígitos).");
         return;
       }
     } else if (isCnpj) {
@@ -2073,7 +2071,11 @@ export default function ConsultaCPFPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setSearchType("CPF"); setCpf(""); }}
+                  onClick={() => {
+                    const raw = cpf.replace(/\D/g, "");
+                    setSearchType("CPF");
+                    setCpf(raw ? maskCpfCnpj(raw) : "");
+                  }}
                   className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest transition-all cursor-pointer ${
                     searchType === "CPF"
                       ? "bg-blue-600 text-white shadow-sm"
@@ -2084,7 +2086,11 @@ export default function ConsultaCPFPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setSearchType("BENEFICIO"); setCpf(""); }}
+                  onClick={() => {
+                    const raw = cpf.replace(/\D/g, "");
+                    setSearchType("BENEFICIO");
+                    setCpf(raw ? maskBeneficio(raw) : "");
+                  }}
                   className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest transition-all cursor-pointer ${
                     searchType === "BENEFICIO"
                       ? "bg-indigo-600 text-white shadow-sm"
@@ -2096,7 +2102,11 @@ export default function ConsultaCPFPage() {
                 {(convenio === "GOVERNO" || convenio === "CLT PRIVADO") && (
                   <button
                     type="button"
-                    onClick={() => { setSearchType("CNPJ"); setCpf(""); }}
+                    onClick={() => {
+                      const raw = cpf.replace(/\D/g, "");
+                      setSearchType("CNPJ");
+                      setCpf(raw ? maskCpfCnpj(raw) : "");
+                    }}
                     className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest transition-all cursor-pointer ${
                       searchType === "CNPJ"
                         ? "bg-emerald-600 text-white shadow-sm"

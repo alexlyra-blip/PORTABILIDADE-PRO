@@ -162,7 +162,10 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
             if isinstance(data, list) and len(data) > 0:
                 target_item = data[0]
             elif isinstance(data, dict):
-                target_item = data
+                if "value" in data and isinstance(data["value"], list) and len(data["value"]) > 0:
+                    target_item = data["value"][0]
+                else:
+                    target_item = data
 
         if not target_item:
             raise ValueError(f"Benefício/Servidor {beneficio} não encontrado.")

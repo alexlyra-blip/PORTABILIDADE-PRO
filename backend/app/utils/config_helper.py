@@ -42,14 +42,14 @@ async def get_active_provider(
     setting = result.scalar_one_or_none()
 
     if not setting:
-        return None
+        return "promosys"
 
     provider = str(
         setting.setting_value or ""
     ).strip().lower()
 
     if provider not in VALID_CPF_PROVIDERS:
-        return None
+        return "promosys"
 
     return provider
 
