@@ -2122,10 +2122,23 @@ export default function ConsultaCPFPage() {
               type="text"
               value={cpf}
               onChange={(e) => {
-                if (searchType === "BENEFICIO") {
-                  setCpf(maskBeneficio(e.target.value));
+                const raw = e.target.value.replace(/\D/g, "");
+
+                if (raw.length === 10) {
+                  setSearchType("BENEFICIO");
+                  setCpf(maskBeneficio(raw));
+                } else if (raw.length === 11) {
+                  setSearchType("CPF");
+                  setCpf(maskCpfCnpj(raw));
+                } else if (raw.length > 11) {
+                  if (searchType !== "CNPJ") setSearchType("CNPJ");
+                  setCpf(maskCpfCnpj(raw));
                 } else {
-                  setCpf(maskCpfCnpj(e.target.value));
+                  if (searchType === "BENEFICIO") {
+                    setCpf(maskBeneficio(e.target.value));
+                  } else {
+                    setCpf(maskCpfCnpj(e.target.value));
+                  }
                 }
               }}
               placeholder={
@@ -2133,7 +2146,7 @@ export default function ConsultaCPFPage() {
                   ? "000.000.000-0"
                   : (searchType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00")
               }
-              maxLength={searchType === "CNPJ" ? 18 : (searchType === "BENEFICIO" ? 13 : 14)}
+              maxLength={18}
               className="w-full h-14 px-6 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white transition-all outline-none font-black text-slate-800 text-lg"
             />
           </div>
