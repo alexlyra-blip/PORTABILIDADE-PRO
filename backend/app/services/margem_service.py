@@ -55,30 +55,36 @@ async def _fetch_daily_coefficient(
     convenio: str,
 ) -> float | None:
     from datetime import datetime, timezone
+    import logging
+    _logger = logging.getLogger("margem_service")
 
-    hoje = datetime.now(timezone.utc)
+    try:
+        hoje = datetime.now(timezone.utc)
 
-    result = await session.execute(
-        select(DailyMarginCoefficient)
-        .join(Bank, DailyMarginCoefficient.bank_id == Bank.id)
-        .filter(Bank.is_margin_base == True)
-        .filter(Bank.active == True)
-        .filter(DailyMarginCoefficient.convenio == convenio)
-        .filter(DailyMarginCoefficient.date <= hoje)
-        .order_by(
-            DailyMarginCoefficient.date.desc(),
-            Bank.margin_base_priority.asc(),
-            Bank.id.asc(),
+        result = await session.execute(
+            select(DailyMarginCoefficient)
+            .join(Bank, DailyMarginCoefficient.bank_id == Bank.id)
+            .filter(Bank.is_margin_base == True)
+            .filter(Bank.active == True)
+            .filter(DailyMarginCoefficient.convenio == convenio)
+            .filter(DailyMarginCoefficient.date <= hoje)
+            .order_by(
+                DailyMarginCoefficient.date.desc(),
+                Bank.margin_base_priority.asc(),
+                Bank.id.asc(),
+            )
+            .limit(1)
         )
-        .limit(1)
-    )
 
-    coefficient = result.scalars().first()
+        coefficient = result.scalars().first()
 
-    if coefficient and coefficient.coefficient > 0:
-        return float(coefficient.coefficient)
+        if coefficient and coefficient.coefficient > 0:
+            return float(coefficient.coefficient)
 
-    return None
+        return None
+    except Exception as err:
+        _logger.warning(f"Não foi possível obter coeficiente diário do banco ({err}). Usando padrão.")
+        return None
 
 
 async def obter_coeficiente_fator(

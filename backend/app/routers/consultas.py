@@ -654,6 +654,9 @@ async def _execute_beneficio_query_flow(
 
     provider = get_provider_by_type(provider_type)
 
+    res = None
+    last_error = None
+
     try:
         if provider_type == "multicorban":
             res = await provider.consultar_por_beneficio(
@@ -664,9 +667,24 @@ async def _execute_beneficio_query_flow(
             res = await provider.consultar_por_beneficio(
                 clean_nb
             )
-    except ValueError as error:
-        err_msg = str(error)
+    except Exception as error:
+        last_error = error
+        # Se falhar no MultiCorban, tenta automaticamente fallback no Promosys
+        if provider_type == "multicorban":
+            logger.warning(
+                f"[FALLBACK] MultiCorban falhou ao consultar benefício {masked_nb}: {error}. Tentando Promosys..."
+            )
+            try:
+                fallback_provider = PromosysProvider()
+                res = await fallback_provider.consultar_por_beneficio(clean_nb)
+                provider_type = "promosys"
+                last_error = None
+            except Exception as fb_err:
+                logger.error(f"[FALLBACK] Promosys também falhou para benefício {masked_nb}: {fb_err}")
+                last_error = fb_err
 
+    if res is None and last_error is not None:
+        err_msg = str(last_error)
         if (
             "token" in err_msg.lower()
             or "autentica" in err_msg.lower()
@@ -675,8 +693,7 @@ async def _execute_beneficio_query_flow(
             raise HTTPException(
                 status_code=502,
                 detail=(
-                    "Falha de autenticação no provedor "
-                    f"{provider_type}."
+                    f"Falha de autenticação no provedor {provider_type}."
                 ),
             )
 
@@ -688,25 +705,14 @@ async def _execute_beneficio_query_flow(
             raise HTTPException(
                 status_code=404,
                 detail=(
-                    f"Benefício {clean_nb} não encontrado "
-                    f"no provedor {provider_type}."
+                    f"Benefício {clean_nb} não encontrado no provedor {provider_type}."
                 ),
             )
 
         raise HTTPException(
             status_code=502,
             detail=(
-                f"Erro no provedor {provider_type} "
-                f"ao consultar benefício: {err_msg}"
-            ),
-        )
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=502,
-            detail=(
-                "Erro de comunicação com o provedor "
-                f"{provider_type}: {str(error)}"
+                f"Erro de comunicação com o provedor {provider_type}: {err_msg}"
             ),
         )
 
@@ -794,7 +800,7 @@ async def _execute_beneficio_query_flow(
 
     # Cache opcional por CPF caso o retorno contenha CPF válido de 11 dígitos
     if len(cliente_cpf) == 11:
-        resultado_dict = multi_response.model_dump()
+        resultado_dict = multi_response.model_dump(mode="json")
         resultado_dict["_cache_version"] = CONSULTA_CPF_CACHE_VERSION
         dados_str = json.dumps(resultado_dict)
 
@@ -868,16 +874,7 @@ async def consultar_cpf_unificado(
     if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
 
-    provider_type = await get_active_provider(db)
-
-    if not provider_type:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Provedor de consulta CPF não configurado "
-                "pelo administrador."
-            ),
-        )
+    provider_type = await get_active_provider(db) or "promosys"
 
     clean_input = "".join(filter(str.isdigit, str(request.cpf or "")))
 
@@ -953,13 +950,7 @@ async def consultar_beneficio_unificado(
     if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
 
-    provider_type = await get_active_provider(db)
-
-    if not provider_type:
-        raise HTTPException(
-            status_code=503,
-            detail="Provedor de consulta não configurado pelo administrador."
-        )
+    provider_type = await get_active_provider(db) or "promosys"
 
     if provider_type == "multicorban":
         conv_upper = str(request.convenio or "INSS").upper()
