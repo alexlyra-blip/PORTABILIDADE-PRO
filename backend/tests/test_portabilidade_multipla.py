@@ -25,6 +25,7 @@ if spec is None or spec.loader is None:
 spec.loader.exec_module(module)
 
 Service = module.PortabilidadeMultiplaFactaService
+DaycovalService = module.PortabilidadeMultiplaDaycovalService
 
 
 def test_exemplo_margem_negativa():
@@ -562,3 +563,282 @@ def test_regra_promotora_libera_quando_minimo_atendido():
     )
 
     assert bloqueios == []
+
+def test_daycoval_multipla_minimo_dois():
+    result = DaycovalService.validar(
+        banco_destino="DAYCOVAL",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "C6",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            }
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+
+    assert any(
+        "minimo 2 contratos" in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_daycoval_multipla_maximo_tres():
+    contratos = []
+
+    for index in range(4):
+        contratos.append(
+            {
+                "banco": f"BANCO {index}",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            }
+        )
+
+    result = DaycovalService.validar(
+        banco_destino="DAYCOVAL",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=contratos,
+    )
+
+    assert result["elegivel_previo"] is False
+
+    assert any(
+        "maximo 3 contratos" in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_daycoval_multipla_parcela_minima_vinte():
+    result = DaycovalService.validar(
+        banco_destino="DAYCOVAL",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "C6",
+                "beneficio": "123",
+                "parcela": 19.99,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+            {
+                "banco": "PAN",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+
+    assert any(
+        "R$ 20,00" in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_daycoval_multipla_minimo_seis_pagas():
+    result = DaycovalService.validar(
+        banco_destino="DAYCOVAL",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "C6",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 79,
+                "parcelas_pagas": 5,
+            },
+            {
+                "banco": "PAN",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+
+    assert any(
+        "6 parcelas" in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_daycoval_multipla_sem_grupos():
+    result = DaycovalService.validar(
+        banco_destino="DAYCOVAL",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "C6",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+            {
+                "banco": "MERCANTIL",
+                "beneficio": "123",
+                "parcela": 120,
+                "saldo_devedor": 3500,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+            {
+                "banco": "BRB",
+                "beneficio": "123",
+                "parcela": 130,
+                "saldo_devedor": 4000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is True
+    assert result["usa_grupos"] is False
+    assert result["grupo_operacao"] is None
+
+
+def test_daycoval_multipla_mesmo_nb():
+    result = DaycovalService.validar(
+        banco_destino="DAYCOVAL",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "C6",
+                "beneficio": "111",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+            {
+                "banco": "PAN",
+                "beneficio": "222",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+
+    assert any(
+        "beneficios/NB diferentes" in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_daycoval_multipla_nao_usa_adicional_facta():
+    result = DaycovalService.validar(
+        banco_destino="DAYCOVAL",
+        convenio="INSS",
+        margem_disponivel=-50,
+        contratos=[
+            {
+                "banco": "C6",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+            {
+                "banco": "PAN",
+                "beneficio": "123",
+                "parcela": 200,
+                "saldo_devedor": 4000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+        ],
+    )
+
+    assert result["soma_parcelas"] == 300
+    assert result["margem_negativa"] == 50
+    assert result["parcela_refin"] == 250
+
+
+def test_daycoval_intersecao_mesma_tabela_prazo():
+    resultados = [
+        {
+            "ofertas": [
+                {
+                    "banco": "DAYCOVAL",
+                    "tabela": "DAY 1",
+                    "prazo": 84,
+                    "valor_liberado": 500,
+                },
+                {
+                    "banco": "DAYCOVAL",
+                    "tabela": "DAY 2",
+                    "prazo": 96,
+                    "valor_liberado": 700,
+                },
+            ]
+        },
+        {
+            "ofertas": [
+                {
+                    "banco": "BANCO DAYCOVAL",
+                    "tabela": "DAY 1",
+                    "prazo": 84,
+                    "valor_liberado": 450,
+                }
+            ]
+        },
+    ]
+
+    result = (
+        module
+        .interseccionar_ofertas_daycoval(
+            resultados
+        )
+    )
+
+    assert len(result) == 1
+    assert result[0]["tabela"] == "DAY 1"
+    assert result[0]["prazo"] == 84
+
+    # Resultado conservador.
+    assert result[0]["valor_liberado"] == 450

@@ -1522,3 +1522,876 @@ async def simular_portabilidade_multipla_facta(
                 soma_saldos,
         },
     }
+
+# ============================================================
+# MULTIPLA_DAYCOVAL_BACKEND_V1
+# ============================================================
+
+from app.services.portabilidade_multipla_service import (
+    PortabilidadeMultiplaDaycovalService
+    as _PortabilidadeMultiplaDaycovalService,
+    interseccionar_ofertas_daycoval
+    as _interseccionar_ofertas_daycoval,
+    oferta_e_daycoval
+    as _oferta_e_daycoval,
+)
+
+
+def _daycoval_species_code(
+    value,
+):
+    match = _re.search(
+        r"\d+",
+        str(value or ""),
+    )
+
+    if not match:
+        return ""
+
+    return (
+        match
+        .group(0)
+        .zfill(2)
+    )
+
+
+def _daycoval_rejection_reasons(
+    result,
+):
+    motivos_daycoval = []
+    motivos_bloqueio = []
+
+    for item in (
+        result.get(
+            "rejeitados",
+            [],
+        )
+        or []
+    ):
+        if not isinstance(
+            item,
+            dict,
+        ):
+            continue
+
+        banco = _motor_norm(
+            item.get("banco")
+        )
+
+        motivo = (
+            item.get("motivo")
+            or item.get("reason")
+            or item.get("mensagem")
+        )
+
+        if not motivo:
+            continue
+
+        if (
+            "DAYCOVAL" in banco
+            or banco == "707"
+        ):
+            motivos_daycoval.append(
+                str(motivo)
+            )
+
+        if (
+            "BLOQUEIO REGRAS"
+            in banco
+        ):
+            motivos_bloqueio.append(
+                str(motivo)
+            )
+
+    return list(
+        dict.fromkeys(
+            motivos_bloqueio
+            + motivos_daycoval
+        )
+    )
+
+
+async def _daycoval_promotora_rules(
+    db,
+    current_user,
+    contratos,
+):
+    promotora_id = (
+        current_user.id
+    )
+
+    if (
+        getattr(
+            current_user,
+            "role",
+            "",
+        )
+        != "promotora"
+        and getattr(
+            current_user,
+            "broker_id",
+            None,
+        )
+    ):
+        promotora_id = (
+            current_user.broker_id
+        )
+
+    result = await db.execute(
+        _multipla_promotora_select(
+            _MultiplaPromotoraRule
+        ).where(
+            _MultiplaPromotoraRule.promotora_id
+            == promotora_id
+        )
+    )
+
+    origin_config = []
+    origin_blocklist = []
+
+    for rule in (
+        result.scalars().all()
+    ):
+        if rule.rule_key not in {
+            "origin_bank_config",
+            "origin_bank_blocklist",
+        }:
+            continue
+
+        try:
+            parsed = (
+                _multipla_promotora_json.loads(
+                    rule.rule_value
+                    or "[]"
+                )
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            parsed = []
+
+        if not isinstance(
+            parsed,
+            list,
+        ):
+            parsed = []
+
+        if (
+            rule.rule_key
+            == "origin_bank_config"
+        ):
+            origin_config = parsed
+
+        if (
+            rule.rule_key
+            == "origin_bank_blocklist"
+        ):
+            origin_blocklist = parsed
+
+    return (
+        PortabilidadeMultiplaFactaService
+        .validar_regras_promotora_origem(
+            contratos=contratos,
+            origin_config=origin_config,
+            origin_blocklist=(
+                origin_blocklist
+            ),
+        )
+    )
+
+
+@router.get(
+    "/daycoval-config"
+)
+async def configuracao_multipla_daycoval(
+    current_user: User = Depends(
+        get_current_user
+    ),
+):
+    return {
+        "banco": "DAYCOVAL",
+        "codigo_banco": "707",
+        "convenio": "INSS",
+        "min_contratos": (
+            _PortabilidadeMultiplaDaycovalService
+            .MIN_CONTRATOS
+        ),
+        "max_contratos": (
+            _PortabilidadeMultiplaDaycovalService
+            .MAX_CONTRATOS
+        ),
+        "parcela_minima": (
+            _PortabilidadeMultiplaDaycovalService
+            .MIN_PARCELA_ORIGEM
+        ),
+        "parcelas_pagas_minimas": (
+            _PortabilidadeMultiplaDaycovalService
+            .MIN_PARCELAS_PAGAS
+        ),
+        "usa_grupos": False,
+        "mesmo_beneficio": True,
+        "motor_autoridade_final": True,
+    }
+
+
+@router.post(
+    "/validar-daycoval"
+)
+async def validar_portabilidade_multipla_daycoval(
+    payload: PortabilidadeMultiplaInput,
+    current_user: User = Depends(
+        get_current_user
+    ),
+    db: _MultiplaPromotoraAsyncSession = Depends(
+        _multipla_promotora_get_db
+    ),
+):
+    contratos = []
+
+    for contrato in (
+        payload.contratos
+    ):
+        if hasattr(
+            contrato,
+            "model_dump",
+        ):
+            contratos.append(
+                contrato.model_dump()
+            )
+        else:
+            contratos.append(
+                contrato.dict()
+            )
+
+    validacao = (
+        _PortabilidadeMultiplaDaycovalService
+        .validar(
+            banco_destino="DAYCOVAL",
+            convenio="INSS",
+            margem_disponivel=(
+                payload.margem_disponivel
+            ),
+            contratos=contratos,
+            valor_operacao_refin=(
+                payload.valor_operacao_refin
+            ),
+        )
+    )
+
+    bloqueios_promotora = await (
+        _daycoval_promotora_rules(
+            db,
+            current_user,
+            contratos,
+        )
+    )
+
+    if bloqueios_promotora:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_promotora,
+        ]
+
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    validacao[
+        "bloqueios_promotora"
+    ] = bloqueios_promotora
+
+    return validacao
+
+
+@router.post(
+    "/simular-daycoval"
+)
+
+
+def _daycoval_benefit_time(
+    value,
+):
+    from datetime import date
+    from datetime import datetime
+
+    raw = str(
+        value or ""
+    ).strip()
+
+    if not raw:
+        return 0, 0
+
+    parsed = None
+
+    for fmt in (
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+    ):
+        try:
+            parsed = datetime.strptime(
+                raw[:10],
+                fmt,
+            ).date()
+
+            break
+
+        except ValueError:
+            pass
+
+    if parsed is None:
+        return 0, 0
+
+    today = date.today()
+
+    months = (
+        (today.year - parsed.year)
+        * 12
+        + today.month
+        - parsed.month
+    )
+
+    if today.day < parsed.day:
+        months -= 1
+
+    months = max(
+        0,
+        months,
+    )
+
+    return (
+        months // 12,
+        months % 12,
+    )
+
+
+async def simular_portabilidade_multipla_daycoval(
+    payload: _SimularMotorMultipla,
+    db: _AsyncSession = _Depends(
+        _get_db
+    ),
+    current_user = _Depends(
+        _get_current_user
+    ),
+):
+    contratos_dict = []
+
+    for contrato in (
+        payload.contratos
+    ):
+        if hasattr(
+            contrato,
+            "model_dump",
+        ):
+            contratos_dict.append(
+                contrato.model_dump()
+            )
+        else:
+            contratos_dict.append(
+                contrato.dict()
+            )
+
+    validacao = (
+        _PortabilidadeMultiplaDaycovalService
+        .validar(
+            banco_destino="DAYCOVAL",
+            convenio="INSS",
+            margem_disponivel=(
+                payload.margem_disponivel
+            ),
+            contratos=contratos_dict,
+        )
+    )
+
+    bloqueios_promotora = await (
+        _daycoval_promotora_rules(
+            db,
+            current_user,
+            contratos_dict,
+        )
+    )
+
+    if bloqueios_promotora:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_promotora,
+        ]
+
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    if not validacao.get(
+        "elegivel_previo"
+    ):
+        return {
+            "success": False,
+            "banco": "DAYCOVAL",
+            "ofertas": [],
+            "rejeitados": [],
+            "bloqueios": (
+                validacao.get(
+                    "bloqueios",
+                    [],
+                )
+            ),
+            "bloqueios_contratos": [],
+            "validacao": validacao,
+        }
+
+    soma_parcelas = _motor_float(
+        validacao.get(
+            "soma_parcelas"
+        )
+    )
+
+    soma_saldos = _motor_float(
+        validacao.get(
+            "soma_saldos"
+        )
+    )
+
+    margem_negativa = _motor_float(
+        validacao.get(
+            "margem_negativa"
+        )
+    )
+
+    # MULTIPLA_DAYCOVAL_FINAL_V3
+    idade = _motor_int(
+        getattr(
+            payload.cliente,
+            "idade",
+            0,
+        )
+    )
+
+    if idade < 18:
+        return {
+            "success": False,
+            "banco": "DAYCOVAL",
+            "ofertas": [],
+            "rejeitados": [],
+            "bloqueios": [
+                (
+                    "Idade invalida ou nao "
+                    "informada para validacao "
+                    "das regras Daycoval."
+                )
+            ],
+            "bloqueios_contratos": [],
+            "validacao": validacao,
+            "resumo": {
+                "quantidade_contratos":
+                    len(
+                        payload.contratos
+                    ),
+                "soma_parcelas":
+                    soma_parcelas,
+                "margem_negativa":
+                    margem_negativa,
+                "parcela_refin":
+                    validacao.get(
+                        "parcela_refin",
+                        0,
+                    ),
+                "saldo_total":
+                    soma_saldos,
+            },
+        }
+
+    especie_raw = (
+        getattr(
+            payload.cliente,
+            "especie",
+            None,
+        )
+        or getattr(
+            payload.cliente,
+            "benefit_species",
+            None,
+        )
+        or ""
+    )
+
+    especie_codigo = (
+        _daycoval_species_code(
+            especie_raw
+        )
+    )
+
+    data_concessao = getattr(
+        payload.cliente,
+        "data_concessao",
+        None,
+    )
+
+    (
+        benefit_time_years,
+        benefit_time_months,
+    ) = _daycoval_benefit_time(
+        data_concessao
+    )
+
+    is_60_plus = (
+        idade >= 60
+    )
+
+    is_invalidez_60_plus = (
+        especie_codigo
+        in {
+            "04",
+            "05",
+            "06",
+            "32",
+            "87",
+            "92",
+        }
+        and idade >= 60
+    )
+
+    resultados_motor = []
+    bloqueios_contratos = []
+
+    for contrato in (
+        payload.contratos
+    ):
+        banco_origem = (
+            str(
+                getattr(
+                    contrato,
+                    "codigo",
+                    "",
+                )
+                or ""
+            ).strip()
+            or str(
+                contrato.banco
+                or ""
+            ).strip()
+        )
+
+        prazo_total = max(
+            1,
+            _motor_int(
+                contrato.prazo
+            ),
+        )
+
+        prazo_restante = max(
+            1,
+            _motor_int(
+                contrato.prazo_restante
+            ),
+        )
+
+        taxa_atual = _motor_float(
+            getattr(
+                contrato,
+                "taxa",
+                0,
+            )
+        )
+
+        sim_input = (
+            _SimulacaoInput(
+                nome_cliente=(
+                    payload.cliente.nome
+                ),
+                cpf=(
+                    payload.cliente.cpf
+                ),
+                idade=idade,
+                convenio="INSS",
+                sub_convenio="",
+                benefit_species=(
+                    especie_codigo
+                ),
+                banco=banco_origem,
+
+                # Financeiro consolidado.
+                parcela=(
+                    soma_parcelas
+                ),
+                saldo_devedor=(
+                    soma_saldos
+                ),
+
+                taxa_atual=(
+                    taxa_atual
+                    if taxa_atual > 0
+                    else None
+                ),
+
+                # Prazo individual preservado
+                # para validar a origem.
+                total_term=(
+                    prazo_total
+                ),
+                remaining_term=(
+                    prazo_restante
+                ),
+
+                benefit_time_years=(
+                    benefit_time_years
+                ),
+
+                benefit_time_months=(
+                    benefit_time_months
+                ),
+
+                data_concessao=(
+                    data_concessao
+                ),
+
+                is_60_plus=(
+                    is_60_plus
+                ),
+
+                is_invalidez_60_plus=(
+                    is_invalidez_60_plus
+                ),
+
+                analfabeto=bool(
+                    getattr(
+                        payload.cliente,
+                        "analfabeto",
+                        False,
+                    )
+                ),
+
+                possui_dois_cartoes=bool(
+                    getattr(
+                        payload.cliente,
+                        "possui_dois_cartoes",
+                        False,
+                    )
+                ),
+
+                # Daycoval:
+                # o Motor abate a margem.
+                valor_margem_negativa=(
+                    margem_negativa
+                ),
+
+                # Mantem TODAS as validacoes
+                # normais de portabilidade.
+                skip_portability_rate_validation=(
+                    False
+                ),
+            )
+        )
+
+        try:
+            result = await (
+                _SimuladorService
+                .executar(
+                    sim_input,
+                    db,
+                    current_user.id,
+                )
+            )
+        except Exception as error:
+            bloqueios_contratos.append(
+                {
+                    "contrato":
+                        contrato.contrato,
+                    "banco":
+                        contrato.banco,
+                    "motivos": [
+                        str(error)
+                    ],
+                }
+            )
+
+            resultados_motor.append(
+                {
+                    "ofertas": [],
+                    "rejeitados": [],
+                }
+            )
+
+            continue
+
+        ofertas_daycoval = [
+            oferta
+            for oferta in (
+                result.get(
+                    "ofertas",
+                    [],
+                )
+                or []
+            )
+            if _oferta_e_daycoval(
+                oferta
+            )
+        ]
+
+        if not ofertas_daycoval:
+            motivos = (
+                _daycoval_rejection_reasons(
+                    result
+                )
+            )
+
+            if not motivos:
+                motivos = [
+                    (
+                        "Nenhuma tabela DAYCOVAL "
+                        "elegivel para este contrato "
+                        "nas regras atuais do Motor."
+                    )
+                ]
+
+            bloqueios_contratos.append(
+                {
+                    "contrato":
+                        contrato.contrato,
+                    "banco":
+                        contrato.banco,
+                    "motivos":
+                        motivos,
+                }
+            )
+
+        resultados_motor.append(
+            {
+                **result,
+                "ofertas":
+                    ofertas_daycoval,
+            }
+        )
+
+    if bloqueios_contratos:
+        bloqueios = []
+
+        for item in (
+            bloqueios_contratos
+        ):
+            for motivo in (
+                item.get(
+                    "motivos",
+                    [],
+                )
+                or []
+            ):
+                bloqueios.append(
+                    str(motivo)
+                )
+
+        return {
+            "success": False,
+            "banco": "DAYCOVAL",
+            "ofertas": [],
+            "bloqueios": list(
+                dict.fromkeys(
+                    bloqueios
+                )
+            ),
+            "bloqueios_contratos":
+                bloqueios_contratos,
+            "validacao":
+                validacao,
+            "resumo": {
+                "quantidade_contratos":
+                    len(
+                        payload.contratos
+                    ),
+                "soma_parcelas":
+                    soma_parcelas,
+                "margem_negativa":
+                    margem_negativa,
+                "parcela_refin":
+                    validacao.get(
+                        "parcela_refin",
+                        0,
+                    ),
+                "saldo_total":
+                    soma_saldos,
+            },
+        }
+
+    ofertas_comuns = (
+        _interseccionar_ofertas_daycoval(
+            resultados_motor
+        )
+    )
+
+    if not ofertas_comuns:
+        return {
+            "success": False,
+            "banco": "DAYCOVAL",
+            "ofertas": [],
+            "bloqueios": [
+                (
+                    "Os contratos passaram "
+                    "individualmente nas regras "
+                    "Daycoval, mas nao existe "
+                    "uma mesma tabela/prazo "
+                    "Daycoval elegivel para "
+                    "todos."
+                )
+            ],
+            "bloqueios_contratos": [],
+            "validacao":
+                validacao,
+            "resumo": {
+                "quantidade_contratos":
+                    len(
+                        payload.contratos
+                    ),
+                "soma_parcelas":
+                    soma_parcelas,
+                "margem_negativa":
+                    margem_negativa,
+                "parcela_refin":
+                    validacao.get(
+                        "parcela_refin",
+                        0,
+                    ),
+                "saldo_total":
+                    soma_saldos,
+            },
+        }
+
+    return {
+        "success": True,
+        "banco": "DAYCOVAL",
+        "convenio": "INSS",
+        "beneficio": (
+            validacao.get(
+                "beneficio_operacao"
+            )
+        ),
+        "grupo": None,
+        "ofertas":
+            ofertas_comuns,
+        "rejeitados": [],
+        "bloqueios": [],
+        "bloqueios_contratos": [],
+        "validacao":
+            validacao,
+        "resumo": {
+            "quantidade_contratos":
+                len(
+                    payload.contratos
+                ),
+            "soma_parcelas":
+                soma_parcelas,
+            "margem_negativa":
+                margem_negativa,
+            "parcela_refin":
+                validacao.get(
+                    "parcela_refin",
+                    0,
+                ),
+            "saldo_total":
+                soma_saldos,
+        },
+    }
