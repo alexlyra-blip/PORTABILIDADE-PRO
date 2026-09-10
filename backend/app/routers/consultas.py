@@ -112,33 +112,50 @@ async def _execute_cpf_query_flow(
     cache_updated_at = None
 
     if use_persistent_cache:
-        stmt = select(ConsultaCpfCache).where(
-            ConsultaCpfCache.cpf == clean_cpf
-        )
-
-        result = await db.execute(stmt)
-        cache_entry = result.scalar_one_or_none()
-
-        if cache_entry:
-            cache_json = cache_entry.dados_json
-            cache_updated_at = (
-                cache_entry.updated_at
-                or cache_entry.created_at
+        try:
+            stmt = select(ConsultaCpfCache).where(
+                ConsultaCpfCache.cpf == clean_cpf
             )
 
-            if (
-                cache_updated_at
-                and cache_updated_at.tzinfo is None
-            ):
+            result = await db.execute(stmt)
+            cache_entry = result.scalar_one_or_none()
+
+            if cache_entry:
+                cache_json = cache_entry.dados_json
                 cache_updated_at = (
-                    cache_updated_at.replace(
-                        tzinfo=timezone.utc
-                    )
+                    cache_entry.updated_at
+                    or cache_entry.created_at
                 )
+
+                if (
+                    cache_updated_at
+                    and cache_updated_at.tzinfo is None
+                ):
+                    cache_updated_at = (
+                        cache_updated_at.replace(
+                            tzinfo=timezone.utc
+                        )
+                    )
+
+        except Exception as cache_read_err:
+            logger.warning(
+                "[CACHE] Falha ao consultar cache do CPF "
+                f"{masked_cpf}: {cache_read_err}. "
+                "A consulta externa continuara normalmente."
+            )
+
+            cache_json = None
+            cache_updated_at = None
 
     # Não mantemos a conexão aberta durante a chamada
     # externa ao provedor.
-    await db.close()
+    try:
+        await db.close()
+    except Exception as close_err:
+        logger.warning(
+            "[CPF] Falha ao fechar sessao apos leitura "
+            f"do cache: {close_err}"
+        )
 
     if (
         use_persistent_cache
@@ -887,6 +904,26 @@ async def get_historico_consultas(
         logger.error(f"Erro ao buscar historico: {e}")
         raise HTTPException(status_code=500, detail="Erro interno ao buscar historico")
 
+async def _safe_active_provider(
+    db: AsyncSession,
+) -> str:
+    try:
+        return (
+            await get_active_provider(
+                db
+            )
+            or "promosys"
+        )
+    except Exception as error:
+        logger.warning(
+            "[CPF] Nao foi possivel ler o provedor "
+            "ativo no banco. Usando Promosys como "
+            f"fallback seguro: {error}"
+        )
+
+        return "promosys"
+
+
 # ROTA UNIFICADA CPF
 @router.post("/cpf", response_model=ConsultaCpfMultiResponse)
 async def consultar_cpf_unificado(
@@ -897,7 +934,7 @@ async def consultar_cpf_unificado(
     if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas de CPF.")
 
-    provider_type = await get_active_provider(db) or "promosys"
+    provider_type = await _safe_active_provider(db)
 
     clean_input = "".join(filter(str.isdigit, str(request.cpf or "")))
 
@@ -973,7 +1010,7 @@ async def consultar_beneficio_unificado(
     if current_user.role not in ["admin", "promotora", "corretor", "vendedor"]:
         raise HTTPException(status_code=403, detail="Você não tem permissão para realizar consultas.")
 
-    provider_type = await get_active_provider(db) or "promosys"
+    provider_type = await _safe_active_provider(db)
 
     if provider_type == "multicorban":
         conv_upper = str(request.convenio or "INSS").upper()

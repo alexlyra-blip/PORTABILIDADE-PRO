@@ -1,4 +1,4 @@
-﻿
+
 import json as _multipla_promotora_json
 
 from sqlalchemy.future import (
@@ -34,6 +34,7 @@ router = APIRouter()
 
 class ContratoMultiplaInput(BaseModel):
     banco: str
+    codigo: Optional[str] = None
     parcela: float
     saldo_devedor: float = 0.0
     contrato: Optional[str] = None
@@ -912,11 +913,21 @@ async def simular_portabilidade_multipla_facta(
         2,
     )
 
+    # MULTIPLA_FACTA_REFIN_MARGIN_V2
+    # Sem margem negativa, a parcela do Refin e exatamente
+    # a soma das parcelas. O +20 existe somente quando
+    # ha margem negativa a compensar.
     parcela_refin = round(
         max(
             0.0,
             soma_parcelas
-            - margem_negativa,
+            - margem_negativa
+            + (
+                PortabilidadeMultiplaFactaService
+                .ADICIONAL_VIABILIDADE
+                if margem_negativa > 0
+                else 0.0
+            ),
         ),
         2,
     )
@@ -1611,6 +1622,276 @@ def _daycoval_rejection_reasons(
     )
 
 
+async def _daycoval_motor_rules(
+    db,
+):
+    """
+    Le as regras de origem cadastradas para o
+    proprio DAYCOVAL. O Motor continua sendo
+    a autoridade final.
+    """
+
+    fallback = {
+        "daycoval_encontrado":
+            False,
+        "rules_available":
+            False,
+        "bank_id":
+            None,
+        "bank_name":
+            "DAYCOVAL",
+        "excluded_origin_banks": [
+            "C6",
+            "626",
+            "336",
+        ],
+        "origin_min_paid":
+            [],
+        "min_paid_installments":
+            6,
+        "min_table_paid_any":
+            0,
+        "active_inss_tables":
+            0,
+    }
+
+    try:
+        banks_result = await db.execute(
+            _select(_Bank).where(
+                _Bank.active == True,
+            )
+        )
+
+        banks = (
+            banks_result
+            .scalars()
+            .all()
+        )
+
+        daycoval = next(
+            (
+                bank
+                for bank in banks
+                if (
+                    "DAYCOVAL"
+                    in _motor_norm(
+                        getattr(
+                            bank,
+                            "name",
+                            "",
+                        )
+                    )
+                    or str(
+                        getattr(
+                            bank,
+                            "code",
+                            "",
+                        )
+                        or getattr(
+                            bank,
+                            "codigo",
+                            "",
+                        )
+                        or ""
+                    ).strip()
+                    == "707"
+                )
+            ),
+            None,
+        )
+
+        if not daycoval:
+            return {
+                **fallback,
+                "rules_error":
+                    "Banco DAYCOVAL ativo nao localizado.",
+            }
+
+        rules_result = await db.execute(
+            _select(
+                _BankRule
+            ).where(
+                _BankRule.bank_id
+                == daycoval.id,
+                _BankRule.active
+                == True,
+            )
+        )
+
+        rules = (
+            rules_result
+            .scalars()
+            .all()
+        )
+
+        rule = next(
+            (
+                item
+                for item in rules
+                if _motor_norm(
+                    getattr(
+                        item,
+                        "agreement",
+                        "",
+                    )
+                )
+                == "INSS"
+            ),
+            None,
+        )
+
+        if rule is None:
+            rule = next(
+                (
+                    item
+                    for item in rules
+                    if not getattr(
+                        item,
+                        "agreement",
+                        None,
+                    )
+                ),
+                rules[0]
+                if rules
+                else None,
+            )
+
+        tables_result = await db.execute(
+            _select(
+                _BankTable
+            ).where(
+                _BankTable.bank_id
+                == daycoval.id,
+                _BankTable.active
+                == True,
+            )
+        )
+
+        all_tables = (
+            tables_result
+            .scalars()
+            .all()
+        )
+
+        inss_tables = [
+            table
+            for table in all_tables
+            if _motor_norm(
+                getattr(
+                    table,
+                    "agreement",
+                    "",
+                )
+            )
+            in (
+                "",
+                "INSS",
+            )
+        ]
+
+        table_minimums = [
+            _motor_int(
+                getattr(
+                    table,
+                    "min_paid_installments",
+                    0,
+                )
+            )
+            for table in inss_tables
+            if _motor_int(
+                getattr(
+                    table,
+                    "min_paid_installments",
+                    0,
+                )
+            ) > 0
+        ]
+
+        min_table_paid_any = (
+            min(table_minimums)
+            if table_minimums
+            else 0
+        )
+
+        excluded = _parse_string_list(
+            getattr(
+                rule,
+                "excluded_origin_banks",
+                None,
+            )
+            if rule
+            else None
+        )
+
+        # Protecao explicita: DAYCOVAL nao porta C6.
+        for item in (
+            "C6",
+            "626",
+            "336",
+        ):
+            if item not in excluded:
+                excluded.append(item)
+
+        return {
+            "daycoval_encontrado":
+                True,
+            "rules_available":
+                True,
+            "bank_id":
+                daycoval.id,
+            "bank_name":
+                getattr(
+                    daycoval,
+                    "name",
+                    "DAYCOVAL",
+                ),
+            "excluded_origin_banks":
+                excluded,
+            "origin_min_paid":
+                _parse_origin_min_paid(
+                    getattr(
+                        rule,
+                        "origin_banks_min_paid",
+                        None,
+                    )
+                    if rule
+                    else None
+                ),
+            "min_paid_installments":
+                max(
+                    6,
+                    _motor_int(
+                        getattr(
+                            rule,
+                            "min_paid_installments",
+                            0,
+                        )
+                        if rule
+                        else 0
+                    ),
+                ),
+            "min_table_paid_any":
+                min_table_paid_any,
+            "active_inss_tables":
+                len(
+                    inss_tables
+                ),
+        }
+
+    except Exception as error:
+        print(
+            "[WARNING] Falha ao carregar regras "
+            "DAYCOVAL da Portabilidade Multipla: "
+            f"{error}"
+        )
+
+        return {
+            **fallback,
+            "rules_error":
+                "Falha temporaria ao carregar regras DAYCOVAL.",
+        }
+
+
 async def _daycoval_promotora_rules(
     db,
     current_user,
@@ -1637,14 +1918,28 @@ async def _daycoval_promotora_rules(
             current_user.broker_id
         )
 
-    result = await db.execute(
-        _multipla_promotora_select(
-            _MultiplaPromotoraRule
-        ).where(
-            _MultiplaPromotoraRule.promotora_id
-            == promotora_id
+    try:
+        result = await db.execute(
+            _multipla_promotora_select(
+                _MultiplaPromotoraRule
+            ).where(
+                _MultiplaPromotoraRule.promotora_id
+                == promotora_id
+            )
         )
-    )
+    except Exception as error:
+        print(
+            "[WARNING] Falha ao validar regras "
+            "da promotora para DAYCOVAL: "
+            f"{error}"
+        )
+
+        return [
+            (
+                "Nao foi possivel validar as regras "
+                "de origem da promotora no momento."
+            )
+        ]
 
     origin_config = []
     origin_blocklist = []
@@ -1698,6 +1993,22 @@ async def _daycoval_promotora_rules(
                 origin_blocklist
             ),
         )
+    )
+
+
+@router.get(
+    "/daycoval-motor-config"
+)
+async def motor_config_multipla_daycoval(
+    db: _AsyncSession = _Depends(
+        _get_db
+    ),
+    current_user = _Depends(
+        _get_current_user
+    ),
+):
+    return await _daycoval_motor_rules(
+        db
     )
 
 
@@ -1779,6 +2090,74 @@ async def validar_portabilidade_multipla_daycoval(
         )
     )
 
+    motor_rules = await (
+        _daycoval_motor_rules(
+            db
+        )
+    )
+
+    bloqueios_daycoval = []
+
+    if not motor_rules.get(
+        "rules_available"
+    ):
+        bloqueios_daycoval.append(
+            (
+                "Nao foi possivel carregar as regras "
+                "de origem do DAYCOVAL no momento."
+            )
+        )
+    else:
+        bloqueios_daycoval = (
+            _PortabilidadeMultiplaDaycovalService
+            .validar_regras_origem(
+                contratos=contratos,
+                origin_config=(
+                    motor_rules.get(
+                        "origin_min_paid",
+                        [],
+                    )
+                ),
+                origin_blocklist=(
+                    motor_rules.get(
+                        "excluded_origin_banks",
+                        [],
+                    )
+                ),
+                min_paid_installments=max(
+                    _motor_int(
+                        motor_rules.get(
+                            "min_paid_installments",
+                            0,
+                        )
+                    ),
+                    _motor_int(
+                        motor_rules.get(
+                            "min_table_paid_any",
+                            0,
+                        )
+                    ),
+                ),
+            )
+        )
+
+    if bloqueios_daycoval:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_daycoval,
+        ]
+
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    validacao[
+        "bloqueios_daycoval"
+    ] = bloqueios_daycoval
+
     bloqueios_promotora = await (
         _daycoval_promotora_rules(
             db,
@@ -1805,11 +2184,6 @@ async def validar_portabilidade_multipla_daycoval(
     ] = bloqueios_promotora
 
     return validacao
-
-
-@router.post(
-    "/simular-daycoval"
-)
 
 
 def _daycoval_benefit_time(
@@ -1868,6 +2242,9 @@ def _daycoval_benefit_time(
     )
 
 
+@router.post(
+    "/simular-daycoval"
+)
 async def simular_portabilidade_multipla_daycoval(
     payload: _SimularMotorMultipla,
     db: _AsyncSession = _Depends(
@@ -1905,6 +2282,74 @@ async def simular_portabilidade_multipla_daycoval(
             contratos=contratos_dict,
         )
     )
+
+    motor_rules = await (
+        _daycoval_motor_rules(
+            db
+        )
+    )
+
+    bloqueios_daycoval = []
+
+    if not motor_rules.get(
+        "rules_available"
+    ):
+        bloqueios_daycoval.append(
+            (
+                "Nao foi possivel carregar as regras "
+                "de origem do DAYCOVAL no momento."
+            )
+        )
+    else:
+        bloqueios_daycoval = (
+            _PortabilidadeMultiplaDaycovalService
+            .validar_regras_origem(
+                contratos=contratos_dict,
+                origin_config=(
+                    motor_rules.get(
+                        "origin_min_paid",
+                        [],
+                    )
+                ),
+                origin_blocklist=(
+                    motor_rules.get(
+                        "excluded_origin_banks",
+                        [],
+                    )
+                ),
+                min_paid_installments=max(
+                    _motor_int(
+                        motor_rules.get(
+                            "min_paid_installments",
+                            0,
+                        )
+                    ),
+                    _motor_int(
+                        motor_rules.get(
+                            "min_table_paid_any",
+                            0,
+                        )
+                    ),
+                ),
+            )
+        )
+
+    if bloqueios_daycoval:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_daycoval,
+        ]
+
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    validacao[
+        "bloqueios_daycoval"
+    ] = bloqueios_daycoval
 
     bloqueios_promotora = await (
         _daycoval_promotora_rules(
@@ -2099,94 +2544,121 @@ async def simular_portabilidade_multipla_daycoval(
             )
         )
 
-        sim_input = (
-            _SimulacaoInput(
-                nome_cliente=(
-                    payload.cliente.nome
-                ),
-                cpf=(
-                    payload.cliente.cpf
-                ),
-                idade=idade,
-                convenio="INSS",
-                sub_convenio="",
-                benefit_species=(
-                    especie_codigo
-                ),
-                banco=banco_origem,
+        try:
+            sim_input = (
+                _SimulacaoInput(
+                    nome_cliente=(
+                        payload.cliente.nome
+                    ),
+                    cpf=(
+                        payload.cliente.cpf
+                    ),
+                    idade=idade,
+                    convenio="INSS",
+                    sub_convenio="",
+                    benefit_species=(
+                        especie_codigo
+                    ),
+                    banco=banco_origem,
 
-                # Financeiro consolidado.
-                parcela=(
-                    soma_parcelas
-                ),
-                saldo_devedor=(
-                    soma_saldos
-                ),
+                    # Financeiro consolidado.
+                    parcela=(
+                        soma_parcelas
+                    ),
+                    saldo_devedor=(
+                        soma_saldos
+                    ),
 
-                taxa_atual=(
-                    taxa_atual
-                    if taxa_atual > 0
-                    else None
-                ),
+                    taxa_atual=(
+                        taxa_atual
+                        if taxa_atual > 0
+                        else None
+                    ),
 
-                # Prazo individual preservado
-                # para validar a origem.
-                total_term=(
-                    prazo_total
-                ),
-                remaining_term=(
-                    prazo_restante
-                ),
+                    # Prazo individual preservado
+                    # para validar a origem.
+                    total_term=(
+                        prazo_total
+                    ),
+                    remaining_term=(
+                        prazo_restante
+                    ),
 
-                benefit_time_years=(
-                    benefit_time_years
-                ),
+                    benefit_time_years=(
+                        benefit_time_years
+                    ),
 
-                benefit_time_months=(
-                    benefit_time_months
-                ),
+                    benefit_time_months=(
+                        benefit_time_months
+                    ),
 
-                data_concessao=(
-                    data_concessao
-                ),
+                    data_concessao=(
+                        data_concessao
+                    ),
 
-                is_60_plus=(
-                    is_60_plus
-                ),
+                    is_60_plus=(
+                        is_60_plus
+                    ),
 
-                is_invalidez_60_plus=(
-                    is_invalidez_60_plus
-                ),
+                    is_invalidez_60_plus=(
+                        is_invalidez_60_plus
+                    ),
 
-                analfabeto=bool(
-                    getattr(
-                        payload.cliente,
-                        "analfabeto",
-                        False,
-                    )
-                ),
+                    analfabeto=bool(
+                        getattr(
+                            payload.cliente,
+                            "analfabeto",
+                            False,
+                        )
+                    ),
 
-                possui_dois_cartoes=bool(
-                    getattr(
-                        payload.cliente,
-                        "possui_dois_cartoes",
-                        False,
-                    )
-                ),
+                    possui_dois_cartoes=bool(
+                        getattr(
+                            payload.cliente,
+                            "possui_dois_cartoes",
+                            False,
+                        )
+                    ),
 
-                # Daycoval:
-                # o Motor abate a margem.
-                valor_margem_negativa=(
-                    margem_negativa
-                ),
+                    # Daycoval:
+                    # o Motor abate a margem.
+                    valor_margem_negativa=(
+                        margem_negativa
+                    ),
 
-                # Mantem TODAS as validacoes
-                # normais de portabilidade.
-                skip_portability_rate_validation=(
-                    False
-                ),
+                    # Mantem TODAS as validacoes
+                    # normais de portabilidade.
+                    skip_portability_rate_validation=(
+                        False
+                    ),
+                )
             )
-        )
+
+        except Exception as error:
+            bloqueios_contratos.append(
+                {
+                    "contrato":
+                        contrato.contrato,
+                    "banco":
+                        contrato.banco,
+                    "motivos": [
+                        (
+                            "Falha ao preparar o contrato "
+                            "para o Motor DAYCOVAL: "
+                            f"{error}"
+                        )
+                    ],
+                }
+            )
+
+            resultados_motor.append(
+                {
+                    "ofertas": [],
+                    "rejeitados": [],
+                }
+            )
+
+            continue
 
         try:
             result = await (
@@ -2322,6 +2794,207 @@ async def simular_portabilidade_multipla_daycoval(
             resultados_motor
         )
     )
+
+    # MULTIPLA_DAYCOVAL_FINANCEIRO_V4
+    # O Motor retorna os campos padrao:
+    # - valor_parcela
+    # - valor_total_contrato
+    # - valor_liberado
+    #
+    # A tela da Portabilidade Multipla usa:
+    # - parcela_refin
+    # - novo_contrato
+    # - troco
+    #
+    # Normalizamos e recalculamos pelo coeficiente efetivo
+    # para garantir a formula:
+    #   novo_contrato = parcela_refin / coeficiente
+    #   troco = novo_contrato - soma_saldos
+    ofertas_normalizadas = []
+
+    parcela_refin_daycoval = round(
+        _motor_float(
+            validacao.get(
+                "parcela_refin",
+                soma_parcelas,
+            )
+        ),
+        2,
+    )
+
+    for oferta in ofertas_comuns:
+        tabela = (
+            oferta.get("tabela")
+            or oferta.get("table_name")
+            or oferta.get("nome_tabela")
+            or "DAYCOVAL"
+        )
+
+        prazo = _motor_int(
+            oferta.get(
+                "prazo",
+                oferta.get(
+                    "term",
+                    0,
+                ),
+            )
+        )
+
+        parcela_motor = _motor_float(
+            oferta.get(
+                "valor_parcela",
+                oferta.get(
+                    "parcela",
+                    parcela_refin_daycoval,
+                ),
+            )
+        )
+
+        if parcela_motor <= 0:
+            parcela_motor = (
+                parcela_refin_daycoval
+            )
+
+        novo_contrato_motor = (
+            _motor_float(
+                oferta.get(
+                    "valor_total_contrato",
+                    oferta.get(
+                        "novo_contrato",
+                        oferta.get(
+                            "valor_financiado",
+                            0,
+                        ),
+                    ),
+                )
+            )
+        )
+
+        coeficiente = _motor_float(
+            oferta.get(
+                "coeficiente",
+                oferta.get(
+                    "coefficient",
+                    0,
+                ),
+            )
+        )
+
+        # O Motor atual nao expõe o coeficiente na oferta,
+        # mas expõe parcela e valor total do contrato.
+        # Logo, recuperamos o coeficiente efetivamente usado.
+        if (
+            coeficiente <= 0
+            and novo_contrato_motor > 0
+            and parcela_motor > 0
+        ):
+            coeficiente = (
+                parcela_motor
+                / novo_contrato_motor
+            )
+
+        novo_contrato = (
+            round(
+                parcela_refin_daycoval
+                / coeficiente,
+                2,
+            )
+            if (
+                coeficiente > 0
+                and parcela_refin_daycoval > 0
+            )
+            else round(
+                novo_contrato_motor,
+                2,
+            )
+        )
+
+        troco = round(
+            novo_contrato
+            - soma_saldos,
+            2,
+        )
+
+        # Se por qualquer motivo o coeficiente nao puder
+        # ser reconstruido, preserva o calculo do Motor.
+        if coeficiente <= 0:
+            troco_raw = oferta.get(
+                "troco"
+            )
+
+            if troco_raw is None:
+                troco_raw = oferta.get(
+                    "valor_liberado"
+                )
+
+            troco = round(
+                _motor_float(
+                    troco_raw
+                ),
+                2,
+            )
+
+        taxa = _motor_float(
+            oferta.get(
+                "taxa_juros",
+                oferta.get(
+                    "taxa",
+                    oferta.get(
+                        "interest_rate",
+                        0,
+                    ),
+                ),
+            )
+        )
+
+        taxa_refin = _motor_float(
+            oferta.get(
+                "taxa_refin",
+                oferta.get(
+                    "interest_rate_refin",
+                    taxa,
+                ),
+            )
+        )
+
+        ofertas_normalizadas.append({
+            **oferta,
+            "banco":
+                oferta.get(
+                    "banco"
+                )
+                or "DAYCOVAL",
+            "tabela":
+                str(tabela),
+            "prazo":
+                prazo,
+            "taxa_juros":
+                taxa,
+            "taxa_refin":
+                taxa_refin,
+            "coeficiente":
+                round(
+                    coeficiente,
+                    8,
+                ),
+            "parcela_refin":
+                parcela_refin_daycoval,
+            "novo_contrato":
+                novo_contrato,
+            "saldo_total":
+                round(
+                    soma_saldos,
+                    2,
+                ),
+            "troco":
+                troco,
+            "quantidade_contratos":
+                len(
+                    payload.contratos
+                ),
+        })
+
+    ofertas_comuns = ofertas_normalizadas
 
     if not ofertas_comuns:
         return {

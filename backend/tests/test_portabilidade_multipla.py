@@ -182,7 +182,7 @@ def test_refin_reprova_se_nao_atender_nenhum():
         valor_operacao_refin=2999,
     )
 
-    assert result["parcela_refin"] == 40
+    assert result["parcela_refin"] == 20
 
     assert (
         result[
@@ -476,7 +476,7 @@ def test_parcela_refin_final_inclui_vinte():
     assert result["margem_negativa"] == 80
     assert result["parcela_refin"] == 340
 
-def test_parcela_refin_final_inclui_vinte_sem_margem_negativa():
+def test_parcela_refin_sem_adicional_quando_margem_zero():
     result = Service.validar(
         banco_destino="FACTA",
         convenio="INSS",
@@ -499,7 +499,34 @@ def test_parcela_refin_final_inclui_vinte_sem_margem_negativa():
 
     assert result["soma_parcelas"] == 200
     assert result["margem_negativa"] == 0
-    assert result["parcela_refin"] == 220
+    assert result["parcela_refin"] == 200
+
+
+def test_parcela_refin_sem_adicional_quando_margem_positiva():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=25,
+        contratos=[
+            {
+                "banco": "C6",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+            },
+            {
+                "banco": "PAN",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+            },
+        ],
+    )
+
+    assert result["soma_parcelas"] == 200
+    assert result["margem_negativa"] == 0
+    assert result["parcela_refin"] == 200
+
 
 def test_regra_promotora_bloqueia_banco_origem():
     bloqueios = Service.validar_regras_promotora_origem(
@@ -698,7 +725,7 @@ def test_daycoval_multipla_sem_grupos():
         margem_disponivel=0,
         contratos=[
             {
-                "banco": "C6",
+                "banco": "BMG",
                 "beneficio": "123",
                 "parcela": 100,
                 "saldo_devedor": 3000,
@@ -799,6 +826,115 @@ def test_daycoval_multipla_nao_usa_adicional_facta():
     assert result["parcela_refin"] == 250
 
 
+def test_daycoval_bloqueia_c6_por_nome():
+    result = DaycovalService.validar(
+        banco_destino="DAYCOVAL",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "626 - C6 CONSIGNADO",
+                "codigo": "626",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+            {
+                "banco": "PAN",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+    assert any(
+        "nao porta contratos originados no Banco C6"
+        in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_daycoval_bloqueia_c6_por_codigo_336():
+    result = DaycovalService.validar(
+        banco_destino="DAYCOVAL",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "ORIGEM",
+                "codigo": "336",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+            {
+                "banco": "PAN",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "prazo": 84,
+                "prazo_restante": 70,
+                "parcelas_pagas": 14,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+
+
+def test_daycoval_aplica_minimo_especifico_por_origem():
+    bloqueios = DaycovalService.validar_regras_origem(
+        contratos=[
+            {
+                "banco": "BANCO TESTE",
+                "parcelas_pagas": 9,
+            }
+        ],
+        origin_config=[
+            {
+                "origin_bank": "BANCO TESTE",
+                "min_paid": 12,
+            }
+        ],
+        origin_blocklist=[],
+        min_paid_installments=6,
+    )
+
+    assert len(bloqueios) == 1
+    assert "12 parcelas pagas" in bloqueios[0]
+    assert "possui 9" in bloqueios[0]
+
+
+def test_daycoval_aplica_blocklist_dinamico():
+    bloqueios = DaycovalService.validar_regras_origem(
+        contratos=[
+            {
+                "banco": "BANCO BLOQUEADO",
+                "parcelas_pagas": 30,
+            }
+        ],
+        origin_config=[],
+        origin_blocklist=[
+            "BANCO BLOQUEADO",
+        ],
+        min_paid_installments=6,
+    )
+
+    assert len(bloqueios) == 1
+    assert "DAYCOVAL nao porta" in bloqueios[0]
+
+
 def test_daycoval_intersecao_mesma_tabela_prazo():
     resultados = [
         {
@@ -842,3 +978,114 @@ def test_daycoval_intersecao_mesma_tabela_prazo():
 
     # Resultado conservador.
     assert result[0]["valor_liberado"] == 450
+
+
+def test_rota_daycoval_decorator_aponta_para_endpoint_json():
+    router_path = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "routers"
+        / "portabilidade_multipla.py"
+    )
+
+    text = router_path.read_text(encoding="utf-8")
+
+    helper_pos = text.index(
+        "def _daycoval_benefit_time("
+    )
+    decorator_pos = text.index(
+        '@router.post(\n    "/simular-daycoval"\n)',
+        helper_pos,
+    )
+    endpoint_pos = text.index(
+        "async def simular_portabilidade_multipla_daycoval(",
+        decorator_pos,
+    )
+
+    assert helper_pos < decorator_pos < endpoint_pos
+    assert (
+        "def _daycoval_benefit_time"
+        not in text[decorator_pos:endpoint_pos]
+    )
+
+
+def test_rota_daycoval_envia_financeiro_consolidado_ao_motor():
+    router_path = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "routers"
+        / "portabilidade_multipla.py"
+    )
+
+    text = router_path.read_text(encoding="utf-8")
+    start = text.index(
+        "async def simular_portabilidade_multipla_daycoval("
+    )
+    endpoint = text[start:]
+
+    # O financial_engine do Motor calcula:
+    # (parcela / coeficiente) - saldo_devedor.
+    # Aqui garantimos que a Multipla envia os valores consolidados.
+    assert "parcela=(\n                        soma_parcelas\n                    )" in endpoint
+    assert "saldo_devedor=(\n                        soma_saldos\n                    )" in endpoint
+
+def test_frontend_facta_nao_soma_vinte_com_margem_zero():
+    page_path = (
+        Path(__file__).resolve().parents[2]
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "portabilidade-multipla"
+        / "page.js"
+    )
+
+    text = page_path.read_text(encoding="utf-8")
+
+    assert "MULTIPLA_FACTA_REFIN_MARGIN_V3" in text
+    assert "margemNegativa > 0" in text
+    assert "? money(" in text
+    assert ": 0" in text
+
+
+def test_daycoval_normaliza_financeiro_para_tela():
+    router_path = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "routers"
+        / "portabilidade_multipla.py"
+    )
+
+    text = router_path.read_text(encoding="utf-8")
+
+    start = text.index(
+        "# MULTIPLA_DAYCOVAL_FINANCEIRO_V4"
+    )
+    endpoint_tail = text[start:]
+
+    assert '"valor_total_contrato"' in endpoint_tail
+    assert '"valor_liberado"' in endpoint_tail
+    assert '"parcela_refin"' in endpoint_tail
+    assert '"novo_contrato"' in endpoint_tail
+    assert '"troco"' in endpoint_tail
+    assert "parcela_refin_daycoval" in endpoint_tail
+    assert "/ coeficiente" in endpoint_tail
+    assert "- soma_saldos" in endpoint_tail
+
+
+def test_daycoval_formula_reconstroi_troco_consolidado():
+    soma_parcelas = 141.15
+    soma_saldos = 6445.15
+    coeficiente = 0.017
+
+    novo_contrato = round(
+        soma_parcelas / coeficiente,
+        2,
+    )
+    troco = round(
+        novo_contrato - soma_saldos,
+        2,
+    )
+
+    assert novo_contrato == 8302.94
+    assert troco == 1857.79
