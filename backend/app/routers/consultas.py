@@ -290,6 +290,9 @@ async def _execute_cpf_query_flow(
 
     provider = get_provider_by_type(provider_type)
 
+    beneficios_info = None
+    last_beneficios_error = None
+
     try:
         beneficios_info = (
             await provider.consultar_beneficios(
@@ -297,9 +300,29 @@ async def _execute_cpf_query_flow(
                 convenio=convenio,
             )
         )
+    except Exception as error:
+        last_beneficios_error = error
+        if provider_type == "multicorban":
+            logger.warning(
+                f"[FALLBACK] MultiCorban falhou ao listar benefícios do CPF {masked_cpf}: {error}. Tentando Promosys..."
+            )
+            try:
+                fallback_provider = PromosysProvider()
+                beneficios_info = await fallback_provider.consultar_beneficios(
+                    clean_cpf,
+                    convenio=convenio,
+                )
+                provider = fallback_provider
+                provider_type = "promosys"
+                last_beneficios_error = None
+            except Exception as fb_err:
+                logger.error(
+                    f"[FALLBACK] Promosys também falhou para CPF {masked_cpf}: {fb_err}"
+                )
+                last_beneficios_error = fb_err
 
-    except ValueError as error:
-        err_msg = str(error)
+    if not beneficios_info and last_beneficios_error is not None:
+        err_msg = str(last_beneficios_error)
 
         if (
             "token" in err_msg.lower()
@@ -318,6 +341,7 @@ async def _execute_cpf_query_flow(
             "nenhum benefício encontrado"
             in err_msg.lower()
             or "não encontrado" in err_msg.lower()
+            or "nenhum" in err_msg.lower()
         ):
             raise HTTPException(
                 status_code=404,
@@ -336,16 +360,7 @@ async def _execute_cpf_query_flow(
             ),
         )
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=502,
-            detail=(
-                "Erro de comunicação com o provedor "
-                f"{provider_type}: {str(error)}"
-            ),
-        )
-
-    beneficios_list = beneficios_info.get(
+    beneficios_list = (beneficios_info or {}).get(
         "beneficios",
         [],
     )
@@ -400,15 +415,23 @@ async def _execute_cpf_query_flow(
 
         for numero_beneficio in numeros_beneficios:
             try:
+                res = None
                 # O MultiCorban precisa do convênio para
                 # localizar a matrícula no cache correto.
                 if provider_type == "multicorban":
-                    res = (
-                        await provider.consultar_por_beneficio(
-                            numero_beneficio,
-                            convenio=convenio,
+                    try:
+                        res = (
+                            await provider.consultar_por_beneficio(
+                                numero_beneficio,
+                                convenio=convenio,
+                            )
                         )
-                    )
+                    except Exception as mc_err:
+                        logger.warning(
+                            f"[FALLBACK] MultiCorban falhou para NB {numero_beneficio}: {mc_err}. Tentando Promosys..."
+                        )
+                        fallback_provider = PromosysProvider()
+                        res = await fallback_provider.consultar_por_beneficio(numero_beneficio)
                 else:
                     res = (
                         await provider.consultar_por_beneficio(
@@ -574,7 +597,7 @@ async def _execute_cpf_query_flow(
     # A tabela atual não possui coluna de convênio.
     # Portanto, somente INSS pode ser persistido nela.
     if use_persistent_cache:
-        resultado_dict = multi_response.model_dump()
+        resultado_dict = multi_response.model_dump(mode="json")
         resultado_dict["_cache_version"] = CONSULTA_CPF_CACHE_VERSION
         dados_str = json.dumps(resultado_dict)
 
