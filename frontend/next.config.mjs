@@ -1,17 +1,25 @@
 /** @type {import('next').NextConfig} */
-const isDevWindows = process.platform === 'win32';
-const isProduction = process.env.NODE_ENV === 'production';
+const isDevWindows =
+  process.platform === 'win32';
 
-const BACKEND_URL = isProduction
-  ? 'http://simulador_portabilidadepro-backend:8000'
-  : (
-      process.env.BACKEND_URL ||
-      (
-        isDevWindows
-          ? 'http://127.0.0.1:8000'
-          : 'http://127.0.0.1:8000'
-      )
-    );
+/* MULTIPLA_WINDOWS_BACKEND_V3 */
+const configuredBackendUrl =
+  (process.env.BACKEND_URL || '').trim();
+
+const localBackendUrl =
+  (
+    process.env.LOCAL_BACKEND_URL ||
+    'http://127.0.0.1:8000'
+  ).trim();
+
+const productionBackendUrl =
+  configuredBackendUrl ||
+  'http://simulador_portabilidadepro-backend:8000';
+
+const BACKEND_URL =
+  isDevWindows
+    ? localBackendUrl
+    : productionBackendUrl;
 
 console.log(
   `[NextConfig] Using Backend URL: ${BACKEND_URL}`
