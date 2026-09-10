@@ -1182,6 +1182,30 @@ export default function PortabilidadeMultiplaPage() {
 
     api
       .get(
+        "/portabilidade-multipla/daycoval-motor-config"
+      )
+      .then((response) => {
+
+        setConfig(
+          (previous) => ({
+            ...previous,
+            daycoval_motor_rules:
+              response || {},
+          })
+        );
+      })
+      .catch((error) => {
+
+        console.warn(
+          "Nao foi possivel carregar "
+          + "o pre-check DAYCOVAL:",
+          error
+        );
+      });
+
+
+    api
+      .get(
         "/admin/sub-logos"
       )
       .then((response) => {
@@ -1469,14 +1493,18 @@ export default function PortabilidadeMultiplaPage() {
               )
             : 0;
 
-        /* MULTIPLA_REFIN_FINAL_PLUS_20 */
+        /* MULTIPLA_FACTA_REFIN_MARGIN_V3 */
         const parcelaRefin =
           Math.max(
             0,
             somaParcelas -
               margemNegativa +
-              money(
-                config.adicional_viabilidade
+              (
+                margemNegativa > 0
+                  ? money(
+                      config.adicional_viabilidade
+                    )
+                  : 0
               )
           );
 
@@ -1664,6 +1692,27 @@ export default function PortabilidadeMultiplaPage() {
 
         return;
       }
+
+      /*
+       * MULTIPLA_CPF_FRESH_STATE_V1
+       * Nunca manter cliente/contratos/simulacao
+       * do CPF anterior durante uma nova consulta.
+       */
+      setRawResponse(null);
+      setSource("");
+      setBenefits([]);
+      setActiveBenefitIndex(0);
+      setLoans([]);
+      setSelectedIds([]);
+      setMargin(0);
+      setValidation(null);
+      setMotorResult(null);
+      setSelectedFactaTerm(null);
+      setClientData({
+        nome: "",
+        cpf: "",
+        beneficio: "",
+      });
 
       setLoadingCpf(true);
       setNotice(null);
@@ -1997,10 +2046,28 @@ export default function PortabilidadeMultiplaPage() {
   const getDaycovalPrecheck = (
     loan
   ) => {
-    const parcela =
-      money(
-        loan?.parcela
-      );
+    const motorRules =
+      config
+        ?.daycoval_motor_rules ||
+      {};
+
+    const loanBankText = [
+      loan?.codigo,
+      loan?.banco,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const bankWords = new Set(
+      norm(loanBankText)
+        .split(/[^A-Z0-9]+/)
+        .filter(Boolean)
+    );
+
+    const isC6 =
+      bankWords.has("C6") ||
+      bankWords.has("626") ||
+      bankWords.has("336");
 
     const paidRaw =
       loan?.parcelas_pagas;
@@ -2025,20 +2092,110 @@ export default function PortabilidadeMultiplaPage() {
               )
           );
 
-    if (parcela < 20) {
+    if (isC6) {
       return {
         blocked: true,
         reason:
-          "Daycoval exige parcela minima de R$ 20,00.",
+          "DAYCOVAL nao porta contratos do Banco C6.",
         paid,
       };
     }
 
-    if (paid < 6) {
+    const excluded =
+      motorRules
+        ?.excluded_origin_banks ||
+      [];
+
+    const excludedMatch =
+      excluded.find(
+        (bank) =>
+          bankRuleMatches(
+            loanBankText,
+            bank
+          )
+      );
+
+    if (excludedMatch) {
       return {
         blocked: true,
         reason:
-          `Daycoval exige no minimo 6 parcelas pagas. Contrato possui ${paid}.`,
+          "DAYCOVAL nao porta este banco originador.",
+        paid,
+      };
+    }
+
+    const parcela =
+      money(
+        loan?.parcela
+      );
+
+    if (parcela < 20) {
+      return {
+        blocked: true,
+        reason:
+          "DAYCOVAL exige parcela minima de R$ 20,00.",
+        paid,
+      };
+    }
+
+    let specificMinimum = 0;
+
+    for (
+      const rule
+      of (
+        motorRules
+          ?.origin_min_paid ||
+        []
+      )
+    ) {
+
+      if (
+        bankRuleMatches(
+          loanBankText,
+          rule?.origin_bank
+        )
+      ) {
+        specificMinimum =
+          Math.max(
+            specificMinimum,
+            Number(
+              rule?.min_paid ||
+              0
+            )
+          );
+      }
+    }
+
+    const required = Math.max(
+      6,
+
+      Number(
+        motorRules
+          ?.min_paid_installments ||
+        0
+      ),
+
+      Number(
+        motorRules
+          ?.min_table_paid_any ||
+        0
+      ),
+
+      specificMinimum
+    );
+
+    if (
+      required > 0 &&
+      paid < required
+    ) {
+      return {
+        blocked: true,
+        reason:
+          `DAYCOVAL exige no minimo `
+          + `${required} parcelas `
+          + `pagas para esta origem. `
+          + `Contrato possui ${paid}.`,
+        required,
         paid,
       };
     }
@@ -2046,6 +2203,7 @@ export default function PortabilidadeMultiplaPage() {
     return {
       blocked: false,
       reason: "",
+      required,
       paid,
     };
   };
@@ -2389,6 +2547,10 @@ export default function PortabilidadeMultiplaPage() {
                   (loan) => ({
                     banco:
                       loan.banco,
+
+                    codigo:
+                      loan.codigo ||
+                      "",
 
                     parcela:
                       money(
@@ -2972,7 +3134,7 @@ export default function PortabilidadeMultiplaPage() {
                   text-red-600
                 "
               >
-                FACTA: {activePrecheck.reason}
+                {activePrecheck.reason}
               </div>
             ) : null}
 
@@ -3363,7 +3525,7 @@ export default function PortabilidadeMultiplaPage() {
                     tracking-[0.2em]
                   "
                 >
-                  FACTA • INSS
+                  {selectedDestination} • INSS
                 </span>
               </div>
 
@@ -3409,8 +3571,11 @@ export default function PortabilidadeMultiplaPage() {
               className="
                 mb-5
                 flex
+                w-full
                 flex-col
                 gap-2
+                xl:w-[220px]
+                xl:shrink-0
               "
             >
               <span
@@ -3429,9 +3594,9 @@ export default function PortabilidadeMultiplaPage() {
                 className="
                   grid
                   w-full
-                  max-w-[360px]
                   grid-cols-2
                   gap-2
+                  xl:w-[220px]
                 "
               >
                 {[
@@ -3459,9 +3624,10 @@ export default function PortabilidadeMultiplaPage() {
                           items-center
                           justify-center
                           gap-2
+                          min-w-0
                           rounded-xl
                           border
-                          px-4
+                          px-3
                           text-[10px]
                           font-black
                           uppercase
@@ -3499,9 +3665,13 @@ export default function PortabilidadeMultiplaPage() {
             <div
               className="
                 grid
+                min-w-0
                 grid-cols-2
                 gap-2
                 md:grid-cols-4
+                xl:w-[460px]
+                xl:grid-cols-[1.35fr_1fr_1.15fr_1fr]
+                xl:shrink-0
               "
             >
               {[
@@ -3514,11 +3684,12 @@ export default function PortabilidadeMultiplaPage() {
                   <div
                     key={label}
                     className="
+                      min-w-0
                       rounded-2xl
                       border
                       border-white/10
                       bg-white/5
-                      px-4
+                      px-3
                       py-3
                     "
                   >
@@ -3535,11 +3706,20 @@ export default function PortabilidadeMultiplaPage() {
                     </p>
 
                     <p
-                      className="
+                      className={`
                         mt-1
-                        text-sm
+                        min-w-0
+                        break-words
                         font-black
-                      "
+                        leading-tight
+                        ${
+                          label === "Banco"
+                            ? "whitespace-nowrap text-[11px] sm:text-xs"
+                            : label === "Limite"
+                              ? "whitespace-nowrap text-xs sm:text-sm"
+                              : "text-sm"
+                        }
+                      `}
                     >
                       {value}
                     </p>

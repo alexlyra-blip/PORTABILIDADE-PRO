@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import unicodedata
 from typing import Any, Dict, List, Optional
@@ -577,17 +577,22 @@ class PortabilidadeMultiplaFactaService:
                     "valor da margem negativa."
                 )
 
-        # MULTIPLA_REFIN_FINAL_PLUS_20
+        # MULTIPLA_FACTA_REFIN_MARGIN_V2
         # Regra FACTA:
-        # soma das parcelas
-        # - margem negativa
-        # + R$ 20,00.
-        parcela_refin = round(
-            soma_parcelas
-            - margem_negativa
-            + cls.ADICIONAL_VIABILIDADE,
-            2,
-        )
+        # - margem zero/positiva: soma das parcelas;
+        # - margem negativa: soma - negativo + R$ 20,00.
+        if margem_negativa > 0:
+            parcela_refin = round(
+                soma_parcelas
+                - margem_negativa
+                + cls.ADICIONAL_VIABILIDADE,
+                2,
+            )
+        else:
+            parcela_refin = round(
+                soma_parcelas,
+                2,
+            )
 
         if parcela_refin <= 0:
             bloqueios.append(
@@ -891,6 +896,217 @@ class PortabilidadeMultiplaDaycovalService:
     MIN_PARCELA_ORIGEM = 20.00
     MIN_PARCELAS_PAGAS = 6
 
+    # O DAYCOVAL nao porta contratos originados no C6.
+    # Mantemos a protecao estrutural aqui para a regra
+    # existir mesmo se a configuracao dinamica falhar.
+    C6_ORIGIN_CODES = {
+        "336",
+        "626",
+    }
+
+    @classmethod
+    def _origin_bank_text(
+        cls,
+        contrato,
+    ):
+        return " ".join(
+            str(
+                contrato.get(key)
+                or ""
+            ).strip()
+            for key in (
+                "codigo",
+                "banco",
+            )
+            if str(
+                contrato.get(key)
+                or ""
+            ).strip()
+        )
+
+    @classmethod
+    def _is_c6_origin(
+        cls,
+        contrato,
+    ):
+        words = (
+            PortabilidadeMultiplaFactaService
+            ._promotora_clean_words(
+                cls._origin_bank_text(
+                    contrato
+                )
+            )
+        )
+
+        if "C6" in words:
+            return True
+
+        return bool(
+            cls.C6_ORIGIN_CODES
+            .intersection(words)
+        )
+
+    @classmethod
+    def validar_regras_origem(
+        cls,
+        contratos,
+        origin_config=None,
+        origin_blocklist=None,
+        min_paid_installments=0,
+    ):
+        """
+        Regras dinamicas do banco destino DAYCOVAL:
+        - bancos de origem bloqueados;
+        - minimo geral de parcelas pagas;
+        - minimo especifico por banco de origem.
+
+        A regra estrutural do C6 e aplicada em validar().
+        """
+
+        origin_config = (
+            origin_config
+            or []
+        )
+
+        origin_blocklist = (
+            origin_blocklist
+            or []
+        )
+
+        bloqueios = []
+
+        minimum_global = max(
+            cls.MIN_PARCELAS_PAGAS,
+            cls._int(
+                min_paid_installments
+            ),
+        )
+
+        for index, contrato in enumerate(
+            contratos or [],
+            start=1,
+        ):
+            if cls._is_c6_origin(
+                contrato
+            ):
+                continue
+
+            banco = cls._origin_bank_text(
+                contrato
+            )
+
+            pagas = cls.parcelas_pagas(
+                contrato
+            )
+
+            specific_minimum = 0
+            specific_bank = ""
+
+            for rule in origin_config:
+                if not isinstance(
+                    rule,
+                    dict,
+                ):
+                    continue
+
+                rule_bank = str(
+                    rule.get(
+                        "origin_bank",
+                        "",
+                    )
+                    or ""
+                ).strip()
+
+                if not (
+                    PortabilidadeMultiplaFactaService
+                    ._promotora_bank_matches(
+                        banco,
+                        rule_bank,
+                    )
+                ):
+                    continue
+
+                rule_minimum = cls._int(
+                    rule.get(
+                        "min_paid",
+                        0,
+                    )
+                )
+
+                if (
+                    rule_minimum
+                    > specific_minimum
+                ):
+                    specific_minimum = (
+                        rule_minimum
+                    )
+                    specific_bank = (
+                        rule_bank
+                    )
+
+            required = max(
+                minimum_global,
+                specific_minimum,
+            )
+
+            if pagas < required:
+                bank_label = (
+                    specific_bank
+                    or str(
+                        contrato.get(
+                            "banco",
+                            "",
+                        )
+                        or "Banco de origem"
+                    ).strip()
+                )
+
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    f"{bank_label} exige no minimo "
+                    f"{required} parcelas pagas "
+                    "para portabilidade DAYCOVAL. "
+                    f"Contrato possui {pagas}."
+                )
+                continue
+
+            for rule in origin_blocklist:
+                if isinstance(
+                    rule,
+                    dict,
+                ):
+                    rule_bank = str(
+                        rule.get(
+                            "origin_bank",
+                            "",
+                        )
+                        or ""
+                    ).strip()
+                else:
+                    rule_bank = str(
+                        rule
+                        or ""
+                    ).strip()
+
+                if not (
+                    PortabilidadeMultiplaFactaService
+                    ._promotora_bank_matches(
+                        banco,
+                        rule_bank,
+                    )
+                ):
+                    continue
+
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "DAYCOVAL nao porta contratos "
+                    "originados no banco "
+                    f"{rule_bank}."
+                )
+                break
+
+        return bloqueios
+
     @staticmethod
     def _money(value):
         try:
@@ -1098,6 +1314,15 @@ class PortabilidadeMultiplaDaycovalService:
                     f"Contrato {index}: "
                     "banco de origem "
                     "nao informado."
+                )
+
+            if cls._is_c6_origin(
+                contrato
+            ):
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "DAYCOVAL nao porta contratos "
+                    "originados no Banco C6."
                 )
 
             if not beneficio:
