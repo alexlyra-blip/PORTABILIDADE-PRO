@@ -5363,7 +5363,7 @@ export default function PortabilidadeMultiplaPage() {
                                             text-emerald-300
                                           "
                                         >
-                                          Melhor troco
+                                          Melhor tabela
                                         </span>
                                       ) : null}
                                     </div>
