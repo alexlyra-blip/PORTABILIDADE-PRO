@@ -872,3 +872,568 @@ def interseccionar_ofertas_facta(
         )
 
     return resultado
+
+# ============================================================
+# MULTIPLA_DAYCOVAL_BACKEND_V1
+# ============================================================
+
+class PortabilidadeMultiplaDaycovalService:
+    """
+    Regras estruturais da Multipla Daycoval.
+
+    O Motor continua sendo a autoridade
+    para as demais regras bancarias.
+    """
+
+    MIN_CONTRATOS = 2
+    MAX_CONTRATOS = 3
+
+    MIN_PARCELA_ORIGEM = 20.00
+    MIN_PARCELAS_PAGAS = 6
+
+    @staticmethod
+    def _money(value):
+        try:
+            return round(
+                float(value or 0),
+                2,
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return 0.0
+
+    @staticmethod
+    def _int(value):
+        try:
+            return max(
+                0,
+                int(float(value or 0)),
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return 0
+
+    @staticmethod
+    def normalizar_beneficio(value):
+        raw = str(
+            value or ""
+        ).strip()
+
+        digits = "".join(
+            char
+            for char in raw
+            if char.isdigit()
+        )
+
+        return (
+            digits
+            or raw.upper()
+        )
+
+    @classmethod
+    def parcelas_pagas(
+        cls,
+        contrato,
+    ):
+        explicit = contrato.get(
+            "parcelas_pagas"
+        )
+
+        if explicit not in (
+            None,
+            "",
+        ):
+            return cls._int(
+                explicit
+            )
+
+        prazo = cls._int(
+            contrato.get(
+                "prazo"
+            )
+        )
+
+        restante = cls._int(
+            contrato.get(
+                "prazo_restante"
+            )
+        )
+
+        return max(
+            0,
+            prazo - restante,
+        )
+
+    @classmethod
+    def validar(
+        cls,
+        banco_destino,
+        convenio,
+        margem_disponivel,
+        contratos,
+        valor_operacao_refin=None,
+    ):
+        bloqueios = []
+        avisos = []
+
+        contratos = (
+            contratos
+            or []
+        )
+
+        destino = str(
+            banco_destino
+            or ""
+        ).strip().upper()
+
+        convenio_norm = str(
+            convenio
+            or ""
+        ).strip().upper()
+
+        if (
+            "DAYCOVAL"
+            not in destino
+            and destino != "707"
+        ):
+            bloqueios.append(
+                "Banco destino invalido para "
+                "Portabilidade Multipla Daycoval."
+            )
+
+        if convenio_norm != "INSS":
+            bloqueios.append(
+                "A Portabilidade Multipla "
+                "Daycoval esta disponivel "
+                "para INSS."
+            )
+
+        quantidade = len(
+            contratos
+        )
+
+        if (
+            quantidade
+            < cls.MIN_CONTRATOS
+        ):
+            bloqueios.append(
+                "A Portabilidade Multipla "
+                "Daycoval exige no minimo "
+                "2 contratos."
+            )
+
+        if (
+            quantidade
+            > cls.MAX_CONTRATOS
+        ):
+            bloqueios.append(
+                "A Portabilidade Multipla "
+                "Daycoval permite no maximo "
+                "3 contratos."
+            )
+
+        beneficios = set()
+
+        soma_parcelas = 0.0
+        soma_saldos = 0.0
+
+        contratos_normalizados = []
+
+        for index, contrato in enumerate(
+            contratos,
+            start=1,
+        ):
+            banco = str(
+                contrato.get(
+                    "banco",
+                    "",
+                )
+                or ""
+            ).strip()
+
+            parcela = cls._money(
+                contrato.get(
+                    "parcela"
+                )
+            )
+
+            saldo = cls._money(
+                contrato.get(
+                    "saldo_devedor"
+                )
+            )
+
+            beneficio = (
+                cls.normalizar_beneficio(
+                    contrato.get(
+                        "beneficio"
+                    )
+                )
+            )
+
+            prazo = cls._int(
+                contrato.get(
+                    "prazo"
+                )
+            )
+
+            restante = cls._int(
+                contrato.get(
+                    "prazo_restante"
+                )
+            )
+
+            pagas = (
+                cls.parcelas_pagas(
+                    contrato
+                )
+            )
+
+            if not banco:
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "banco de origem "
+                    "nao informado."
+                )
+
+            if not beneficio:
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "beneficio/NB "
+                    "nao informado."
+                )
+            else:
+                beneficios.add(
+                    beneficio
+                )
+
+            if (
+                parcela
+                < cls.MIN_PARCELA_ORIGEM
+            ):
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "parcela minima para "
+                    "portabilidade Daycoval "
+                    "e R$ 20,00."
+                )
+
+            if (
+                pagas
+                < cls.MIN_PARCELAS_PAGAS
+            ):
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "o Daycoval exige "
+                    "no minimo 6 parcelas "
+                    "pagas. Contrato possui "
+                    f"{pagas}."
+                )
+
+            if saldo <= 0:
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "saldo devedor invalido."
+                )
+
+            if prazo <= 0:
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "prazo total invalido."
+                )
+
+            if restante <= 0:
+                bloqueios.append(
+                    f"Contrato {index}: "
+                    "prazo restante invalido."
+                )
+
+            soma_parcelas += parcela
+            soma_saldos += saldo
+
+            contratos_normalizados.append(
+                {
+                    **contrato,
+                    "beneficio":
+                        beneficio,
+                    "parcela":
+                        parcela,
+                    "saldo_devedor":
+                        saldo,
+                    "parcelas_pagas":
+                        pagas,
+                    "grupo_daycoval":
+                        None,
+                }
+            )
+
+        if len(beneficios) > 1:
+            bloqueios.append(
+                "Nao e permitido unificar "
+                "contratos de beneficios/NB "
+                "diferentes na Portabilidade "
+                "Multipla Daycoval."
+            )
+
+        beneficio_operacao = (
+            next(
+                iter(beneficios)
+            )
+            if len(beneficios) == 1
+            else None
+        )
+
+        margem_disponivel = (
+            cls._money(
+                margem_disponivel
+            )
+        )
+
+        margem_negativa = round(
+            max(
+                0.0,
+                -margem_disponivel,
+            ),
+            2,
+        )
+
+        # Daycoval NAO usa o +20 da FACTA.
+        #
+        # O Motor recebe soma_parcelas
+        # e valor_margem_negativa
+        # separadamente.
+        parcela_refin = round(
+            soma_parcelas
+            - margem_negativa,
+            2,
+        )
+
+        if (
+            quantidade
+            >= cls.MIN_CONTRATOS
+            and parcela_refin <= 0
+        ):
+            bloqueios.append(
+                "A parcela consolidada "
+                "do Refin ficou zerada "
+                "ou negativa."
+            )
+
+        return {
+            "banco_destino":
+                "DAYCOVAL",
+            "convenio":
+                "INSS",
+            "elegivel_previo":
+                len(bloqueios) == 0,
+            "usa_grupos":
+                False,
+            "grupo_operacao":
+                None,
+            "beneficio_operacao":
+                beneficio_operacao,
+            "quantidade_contratos":
+                quantidade,
+            "minimo_contratos":
+                cls.MIN_CONTRATOS,
+            "limite_contratos":
+                cls.MAX_CONTRATOS,
+            "parcela_minima_origem":
+                cls.MIN_PARCELA_ORIGEM,
+            "parcelas_pagas_minimas":
+                cls.MIN_PARCELAS_PAGAS,
+            "soma_parcelas":
+                round(
+                    soma_parcelas,
+                    2,
+                ),
+            "soma_saldos":
+                round(
+                    soma_saldos,
+                    2,
+                ),
+            "margem_disponivel":
+                margem_disponivel,
+            "margem_negativa":
+                margem_negativa,
+            "parcela_refin":
+                parcela_refin,
+            "contratos":
+                contratos_normalizados,
+            "bloqueios":
+                bloqueios,
+            "avisos":
+                avisos,
+        }
+
+
+def oferta_e_daycoval(
+    oferta,
+):
+    if not isinstance(
+        oferta,
+        dict,
+    ):
+        return False
+
+    valores = [
+        oferta.get("banco"),
+        oferta.get("bank"),
+        oferta.get("bank_name"),
+        oferta.get("nome_banco"),
+        oferta.get("codigo_banco"),
+        oferta.get("bank_code"),
+    ]
+
+    texto = " ".join(
+        str(value or "")
+        for value in valores
+    ).upper()
+
+    if "DAYCOVAL" in texto:
+        return True
+
+    return any(
+        str(value or "").strip()
+        == "707"
+        for value in valores
+    )
+
+
+def chave_oferta_daycoval(
+    oferta,
+):
+    tabela = (
+        oferta.get("tabela")
+        or oferta.get("table_name")
+        or oferta.get("nome_tabela")
+        or ""
+    )
+
+    prazo = (
+        oferta.get("prazo")
+        or oferta.get("term")
+        or 0
+    )
+
+    try:
+        prazo = int(
+            float(
+                prazo or 0
+            )
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        prazo = 0
+
+    return (
+        str(tabela)
+        .strip()
+        .upper(),
+        prazo,
+    )
+
+
+def interseccionar_ofertas_daycoval(
+    resultados,
+):
+    mapas = []
+
+    for resultado in (
+        resultados
+        or []
+    ):
+        mapa = {}
+
+        for oferta in (
+            resultado.get(
+                "ofertas",
+                [],
+            )
+            or []
+        ):
+            if not oferta_e_daycoval(
+                oferta
+            ):
+                continue
+
+            chave = (
+                chave_oferta_daycoval(
+                    oferta
+                )
+            )
+
+            mapa[chave] = oferta
+
+        if not mapa:
+            return []
+
+        mapas.append(
+            mapa
+        )
+
+    if not mapas:
+        return []
+
+    comuns = set(
+        mapas[0].keys()
+    )
+
+    for mapa in mapas[1:]:
+        comuns &= set(
+            mapa.keys()
+        )
+
+    resultado = []
+
+    for chave in sorted(
+        comuns,
+        key=lambda item: (
+            item[1],
+            item[0],
+        ),
+        reverse=True,
+    ):
+        variantes = [
+            mapa[chave]
+            for mapa in mapas
+        ]
+
+        def valor_liberado(
+            oferta,
+        ):
+            try:
+                return float(
+                    oferta.get(
+                        "valor_liberado",
+                        oferta.get(
+                            "troco",
+                            0,
+                        ),
+                    )
+                    or 0
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                return 0.0
+
+        # Mantem resultado conservador
+        # entre os contextos de origem.
+        escolhida = min(
+            variantes,
+            key=valor_liberado,
+        )
+
+        resultado.append(
+            dict(escolhida)
+        )
+
+    return resultado

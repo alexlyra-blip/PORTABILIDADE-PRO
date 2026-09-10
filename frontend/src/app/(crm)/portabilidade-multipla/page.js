@@ -694,6 +694,125 @@ function extractMotorClient(
   };
 }
 
+function extractMotorClientDaycoval(
+  benefit,
+  response,
+  fallback
+) {
+  const client =
+    benefit?.cliente ||
+    response?.cliente ||
+    {};
+
+  const benefitInfo =
+    (
+      benefit?.beneficio &&
+      typeof benefit.beneficio ===
+        "object"
+    )
+      ? benefit.beneficio
+      : (
+          response?.beneficio &&
+          typeof response.beneficio ===
+            "object"
+        )
+        ? response.beneficio
+        : {};
+
+  const birthDate =
+    client?.data_nascimento ||
+    client?.nascimento ||
+    client?.birth_date ||
+    "";
+
+  let idade = Number(
+    client?.idade ||
+    response?.idade ||
+    0
+  );
+
+  if (!idade && birthDate) {
+    idade = calculateAge(
+      birthDate
+    );
+  }
+
+  const especieRaw =
+    benefitInfo?.especie ||
+    benefit?.especie ||
+    client?.especie ||
+    response?.beneficio?.especie ||
+    response?.especie ||
+    "";
+
+  const especieMatch =
+    String(especieRaw)
+      .match(/\d{1,3}/);
+
+  const especie =
+    especieMatch
+      ? especieMatch[0]
+          .padStart(2, "0")
+      : String(
+          especieRaw || ""
+        );
+
+  const analfabeto =
+    client?.analfabeto === true ||
+    client?.nao_assina === true ||
+    client?.cliente_assina ===
+      false;
+
+  return {
+    nome:
+      extractClientName(
+        benefit,
+        response
+      ),
+
+    cpf:
+      onlyDigits(
+        extractCPF(
+          benefit,
+          response,
+          fallback
+        )
+      ),
+
+    idade: idade || 0,
+
+    especie,
+
+    data_concessao:
+      benefitInfo?.data_concessao ||
+      benefitInfo?.concessao ||
+      benefit?.data_concessao ||
+      benefit?.concessao ||
+      null,
+
+    analfabeto,
+
+    is_60_plus:
+      idade
+        ? idade >= 60
+        : false,
+
+    is_invalidez_60_plus:
+      idade >= 60 &&
+      [
+        "04",
+        "05",
+        "06",
+        "32",
+        "87",
+        "92",
+      ].includes(especie),
+
+    possui_dois_cartoes:
+      false,
+  };
+}
+
 
 function bankRuleMatches(
   loanBank,
@@ -874,6 +993,32 @@ export default function PortabilidadeMultiplaPage() {
     selectedFactaTerm,
     setSelectedFactaTerm,
   ] = useState(null);
+
+
+  /* MULTIPLA_DAYCOVAL_FRONTEND_V3 */
+
+  const [
+    selectedDestination,
+    setSelectedDestination,
+  ] = useState("FACTA");
+
+  const isDaycoval =
+    selectedDestination ===
+    "DAYCOVAL";
+
+  const activeMaxContracts =
+    isDaycoval
+      ? 3
+      : Number(
+          config.max_contratos ||
+          6
+        );
+
+  const activeMinContracts =
+    isDaycoval
+      ? 2
+      : 1;
+
 
   /* MULTIPLA_FACTA_TERM_FILTER */
   const factaOffers = Array.isArray(
@@ -1191,14 +1336,17 @@ export default function PortabilidadeMultiplaPage() {
             ...loan,
 
             grupo_facta:
-              identifyGroup(
-                loan.banco
-              ),
+              isDaycoval
+                ? "A"
+                : identifyGroup(
+                    loan.banco
+                  ),
           })
         ),
       [
         loans,
         config,
+        isDaycoval,
       ]
     );
 
@@ -1337,10 +1485,20 @@ export default function PortabilidadeMultiplaPage() {
           somaSaldos,
           margemNegativa,
           maiorParcela,
-          minimoViabilidade,
-          parcelaRefin,
-
+          minimoViabilidade:
+            isDaycoval
+              ? 0
+              : minimoViabilidade,
+          parcelaRefin:
+            isDaycoval
+              ? Math.max(
+                  0,
+                  somaParcelas -
+                    margemNegativa
+                )
+              : parcelaRefin,
           viabilidade:
+            isDaycoval ||
             margemNegativa === 0 ||
             maiorParcela >=
               minimoViabilidade,
@@ -1350,6 +1508,7 @@ export default function PortabilidadeMultiplaPage() {
         selectedLoans,
         margin,
         config,
+        isDaycoval,
       ]
     );
 
@@ -1835,15 +1994,184 @@ export default function PortabilidadeMultiplaPage() {
   };
 
 
+  const getDaycovalPrecheck = (
+    loan
+  ) => {
+    const parcela =
+      money(
+        loan?.parcela
+      );
+
+    const paidRaw =
+      loan?.parcelas_pagas;
+
+    const paid =
+      paidRaw !== null &&
+      paidRaw !== undefined &&
+      paidRaw !== ""
+        ? Number(
+            paidRaw
+          )
+        : Math.max(
+            0,
+            Number(
+              loan?.prazo ||
+              0
+            ) -
+              Number(
+                loan
+                  ?.prazo_restante ||
+                0
+              )
+          );
+
+    if (parcela < 20) {
+      return {
+        blocked: true,
+        reason:
+          "Daycoval exige parcela minima de R$ 20,00.",
+        paid,
+      };
+    }
+
+    if (paid < 6) {
+      return {
+        blocked: true,
+        reason:
+          `Daycoval exige no minimo 6 parcelas pagas. Contrato possui ${paid}.`,
+        paid,
+      };
+    }
+
+    return {
+      blocked: false,
+      reason: "",
+      paid,
+    };
+  };
+
+
+  const getActivePrecheck = (
+    loan
+  ) =>
+    isDaycoval
+      ? getDaycovalPrecheck(
+          loan
+        )
+      : getFactaPrecheck(
+          loan
+        );
+
+
+  const selectDestination = (
+    destination
+  ) => {
+    if (
+      destination ===
+      selectedDestination
+    ) {
+      return;
+    }
+
+    setSelectedDestination(
+      destination
+    );
+
+    setSelectedIds([]);
+    setValidation(null);
+    setMotorResult(null);
+    setSelectedFactaTerm(null);
+    setNotice(null);
+  };
+
+
   const toggleLoan = (
     loan
   ) => {
+    const alreadySelected =
+      selectedIds.includes(
+        loan._id
+      );
+
+    if (alreadySelected) {
+      setSelectedIds(
+        selectedIds.filter(
+          (id) =>
+            id !== loan._id
+        )
+      );
+
+      setValidation(null);
+      setMotorResult(null);
+      setNotice(null);
+
+      return;
+    }
+
+    const loanBenefit =
+      normalizeBenefit(
+        loan.beneficio
+      );
+
+    if (
+      selectedBenefit &&
+      loanBenefit !==
+        selectedBenefit
+    ) {
+      setNotice({
+        type: "error",
+        text:
+          "Nao e permitido juntar contratos de beneficios diferentes.",
+      });
+
+      return;
+    }
+
+    if (isDaycoval) {
+      const check =
+        getDaycovalPrecheck(
+          loan
+        );
+
+      if (check.blocked) {
+        setNotice({
+          type: "error",
+          text:
+            check.reason,
+        });
+
+        return;
+      }
+
+      if (
+        selectedIds.length >=
+        activeMaxContracts
+      ) {
+        setNotice({
+          type: "warning",
+          text:
+            `A Portabilidade Multipla Daycoval permite no maximo ${activeMaxContracts} contratos.`,
+        });
+
+        return;
+      }
+
+      setSelectedIds([
+        ...selectedIds,
+        loan._id,
+      ]);
+
+      setValidation(null);
+      setMotorResult(null);
+      setNotice(null);
+
+      return;
+    }
 
     const group =
       loan.grupo_facta;
 
     if (group === "C") {
-
       setNotice({
         type: "error",
         text:
@@ -1854,7 +2182,6 @@ export default function PortabilidadeMultiplaPage() {
     }
 
     if (!group) {
-
       setNotice({
         type: "warning",
         text:
@@ -1870,7 +2197,6 @@ export default function PortabilidadeMultiplaPage() {
       );
 
     if (factaCheck.blocked) {
-
       setNotice({
         type: "error",
         text:
@@ -1880,47 +2206,23 @@ export default function PortabilidadeMultiplaPage() {
       return;
     }
 
-    const alreadySelected =
-      selectedIds.includes(
-        loan._id
-      );
-
-    if (alreadySelected) {
-
-      setSelectedIds(
-        selectedIds.filter(
-          (id) =>
-            id !== loan._id
-        )
-      );
-
-      setValidation(null);
-    setMotorResult(null);
-
-      return;
-    }
-
-
     if (
       selectedIds.length >=
-      config.max_contratos
+      activeMaxContracts
     ) {
-
       setNotice({
         type: "warning",
         text:
-          `O limite e de ${config.max_contratos} contratos.`,
+          `O limite e de ${activeMaxContracts} contratos.`,
       });
 
       return;
     }
 
-
     if (
       selectedGroup &&
       selectedGroup !== group
     ) {
-
       setNotice({
         type: "warning",
         text:
@@ -1929,33 +2231,6 @@ export default function PortabilidadeMultiplaPage() {
 
       return;
     }
-
-
-    const loanBenefit =
-      normalizeBenefit(
-        loan.beneficio
-      );
-
-
-    /*
-     * SEGUNDA PROTECAO NO FRONTEND:
-     * contratos precisam ter o mesmo NB.
-     */
-    if (
-      selectedBenefit &&
-      loanBenefit !==
-        selectedBenefit
-    ) {
-
-      setNotice({
-        type: "error",
-        text:
-          "Nao e permitido juntar contratos de beneficios diferentes.",
-      });
-
-      return;
-    }
-
 
     setSelectedIds([
       ...selectedIds,
@@ -2008,6 +2283,22 @@ export default function PortabilidadeMultiplaPage() {
     async () => {
 
       if (
+        isDaycoval &&
+        selectedLoans.length <
+          activeMinContracts
+      ) {
+        setNotice({
+          type: "warning",
+          text:
+            `Selecione no minimo ${activeMinContracts} contratos para a Portabilidade Multipla Daycoval.`,
+        });
+
+        return;
+      }
+
+
+
+      if (
         !selectedLoans.length
       ) {
         setNotice({
@@ -2041,7 +2332,7 @@ export default function PortabilidadeMultiplaPage() {
             (loan) => ({
               loan,
               check:
-                getFactaPrecheck(
+                getActivePrecheck(
                   loan
                 ),
             })
@@ -2078,10 +2369,12 @@ export default function PortabilidadeMultiplaPage() {
 
         const response =
           await api.post(
-            "/portabilidade-multipla/validar",
+            isDaycoval
+              ? "/portabilidade-multipla/validar-daycoval"
+              : "/portabilidade-multipla/validar",
             {
               banco_destino:
-                "FACTA",
+                selectedDestination,
 
               convenio:
                 "INSS",
@@ -2179,7 +2472,11 @@ export default function PortabilidadeMultiplaPage() {
           {};
 
         const motorClient =
-          extractMotorClient(
+          (
+            isDaycoval
+              ? extractMotorClientDaycoval
+              : extractMotorClient
+          )(
             activeBenefit,
             rawResponse,
             cpf
@@ -2188,10 +2485,12 @@ export default function PortabilidadeMultiplaPage() {
 
         const motorResponse =
           await api.post(
-            "/portabilidade-multipla/simular",
+            isDaycoval
+              ? "/portabilidade-multipla/simular-daycoval"
+              : "/portabilidade-multipla/simular",
             {
               banco_destino:
-                "FACTA",
+                selectedDestination,
 
               convenio:
                 "INSS",
@@ -2282,6 +2581,7 @@ export default function PortabilidadeMultiplaPage() {
           "Sem margem para libera\u00e7\u00e3o de troco ou saldo negativo.";
 
         const negativeMarginBlock =
+          !isDaycoval &&
           Array.isArray(
             motorResponse
               ?.bloqueios_contratos
@@ -2440,7 +2740,7 @@ export default function PortabilidadeMultiplaPage() {
             type: "success",
             text:
               `${motorResponse.ofertas.length} `
-              + `tabela(s) FACTA elegivel(is) `
+              + `tabela(s) ${selectedDestination} elegivel(is) `
               + `para todos os contratos selecionados.`,
           });
 
@@ -2473,7 +2773,7 @@ export default function PortabilidadeMultiplaPage() {
                 ? negativeMarginMessage
                 : visibleFailure
                   ? `Simula\u00e7\u00e3o n\u00e3o aprovada: ${visibleFailure}`
-                  : "Nenhuma tabela FACTA elegivel foi encontrada pelo Motor.",
+                  : `Nenhuma tabela ${selectedDestination} elegivel foi encontrada pelo Motor.`,
           });
         }
 
@@ -2485,7 +2785,7 @@ export default function PortabilidadeMultiplaPage() {
           type: "error",
           text:
             error?.message ||
-            "Erro ao simular a Portabilidade Multipla FACTA.",
+            `Erro ao simular a Portabilidade Multipla ${selectedDestination}.`,
         });
 
       } finally {
@@ -2505,21 +2805,26 @@ export default function PortabilidadeMultiplaPage() {
       );
 
 
-    const factaPrecheck =
-      getFactaPrecheck(
+    const activePrecheck =
+      getActivePrecheck(
         loan
       );
 
     const blockedGroup =
+      !isDaycoval &&
       selectedGroup &&
       selectedGroup !== group &&
       !selected;
 
     const blocked =
-      group === "C" ||
-      !group ||
-      blockedGroup ||
-      factaPrecheck.blocked;
+      isDaycoval
+        ? activePrecheck.blocked
+        : (
+            group === "C" ||
+            !group ||
+            blockedGroup ||
+            activePrecheck.blocked
+          );
 
     const logo =
       getBankLogo(
@@ -2629,7 +2934,9 @@ export default function PortabilidadeMultiplaPage() {
                   }
                 `}
               >
-                Grupo {group || "?"}
+                {isDaycoval
+                  ? "DAYCOVAL"
+                  : `Grupo ${group || "?"}`}
               </span>
             </div>
 
@@ -2650,7 +2957,7 @@ export default function PortabilidadeMultiplaPage() {
             </p>
 
 
-            {factaPrecheck.blocked ? (
+            {activePrecheck.blocked ? (
               <div
                 className="
                   mt-3
@@ -2665,7 +2972,7 @@ export default function PortabilidadeMultiplaPage() {
                   text-red-600
                 "
               >
-                FACTA: {factaPrecheck.reason}
+                FACTA: {activePrecheck.reason}
               </div>
             ) : null}
 
@@ -3089,10 +3396,71 @@ export default function PortabilidadeMultiplaPage() {
                   text-white/50
                 "
               >
-                Unifique até 6 contratos do mesmo benefício em uma única operação de Refin da Portabilidade.
+                {isDaycoval
+                  ? "Unifique de 2 a 3 contratos do mesmo beneficio em uma unica operacao de Refin da Portabilidade Daycoval."
+                  : "Unifique ate 6 contratos do mesmo beneficio em uma unica operacao de Refin da Portabilidade."}
               </p>
             </div>
 
+
+            <div
+              className="
+                mb-5
+                flex
+                flex-wrap
+                items-center
+                gap-2
+              "
+            >
+              <span
+                className="
+                  mr-2
+                  text-[9px]
+                  font-black
+                  uppercase
+                  tracking-[0.18em]
+                  text-white/40
+                "
+              >
+                Banco destino
+              </span>
+
+              {[
+                "FACTA",
+                "DAYCOVAL",
+              ].map(
+                (destination) => (
+                  <button
+                    key={destination}
+                    type="button"
+                    onClick={() =>
+                      selectDestination(
+                        destination
+                      )
+                    }
+                    className={`
+                      rounded-xl
+                      border
+                      px-4
+                      py-2
+                      text-[10px]
+                      font-black
+                      uppercase
+                      tracking-wide
+                      transition-all
+                      ${
+                        selectedDestination ===
+                        destination
+                          ? "border-white/30 bg-white text-slate-900 shadow-lg"
+                          : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
+                      }
+                    `}
+                  >
+                    {destination}
+                  </button>
+                )
+              )}
+            </div>
 
             <div
               className="
@@ -3103,9 +3471,9 @@ export default function PortabilidadeMultiplaPage() {
               "
             >
               {[
-                ["Banco", "FACTA"],
+                ["Banco", selectedDestination],
                 ["Convênio", "INSS"],
-                ["Limite", "6 contratos"],
+                ["Limite", `${activeMaxContracts} contratos`],
                 ["Benefício", "1 NB"],
               ].map(
                 ([label, value]) => (
@@ -3876,24 +4244,31 @@ export default function PortabilidadeMultiplaPage() {
 
                 {renderGroup(
                   "A",
-                  "Grupo A",
-                  "Contratos unificáveis entre si"
+                  isDaycoval
+                    ? "DAYCOVAL"
+                    : "Grupo A",
+                  isDaycoval
+                    ? "Sem grupos - minimo 2 e maximo 3 contratos"
+                    : "Contratos unificaveis entre si"
                 )}
 
-                {renderGroup(
-                  "B",
-                  "Grupo B",
-                  "Contratos unificáveis entre si"
-                )}
+                {!isDaycoval
+                  ? renderGroup(
+                      "B",
+                      "Grupo B",
+                      "Contratos unificaveis entre si"
+                    )
+                  : null}
 
-                {renderGroup(
-                  "C",
-                  "Grupo C",
-                  "Não são unificáveis"
-                )}
+                {!isDaycoval
+                  ? renderGroup(
+                      "C",
+                      "Grupo C",
+                      "Nao sao unificaveis"
+                    )
+                  : null}
 
-
-                {groups.OTHER.length >
+{!isDaycoval && groups.OTHER.length >
                 0 ? (
 
                   <section
@@ -4006,7 +4381,7 @@ export default function PortabilidadeMultiplaPage() {
                             font-black
                           "
                         >
-                          FACTA
+                          {selectedDestination}
                         </h3>
 
                         <p
@@ -4045,7 +4420,7 @@ export default function PortabilidadeMultiplaPage() {
                           }
                           /
                           {
-                            config.max_contratos
+                            activeMaxContracts
                           }
                         </p>
 
@@ -4940,7 +5315,7 @@ export default function PortabilidadeMultiplaPage() {
                           ? motorResult?.success
                             ? "Simula\u00e7\u00e3o aprovada"
                             : "Simula\u00e7\u00e3o n\u00e3o aprovada"
-                          : "Simular FACTA"}
+                          : `Simular ${selectedDestination}`}
                     </button>
 
 
