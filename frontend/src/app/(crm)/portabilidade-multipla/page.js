@@ -3403,18 +3403,18 @@ export default function PortabilidadeMultiplaPage() {
             </div>
 
 
+            {/* MULTIPLA_BANK_SELECTOR_V3 */}
+
             <div
               className="
                 mb-5
                 flex
-                flex-wrap
-                items-center
+                flex-col
                 gap-2
               "
             >
               <span
                 className="
-                  mr-2
                   text-[9px]
                   font-black
                   uppercase
@@ -3425,41 +3425,75 @@ export default function PortabilidadeMultiplaPage() {
                 Banco destino
               </span>
 
-              {[
-                "FACTA",
-                "DAYCOVAL",
-              ].map(
-                (destination) => (
-                  <button
-                    key={destination}
-                    type="button"
-                    onClick={() =>
-                      selectDestination(
-                        destination
-                      )
-                    }
-                    className={`
-                      rounded-xl
-                      border
-                      px-4
-                      py-2
-                      text-[10px]
-                      font-black
-                      uppercase
-                      tracking-wide
-                      transition-all
-                      ${
-                        selectedDestination ===
-                        destination
-                          ? "border-white/30 bg-white text-slate-900 shadow-lg"
-                          : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
-                      }
-                    `}
-                  >
-                    {destination}
-                  </button>
-                )
-              )}
+              <div
+                className="
+                  grid
+                  w-full
+                  max-w-[360px]
+                  grid-cols-2
+                  gap-2
+                "
+              >
+                {[
+                  "FACTA",
+                  "DAYCOVAL",
+                ].map(
+                  (destination) => {
+                    const active =
+                      selectedDestination ===
+                      destination;
+
+                    return (
+                      <button
+                        key={destination}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() =>
+                          selectDestination(
+                            destination
+                          )
+                        }
+                        className={`
+                          flex
+                          h-11
+                          items-center
+                          justify-center
+                          gap-2
+                          rounded-xl
+                          border
+                          px-4
+                          text-[10px]
+                          font-black
+                          uppercase
+                          tracking-[0.08em]
+                          transition-all
+                          duration-200
+                          ${
+                            active
+                              ? "border-white bg-white text-slate-950 shadow-lg"
+                              : "border-white/10 bg-white/[0.05] text-white/65 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                          }
+                        `}
+                      >
+                        <span
+                          className={`
+                            h-2
+                            w-2
+                            rounded-full
+                            ${
+                              active
+                                ? "bg-blue-600"
+                                : "bg-white/25"
+                            }
+                          `}
+                        />
+
+                        {destination}
+                      </button>
+                    );
+                  }
+                )}
+              </div>
             </div>
 
             <div
@@ -4916,7 +4950,7 @@ export default function PortabilidadeMultiplaPage() {
                                 text-blue-300
                               "
                             >
-                              Tabelas FACTA
+                              Tabelas {selectedDestination}
                             </p>
 
                             <p
