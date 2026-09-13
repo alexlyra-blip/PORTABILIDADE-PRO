@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re as _re
 import unicodedata
 from typing import Any, Dict, List, Optional
 
@@ -732,6 +733,11 @@ def oferta_e_facta(oferta):
     )
 
 
+def _tabela_sort_key(tabela_nome: str):
+    tokens = _re.split(r"(\d+)", str(tabela_nome or ""))
+    return [int(t) if t.isdigit() else t.upper() for t in tokens if t]
+
+
 def chave_oferta_facta(oferta):
     tabela = (
         oferta.get("tabela")
@@ -834,10 +840,9 @@ def interseccionar_ofertas_facta(
     for chave in sorted(
         comuns,
         key=lambda item: (
-            item[1],
-            item[0],
+            -item[1],
+            _tabela_sort_key(item[0]),
         ),
-        reverse=True,
     ):
         variantes = [
             mapa[chave]
@@ -1620,10 +1625,9 @@ def interseccionar_ofertas_daycoval(
     for chave in sorted(
         comuns,
         key=lambda item: (
-            item[1],
-            item[0],
+            -item[1],
+            _tabela_sort_key(item[0]),
         ),
-        reverse=True,
     ):
         variantes = [
             mapa[chave]

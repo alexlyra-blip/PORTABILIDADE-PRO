@@ -2996,6 +2996,17 @@ async def simular_portabilidade_multipla_daycoval(
                 ),
         })
 
+    def _daycoval_tabela_sort_key(item):
+        name = str(item.get("tabela") or item.get("table_name") or item.get("nome_tabela") or "")
+        return [int(t) if t.isdigit() else t.upper() for t in _re.split(r"(\d+)", name) if t]
+
+    ofertas_normalizadas.sort(
+        key=lambda item: (
+            -_motor_int(item.get("prazo")),
+            _daycoval_tabela_sort_key(item),
+        )
+    )
+
     ofertas_comuns = ofertas_normalizadas
 
     if not ofertas_comuns:

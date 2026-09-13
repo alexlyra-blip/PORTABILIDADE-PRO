@@ -37,7 +37,7 @@ export default function PageHeader({ title, highlight, subtitle, icon: Icon, chi
 
   return (
     <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10 pb-6 border-b border-slate-100 dark:border-slate-800/50 brand-themed w-full max-w-[98%] mx-auto">
-      <div className="space-y-2">
+      <div className="space-y-2 flex-1 min-w-0">
         <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter drop-shadow-sm uppercase">
           {title} {highlight && <span style={{ color: brandColor }}>{highlight}</span>}
         </h1>
@@ -49,7 +49,7 @@ export default function PageHeader({ title, highlight, subtitle, icon: Icon, chi
       </div>
 
       {children && (
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto md:justify-end">
+        <div className="flex items-center gap-3 w-full md:w-auto md:justify-end shrink-0">
           {children}
         </div>
       )}
