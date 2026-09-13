@@ -1491,6 +1491,7 @@ function SimuladorPageContent() {
     { value: "27", label: "27 - PENSÃO POR MORTE SERVIDOR PÚBLICO FEDERAL" },
     { value: "28", label: "28 - PENSÃO POR MORTE DO REGIME GERAL" },
     { value: "29", label: "29 - PENSÃO POR MORTE EX-COMBATENTE MARÍTIMO" },
+    { value: "30", label: "30 - RENDA MENSAL VITALÍCIA POR INVALIDEZ" },
     { value: "32", label: "32 - APOSENTADORIA POR INVALIDEZ PREVIDENCIÁRIA" },
     { value: "33", label: "33 - APOSENTADORIA POR INVALIDEZ DE AERONAUTA" },
     { value: "34", label: "34 - APOSENTADORIA POR INVALIDEZ DE EX-COMBATENTE MARÍTIMO" },

@@ -330,6 +330,7 @@ export default function ConsultaCPFPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showQuotaModal, setShowQuotaModal] = useState(false);
   const [quotaInput, setQuotaInput] = useState("");
+  const [diaRenovacaoInput, setDiaRenovacaoInput] = useState("15");
   const [savingQuota, setSavingQuota] = useState(false);
 
   useEffect(() => {
@@ -582,7 +583,9 @@ export default function ConsultaCPFPage() {
   const handleOpenQuotaModal = () => {
     const localTotal = typeof window !== "undefined" ? localStorage.getItem("multicorban_total_consultas") : null;
     const currentTotal = creditos?.total_consultas || (localTotal ? parseInt(localTotal, 10) : 1000);
+    const currentDia = creditos?.dia_renovacao || 15;
     setQuotaInput(String(currentTotal));
+    setDiaRenovacaoInput(String(currentDia));
     setShowQuotaModal(true);
   };
 
@@ -593,6 +596,11 @@ export default function ConsultaCPFPage() {
       toast.warning("Por favor, informe um número válido de consultas (maior que zero).");
       return;
     }
+    const diaVal = parseInt(diaRenovacaoInput, 10);
+    if (!diaVal || diaVal < 1 || diaVal > 28) {
+      toast.warning("O dia de renovação deve ser entre 1 e 28.");
+      return;
+    }
     setSavingQuota(true);
     try {
       if (typeof window !== "undefined") {
@@ -600,7 +608,7 @@ export default function ConsultaCPFPage() {
       }
       const res = await api.post("/consultas/multicorban/config", {
         total_consultas: val,
-        dia_renovacao: 15
+        dia_renovacao: diaVal
       });
       const totalConsultas = res?.total_consultas ?? val;
       const consultasConsumidas = res?.consultas_consumidas ?? 0;
@@ -612,14 +620,14 @@ export default function ConsultaCPFPage() {
         creditos_geracao_leads: res?.geracao_leads || 0,
         total_consultas: totalConsultas,
         consultas_consumidas: consultasConsumidas,
-        dia_renovacao: res?.dia_renovacao ?? 15,
+        dia_renovacao: res?.dia_renovacao ?? diaVal,
         proxima_renovacao: res?.proxima_renovacao,
         ciclo_inicio: res?.ciclo_inicio,
         ciclo_fim: res?.ciclo_fim,
         isMultiCorban: true
       });
       setShowQuotaModal(false);
-      toast.success("Total de consultas do plano atualizado com sucesso!");
+      toast.success("Configuração de consultas e renovação atualizada com sucesso!");
     } catch (err) {
       console.error("Erro ao atualizar cota:", err);
       toast.error("Erro ao atualizar o total de consultas do plano.");
@@ -2000,10 +2008,10 @@ export default function ConsultaCPFPage() {
                   </div>
                   <div>
                     <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">
-                      Ajustar Total de Consultas
+                      Configurar Consultas e Renovação
                     </h3>
                     <p className="text-xs text-slate-500 font-medium">
-                      MultiCorban • Renovação todo dia 15
+                      MultiCorban • Renovação todo dia {diaRenovacaoInput || creditos?.dia_renovacao || 15}
                     </p>
                   </div>
                 </div>
@@ -2032,8 +2040,25 @@ export default function ConsultaCPFPage() {
                     required
                     autoFocus
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black uppercase text-slate-500 tracking-wider mb-2">
+                    Dia de Renovação dos Créditos (1 a 28)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="28"
+                    step="1"
+                    value={diaRenovacaoInput}
+                    onChange={(e) => setDiaRenovacaoInput(e.target.value)}
+                    placeholder="Ex: 15"
+                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white outline-none font-black text-slate-800 text-lg transition-all"
+                    required
+                  />
                   <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                    Este total será renovado automaticamente todo dia <strong>15 de cada mês</strong>, reiniciando a contagem de consultas consumidas.
+                    A contagem de consultas consumidas será reiniciada automaticamente todo dia <strong>{diaRenovacaoInput || 15} de cada mês</strong>.
                   </p>
                 </div>
 

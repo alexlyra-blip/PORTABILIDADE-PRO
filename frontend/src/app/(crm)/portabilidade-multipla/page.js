@@ -10,6 +10,7 @@ import {
 import { api, getStaticUrl } from "@/utils/api";
 
 import { Icons } from "@/components/Icons";
+import PageHeader from "@/components/PageHeader";
 
 
 const DEFAULT_CONFIG = {
@@ -3438,296 +3439,85 @@ export default function PortabilidadeMultiplaPage() {
         "
       >
 
-        <section
-          className="
-            relative
-            overflow-hidden
-            rounded-[2.5rem]
-            bg-slate-950
-            p-7
-            text-white
-            shadow-2xl
-            md:p-9
-          "
+        <PageHeader
+          title="Portabilidade"
+          highlight="Múltipla"
+          subtitle={
+            isDaycoval
+              ? "Unifique de 2 a 3 contratos do mesmo benefício em uma única operação de Refin da Portabilidade Daycoval."
+              : "Unifique até 6 contratos do mesmo benefício em uma única operação de Refin da Portabilidade."
+          }
         >
-          <div
-            className="
-              absolute
-              -right-20
-              -top-20
-              h-72
-              w-72
-              rounded-full
-              opacity-20
-              blur-3xl
-            "
-            style={{
-              background:
-                brandColor,
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">
+              Banco destino:
+            </span>
+            {["FACTA", "DAYCOVAL"].map((destination) => {
+              const active = selectedDestination === destination;
+              return (
+                <button
+                  key={destination}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => selectDestination(destination)}
+                  className={`flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                    active
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                      : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                  style={active ? { background: brandColor } : {}}
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      active ? "bg-white" : "bg-slate-300"
+                    }`}
+                  />
+                  {destination}
+                </button>
+              );
+            })}
+          </div>
+        </PageHeader>
 
-          <div
-            className="
-              absolute
-              -bottom-24
-              left-1/3
-              h-64
-              w-64
-              rounded-full
-              opacity-20
-              blur-3xl
-            "
-            style={{
-              background:
-                secondaryColor,
-            }}
-          />
-
-
-          <div
-            className="
-              relative
-              z-10
-              flex
-              flex-col
-              gap-6
-              xl:flex-row
-              xl:items-center
-              xl:justify-between
-            "
-          >
-
+        <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-2xl text-white shadow-sm"
+              style={{ background: brandColor }}
+            >
+              <Icons.Sparkles size={18} />
+            </div>
             <div>
-              <div
-                className="
-                  mb-4
-                  inline-flex
-                  items-center
-                  gap-2
-                  rounded-full
-                  border
-                  border-white/10
-                  bg-white/10
-                  px-3
-                  py-2
-                "
-              >
-                <Icons.Sparkles
-                  size={14}
-                />
-
-                <span
-                  className="
-                    text-[9px]
-                    font-black
-                    uppercase
-                    tracking-[0.2em]
-                  "
-                >
-                  {selectedDestination} • INSS
-                </span>
-              </div>
-
-              <h1
-                className="
-                  text-3xl
-                  font-black
-                  tracking-tight
-                  md:text-4xl
-                "
-              >
-                Portabilidade{" "}
-
-                <span
-                  style={{
-                    color:
-                      secondaryColor,
-                  }}
-                >
-                  Múltipla
-                </span>
-              </h1>
-
-              <p
-                className="
-                  mt-2
-                  max-w-3xl
-                  text-sm
-                  font-semibold
-                  text-white/50
-                "
-              >
+              <p className="text-xs font-black uppercase text-slate-800 tracking-tight">
+                Operação {selectedDestination} • INSS
+              </p>
+              <p className="text-[11px] font-semibold text-slate-400">
                 {isDaycoval
-                  ? "Unifique de 2 a 3 contratos do mesmo beneficio em uma unica operacao de Refin da Portabilidade Daycoval."
-                  : "Unifique ate 6 contratos do mesmo beneficio em uma unica operacao de Refin da Portabilidade."}
+                  ? "Min. 2 e máx. 3 contratos • Sem restrição de grupos"
+                  : "Até 6 contratos do mesmo grupo e benefício"}
               </p>
             </div>
+          </div>
 
-
-            {/* MULTIPLA_BANK_SELECTOR_V3 */}
-
-            <div
-              className="
-                mb-5
-                flex
-                w-full
-                flex-col
-                gap-2
-                xl:w-[220px]
-                xl:shrink-0
-              "
-            >
-              <span
-                className="
-                  text-[9px]
-                  font-black
-                  uppercase
-                  tracking-[0.18em]
-                  text-white/40
-                "
-              >
-                Banco destino
-              </span>
-
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full lg:w-auto">
+            {[
+              ["Banco", selectedDestination],
+              ["Convênio", "INSS"],
+              ["Limite", `${activeMaxContracts} contratos`],
+              ["Benefício", "1 NB"],
+            ].map(([label, value]) => (
               <div
-                className="
-                  grid
-                  w-full
-                  grid-cols-2
-                  gap-2
-                  xl:w-[220px]
-                "
+                key={label}
+                className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2.5 text-center sm:text-left min-w-[100px]"
               >
-                {[
-                  "FACTA",
-                  "DAYCOVAL",
-                ].map(
-                  (destination) => {
-                    const active =
-                      selectedDestination ===
-                      destination;
-
-                    return (
-                      <button
-                        key={destination}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() =>
-                          selectDestination(
-                            destination
-                          )
-                        }
-                        className={`
-                          flex
-                          h-11
-                          items-center
-                          justify-center
-                          gap-2
-                          min-w-0
-                          rounded-xl
-                          border
-                          px-3
-                          text-[10px]
-                          font-black
-                          uppercase
-                          tracking-[0.08em]
-                          transition-all
-                          duration-200
-                          ${
-                            active
-                              ? "border-white bg-white text-slate-950 shadow-lg"
-                              : "border-white/10 bg-white/[0.05] text-white/65 hover:border-white/20 hover:bg-white/10 hover:text-white"
-                          }
-                        `}
-                      >
-                        <span
-                          className={`
-                            h-2
-                            w-2
-                            rounded-full
-                            ${
-                              active
-                                ? "bg-blue-600"
-                                : "bg-white/25"
-                            }
-                          `}
-                        />
-
-                        {destination}
-                      </button>
-                    );
-                  }
-                )}
+                <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">
+                  {label}
+                </p>
+                <p className="mt-0.5 text-xs font-black text-slate-800">
+                  {value}
+                </p>
               </div>
-            </div>
-
-            <div
-              className="
-                grid
-                min-w-0
-                grid-cols-2
-                gap-2
-                md:grid-cols-4
-                xl:w-[460px]
-                xl:grid-cols-[1.35fr_1fr_1.15fr_1fr]
-                xl:shrink-0
-              "
-            >
-              {[
-                ["Banco", selectedDestination],
-                ["Convênio", "INSS"],
-                ["Limite", `${activeMaxContracts} contratos`],
-                ["Benefício", "1 NB"],
-              ].map(
-                ([label, value]) => (
-                  <div
-                    key={label}
-                    className="
-                      min-w-0
-                      rounded-2xl
-                      border
-                      border-white/10
-                      bg-white/5
-                      px-3
-                      py-3
-                    "
-                  >
-                    <p
-                      className="
-                        text-[8px]
-                        font-black
-                        uppercase
-                        tracking-wider
-                        text-white/30
-                      "
-                    >
-                      {label}
-                    </p>
-
-                    <p
-                      className={`
-                        mt-1
-                        min-w-0
-                        break-words
-                        font-black
-                        leading-tight
-                        ${
-                          label === "Banco"
-                            ? "whitespace-nowrap text-[11px] sm:text-xs"
-                            : label === "Limite"
-                              ? "whitespace-nowrap text-xs sm:text-sm"
-                              : "text-sm"
-                        }
-                      `}
-                    >
-                      {value}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-
+            ))}
           </div>
         </section>
 
@@ -4549,9 +4339,12 @@ export default function PortabilidadeMultiplaPage() {
                   className="
                     overflow-hidden
                     rounded-[2.3rem]
-                    bg-slate-950
-                    text-white
-                    shadow-2xl
+                    bg-white
+                    border
+                    border-slate-100
+                    text-slate-800
+                    shadow-xl
+                    shadow-slate-200/50
                   "
                 >
 
@@ -4582,7 +4375,7 @@ export default function PortabilidadeMultiplaPage() {
                             font-black
                             uppercase
                             tracking-[0.22em]
-                            text-white/30
+                            text-slate-400
                           "
                         >
                           Resumo da operação
@@ -4593,6 +4386,7 @@ export default function PortabilidadeMultiplaPage() {
                             mt-1
                             text-xl
                             font-black
+                            text-slate-900
                           "
                         >
                           {selectedDestination}
@@ -4604,7 +4398,7 @@ export default function PortabilidadeMultiplaPage() {
                             text-[10px]
                             font-bold
                             uppercase
-                            text-white/40
+                            text-slate-400
                           "
                         >
                           Refin da Portabilidade
@@ -4616,8 +4410,8 @@ export default function PortabilidadeMultiplaPage() {
                         className="
                           rounded-xl
                           border
-                          border-white/10
-                          bg-white/5
+                          border-slate-100
+                          bg-slate-50
                           px-3
                           py-2
                           text-center
@@ -4627,6 +4421,7 @@ export default function PortabilidadeMultiplaPage() {
                           className="
                             text-xl
                             font-black
+                            text-slate-900
                           "
                         >
                           {
@@ -4643,7 +4438,7 @@ export default function PortabilidadeMultiplaPage() {
                             text-[7px]
                             font-black
                             uppercase
-                            text-white/30
+                            text-slate-400
                           "
                         >
                           contratos
@@ -4666,8 +4461,8 @@ export default function PortabilidadeMultiplaPage() {
                         className="
                           rounded-2xl
                           border
-                          border-white/10
-                          bg-white/5
+                          border-slate-100
+                          bg-slate-50
                           p-4
                         "
                       >
@@ -4676,7 +4471,7 @@ export default function PortabilidadeMultiplaPage() {
                             text-[8px]
                             font-black
                             uppercase
-                            text-white/30
+                            text-slate-400
                           "
                         >
                           Grupo
@@ -4687,6 +4482,7 @@ export default function PortabilidadeMultiplaPage() {
                             mt-1
                             text-lg
                             font-black
+                            text-slate-800
                           "
                         >
                           {selectedGroup ||
@@ -4699,8 +4495,8 @@ export default function PortabilidadeMultiplaPage() {
                         className="
                           rounded-2xl
                           border
-                          border-white/10
-                          bg-white/5
+                          border-slate-100
+                          bg-slate-50
                           p-4
                         "
                       >
@@ -4709,7 +4505,7 @@ export default function PortabilidadeMultiplaPage() {
                             text-[8px]
                             font-black
                             uppercase
-                            text-white/30
+                            text-slate-400
                           "
                         >
                           Benefício
@@ -4721,6 +4517,7 @@ export default function PortabilidadeMultiplaPage() {
                             truncate
                             text-sm
                             font-black
+                            text-slate-800
                           "
                         >
                           {selectedBenefit
@@ -4745,7 +4542,7 @@ export default function PortabilidadeMultiplaPage() {
                           items-center
                           justify-between
                           border-b
-                          border-white/10
+                          border-slate-100
                           pb-3
                         "
                       >
@@ -4753,7 +4550,7 @@ export default function PortabilidadeMultiplaPage() {
                           className="
                             text-xs
                             font-bold
-                            text-white/45
+                            text-slate-500
                           "
                         >
                           Soma das parcelas
@@ -4763,6 +4560,7 @@ export default function PortabilidadeMultiplaPage() {
                           className="
                             text-xs
                             font-black
+                            text-slate-900
                           "
                         >
                           {formatBRL(
@@ -4778,7 +4576,7 @@ export default function PortabilidadeMultiplaPage() {
                           items-center
                           justify-between
                           border-b
-                          border-white/10
+                          border-slate-100
                           pb-3
                         "
                       >
@@ -4786,7 +4584,7 @@ export default function PortabilidadeMultiplaPage() {
                           className="
                             text-xs
                             font-bold
-                            text-white/45
+                            text-slate-500
                           "
                         >
                           Margem negativa
@@ -4796,7 +4594,7 @@ export default function PortabilidadeMultiplaPage() {
                           className="
                             text-xs
                             font-black
-                            text-red-300
+                            text-red-600
                           "
                         >
                           {formatBRL(
@@ -4812,7 +4610,7 @@ export default function PortabilidadeMultiplaPage() {
                           items-center
                           justify-between
                           border-b
-                          border-white/10
+                          border-slate-100
                           pb-3
                         "
                       >
@@ -4820,7 +4618,7 @@ export default function PortabilidadeMultiplaPage() {
                           className="
                             text-xs
                             font-bold
-                            text-white/45
+                            text-slate-500
                           "
                         >
                           Saldo total
@@ -4830,6 +4628,7 @@ export default function PortabilidadeMultiplaPage() {
                           className="
                             text-xs
                             font-black
+                            text-slate-900
                           "
                         >
                           {formatBRL(
@@ -4846,8 +4645,8 @@ export default function PortabilidadeMultiplaPage() {
                         mt-5
                         rounded-[1.6rem]
                         border
-                        border-blue-400/20
-                        bg-blue-500/10
+                        border-blue-100
+                        bg-blue-50
                         p-5
                       "
                     >
@@ -4857,7 +4656,7 @@ export default function PortabilidadeMultiplaPage() {
                           font-black
                           uppercase
                           tracking-[0.2em]
-                          text-blue-300
+                          text-blue-600
                         "
                       >
                         Nova parcela do Refin
@@ -4868,6 +4667,7 @@ export default function PortabilidadeMultiplaPage() {
                           mt-1
                           text-3xl
                           font-black
+                          text-slate-900
                         "
                       >
                         {formatBRL(
@@ -4881,7 +4681,7 @@ export default function PortabilidadeMultiplaPage() {
                           text-[9px]
                           font-semibold
                           leading-relaxed
-                          text-white/40
+                          text-slate-400
                         "
                       >
                         Soma das parcelas portadas menos a margem negativa.
@@ -4894,8 +4694,8 @@ export default function PortabilidadeMultiplaPage() {
                         mt-5
                         rounded-[1.5rem]
                         border
-                        border-white/10
-                        bg-white/5
+                        border-slate-100
+                        bg-slate-50
                         p-4
                       "
                     >
@@ -4914,7 +4714,7 @@ export default function PortabilidadeMultiplaPage() {
                               text-[8px]
                               font-black
                               uppercase
-                              text-white/30
+                              text-slate-400
                             "
                           >
                             Parcela de viabilidade
@@ -4925,6 +4725,7 @@ export default function PortabilidadeMultiplaPage() {
                               mt-1
                               text-xs
                               font-black
+                              text-slate-800
                             "
                           >
                             Necessário{" "}
@@ -4938,7 +4739,7 @@ export default function PortabilidadeMultiplaPage() {
                               mt-1
                               text-[9px]
                               font-bold
-                              text-white/40
+                              text-slate-400
                             "
                           >
                             Maior parcela{" "}
@@ -5127,7 +4928,7 @@ export default function PortabilidadeMultiplaPage() {
                                 font-black
                                 uppercase
                                 tracking-[0.2em]
-                                text-blue-300
+                                text-blue-600
                               "
                             >
                               Tabelas {selectedDestination}
@@ -5138,7 +4939,7 @@ export default function PortabilidadeMultiplaPage() {
                                 mt-1
                                 text-[9px]
                                 font-semibold
-                                text-white/35
+                                text-slate-400
                               "
                             >
                               Aprovadas em todos os contratos
@@ -5148,12 +4949,12 @@ export default function PortabilidadeMultiplaPage() {
                           <span
                             className="
                               rounded-full
-                              bg-blue-500/15
+                              bg-blue-100
                               px-2.5
                               py-1
                               text-[9px]
                               font-black
-                              text-blue-300
+                              text-blue-700
                             "
                           >
                             {
@@ -5171,8 +4972,8 @@ export default function PortabilidadeMultiplaPage() {
                             className="
                               rounded-2xl
                               border
-                              border-white/10
-                              bg-black/10
+                              border-slate-100
+                              bg-slate-50
                               p-3
                             "
                           >
@@ -5191,7 +4992,7 @@ export default function PortabilidadeMultiplaPage() {
                                   font-black
                                   uppercase
                                   tracking-[0.18em]
-                                  text-white/40
+                                  text-slate-400
                                 "
                               >
                                 Prazos disponíveis
@@ -5203,7 +5004,7 @@ export default function PortabilidadeMultiplaPage() {
                                     text-[8px]
                                     font-black
                                     uppercase
-                                    text-white/40
+                                    text-slate-400
                                   "
                                 >
                                   {factaActiveTerm}X
@@ -5269,10 +5070,11 @@ export default function PortabilidadeMultiplaPage() {
                                             uppercase
                                             tracking-wider
                                             transition-all
+                                            cursor-pointer
                                             ${
                                               active
-                                                ? "text-white shadow-lg"
-                                                : "bg-white/5 text-white/45 hover:bg-white/10 hover:text-white"
+                                                ? "text-white shadow-md shadow-blue-500/20"
+                                                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
                                             }
                                           `}
                                           style={
@@ -5311,8 +5113,8 @@ export default function PortabilidadeMultiplaPage() {
                                   p-4
                                   ${
                                     index === 0
-                                      ? "border-emerald-400/30 bg-emerald-500/10"
-                                      : "border-white/10 bg-white/5"
+                                      ? "border-emerald-300 bg-emerald-50/70 shadow-sm"
+                                      : "border-slate-100 bg-slate-50"
                                   }
                                 `}
                               >
@@ -5343,7 +5145,7 @@ export default function PortabilidadeMultiplaPage() {
                                           truncate
                                           text-[11px]
                                           font-black
-                                          text-white
+                                          text-slate-900
                                         "
                                       >
                                         {offer.tabela}
@@ -5353,14 +5155,14 @@ export default function PortabilidadeMultiplaPage() {
                                         <span
                                           className="
                                             rounded-full
-                                            bg-emerald-400/15
+                                            bg-emerald-100
                                             px-2
                                             py-1
                                             text-[7px]
                                             font-black
                                             uppercase
                                             tracking-wider
-                                            text-emerald-300
+                                            text-emerald-700
                                           "
                                         >
                                           Melhor tabela
@@ -5373,7 +5175,7 @@ export default function PortabilidadeMultiplaPage() {
                                         mt-1
                                         text-[9px]
                                         font-bold
-                                        text-white/35
+                                        text-slate-400
                                       "
                                     >
                                       {Number(
@@ -5402,7 +5204,7 @@ export default function PortabilidadeMultiplaPage() {
                                       whitespace-nowrap
                                       text-sm
                                       font-black
-                                      text-emerald-300
+                                      text-emerald-600
                                     "
                                   >
                                     {formatBRL(
@@ -5423,15 +5225,17 @@ export default function PortabilidadeMultiplaPage() {
                                   <div
                                     className="
                                       rounded-xl
-                                      bg-black/15
+                                      bg-white
+                                      border
+                                      border-slate-100
                                       p-3
                                     "
                                   >
-                                    <p className="text-[7px] font-black uppercase text-white/30">
+                                    <p className="text-[7px] font-black uppercase text-slate-400">
                                       Parcela Refin
                                     </p>
 
-                                    <p className="mt-1 text-xs font-black">
+                                    <p className="mt-1 text-xs font-black text-slate-800">
                                       {formatBRL(
                                         offer.parcela_refin
                                       )}
@@ -5442,15 +5246,17 @@ export default function PortabilidadeMultiplaPage() {
                                   <div
                                     className="
                                       rounded-xl
-                                      bg-black/15
+                                      bg-white
+                                      border
+                                      border-slate-100
                                       p-3
                                     "
                                   >
-                                    <p className="text-[7px] font-black uppercase text-white/30">
+                                    <p className="text-[7px] font-black uppercase text-slate-400">
                                       Novo contrato
                                     </p>
 
-                                    <p className="mt-1 text-xs font-black">
+                                    <p className="mt-1 text-xs font-black text-slate-800">
                                       {formatBRL(
                                         offer.novo_contrato
                                       )}
@@ -5541,7 +5347,7 @@ export default function PortabilidadeMultiplaPage() {
                         font-bold
                         uppercase
                         tracking-wider
-                        text-white/25
+                        text-slate-400
                       "
                     >
                       Um único benefício por operação

@@ -193,7 +193,7 @@ def verificar_elegibilidade(cliente_input, regra_banco):
 
     # 8. Regras Específicas: Invalidez e LOAS
     # Espécies Invalidez (Phase 9: Strict Validation)
-    especies_invalidez = ["04", "05", "06", "32", "33", "34", "92", "4", "5", "6"]
+    especies_invalidez = ["04", "05", "06", "30", "32", "33", "34", "92", "4", "5", "6"]
     especies_loas = ["87", "88"]
     
     if convenio_cliente == "INSS":
