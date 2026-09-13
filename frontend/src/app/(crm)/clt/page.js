@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/utils/api";
 import { useToast } from "@/components/ToastProvider";
+import PageHeader from "@/components/PageHeader";
 
 const Icon = {
   Sparkles: ({ className = "w-5 h-5" }) => (
@@ -1236,90 +1237,48 @@ export default function CltMultibancosPage() {
       <div className="pointer-events-none absolute -left-20 top-0 h-72 w-72 rounded-full bg-blue-500/15 blur-[100px]" />
       <div className="pointer-events-none absolute right-0 top-28 h-80 w-80 rounded-full bg-violet-500/10 blur-[120px]" />
 
-      <motion.section
-        initial={{
-          opacity: 0,
-          y: 18,
-        }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
-        className="relative mb-7 overflow-hidden rounded-[34px] border border-blue-400/20 bg-gradient-to-br from-[#061b49] via-[#0b3c91] to-[#161b54] p-6 text-white shadow-[0_35px_100px_-35px_rgba(30,64,175,0.8)] md:p-9"
+      <PageHeader
+        title="CLT"
+        highlight="Multibancos"
+        subtitle="Consulte os dados do cliente, gere a autorização e compare as melhores ofertas em uma única experiência."
       >
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full border border-white/30" />
-          <div className="absolute -right-8 -top-10 h-56 w-56 rounded-full border border-white/20" />
-          <div className="absolute bottom-0 left-1/3 h-px w-1/2 bg-gradient-to-r from-transparent via-cyan-300 to-transparent" />
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            {
+              number: "01",
+              label: "Dados",
+            },
+            {
+              number: "02",
+              label: "Autorização",
+            },
+            {
+              number: "03",
+              label: "Ofertas",
+            },
+          ].map((step, index) => {
+            const stepNumber = index + 1;
+            const active = stepNumber <= currentStep;
+            return (
+              <div
+                key={step.number}
+                className={`flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all ${
+                  active
+                    ? "border-blue-200 bg-blue-50 text-blue-700 shadow-sm"
+                    : "border-slate-200 bg-white text-slate-400"
+                }`}
+              >
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black ${
+                  active ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"
+                }`}>
+                  {step.number}
+                </span>
+                <span>{step.label}</span>
+              </div>
+            );
+          })}
         </div>
-
-        <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-xl">
-              <Icon.Sparkles className="h-4 w-4 text-cyan-300" />
-
-              <span className="text-[10px] font-black uppercase tracking-[0.24em]">
-                Inteligência Multibancos
-              </span>
-            </div>
-
-            <h1 className="max-w-3xl text-3xl font-black leading-tight tracking-tight md:text-5xl">
-              Consulta e Simulação
-              <span className="block bg-gradient-to-r from-cyan-300 via-white to-blue-200 bg-clip-text text-transparent">
-                CLT Multibancos
-              </span>
-            </h1>
-
-            <p className="mt-5 max-w-2xl text-sm font-medium leading-7 text-blue-100/85 md:text-base">
-              Consulte os dados do cliente,
-              gere a autorização e compare as
-              melhores ofertas em uma única
-              experiência.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              {
-                number: "01",
-                label: "Dados",
-              },
-              {
-                number: "02",
-                label: "Autorização",
-              },
-              {
-                number: "03",
-                label: "Ofertas",
-              },
-            ].map((step, index) => {
-              const stepNumber = index + 1;
-              const active =
-                stepNumber <= currentStep;
-
-              return (
-                <div
-                  key={step.number}
-                  className={[
-                    "rounded-3xl border p-4 text-center transition-all",
-                    active
-                      ? "border-cyan-300/40 bg-white/15 shadow-lg"
-                      : "border-white/10 bg-black/10 opacity-55",
-                  ].join(" ")}
-                >
-                  <p className="text-lg font-black text-cyan-300">
-                    {step.number}
-                  </p>
-
-                  <p className="mt-1 text-[9px] font-black uppercase tracking-[0.18em]">
-                    {step.label}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </motion.section>
+      </PageHeader>
 
       <div className="grid gap-7 xl:grid-cols-[420px_minmax(0,1fr)]">
         <GlassCard className="h-fit">

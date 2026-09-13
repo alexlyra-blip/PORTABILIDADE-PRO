@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/utils/api";
+import PageHeader from "@/components/PageHeader";
 
 const PROVIDERS = [
   {
@@ -427,54 +428,22 @@ export default function CredenciaisBancariasPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
-        <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-8 text-white md:px-9 md:py-10">
-          <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
-          <div className="absolute -bottom-24 left-1/3 h-52 w-52 rounded-full bg-cyan-400/10 blur-3xl" />
-
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-blue-200">
-                <Icon.Shield className="h-4 w-4" />
-                Cofre Bancário
-              </div>
-
-              <h1 className="text-3xl font-black tracking-tight md:text-4xl">
-                Minhas Credenciais Bancárias
-              </h1>
-
-              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-300 md:text-base">
-                Conecte suas contas bancárias ao Portabilidade PRO para que
-                cada consulta CLT utilize suas próprias credenciais.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-              <div className="flex items-start gap-3">
-                <div className="rounded-xl bg-emerald-400/10 p-2 text-emerald-300">
-                  <Icon.Lock />
-                </div>
-
-                <div>
-                  <p className="text-sm font-black text-white">
-                    Proteção criptografada
-                  </p>
-                  <p className="mt-1 max-w-sm text-xs leading-5 text-slate-300">
-                    Senhas não são exibidas novamente e permanecem
-                    criptografadas no servidor.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <PageHeader
+        title="Credenciais"
+        highlight="Bancárias"
+        subtitle="Conecte suas contas bancárias ao Portabilidade PRO para que cada consulta CLT utilize suas próprias credenciais."
+      >
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-emerald-800 shadow-sm">
+          <Icon.Lock className="h-4 w-4 text-emerald-600" />
+          <span>Proteção criptografada</span>
         </div>
+      </PageHeader>
 
-        <div className="border-t border-slate-100 bg-slate-50/80 px-6 py-4 dark:border-white/5 dark:bg-white/[0.02] md:px-9">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-            <span>✓ Credenciais vinculadas ao seu usuário</span>
-            <span>✓ Senha nunca retornada pelo frontend</span>
-            <span>✓ Você pode atualizar ou remover quando desejar</span>
-          </div>
+      <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold text-slate-500">
+          <span className="flex items-center gap-1.5"><span className="text-emerald-500 font-black">✓</span> Credenciais vinculadas ao seu usuário</span>
+          <span className="flex items-center gap-1.5"><span className="text-emerald-500 font-black">✓</span> Senha nunca retornada pelo frontend</span>
+          <span className="flex items-center gap-1.5"><span className="text-emerald-500 font-black">✓</span> Atualize ou remova quando desejar</span>
         </div>
       </section>
 

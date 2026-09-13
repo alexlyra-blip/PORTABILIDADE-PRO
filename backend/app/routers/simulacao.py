@@ -114,7 +114,7 @@ async def processar_simulacao_promosys_core(
             nome_cliente=payload.cliente.nome,
             analfabeto=is_analfabeto,
             is_60_plus=idade_cliente >= 60,
-            is_invalidez_60_plus=extrair_codigo_especie(payload.cliente.especie) in ["04", "05", "06", "32", "92", "87"] and idade_cliente >= 60,
+            is_invalidez_60_plus=extrair_codigo_especie(payload.cliente.especie) in ["04", "05", "06", "30", "32", "92", "87"] and idade_cliente >= 60,
             possui_dois_cartoes=possui_dois_cartoes,
             valor_margem_negativa=float(valor_margem_negativa)
         )
