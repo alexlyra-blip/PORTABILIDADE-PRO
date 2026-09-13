@@ -1062,8 +1062,8 @@ export default function PortabilidadeMultiplaPage() {
       ? Number(selectedFactaTerm)
       : factaPreferredTerm;
 
-  const factaVisibleOffers =
-    factaActiveTerm
+  const factaVisibleOffers = useMemo(() => {
+    const list = factaActiveTerm
       ? factaOffers.filter(
           (offer) =>
             Number(
@@ -1071,6 +1071,13 @@ export default function PortabilidadeMultiplaPage() {
             ) === factaActiveTerm
         )
       : factaOffers;
+
+    return [...list].sort((a, b) => {
+      const tableA = String(a?.tabela || a?.table_name || a?.nome_tabela || "");
+      const tableB = String(b?.tabela || b?.table_name || b?.nome_tabela || "");
+      return tableA.localeCompare(tableB, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [factaOffers, factaActiveTerm]);
 
   useEffect(() => {
     if (!factaOffers.length) {
@@ -3448,34 +3455,36 @@ export default function PortabilidadeMultiplaPage() {
               : "Unifique até 6 contratos do mesmo benefício em uma única operação de Refin da Portabilidade."
           }
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">
+          <div className="flex flex-col items-start md:items-end gap-1.5 shrink-0">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
               Banco destino:
             </span>
-            {["FACTA", "DAYCOVAL"].map((destination) => {
-              const active = selectedDestination === destination;
-              return (
-                <button
-                  key={destination}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => selectDestination(destination)}
-                  className={`flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                    active
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                      : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
-                  style={active ? { background: brandColor } : {}}
-                >
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      active ? "bg-white" : "bg-slate-300"
+            <div className="inline-flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm shrink-0">
+              {["FACTA", "DAYCOVAL"].map((destination) => {
+                const active = selectedDestination === destination;
+                return (
+                  <button
+                    key={destination}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => selectDestination(destination)}
+                    className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer whitespace-nowrap min-w-[110px] ${
+                      active
+                        ? "text-white shadow-md shadow-blue-500/20"
+                        : "bg-slate-50 border border-slate-200/70 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
                     }`}
-                  />
-                  {destination}
-                </button>
-              );
-            })}
+                    style={active ? { background: brandColor } : {}}
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full shrink-0 ${
+                        active ? "bg-white" : "bg-slate-300"
+                      }`}
+                    />
+                    {destination}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </PageHeader>
 
