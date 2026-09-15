@@ -3632,7 +3632,7 @@ export default function PortabilidadeMultiplaPage() {
               Banco destino:
             </span>
             <div className="inline-flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm shrink-0">
-              {["FACTA", "DAYCOVAL"].map((destination) => {
+              {["FACTA", "DAYCOVAL", "QUERO+ CREDITO"].map((destination) => {
                 const active = selectedDestination === destination;
                 return (
                   <button
