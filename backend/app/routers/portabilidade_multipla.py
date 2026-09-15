@@ -3081,3 +3081,1527 @@ async def simular_portabilidade_multipla_daycoval(
                 soma_saldos,
         },
     }
+
+# ============================================================
+# MULTIPLA_QUERO_MAIS_BACKEND_V1
+# ============================================================
+
+from app.services.portabilidade_multipla_service import (
+    PortabilidadeMultiplaQueroMaisService
+    as _PortabilidadeMultiplaQueroMaisService,
+    interseccionar_ofertas_quero_mais
+    as _interseccionar_ofertas_quero_mais,
+    oferta_e_quero_mais
+    as _oferta_e_quero_mais,
+)
+
+
+
+
+def _quero_mais_bank_matches(value):
+    text = _motor_norm(value).replace("+", " MAIS ")
+    text = " ".join(text.split())
+    compact = text.replace(" ", "")
+    return (
+        "QUERO MAIS CREDITO" in text
+        or compact == "QUEROMAIS"
+        or compact.startswith("QUEROMAISCREDITO")
+    )
+
+def _quero_mais_species_code(
+    value,
+):
+    match = _re.search(
+        r"\d+",
+        str(value or ""),
+    )
+
+    if not match:
+        return ""
+
+    return (
+        match
+        .group(0)
+        .zfill(2)
+    )
+
+
+def _quero_mais_rejection_reasons(
+    result,
+):
+    motivos_quero_mais = []
+    motivos_bloqueio = []
+
+    for item in (
+        result.get(
+            "rejeitados",
+            [],
+        )
+        or []
+    ):
+        if not isinstance(
+            item,
+            dict,
+        ):
+            continue
+
+        banco = _motor_norm(
+            item.get("banco")
+        )
+
+        motivo = (
+            item.get("motivo")
+            or item.get("reason")
+            or item.get("mensagem")
+        )
+
+        if not motivo:
+            continue
+
+        if (
+            _quero_mais_bank_matches(banco)
+        ):
+            motivos_quero_mais.append(
+                str(motivo)
+            )
+
+        if (
+            "BLOQUEIO REGRAS"
+            in banco
+        ):
+            motivos_bloqueio.append(
+                str(motivo)
+            )
+
+    return list(
+        dict.fromkeys(
+            motivos_bloqueio
+            + motivos_quero_mais
+        )
+    )
+
+
+async def _quero_mais_motor_rules(
+    db,
+):
+    """
+    Le as regras de origem cadastradas para o
+    proprio QUERO+ CREDITO. O Motor continua sendo
+    a autoridade final.
+    """
+
+    fallback = {
+        "quero_mais_encontrado":
+            False,
+        "rules_available":
+            False,
+        "bank_id":
+            None,
+        "bank_name":
+            "QUERO+ CREDITO",
+        "excluded_origin_banks": [],
+        "origin_min_paid":
+            [],
+        "min_paid_installments":
+            0,
+        "min_table_paid_any":
+            0,
+        "active_inss_tables":
+            0,
+    }
+
+    try:
+        banks_result = await db.execute(
+            _select(_Bank).where(
+                _Bank.active == True,
+            )
+        )
+
+        banks = (
+            banks_result
+            .scalars()
+            .all()
+        )
+
+        quero_mais = next(
+            (
+                bank
+                for bank in banks
+                if _quero_mais_bank_matches(
+                    getattr(bank, "name", "")
+                )
+            ),
+            None,
+        )
+
+        if not quero_mais:
+            return {
+                **fallback,
+                "rules_error":
+                    "Banco QUERO+ CREDITO ativo nao localizado.",
+            }
+
+        rules_result = await db.execute(
+            _select(
+                _BankRule
+            ).where(
+                _BankRule.bank_id
+                == quero_mais.id,
+                _BankRule.active
+                == True,
+            )
+        )
+
+        rules = (
+            rules_result
+            .scalars()
+            .all()
+        )
+
+        rule = next(
+            (
+                item
+                for item in rules
+                if _motor_norm(
+                    getattr(
+                        item,
+                        "agreement",
+                        "",
+                    )
+                )
+                == "INSS"
+            ),
+            None,
+        )
+
+        if rule is None:
+            rule = next(
+                (
+                    item
+                    for item in rules
+                    if not getattr(
+                        item,
+                        "agreement",
+                        None,
+                    )
+                ),
+                rules[0]
+                if rules
+                else None,
+            )
+
+        tables_result = await db.execute(
+            _select(
+                _BankTable
+            ).where(
+                _BankTable.bank_id
+                == quero_mais.id,
+                _BankTable.active
+                == True,
+            )
+        )
+
+        all_tables = (
+            tables_result
+            .scalars()
+            .all()
+        )
+
+        inss_tables = [
+            table
+            for table in all_tables
+            if _motor_norm(
+                getattr(
+                    table,
+                    "agreement",
+                    "",
+                )
+            )
+            in (
+                "",
+                "INSS",
+            )
+        ]
+
+        table_minimums = [
+            _motor_int(
+                getattr(
+                    table,
+                    "min_paid_installments",
+                    0,
+                )
+            )
+            for table in inss_tables
+            if _motor_int(
+                getattr(
+                    table,
+                    "min_paid_installments",
+                    0,
+                )
+            ) > 0
+        ]
+
+        min_table_paid_any = (
+            min(table_minimums)
+            if table_minimums
+            else 0
+        )
+
+        excluded = _parse_string_list(
+            getattr(
+                rule,
+                "excluded_origin_banks",
+                None,
+            )
+            if rule
+            else None
+        )
+
+        return {
+            "quero_mais_encontrado":
+                True,
+            "rules_available":
+                True,
+            "bank_id":
+                quero_mais.id,
+            "bank_name":
+                getattr(
+                    quero_mais,
+                    "name",
+                    "QUERO+ CREDITO",
+                ),
+            "excluded_origin_banks":
+                excluded,
+            "origin_min_paid":
+                _parse_origin_min_paid(
+                    getattr(
+                        rule,
+                        "origin_banks_min_paid",
+                        None,
+                    )
+                    if rule
+                    else None
+                ),
+            "min_paid_installments":
+                max(
+                    0,
+                    _motor_int(
+                        getattr(
+                            rule,
+                            "min_paid_installments",
+                            0,
+                        )
+                        if rule
+                        else 0
+                    ),
+                ),
+            "min_table_paid_any":
+                min_table_paid_any,
+            "active_inss_tables":
+                len(
+                    inss_tables
+                ),
+        }
+
+    except Exception as error:
+        print(
+            "[WARNING] Falha ao carregar regras "
+            "QUERO+ CREDITO da Portabilidade Multipla: "
+            f"{error}"
+        )
+
+        return {
+            **fallback,
+            "rules_error":
+                "Falha temporaria ao carregar regras QUERO+ CREDITO.",
+        }
+
+
+async def _quero_mais_promotora_rules(
+    db,
+    current_user,
+    contratos,
+):
+    promotora_id = (
+        current_user.id
+    )
+
+    if (
+        getattr(
+            current_user,
+            "role",
+            "",
+        )
+        != "promotora"
+        and getattr(
+            current_user,
+            "broker_id",
+            None,
+        )
+    ):
+        promotora_id = (
+            current_user.broker_id
+        )
+
+    try:
+        result = await db.execute(
+            _multipla_promotora_select(
+                _MultiplaPromotoraRule
+            ).where(
+                _MultiplaPromotoraRule.promotora_id
+                == promotora_id
+            )
+        )
+    except Exception as error:
+        print(
+            "[WARNING] Falha ao validar regras "
+            "da promotora para QUERO+ CREDITO: "
+            f"{error}"
+        )
+
+        return [
+            (
+                "Nao foi possivel validar as regras "
+                "de origem da promotora no momento."
+            )
+        ]
+
+    origin_config = []
+    origin_blocklist = []
+
+    for rule in (
+        result.scalars().all()
+    ):
+        if rule.rule_key not in {
+            "origin_bank_config",
+            "origin_bank_blocklist",
+        }:
+            continue
+
+        try:
+            parsed = (
+                _multipla_promotora_json.loads(
+                    rule.rule_value
+                    or "[]"
+                )
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            parsed = []
+
+        if not isinstance(
+            parsed,
+            list,
+        ):
+            parsed = []
+
+        if (
+            rule.rule_key
+            == "origin_bank_config"
+        ):
+            origin_config = parsed
+
+        if (
+            rule.rule_key
+            == "origin_bank_blocklist"
+        ):
+            origin_blocklist = parsed
+
+    return (
+        PortabilidadeMultiplaFactaService
+        .validar_regras_promotora_origem(
+            contratos=contratos,
+            origin_config=origin_config,
+            origin_blocklist=(
+                origin_blocklist
+            ),
+        )
+    )
+
+
+@router.get(
+    "/quero-mais-motor-config"
+)
+async def motor_config_multipla_quero_mais(
+    db: _AsyncSession = _Depends(
+        _get_db
+    ),
+    current_user = _Depends(
+        _get_current_user
+    ),
+):
+    return await _quero_mais_motor_rules(
+        db
+    )
+
+
+@router.get(
+    "/quero-mais-config"
+)
+async def configuracao_multipla_quero_mais(
+    current_user: User = Depends(
+        get_current_user
+    ),
+):
+    return {
+        "banco": "QUERO+ CREDITO",
+        "codigo_banco": None,
+        "convenio": "INSS",
+        "min_contratos": (
+            _PortabilidadeMultiplaQueroMaisService
+            .MIN_CONTRATOS
+        ),
+        "max_contratos": (
+            _PortabilidadeMultiplaQueroMaisService
+            .MAX_CONTRATOS
+        ),
+        "parcela_minima": (
+            _PortabilidadeMultiplaQueroMaisService
+            .MIN_PARCELA_ORIGEM
+        ),
+        "parcelas_pagas_minimas": (
+            _PortabilidadeMultiplaQueroMaisService
+            .MIN_PARCELAS_PAGAS
+        ),
+        "usa_grupos": False,
+        "mesmo_beneficio": True,
+        "motor_autoridade_final": True,
+    }
+
+
+@router.post(
+    "/validar-quero-mais"
+)
+async def validar_portabilidade_multipla_quero_mais(
+    payload: PortabilidadeMultiplaInput,
+    current_user: User = Depends(
+        get_current_user
+    ),
+    db: _MultiplaPromotoraAsyncSession = Depends(
+        _multipla_promotora_get_db
+    ),
+):
+    contratos = []
+
+    for contrato in (
+        payload.contratos
+    ):
+        if hasattr(
+            contrato,
+            "model_dump",
+        ):
+            contratos.append(
+                contrato.model_dump()
+            )
+        else:
+            contratos.append(
+                contrato.dict()
+            )
+
+    validacao = (
+        _PortabilidadeMultiplaQueroMaisService
+        .validar(
+            banco_destino="QUERO+ CREDITO",
+            convenio="INSS",
+            margem_disponivel=(
+                payload.margem_disponivel
+            ),
+            contratos=contratos,
+            valor_operacao_refin=(
+                payload.valor_operacao_refin
+            ),
+        )
+    )
+
+    motor_rules = await (
+        _quero_mais_motor_rules(
+            db
+        )
+    )
+
+    bloqueios_quero_mais = []
+
+    if not motor_rules.get(
+        "rules_available"
+    ):
+        bloqueios_quero_mais.append(
+            (
+                "Nao foi possivel carregar as regras "
+                "de origem do QUERO+ CREDITO no momento."
+            )
+        )
+    else:
+        bloqueios_quero_mais = (
+            _PortabilidadeMultiplaQueroMaisService
+            .validar_regras_origem(
+                contratos=contratos,
+                origin_config=(
+                    motor_rules.get(
+                        "origin_min_paid",
+                        [],
+                    )
+                ),
+                origin_blocklist=(
+                    motor_rules.get(
+                        "excluded_origin_banks",
+                        [],
+                    )
+                ),
+                min_paid_installments=max(
+                    _motor_int(
+                        motor_rules.get(
+                            "min_paid_installments",
+                            0,
+                        )
+                    ),
+                    _motor_int(
+                        motor_rules.get(
+                            "min_table_paid_any",
+                            0,
+                        )
+                    ),
+                ),
+            )
+        )
+
+    if bloqueios_quero_mais:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_quero_mais,
+        ]
+
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    validacao[
+        "bloqueios_quero_mais"
+    ] = bloqueios_quero_mais
+
+    bloqueios_promotora = await (
+        _quero_mais_promotora_rules(
+            db,
+            current_user,
+            contratos,
+        )
+    )
+
+    if bloqueios_promotora:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_promotora,
+        ]
+
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    validacao[
+        "bloqueios_promotora"
+    ] = bloqueios_promotora
+
+    return validacao
+
+
+def _quero_mais_benefit_time(
+    value,
+):
+    from datetime import date
+    from datetime import datetime
+
+    raw = str(
+        value or ""
+    ).strip()
+
+    if not raw:
+        return 0, 0
+
+    parsed = None
+
+    for fmt in (
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+    ):
+        try:
+            parsed = datetime.strptime(
+                raw[:10],
+                fmt,
+            ).date()
+
+            break
+
+        except ValueError:
+            pass
+
+    if parsed is None:
+        return 0, 0
+
+    today = date.today()
+
+    months = (
+        (today.year - parsed.year)
+        * 12
+        + today.month
+        - parsed.month
+    )
+
+    if today.day < parsed.day:
+        months -= 1
+
+    months = max(
+        0,
+        months,
+    )
+
+    return (
+        months // 12,
+        months % 12,
+    )
+
+
+@router.post(
+    "/simular-quero-mais"
+)
+async def simular_portabilidade_multipla_quero_mais(
+    payload: _SimularMotorMultipla,
+    db: _AsyncSession = _Depends(
+        _get_db
+    ),
+    current_user = _Depends(
+        _get_current_user
+    ),
+):
+    contratos_dict = []
+
+    for contrato in (
+        payload.contratos
+    ):
+        if hasattr(
+            contrato,
+            "model_dump",
+        ):
+            contratos_dict.append(
+                contrato.model_dump()
+            )
+        else:
+            contratos_dict.append(
+                contrato.dict()
+            )
+
+    validacao = (
+        _PortabilidadeMultiplaQueroMaisService
+        .validar(
+            banco_destino="QUERO+ CREDITO",
+            convenio="INSS",
+            margem_disponivel=(
+                payload.margem_disponivel
+            ),
+            contratos=contratos_dict,
+        )
+    )
+
+    motor_rules = await (
+        _quero_mais_motor_rules(
+            db
+        )
+    )
+
+    bloqueios_quero_mais = []
+
+    if not motor_rules.get(
+        "rules_available"
+    ):
+        bloqueios_quero_mais.append(
+            (
+                "Nao foi possivel carregar as regras "
+                "de origem do QUERO+ CREDITO no momento."
+            )
+        )
+    else:
+        bloqueios_quero_mais = (
+            _PortabilidadeMultiplaQueroMaisService
+            .validar_regras_origem(
+                contratos=contratos_dict,
+                origin_config=(
+                    motor_rules.get(
+                        "origin_min_paid",
+                        [],
+                    )
+                ),
+                origin_blocklist=(
+                    motor_rules.get(
+                        "excluded_origin_banks",
+                        [],
+                    )
+                ),
+                min_paid_installments=max(
+                    _motor_int(
+                        motor_rules.get(
+                            "min_paid_installments",
+                            0,
+                        )
+                    ),
+                    _motor_int(
+                        motor_rules.get(
+                            "min_table_paid_any",
+                            0,
+                        )
+                    ),
+                ),
+            )
+        )
+
+    if bloqueios_quero_mais:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_quero_mais,
+        ]
+
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    validacao[
+        "bloqueios_quero_mais"
+    ] = bloqueios_quero_mais
+
+    bloqueios_promotora = await (
+        _quero_mais_promotora_rules(
+            db,
+            current_user,
+            contratos_dict,
+        )
+    )
+
+    if bloqueios_promotora:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_promotora,
+        ]
+
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    if not validacao.get(
+        "elegivel_previo"
+    ):
+        return {
+            "success": False,
+            "banco": "QUERO+ CREDITO",
+            "ofertas": [],
+            "rejeitados": [],
+            "bloqueios": (
+                validacao.get(
+                    "bloqueios",
+                    [],
+                )
+            ),
+            "bloqueios_contratos": [],
+            "validacao": validacao,
+        }
+
+    soma_parcelas = _motor_float(
+        validacao.get(
+            "soma_parcelas"
+        )
+    )
+
+    soma_saldos = _motor_float(
+        validacao.get(
+            "soma_saldos"
+        )
+    )
+
+    margem_negativa = _motor_float(
+        validacao.get(
+            "margem_negativa"
+        )
+    )
+
+    # MULTIPLA_QUERO_MAIS_FINAL_V3
+    idade = _motor_int(
+        getattr(
+            payload.cliente,
+            "idade",
+            0,
+        )
+    )
+
+    if idade < 18:
+        return {
+            "success": False,
+            "banco": "QUERO+ CREDITO",
+            "ofertas": [],
+            "rejeitados": [],
+            "bloqueios": [
+                (
+                    "Idade invalida ou nao "
+                    "informada para validacao "
+                    "das regras QUERO+ CREDITO."
+                )
+            ],
+            "bloqueios_contratos": [],
+            "validacao": validacao,
+            "resumo": {
+                "quantidade_contratos":
+                    len(
+                        payload.contratos
+                    ),
+                "soma_parcelas":
+                    soma_parcelas,
+                "margem_negativa":
+                    margem_negativa,
+                "parcela_refin":
+                    validacao.get(
+                        "parcela_refin",
+                        0,
+                    ),
+                "saldo_total":
+                    soma_saldos,
+            },
+        }
+
+    especie_raw = (
+        getattr(
+            payload.cliente,
+            "especie",
+            None,
+        )
+        or getattr(
+            payload.cliente,
+            "benefit_species",
+            None,
+        )
+        or ""
+    )
+
+    especie_codigo = (
+        _quero_mais_species_code(
+            especie_raw
+        )
+    )
+
+    data_concessao = getattr(
+        payload.cliente,
+        "data_concessao",
+        None,
+    )
+
+    (
+        benefit_time_years,
+        benefit_time_months,
+    ) = _quero_mais_benefit_time(
+        data_concessao
+    )
+
+    is_60_plus = (
+        idade >= 60
+    )
+
+    is_invalidez_60_plus = (
+        especie_codigo
+        in {
+            "04",
+            "05",
+            "06",
+            "30",
+            "32",
+            "87",
+            "92",
+        }
+        and idade >= 60
+    )
+
+    resultados_motor = []
+    bloqueios_contratos = []
+
+    for contrato in (
+        payload.contratos
+    ):
+        banco_origem = (
+            str(
+                getattr(
+                    contrato,
+                    "codigo",
+                    "",
+                )
+                or ""
+            ).strip()
+            or str(
+                contrato.banco
+                or ""
+            ).strip()
+        )
+
+        prazo_total = max(
+            1,
+            _motor_int(
+                contrato.prazo
+            ),
+        )
+
+        prazo_restante = max(
+            1,
+            _motor_int(
+                contrato.prazo_restante
+            ),
+        )
+
+        taxa_atual = _motor_float(
+            getattr(
+                contrato,
+                "taxa",
+                0,
+            )
+        )
+
+        try:
+            sim_input = (
+                _SimulacaoInput(
+                    nome_cliente=(
+                        payload.cliente.nome
+                    ),
+                    cpf=(
+                        payload.cliente.cpf
+                    ),
+                    idade=idade,
+                    convenio="INSS",
+                    sub_convenio="",
+                    benefit_species=(
+                        especie_codigo
+                    ),
+                    banco=banco_origem,
+
+                    # Financeiro consolidado.
+                    parcela=(
+                        soma_parcelas
+                    ),
+                    saldo_devedor=(
+                        soma_saldos
+                    ),
+
+                    taxa_atual=(
+                        taxa_atual
+                        if taxa_atual > 0
+                        else None
+                    ),
+
+                    # Prazo individual preservado
+                    # para validar a origem.
+                    total_term=(
+                        prazo_total
+                    ),
+                    remaining_term=(
+                        prazo_restante
+                    ),
+
+                    benefit_time_years=(
+                        benefit_time_years
+                    ),
+
+                    benefit_time_months=(
+                        benefit_time_months
+                    ),
+
+                    data_concessao=(
+                        data_concessao
+                    ),
+
+                    is_60_plus=(
+                        is_60_plus
+                    ),
+
+                    is_invalidez_60_plus=(
+                        is_invalidez_60_plus
+                    ),
+
+                    analfabeto=bool(
+                        getattr(
+                            payload.cliente,
+                            "analfabeto",
+                            False,
+                        )
+                    ),
+
+                    possui_dois_cartoes=bool(
+                        getattr(
+                            payload.cliente,
+                            "possui_dois_cartoes",
+                            False,
+                        )
+                    ),
+
+                    # QUERO+ CREDITO:
+                    # o Motor abate a margem.
+                    valor_margem_negativa=(
+                        margem_negativa
+                    ),
+
+                    # Mantem TODAS as validacoes
+                    # normais de portabilidade.
+                    skip_portability_rate_validation=(
+                        False
+                    ),
+                )
+            )
+
+        except Exception as error:
+            bloqueios_contratos.append(
+                {
+                    "contrato":
+                        contrato.contrato,
+                    "banco":
+                        contrato.banco,
+                    "motivos": [
+                        (
+                            "Falha ao preparar o contrato "
+                            "para o Motor QUERO+ CREDITO: "
+                            f"{error}"
+                        )
+                    ],
+                }
+            )
+
+            resultados_motor.append(
+                {
+                    "ofertas": [],
+                    "rejeitados": [],
+                }
+            )
+
+            continue
+
+        try:
+            result = await (
+                _SimuladorService
+                .executar(
+                    sim_input,
+                    db,
+                    current_user.id,
+                )
+            )
+        except Exception as error:
+            bloqueios_contratos.append(
+                {
+                    "contrato":
+                        contrato.contrato,
+                    "banco":
+                        contrato.banco,
+                    "motivos": [
+                        str(error)
+                    ],
+                }
+            )
+
+            resultados_motor.append(
+                {
+                    "ofertas": [],
+                    "rejeitados": [],
+                }
+            )
+
+            continue
+
+        ofertas_quero_mais = [
+            oferta
+            for oferta in (
+                result.get(
+                    "ofertas",
+                    [],
+                )
+                or []
+            )
+            if _oferta_e_quero_mais(
+                oferta
+            )
+        ]
+
+        if not ofertas_quero_mais:
+            motivos = (
+                _quero_mais_rejection_reasons(
+                    result
+                )
+            )
+
+            if not motivos:
+                motivos = [
+                    (
+                        "Nenhuma tabela QUERO+ CREDITO "
+                        "elegivel para este contrato "
+                        "nas regras atuais do Motor."
+                    )
+                ]
+
+            bloqueios_contratos.append(
+                {
+                    "contrato":
+                        contrato.contrato,
+                    "banco":
+                        contrato.banco,
+                    "motivos":
+                        motivos,
+                }
+            )
+
+        resultados_motor.append(
+            {
+                **result,
+                "ofertas":
+                    ofertas_quero_mais,
+            }
+        )
+
+    if bloqueios_contratos:
+        bloqueios = []
+
+        for item in (
+            bloqueios_contratos
+        ):
+            for motivo in (
+                item.get(
+                    "motivos",
+                    [],
+                )
+                or []
+            ):
+                bloqueios.append(
+                    str(motivo)
+                )
+
+        return {
+            "success": False,
+            "banco": "QUERO+ CREDITO",
+            "ofertas": [],
+            "bloqueios": list(
+                dict.fromkeys(
+                    bloqueios
+                )
+            ),
+            "bloqueios_contratos":
+                bloqueios_contratos,
+            "validacao":
+                validacao,
+            "resumo": {
+                "quantidade_contratos":
+                    len(
+                        payload.contratos
+                    ),
+                "soma_parcelas":
+                    soma_parcelas,
+                "margem_negativa":
+                    margem_negativa,
+                "parcela_refin":
+                    validacao.get(
+                        "parcela_refin",
+                        0,
+                    ),
+                "saldo_total":
+                    soma_saldos,
+            },
+        }
+
+    ofertas_comuns = (
+        _interseccionar_ofertas_quero_mais(
+            resultados_motor
+        )
+    )
+
+    # MULTIPLA_QUERO_MAIS_FINANCEIRO_V4
+    # O Motor retorna os campos padrao:
+    # - valor_parcela
+    # - valor_total_contrato
+    # - valor_liberado
+    #
+    # A tela da Portabilidade Multipla usa:
+    # - parcela_refin
+    # - novo_contrato
+    # - troco
+    #
+    # Normalizamos e recalculamos pelo coeficiente efetivo
+    # para garantir a formula:
+    #   novo_contrato = parcela_refin / coeficiente
+    #   troco = novo_contrato - soma_saldos
+    ofertas_normalizadas = []
+
+    parcela_refin_quero_mais = round(
+        _motor_float(
+            validacao.get(
+                "parcela_refin",
+                soma_parcelas,
+            )
+        ),
+        2,
+    )
+
+    for oferta in ofertas_comuns:
+        tabela = (
+            oferta.get("tabela")
+            or oferta.get("table_name")
+            or oferta.get("nome_tabela")
+            or "QUERO+ CREDITO"
+        )
+
+        prazo = _motor_int(
+            oferta.get(
+                "prazo",
+                oferta.get(
+                    "term",
+                    0,
+                ),
+            )
+        )
+
+        parcela_motor = _motor_float(
+            oferta.get(
+                "valor_parcela",
+                oferta.get(
+                    "parcela",
+                    parcela_refin_quero_mais,
+                ),
+            )
+        )
+
+        if parcela_motor <= 0:
+            parcela_motor = (
+                parcela_refin_quero_mais
+            )
+
+        novo_contrato_motor = (
+            _motor_float(
+                oferta.get(
+                    "valor_total_contrato",
+                    oferta.get(
+                        "novo_contrato",
+                        oferta.get(
+                            "valor_financiado",
+                            0,
+                        ),
+                    ),
+                )
+            )
+        )
+
+        coeficiente = _motor_float(
+            oferta.get(
+                "coeficiente",
+                oferta.get(
+                    "coefficient",
+                    0,
+                ),
+            )
+        )
+
+        # O Motor atual nao expõe o coeficiente na oferta,
+        # mas expõe parcela e valor total do contrato.
+        # Logo, recuperamos o coeficiente efetivamente usado.
+        if (
+            coeficiente <= 0
+            and novo_contrato_motor > 0
+            and parcela_motor > 0
+        ):
+            coeficiente = (
+                parcela_motor
+                / novo_contrato_motor
+            )
+
+        novo_contrato = (
+            round(
+                parcela_refin_quero_mais
+                / coeficiente,
+                2,
+            )
+            if (
+                coeficiente > 0
+                and parcela_refin_quero_mais > 0
+            )
+            else round(
+                novo_contrato_motor,
+                2,
+            )
+        )
+
+        troco = round(
+            novo_contrato
+            - soma_saldos,
+            2,
+        )
+
+        # Se por qualquer motivo o coeficiente nao puder
+        # ser reconstruido, preserva o calculo do Motor.
+        if coeficiente <= 0:
+            troco_raw = oferta.get(
+                "troco"
+            )
+
+            if troco_raw is None:
+                troco_raw = oferta.get(
+                    "valor_liberado"
+                )
+
+            troco = round(
+                _motor_float(
+                    troco_raw
+                ),
+                2,
+            )
+
+        taxa = _motor_float(
+            oferta.get(
+                "taxa_juros",
+                oferta.get(
+                    "taxa",
+                    oferta.get(
+                        "interest_rate",
+                        0,
+                    ),
+                ),
+            )
+        )
+
+        taxa_refin = _motor_float(
+            oferta.get(
+                "taxa_refin",
+                oferta.get(
+                    "interest_rate_refin",
+                    taxa,
+                ),
+            )
+        )
+
+        ofertas_normalizadas.append({
+            **oferta,
+            "banco":
+                oferta.get(
+                    "banco"
+                )
+                or "QUERO+ CREDITO",
+            "tabela":
+                str(tabela),
+            "prazo":
+                prazo,
+            "taxa_juros":
+                taxa,
+            "taxa_refin":
+                taxa_refin,
+            "coeficiente":
+                round(
+                    coeficiente,
+                    8,
+                ),
+            "parcela_refin":
+                parcela_refin_quero_mais,
+            "novo_contrato":
+                novo_contrato,
+            "saldo_total":
+                round(
+                    soma_saldos,
+                    2,
+                ),
+            "troco":
+                troco,
+            "quantidade_contratos":
+                len(
+                    payload.contratos
+                ),
+        })
+
+    def _quero_mais_tabela_sort_key(item):
+        name = str(item.get("tabela") or item.get("table_name") or item.get("nome_tabela") or "")
+        return [int(t) if t.isdigit() else t.upper() for t in _re.split(r"(\d+)", name) if t]
+
+    ofertas_normalizadas.sort(
+        key=lambda item: (
+            -_motor_int(item.get("prazo")),
+            _quero_mais_tabela_sort_key(item),
+        )
+    )
+
+    ofertas_comuns = ofertas_normalizadas
+
+    if not ofertas_comuns:
+        return {
+            "success": False,
+            "banco": "QUERO+ CREDITO",
+            "ofertas": [],
+            "bloqueios": [
+                (
+                    "Os contratos passaram "
+                    "individualmente nas regras "
+                    "QUERO+ CREDITO, mas nao existe "
+                    "uma mesma tabela/prazo "
+                    "QUERO+ CREDITO elegivel para "
+                    "todos."
+                )
+            ],
+            "bloqueios_contratos": [],
+            "validacao":
+                validacao,
+            "resumo": {
+                "quantidade_contratos":
+                    len(
+                        payload.contratos
+                    ),
+                "soma_parcelas":
+                    soma_parcelas,
+                "margem_negativa":
+                    margem_negativa,
+                "parcela_refin":
+                    validacao.get(
+                        "parcela_refin",
+                        0,
+                    ),
+                "saldo_total":
+                    soma_saldos,
+            },
+        }
+
+    return {
+        "success": True,
+        "banco": "QUERO+ CREDITO",
+        "convenio": "INSS",
+        "beneficio": (
+            validacao.get(
+                "beneficio_operacao"
+            )
+        ),
+        "grupo": None,
+        "ofertas":
+            ofertas_comuns,
+        "rejeitados": [],
+        "bloqueios": [],
+        "bloqueios_contratos": [],
+        "validacao":
+            validacao,
+        "resumo": {
+            "quantidade_contratos":
+                len(
+                    payload.contratos
+                ),
+            "soma_parcelas":
+                soma_parcelas,
+            "margem_negativa":
+                margem_negativa,
+            "parcela_refin":
+                validacao.get(
+                    "parcela_refin",
+                    0,
+                ),
+            "saldo_total":
+                soma_saldos,
+        },
+    }
