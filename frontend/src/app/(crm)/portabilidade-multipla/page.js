@@ -1003,12 +1003,20 @@ export default function PortabilidadeMultiplaPage() {
     setSelectedDestination,
   ] = useState("FACTA");
 
+  /* MULTIPLA_QUERO_MAIS_FRONTEND_V1 */
   const isDaycoval =
     selectedDestination ===
     "DAYCOVAL";
 
+  const isQueroMais =
+    selectedDestination ===
+    "QUERO+ CREDITO";
+
+  const isAlternativeDestination =
+    isDaycoval || isQueroMais;
+
   const activeMaxContracts =
-    isDaycoval
+    isAlternativeDestination
       ? 3
       : Number(
           config.max_contratos ||
@@ -1016,7 +1024,7 @@ export default function PortabilidadeMultiplaPage() {
         );
 
   const activeMinContracts =
-    isDaycoval
+    isAlternativeDestination
       ? 2
       : 1;
 
@@ -1214,6 +1222,30 @@ export default function PortabilidadeMultiplaPage() {
 
     api
       .get(
+        "/portabilidade-multipla/quero-mais-motor-config"
+      )
+      .then((response) => {
+
+        setConfig(
+          (previous) => ({
+            ...previous,
+            quero_mais_motor_rules:
+              response || {},
+          })
+        );
+      })
+      .catch((error) => {
+
+        console.warn(
+          "Nao foi possivel carregar "
+          + "o pre-check QUERO+ CREDITO:",
+          error
+        );
+      });
+
+
+    api
+      .get(
         "/admin/sub-logos"
       )
       .then((response) => {
@@ -1368,7 +1400,7 @@ export default function PortabilidadeMultiplaPage() {
             ...loan,
 
             grupo_facta:
-              isDaycoval
+              isAlternativeDestination
                 ? "A"
                 : identifyGroup(
                     loan.banco
@@ -1378,7 +1410,7 @@ export default function PortabilidadeMultiplaPage() {
       [
         loans,
         config,
-        isDaycoval,
+        isAlternativeDestination,
       ]
     );
 
@@ -1522,11 +1554,11 @@ export default function PortabilidadeMultiplaPage() {
           margemNegativa,
           maiorParcela,
           minimoViabilidade:
-            isDaycoval
+            isAlternativeDestination
               ? 0
               : minimoViabilidade,
           parcelaRefin:
-            isDaycoval
+            isAlternativeDestination
               ? Math.max(
                   0,
                   somaParcelas -
@@ -1534,7 +1566,7 @@ export default function PortabilidadeMultiplaPage() {
                 )
               : parcelaRefin,
           viabilidade:
-            isDaycoval ||
+            isAlternativeDestination ||
             margemNegativa === 0 ||
             maiorParcela >=
               minimoViabilidade,
@@ -1544,7 +1576,7 @@ export default function PortabilidadeMultiplaPage() {
         selectedLoans,
         margin,
         config,
-        isDaycoval,
+        isAlternativeDestination,
       ]
     );
 
@@ -2217,6 +2249,138 @@ export default function PortabilidadeMultiplaPage() {
   };
 
 
+  const getQueroMaisPrecheck = (
+    loan
+  ) => {
+    const motorRules =
+      config
+        ?.quero_mais_motor_rules ||
+      {};
+
+    const loanBankText = [
+      loan?.codigo,
+      loan?.banco,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const paidRaw =
+      loan?.parcelas_pagas;
+
+    const paid =
+      paidRaw !== null &&
+      paidRaw !== undefined &&
+      paidRaw !== ""
+        ? Number(paidRaw)
+        : Math.max(
+            0,
+            Number(loan?.prazo || 0) -
+              Number(
+                loan?.prazo_restante || 0
+              )
+          );
+
+    const excluded =
+      motorRules
+        ?.excluded_origin_banks ||
+      [];
+
+    const excludedMatch =
+      excluded.find(
+        (bank) =>
+          bankRuleMatches(
+            loanBankText,
+            bank
+          )
+      );
+
+    if (excludedMatch) {
+      return {
+        blocked: true,
+        reason:
+          "QUERO+ CREDITO nao porta este banco originador.",
+        paid,
+      };
+    }
+
+    const parcela =
+      money(loan?.parcela);
+
+    if (parcela < 20) {
+      return {
+        blocked: true,
+        reason:
+          "QUERO+ CREDITO exige parcela minima de R$ 20,00.",
+        paid,
+      };
+    }
+
+    let specificMinimum = 0;
+
+    for (
+      const rule
+      of (
+        motorRules
+          ?.origin_min_paid ||
+        []
+      )
+    ) {
+      if (
+        bankRuleMatches(
+          loanBankText,
+          rule?.origin_bank
+        )
+      ) {
+        specificMinimum =
+          Math.max(
+            specificMinimum,
+            Number(
+              rule?.min_paid || 0
+            )
+          );
+      }
+    }
+
+    const required = Math.max(
+      0,
+      Number(
+        motorRules
+          ?.min_paid_installments ||
+        0
+      ),
+      Number(
+        motorRules
+          ?.min_table_paid_any ||
+        0
+      ),
+      specificMinimum
+    );
+
+    if (
+      required > 0 &&
+      paid < required
+    ) {
+      return {
+        blocked: true,
+        reason:
+          `QUERO+ CREDITO exige no minimo `
+          + `${required} parcelas `
+          + `pagas para esta origem. `
+          + `Contrato possui ${paid}.`,
+        required,
+        paid,
+      };
+    }
+
+    return {
+      blocked: false,
+      reason: "",
+      required,
+      paid,
+    };
+  };
+
+
   const getActivePrecheck = (
     loan
   ) =>
@@ -2224,9 +2388,13 @@ export default function PortabilidadeMultiplaPage() {
       ? getDaycovalPrecheck(
           loan
         )
-      : getFactaPrecheck(
-          loan
-        );
+      : isQueroMais
+        ? getQueroMaisPrecheck(
+            loan
+          )
+        : getFactaPrecheck(
+            loan
+          );
 
 
   const selectDestination = (
@@ -2293,9 +2461,9 @@ export default function PortabilidadeMultiplaPage() {
       return;
     }
 
-    if (isDaycoval) {
+    if (isAlternativeDestination) {
       const check =
-        getDaycovalPrecheck(
+        getActivePrecheck(
           loan
         );
 
@@ -2316,7 +2484,7 @@ export default function PortabilidadeMultiplaPage() {
         setNotice({
           type: "warning",
           text:
-            `A Portabilidade Multipla Daycoval permite no maximo ${activeMaxContracts} contratos.`,
+            `A Portabilidade Multipla ${selectedDestination} permite no maximo ${activeMaxContracts} contratos.`,
         });
 
         return;
@@ -2449,7 +2617,7 @@ export default function PortabilidadeMultiplaPage() {
     async () => {
 
       if (
-        isDaycoval &&
+        isAlternativeDestination &&
         selectedLoans.length <
           activeMinContracts
       ) {
@@ -2537,7 +2705,9 @@ export default function PortabilidadeMultiplaPage() {
           await api.post(
             isDaycoval
               ? "/portabilidade-multipla/validar-daycoval"
-              : "/portabilidade-multipla/validar",
+              : isQueroMais
+                ? "/portabilidade-multipla/validar-quero-mais"
+                : "/portabilidade-multipla/validar",
             {
               banco_destino:
                 selectedDestination,
@@ -2643,7 +2813,7 @@ export default function PortabilidadeMultiplaPage() {
 
         const motorClient =
           (
-            isDaycoval
+            isAlternativeDestination
               ? extractMotorClientDaycoval
               : extractMotorClient
           )(
@@ -2657,7 +2827,9 @@ export default function PortabilidadeMultiplaPage() {
           await api.post(
             isDaycoval
               ? "/portabilidade-multipla/simular-daycoval"
-              : "/portabilidade-multipla/simular",
+              : isQueroMais
+                ? "/portabilidade-multipla/simular-quero-mais"
+                : "/portabilidade-multipla/simular",
             {
               banco_destino:
                 selectedDestination,
@@ -2751,7 +2923,7 @@ export default function PortabilidadeMultiplaPage() {
           "Sem margem para libera\u00e7\u00e3o de troco ou saldo negativo.";
 
         const negativeMarginBlock =
-          !isDaycoval &&
+          !isAlternativeDestination &&
           Array.isArray(
             motorResponse
               ?.bloqueios_contratos
@@ -2981,13 +3153,13 @@ export default function PortabilidadeMultiplaPage() {
       );
 
     const blockedGroup =
-      !isDaycoval &&
+      !isAlternativeDestination &&
       selectedGroup &&
       selectedGroup !== group &&
       !selected;
 
     const blocked =
-      isDaycoval
+      isAlternativeDestination
         ? activePrecheck.blocked
         : (
             group === "C" ||
@@ -3104,8 +3276,8 @@ export default function PortabilidadeMultiplaPage() {
                   }
                 `}
               >
-                {isDaycoval
-                  ? "DAYCOVAL"
+                {isAlternativeDestination
+                  ? selectedDestination
                   : `Grupo ${group || "?"}`}
               </span>
             </div>
@@ -4257,15 +4429,15 @@ export default function PortabilidadeMultiplaPage() {
 
                 {renderGroup(
                   "A",
-                  isDaycoval
-                    ? "DAYCOVAL"
+                  isAlternativeDestination
+                    ? selectedDestination
                     : "Grupo A",
-                  isDaycoval
+                  isAlternativeDestination
                     ? "Sem grupos - minimo 2 e maximo 3 contratos"
                     : "Contratos unificaveis entre si"
                 )}
 
-                {!isDaycoval
+                {!isAlternativeDestination
                   ? renderGroup(
                       "B",
                       "Grupo B",
@@ -4273,7 +4445,7 @@ export default function PortabilidadeMultiplaPage() {
                     )
                   : null}
 
-                {!isDaycoval
+                {!isAlternativeDestination
                   ? renderGroup(
                       "C",
                       "Grupo C",
@@ -4281,7 +4453,7 @@ export default function PortabilidadeMultiplaPage() {
                     )
                   : null}
 
-{!isDaycoval && groups.OTHER.length >
+{!isAlternativeDestination && groups.OTHER.length >
                 0 ? (
 
                   <section

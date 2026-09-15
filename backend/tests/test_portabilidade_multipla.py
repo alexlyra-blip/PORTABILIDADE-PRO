@@ -26,6 +26,7 @@ spec.loader.exec_module(module)
 
 Service = module.PortabilidadeMultiplaFactaService
 DaycovalService = module.PortabilidadeMultiplaDaycovalService
+QueroMaisService = module.PortabilidadeMultiplaQueroMaisService
 
 
 def test_exemplo_margem_negativa():
@@ -1089,3 +1090,154 @@ def test_daycoval_formula_reconstroi_troco_consolidado():
 
     assert novo_contrato == 8302.94
     assert troco == 1857.79
+
+
+
+def _quero_contract(
+    banco="BANCO TESTE",
+    parcela=100,
+    pagas=12,
+    beneficio="1234567890",
+):
+    return {
+        "banco": banco,
+        "codigo": "999",
+        "parcela": parcela,
+        "saldo_devedor": 3000,
+        "beneficio": beneficio,
+        "prazo": 84,
+        "prazo_restante": 84 - pagas,
+        "parcelas_pagas": pagas,
+    }
+
+
+def test_quero_mais_minimo_dois_maximo_tres_contratos():
+    um = QueroMaisService.validar(
+        banco_destino="QUERO+ CREDITO",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[_quero_contract()],
+    )
+    assert um["elegivel_previo"] is False
+    assert any("minimo 2" in item.lower() for item in um["bloqueios"])
+
+    tres = QueroMaisService.validar(
+        banco_destino="QUERO+ CREDITO",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            _quero_contract(banco="BANCO A"),
+            _quero_contract(banco="BANCO B"),
+            _quero_contract(banco="BANCO C"),
+        ],
+    )
+    assert tres["elegivel_previo"] is True
+
+    quatro = QueroMaisService.validar(
+        banco_destino="QUERO+ CREDITO",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            _quero_contract(banco=f"BANCO {i}")
+            for i in range(4)
+        ],
+    )
+    assert quatro["elegivel_previo"] is False
+    assert any("maximo 3" in item.lower() for item in quatro["bloqueios"])
+
+
+def test_quero_mais_bloqueia_parcela_abaixo_de_vinte():
+    result = QueroMaisService.validar(
+        banco_destino="QUERO+ CREDITO",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            _quero_contract(banco="BANCO A", parcela=19.99),
+            _quero_contract(banco="BANCO B", parcela=100),
+        ],
+    )
+    assert result["elegivel_previo"] is False
+    assert any("R$ 20,00" in item for item in result["bloqueios"])
+
+
+def test_quero_mais_aceita_parcela_igual_a_vinte():
+    result = QueroMaisService.validar(
+        banco_destino="QUERO+ CREDITO",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            _quero_contract(banco="BANCO A", parcela=20),
+            _quero_contract(banco="BANCO B", parcela=100),
+        ],
+    )
+    assert result["elegivel_previo"] is True
+
+
+def test_quero_mais_bancos_bloqueados_vem_das_regras():
+    contratos = [
+        _quero_contract(banco="BANCO BLOQUEADO"),
+        _quero_contract(banco="BANCO OK"),
+    ]
+    bloqueios = QueroMaisService.validar_regras_origem(
+        contratos=contratos,
+        origin_blocklist=["BANCO BLOQUEADO"],
+    )
+    assert bloqueios
+    assert "BANCO BLOQUEADO" in bloqueios[0]
+    assert "QUERO+ CREDITO" in bloqueios[0]
+
+
+def test_quero_mais_minimo_parcelas_por_banco_vem_das_regras():
+    contratos = [
+        _quero_contract(banco="BANCO A", pagas=8),
+        _quero_contract(banco="BANCO B", pagas=20),
+    ]
+    bloqueios = QueroMaisService.validar_regras_origem(
+        contratos=contratos,
+        origin_config=[
+            {"origin_bank": "BANCO A", "min_paid": 12}
+        ],
+        min_paid_installments=0,
+    )
+    assert bloqueios
+    assert "12 parcelas" in bloqueios[0]
+
+
+def test_quero_mais_mesmo_beneficio_obrigatorio():
+    result = QueroMaisService.validar(
+        banco_destino="QUERO+ CREDITO",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            _quero_contract(beneficio="1111111111"),
+            _quero_contract(beneficio="2222222222"),
+        ],
+    )
+    assert result["elegivel_previo"] is False
+    assert any("beneficios/NB diferentes" in item for item in result["bloqueios"])
+
+
+def test_quero_mais_intersecao_preserva_ordem_motor():
+    resultados = [
+        {
+            "ofertas": [
+                {"banco": "QUERO+ CREDITO", "tabela": "TABELA 3", "prazo": 84, "valor_liberado": 900},
+                {"banco": "QUERO+ CREDITO", "tabela": "TABELA 1", "prazo": 84, "valor_liberado": 1000},
+                {"banco": "QUERO+ CREDITO", "tabela": "TABELA 2", "prazo": 84, "valor_liberado": 950},
+            ]
+        },
+        {
+            "ofertas": [
+                {"banco": "QUERO MAIS CREDITO", "tabela": "TABELA 2", "prazo": 84, "valor_liberado": 940},
+                {"banco": "QUERO MAIS CREDITO", "tabela": "TABELA 3", "prazo": 84, "valor_liberado": 880},
+                {"banco": "QUERO MAIS CREDITO", "tabela": "TABELA 1", "prazo": 84, "valor_liberado": 990},
+            ]
+        },
+    ]
+
+    ofertas = module.interseccionar_ofertas_quero_mais(resultados)
+    assert [item["tabela"] for item in ofertas] == [
+        "TABELA 3",
+        "TABELA 1",
+        "TABELA 2",
+    ]

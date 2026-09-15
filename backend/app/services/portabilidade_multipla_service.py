@@ -1666,3 +1666,230 @@ def interseccionar_ofertas_daycoval(
         )
 
     return resultado
+
+# ============================================================
+# MULTIPLA_QUERO_MAIS_BACKEND_V1
+# ============================================================
+
+class PortabilidadeMultiplaQueroMaisService(
+    PortabilidadeMultiplaDaycovalService
+):
+    """
+    Regras estruturais da Portabilidade Multipla QUERO+ CREDITO.
+
+    Replica o desenho da Multipla Daycoval: 2 a 3 contratos do
+    mesmo beneficio/NB, sem grupos A/B/C. Bancos de origem,
+    quantidade minima de parcelas pagas, idade, especie, tabelas,
+    coeficientes e demais regras continuam sob autoridade das
+    regras cadastradas e do Motor existente.
+    """
+
+    MIN_CONTRATOS = 2
+    MAX_CONTRATOS = 3
+    MIN_PARCELA_ORIGEM = 20.00
+
+    # QUERO+ nao possui minimo estrutural fixo de parcelas pagas.
+    # O minimo vem das regras gerais/especificas e das tabelas
+    # cadastradas para o banco destino.
+    MIN_PARCELAS_PAGAS = 0
+
+    @classmethod
+    def _is_c6_origin(cls, contrato):
+        # Nao hardcodar bancos de origem no QUERO+.
+        # A lista de bancos nao portados vem da configuracao
+        # excluded_origin_banks/origin_bank_blocklist.
+        return False
+
+    @staticmethod
+    def _quero_text(value):
+        return (
+            str(value)
+            .replace("DAYCOVAL", "QUERO+ CREDITO")
+            .replace("Daycoval", "QUERO+ CREDITO")
+            .replace("daycoval", "QUERO+ CREDITO")
+        )
+
+    @classmethod
+    def validar_regras_origem(
+        cls,
+        contratos,
+        origin_config=None,
+        origin_blocklist=None,
+        min_paid_installments=0,
+    ):
+        bloqueios = super().validar_regras_origem(
+            contratos=contratos,
+            origin_config=origin_config,
+            origin_blocklist=origin_blocklist,
+            min_paid_installments=min_paid_installments,
+        )
+
+        return [
+            cls._quero_text(item)
+            for item in bloqueios
+        ]
+
+    @classmethod
+    def validar(
+        cls,
+        banco_destino,
+        convenio,
+        margem_disponivel,
+        contratos,
+        valor_operacao_refin=None,
+    ):
+        # Reutiliza o mesmo consolidado financeiro da Multipla
+        # Daycoval, mas com constantes/validacoes da subclasse.
+        result = super().validar(
+            banco_destino="DAYCOVAL",
+            convenio=convenio,
+            margem_disponivel=margem_disponivel,
+            contratos=contratos,
+            valor_operacao_refin=valor_operacao_refin,
+        )
+
+        result["banco_destino"] = "QUERO+ CREDITO"
+        result["bloqueios"] = [
+            cls._quero_text(item)
+            for item in result.get("bloqueios", [])
+        ]
+        result["avisos"] = [
+            cls._quero_text(item)
+            for item in result.get("avisos", [])
+        ]
+
+        return result
+
+
+def _quero_mais_norm(value):
+    import unicodedata
+
+    text = str(value or "").strip().upper()
+    text = "".join(
+        char
+        for char in unicodedata.normalize("NFD", text)
+        if unicodedata.category(char) != "Mn"
+    )
+    text = text.replace("+", " MAIS ")
+    return " ".join(text.split())
+
+
+def oferta_e_quero_mais(oferta):
+    if not isinstance(oferta, dict):
+        return False
+
+    valores = [
+        oferta.get("banco"),
+        oferta.get("bank"),
+        oferta.get("bank_name"),
+        oferta.get("nome_banco"),
+    ]
+
+    texto = " ".join(
+        _quero_mais_norm(value)
+        for value in valores
+        if value is not None
+    )
+
+    compacto = texto.replace(" ", "")
+
+    return (
+        "QUERO MAIS CREDITO" in texto
+        or compacto == "QUEROMAIS"
+        or compacto.startswith("QUEROMAISCREDITO")
+    )
+
+
+def chave_oferta_quero_mais(oferta):
+    tabela = (
+        oferta.get("tabela")
+        or oferta.get("table_name")
+        or oferta.get("nome_tabela")
+        or ""
+    )
+
+    prazo = (
+        oferta.get("prazo")
+        or oferta.get("term")
+        or 0
+    )
+
+    try:
+        prazo = int(float(prazo or 0))
+    except (TypeError, ValueError):
+        prazo = 0
+
+    return (
+        str(tabela).strip().upper(),
+        prazo,
+    )
+
+
+def interseccionar_ofertas_quero_mais(resultados):
+    """
+    Intersecciona somente tabelas/prazos presentes em todos os
+    contratos e PRESERVA a ordem comercial do primeiro retorno do
+    Motor. Nao reordena por troco, taxa, prazo ou nome da tabela.
+    """
+
+    mapas = []
+    primeira_ordem = []
+
+    for indice_resultado, resultado in enumerate(resultados or []):
+        mapa = {}
+
+        for oferta in (resultado.get("ofertas", []) or []):
+            if not oferta_e_quero_mais(oferta):
+                continue
+
+            chave = chave_oferta_quero_mais(oferta)
+
+            if chave not in mapa:
+                mapa[chave] = oferta
+
+            if indice_resultado == 0 and chave not in primeira_ordem:
+                primeira_ordem.append(chave)
+
+        if not mapa:
+            return []
+
+        mapas.append(mapa)
+
+    if not mapas:
+        return []
+
+    comuns = set(mapas[0].keys())
+    for mapa in mapas[1:]:
+        comuns &= set(mapa.keys())
+
+    resultado = []
+
+    for chave in primeira_ordem:
+        if chave not in comuns:
+            continue
+
+        variantes = [
+            mapa[chave]
+            for mapa in mapas
+        ]
+
+        def valor_liberado(oferta):
+            try:
+                return float(
+                    oferta.get(
+                        "valor_liberado",
+                        oferta.get("troco", 0),
+                    )
+                    or 0
+                )
+            except (TypeError, ValueError):
+                return 0.0
+
+        escolhida = min(
+            variantes,
+            key=valor_liberado,
+        )
+
+        resultado.append(dict(escolhida))
+
+    return resultado
