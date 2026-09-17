@@ -70,7 +70,7 @@ def test_exemplo_margem_negativa():
     assert result["parcela_refin"] == 340
 
 
-def test_grupo_c_nao_pode_ser_unificado():
+def test_grupo_c_pode_ser_unificado():
     result = Service.validar(
         banco_destino="FACTA",
         convenio="INSS",
@@ -80,15 +80,13 @@ def test_grupo_c_nao_pode_ser_unificado():
                 "banco": "BRB",
                 "parcela": 150,
                 "saldo_devedor": 5000,
+                "parcelas_pagas": 15,
             }
         ],
     )
 
-    assert result["elegivel_previo"] is False
-    assert any(
-        "Grupo C" in item
-        for item in result["bloqueios"]
-    )
+    assert result["elegivel_previo"] is True
+    assert result["grupo_operacao"] == "C"
 
 
 def test_grupo_a_e_b_nao_podem_misturar():
@@ -113,7 +111,7 @@ def test_grupo_a_e_b_nao_podem_misturar():
     assert result["elegivel_previo"] is False
 
     assert any(
-        "Grupos A e B" in item
+        "Grupos A, B e C" in item
         for item in result["bloqueios"]
     )
 
@@ -424,7 +422,7 @@ def test_grupo_b_com_grupo_b_pode_unificar():
     assert result["grupo_operacao"] == "B"
 
 
-def test_grupo_c_nao_agrupa_nem_com_mesmo_banco():
+def test_grupo_c_bloqueado_para_unificacao_entre_si():
     result = Service.validar(
         banco_destino="FACTA",
         convenio="INSS",
@@ -435,22 +433,197 @@ def test_grupo_c_nao_agrupa_nem_com_mesmo_banco():
                 "beneficio": "1234567890",
                 "parcela": 150,
                 "saldo_devedor": 5000,
+                "parcelas_pagas": 14,
             },
             {
-                "banco": "BRB",
+                "banco": "BANCO INTER",
                 "beneficio": "1234567890",
                 "parcela": 150,
                 "saldo_devedor": 5000,
+                "parcelas_pagas": 20,
             },
         ],
     )
 
     assert result["elegivel_previo"] is False
-
     assert any(
-        "Grupo C" in item
+        "Grupo C nao podem ser unificados" in item
         for item in result["bloqueios"]
     )
+
+
+def test_grupo_c_nao_mistura_com_grupo_a():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "BRB",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+                "parcelas_pagas": 15,
+            },
+            {
+                "banco": "BMG",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "parcelas_pagas": 15,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+    assert any(
+        "Grupos A, B e C" in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_bloqueia_misturar_12_pagas_com_menos_grupo_a():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "BMG",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "parcelas_pagas": 12,
+            },
+            {
+                "banco": "C6",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "parcelas_pagas": 6,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+    assert any(
+        "12 ou mais parcelas pagas" in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_bloqueia_misturar_12_pagas_com_menos_grupo_b():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "MERCANTIL",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "parcelas_pagas": 15,
+            },
+            {
+                "banco": "PICPAY",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "parcelas_pagas": 8,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+    assert any(
+        "12 ou mais parcelas pagas" in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_bloqueia_misturar_12_pagas_com_menos_grupo_c():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "BRB",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+                "parcelas_pagas": 18,
+            },
+            {
+                "banco": "BANCO INTER",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+                "parcelas_pagas": 5,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is False
+    assert any(
+        "12 ou mais parcelas pagas" in item
+        for item in result["bloqueios"]
+    )
+
+
+def test_permite_multiplos_contratos_menos_de_12_pagas():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "BMG",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "parcelas_pagas": 6,
+            },
+            {
+                "banco": "C6",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "parcelas_pagas": 9,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is True
+    assert result["grupo_operacao"] == "A"
+
+
+def test_permite_multiplos_contratos_a_partir_de_12_pagas():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "BMG",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "parcelas_pagas": 12,
+            },
+            {
+                "banco": "C6",
+                "beneficio": "1234567890",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+                "parcelas_pagas": 36,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is True
+    assert result["grupo_operacao"] == "A"
 
 def test_parcela_refin_final_inclui_vinte():
     result = Service.validar(

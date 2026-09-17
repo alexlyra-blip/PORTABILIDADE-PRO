@@ -1483,6 +1483,40 @@ export default function PortabilidadeMultiplaPage() {
       : null;
 
 
+  const getLoanPaid = (loan) => {
+    if (
+      loan?.parcelas_pagas !== undefined &&
+      loan?.parcelas_pagas !== null &&
+      loan?.parcelas_pagas !== ""
+    ) {
+      return Number(loan.parcelas_pagas) || 0;
+    }
+    const prazo = Number(loan?.prazo || 0);
+    const prazoRestante = Number(loan?.prazo_restante || 0);
+    return Math.max(0, prazo - prazoRestante);
+  };
+
+
+  const selectedPaidTier = useMemo(() => {
+    if (isAlternativeDestination || selectedLoans.length === 0) {
+      return null;
+    }
+    const hasAtLeast12 = selectedLoans.some(
+      (loan) => getLoanPaid(loan) >= 12
+    );
+    const hasLessThan12 = selectedLoans.some(
+      (loan) => getLoanPaid(loan) < 12
+    );
+    if (hasAtLeast12 && !hasLessThan12) {
+      return "ge12";
+    }
+    if (hasLessThan12 && !hasAtLeast12) {
+      return "lt12";
+    }
+    return null;
+  }, [isAlternativeDestination, selectedLoans]);
+
+
   const summary =
     useMemo(
       () => {
@@ -2505,16 +2539,6 @@ export default function PortabilidadeMultiplaPage() {
     const group =
       loan.grupo_facta;
 
-    if (group === "C") {
-      setNotice({
-        type: "error",
-        text:
-          `${loan.banco} pertence ao Grupo C e nao pode participar da Portabilidade Multipla.`,
-      });
-
-      return;
-    }
-
     if (!group) {
       setNotice({
         type: "warning",
@@ -2523,6 +2547,79 @@ export default function PortabilidadeMultiplaPage() {
       });
 
       return;
+    }
+
+    if (
+      !isAlternativeDestination &&
+      group === "C" &&
+      selectedLoans.length > 0
+    ) {
+      setNotice({
+        type: "warning",
+        text:
+          "Contratos do Grupo C nao podem ser unificados entre si.",
+      });
+
+      return;
+    }
+
+    if (
+      !isAlternativeDestination &&
+      selectedGroup === "C"
+    ) {
+      setNotice({
+        type: "warning",
+        text:
+          "Contratos do Grupo C nao podem ser unificados entre si.",
+      });
+
+      return;
+    }
+
+    if (selectedLoans.length > 0) {
+      const loanPaid =
+        getLoanPaid(loan);
+
+      const isLoanGe12 =
+        loanPaid >= 12;
+
+      const currentHasGe12 =
+        selectedLoans.some(
+          (l) =>
+            getLoanPaid(l) >= 12
+        );
+
+      const currentHasLt12 =
+        selectedLoans.some(
+          (l) =>
+            getLoanPaid(l) < 12
+        );
+
+      if (
+        currentHasGe12 &&
+        !isLoanGe12
+      ) {
+        setNotice({
+          type: "warning",
+          text:
+            "A selecao atual contem contratos com 12 ou mais parcelas pagas. Nao e permitido misturar com contratos com menos de 12 parcelas pagas.",
+        });
+
+        return;
+      }
+
+      if (
+        currentHasLt12 &&
+        isLoanGe12
+      ) {
+        setNotice({
+          type: "warning",
+          text:
+            "A selecao atual contem contratos com menos de 12 parcelas pagas. Nao e permitido misturar com contratos com 12 ou mais parcelas pagas.",
+        });
+
+        return;
+      }
     }
 
     const factaCheck =
@@ -2560,7 +2657,7 @@ export default function PortabilidadeMultiplaPage() {
       setNotice({
         type: "warning",
         text:
-          `A operacao atual pertence ao Grupo ${selectedGroup}. Nao e permitido misturar os Grupos A e B.`,
+          `A operacao atual pertence ao Grupo ${selectedGroup}. Nao e permitido misturar os Grupos A, B e C.`,
       });
 
       return;
@@ -3158,13 +3255,27 @@ export default function PortabilidadeMultiplaPage() {
       selectedGroup !== group &&
       !selected;
 
+    const isGroupCBlocked =
+      !isAlternativeDestination &&
+      !selected &&
+      (selectedGroup === "C" ||
+        (selectedLoans.length > 0 && group === "C"));
+
+    const isPaidTierBlocked =
+      !isAlternativeDestination &&
+      !selected &&
+      Boolean(selectedPaidTier) &&
+      ((selectedPaidTier === "ge12" && getLoanPaid(loan) < 12) ||
+        (selectedPaidTier === "lt12" && getLoanPaid(loan) >= 12));
+
     const blocked =
       isAlternativeDestination
         ? activePrecheck.blocked
         : (
-            group === "C" ||
             !group ||
             blockedGroup ||
+            isGroupCBlocked ||
+            isPaidTierBlocked ||
             activePrecheck.blocked
           );
 
@@ -3272,7 +3383,7 @@ export default function PortabilidadeMultiplaPage() {
                       ? "bg-blue-100 text-blue-700"
                       : group === "B"
                       ? "bg-violet-100 text-violet-700"
-                      : "bg-red-100 text-red-600"
+                      : "bg-emerald-100 text-emerald-700"
                   }
                 `}
               >
@@ -3315,6 +3426,42 @@ export default function PortabilidadeMultiplaPage() {
                 "
               >
                 {activePrecheck.reason}
+              </div>
+            ) : !selected && isGroupCBlocked ? (
+              <div
+                className="
+                  mt-3
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-slate-100
+                  px-3
+                  py-2
+                  text-[9px]
+                  font-bold
+                  text-slate-600
+                "
+              >
+                Contratos do Grupo C não podem ser unificados entre si.
+              </div>
+            ) : !selected && isPaidTierBlocked ? (
+              <div
+                className="
+                  mt-3
+                  rounded-xl
+                  border
+                  border-amber-200
+                  bg-amber-50
+                  px-3
+                  py-2
+                  text-[9px]
+                  font-black
+                  text-amber-700
+                "
+              >
+                {selectedPaidTier === "ge12"
+                  ? "Bloqueado: Contrato possui menos de 12 parcelas pagas (seleção atual é de 12+ pagas)."
+                  : "Bloqueado: Contrato possui 12 ou mais parcelas pagas (seleção atual é de menos de 12 pagas)."}
               </div>
             ) : null}
 
@@ -3432,8 +3579,6 @@ export default function PortabilidadeMultiplaPage() {
               ${
                 selected
                   ? "border-blue-600 bg-blue-600 text-white"
-                  : group === "C"
-                  ? "border-red-200 bg-red-50 text-red-500"
                   : "border-slate-200 bg-white"
               }
             `}
@@ -3442,15 +3587,6 @@ export default function PortabilidadeMultiplaPage() {
               <Icons.Check
                 size={14}
               />
-            ) : group === "C" ? (
-              <span
-                className="
-                  text-xs
-                  font-black
-                "
-              >
-                ×
-              </span>
             ) : null}
           </div>
 
@@ -3486,9 +3622,9 @@ export default function PortabilidadeMultiplaPage() {
           }
         : {
             header:
-              "bg-red-50 border-red-100",
+              "bg-emerald-50 border-emerald-100",
             text:
-              "text-red-600",
+              "text-emerald-600",
           };
 
     return (
@@ -4449,7 +4585,7 @@ export default function PortabilidadeMultiplaPage() {
                   ? renderGroup(
                       "C",
                       "Grupo C",
-                      "Nao sao unificaveis"
+                      "Nao sao unificaveis entre si"
                     )
                   : null}
 
