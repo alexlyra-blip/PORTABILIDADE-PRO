@@ -255,6 +255,33 @@ class PortabilidadeMultiplaFactaService:
             return 0
 
     @classmethod
+    def parcelas_pagas(
+        cls,
+        contrato: Dict[str, Any],
+    ) -> int:
+        parcelas_raw = contrato.get(
+            "parcelas_pagas"
+        )
+
+        if parcelas_raw not in (None, ""):
+            return cls._promotora_int(
+                parcelas_raw
+            )
+
+        prazo = cls._promotora_int(
+            contrato.get("prazo")
+        )
+
+        prazo_restante = cls._promotora_int(
+            contrato.get("prazo_restante")
+        )
+
+        return max(
+            0,
+            prazo - prazo_restante,
+        )
+
+    @classmethod
     def validar_regras_promotora_origem(
         cls,
         contratos,
@@ -279,27 +306,9 @@ class PortabilidadeMultiplaFactaService:
                 contrato.get("banco", "") or ""
             ).strip()
 
-            parcelas_raw = contrato.get(
-                "parcelas_pagas"
+            parcelas_pagas = cls.parcelas_pagas(
+                contrato
             )
-
-            if parcelas_raw in (None, ""):
-                prazo = cls._promotora_int(
-                    contrato.get("prazo")
-                )
-
-                prazo_restante = cls._promotora_int(
-                    contrato.get("prazo_restante")
-                )
-
-                parcelas_pagas = max(
-                    0,
-                    prazo - prazo_restante,
-                )
-            else:
-                parcelas_pagas = cls._promotora_int(
-                    parcelas_raw
-                )
 
             for rule in origin_config:
                 if not isinstance(rule, dict):
@@ -481,13 +490,6 @@ class PortabilidadeMultiplaFactaService:
                     "Portabilidade Multipla FACTA."
                 )
 
-            elif grupo == "C":
-                bloqueios.append(
-                    f"Contrato {index}: banco "
-                    f"{banco} pertence ao Grupo C "
-                    "e nao pode ser unificado."
-                )
-
             else:
                 grupos_ativos.add(grupo)
 
@@ -510,15 +512,23 @@ class PortabilidadeMultiplaFactaService:
                     "selecionavel": grupo in {
                         "A",
                         "B",
+                        "C",
                     },
                 }
             )
 
         if len(grupos_ativos) > 1:
             bloqueios.append(
-                "Contratos dos Grupos A e B nao "
+                "Contratos dos Grupos A, B e C nao "
                 "podem ser unificados na mesma "
                 "operacao."
+            )
+
+        if "C" in grupos_ativos and len(contratos) > 1:
+            bloqueios.append(
+                "Contratos do Grupo C nao podem ser "
+                "unificados entre si na "
+                "Portabilidade Multipla FACTA."
             )
 
         if len(beneficios_ativos) > 1:
@@ -526,6 +536,22 @@ class PortabilidadeMultiplaFactaService:
                 "Nao e permitido unificar contratos "
                 "de beneficios diferentes na "
                 "Portabilidade Multipla FACTA."
+            )
+
+        tem_ge_12 = any(
+            cls.parcelas_pagas(c) >= 12
+            for c in contratos
+        )
+        tem_lt_12 = any(
+            cls.parcelas_pagas(c) < 12
+            for c in contratos
+        )
+
+        if tem_ge_12 and tem_lt_12:
+            bloqueios.append(
+                "Nao e permitido unificar contratos com 12 ou mais "
+                "parcelas pagas com contratos com menos de 12 "
+                "parcelas pagas na Portabilidade Multipla FACTA."
             )
 
         beneficio_operacao = (
