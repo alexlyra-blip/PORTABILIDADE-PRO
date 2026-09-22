@@ -160,6 +160,42 @@ Extrato para simples verificação.
         self.assertEqual(resultado["emprestimos_ativos"][1]["banco"], "NUBANK")
         self.assertEqual(len(resultado["cartoes_beneficio"]), 0)
 
+    def test_extrato_com_cartao_margem_disponivel_zerada(self):
+        texto = """
+Órgão CPF Matrícula Nome
+26248 - UNIVERSIDADE FEDERAL RURAL DE PERNAMBUCO 049.421.884-31 1416216 DANIELLE CRISTINE CAMELO FARIAS
+Bruta Compulsória Líquida Comp. Bruta Facult. Global (*) Líquida Facult. Global (*) Bruta Cartão Líquida Cartão
+Utilizada Facultativa Utilizada Cartão
+R$ 9.627,77 R$ 3,36 R$ 4.813,88 R$ 0,00 R$ 687,69 R$ 3,36
+R$ 4.813,88 R$ 161,11
+Extrato de Consignações Vigentes
+Bruta Cartão Benefício R$ 687,69
+Líquida Cartão Benefício R$ 3,36
+Utilizada Cartão Benefício R$ 596,66
+(*) Dentro do limite Global (bruta e líquida) já estão inseridos os sublimites de Cartão e de Cartão Benefício.
+
+Demonstrativo de uso da margem / Novo Contrato e Renovação
+Número do Contrato Rubrica Sequência Prioridade Transação Data/Hora Parcela Valor da Parcela Inicio Fim
+150049110003463069 34113 - EMPREST BCO OFICIAL - CEF 7 10 01/04/2025 15:16:29 18/93 R$ 122,45 04/2025 12/2032
+
+Demonstrativo de uso da margem - Amortização de Despesas / Saques com Cartão de Crédito
+Número do Contrato Rubrica Sequência Prioridade Transação Data/Hora Parcela Valor da Parcela Inicio Fim
+1416216262482605 34805 - AMORT CARTAO CREDITO - BMG 1 12 08/04/2026 22:42:27 06/96 R$ 161,11 04/2026 03/2034
+
+Demonstrativo de uso da margem - Cartão Consignado de Benefício
+Número do Contrato Rubrica Sequência Prioridade Transação Data/Hora Parcela Valor da Parcela Inicio Fim
+1416216262482605B 35013 - AMORT CARTAO BENEFICIO - BMG 1 13 08/04/2026 19:41:36 06/96 R$ 596,66 04/2026 03/2034
+
+Extrato para simples verificação.
+"""
+        resultado = siape_parser.parse_siape_extrato(texto)
+        self.assertEqual(resultado["margem_maxima"], 4813.88)
+        self.assertEqual(resultado["margem_comprometida"], 4813.88)
+        self.assertEqual(resultado["margem_disponivel"], 0.0)
+        self.assertEqual(resultado["margens"]["liquida_facultativa_global"], 0.0)
+        self.assertEqual(resultado["validacoes"]["margem_global_confere"], True)
+
 
 if __name__ == "__main__":
     unittest.main()
+
