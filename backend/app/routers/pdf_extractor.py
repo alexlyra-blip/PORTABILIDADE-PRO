@@ -241,14 +241,50 @@ class PdfExtractorService:
         # Real extraction logic can be added here later
         return {"status": "success", "data": {"convenio": "INSS"}}
 
-def parse_currency(value_str):
+def parse_currency(value_str) -> float:
     if not value_str: return 0.0
     try:
-        clean_str = re.sub(r'[R$\s]', '', value_str)
-        clean_str = clean_str.replace('.', '').replace(',', '.')
+        clean_str = re.sub(r'[^\d.,]', '', str(value_str)).strip()
+        if not clean_str: return 0.0
+        if '.' in clean_str and ',' in clean_str:
+            if clean_str.rfind('.') < clean_str.rfind(','):
+                clean_str = clean_str.replace('.', '').replace(',', '.')
+            else:
+                clean_str = clean_str.replace(',', '')
+        elif ',' in clean_str:
+            clean_str = clean_str.replace(',', '.')
+        elif '.' in clean_str:
+            parts = clean_str.split('.')
+            if len(parts) > 2:
+                clean_str = clean_str.replace('.', '')
+            elif len(parts) == 2:
+                if len(parts[1]) == 3 and len(parts[0]) <= 3:
+                    clean_str = clean_str.replace('.', '')
         return float(clean_str)
     except:
         return 0.0
+
+def parse_rate(value_str) -> float:
+    if not value_str: return 0.0
+    try:
+        clean_str = re.sub(r'[%R$\s]', '', str(value_str)).strip()
+        if not clean_str: return 0.0
+        if '.' in clean_str and ',' in clean_str:
+            if clean_str.rfind('.') < clean_str.rfind(','):
+                clean_str = clean_str.replace('.', '').replace(',', '.')
+            else:
+                clean_str = clean_str.replace(',', '')
+        elif ',' in clean_str:
+            clean_str = clean_str.replace(',', '.')
+        val = float(clean_str)
+        if 0 < val < 0.10:
+            val = val * 100.0
+        elif val >= 50.0:
+            val = val / 100.0
+        return round(val, 2)
+    except:
+        return 0.0
+
 
 BANK_NAMES_MAP = {
     "041": "041 - BANRISUL", "626": "626 - BANCO C6 CONSIGNADO", "033": "033 - BANCO SANTANDER",
@@ -530,18 +566,18 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                     prazo_total = int(re.sub(r'\D', '', prazo_str)) if prazo_str else 0
                                 
                                     parcela = parse_currency(clean_row[8]) if len(clean_row) > 8 else 0.0
-                                    taxa_mensal = parse_currency(clean_row[14]) if len(clean_row) > 14 else 0.0
-                                
-                                    # Extração do Valor Financiado (coluna 10) ou Liberado (coluna 9)
-                                    valor_financiado = 0.0
-                                    if len(clean_row) > 10:
-                                        valor_financiado = parse_currency(clean_row[10])
-                                    if valor_financiado == 0 and len(clean_row) > 9:
-                                        valor_financiado = parse_currency(clean_row[9])
+                                    taxa_mensal = parse_rate(clean_row[14]) if len(clean_row) > 14 else 0.0
+                                    if taxa_mensal == 0 and len(clean_row) > 12:
+                                        taxa_mensal = parse_rate(clean_row[12])
+
+                                    # Extração do Valor Emprestado (coluna 9) e Liberado (coluna 10)
+                                    valor_emprestado = parse_currency(clean_row[9]) if len(clean_row) > 9 else 0.0
+                                    valor_liberado = parse_currency(clean_row[10]) if len(clean_row) > 10 else 0.0
+                                    valor_financiado = valor_liberado if valor_liberado > 0 else valor_emprestado
 
                                     # Cálculo da taxa de juros se estiver zerada ou não informada
                                     if taxa_mensal == 0 and valor_financiado > 0 and prazo_total > 0 and parcela > 0:
-                                        taxa_mensal = calcular_taxa(valor_financiado, parcela, prazo_total)
+                                        taxa_mensal = round(calcular_taxa(valor_financiado, parcela, prazo_total), 2)
 
                                     # Fallback se a taxa ainda for zero, usa taxa padrão de 1.50%
                                     if taxa_mensal == 0:
@@ -552,8 +588,13 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                     se_iniciou = re.match(r'(\d{2})/(\d{4})', inicio_desconto)
                                     if se_iniciou:
                                         mes, ano = map(int, se_iniciou.groups())
-                                        hoje = datetime.today()
-                                        meses_pagos = (hoje.year - ano) * 12 + (hoje.month - mes)
+                                        ref_date = datetime.today()
+                                        if extracted_data.get("data_extrato"):
+                                            try:
+                                                ref_date = datetime.strptime(extracted_data["data_extrato"], "%d/%m/%Y")
+                                            except Exception:
+                                                ref_date = datetime.today()
+                                        meses_pagos = (ref_date.year - ano) * 12 + (ref_date.month - mes)
                                         if meses_pagos < 0: meses_pagos = 0
                                 
                                     prazo_restante = max(0, prazo_total - meses_pagos)
@@ -572,6 +613,8 @@ async def extract_inss_pdf(file: UploadFile = File(...)):
                                         "prazo_total": prazo_total,
                                         "prazo_restante": prazo_restante,
                                         "taxa_mensal": taxa_mensal,
+                                        "valor_emprestado": valor_emprestado,
+                                        "valor_liberado": valor_liberado,
                                         "saldo_devedor": round(saldo_devedor, 2)
                                     })
                                 except Exception as e:

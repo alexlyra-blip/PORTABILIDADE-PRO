@@ -327,9 +327,7 @@ def parse_siape_extrato(texto: str) -> dict[str, Any]:
     total_cards = round(sum(item["parcela"] for item in cards), 2)
     available = round(
         margens["bruta_facultativa_global"]
-        - margens["utilizada_facultativa"]
-        - margens["utilizada_cartao"]
-        - margens["utilizada_cartao_beneficio"],
+        - margens["utilizada_facultativa"],
         2,
     )
 
