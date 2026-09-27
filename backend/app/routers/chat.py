@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from typing import Optional
 import re
 import json
+from inss_species import ESPECIES_INSS_MAP
 
 router = APIRouter()
 
@@ -1545,16 +1546,96 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         except:
             return f"R$ {val}"
 
+    # CLARA_V2_BENEFIT_IDENTIFICATION
+    def format_benefit_identification(
+        nb_value,
+        species_value,
+    ):
+        nb_text = str(
+            nb_value or "N/A"
+        ).strip()
+
+        species_text = str(
+            species_value or ""
+        ).strip()
+
+        match = re.match(
+            r"^\s*(\d{1,3})\s*"
+            r"(?:[-–—|]\s*)?"
+            r"(.*)$",
+            species_text,
+        )
+
+        if match:
+            species_code = (
+                match.group(1)
+                .strip()
+                .zfill(2)
+            )
+            species_name = (
+                match.group(2)
+                or ""
+            ).strip()
+        else:
+            digits = "".join(
+                filter(
+                    str.isdigit,
+                    species_text,
+                )
+            )
+            species_code = digits or "N/A"
+            species_name = (
+                species_text
+                if species_text and not digits
+                else ""
+            )
+
+        if (
+            not species_name
+            and species_code != "N/A"
+        ):
+            species_name = (
+                ESPECIES_INSS_MAP.get(
+                    species_code,
+                    "",
+                )
+            )
+
+        identification = (
+            f"NB {nb_text} — "
+            f"ESPÉCIE {species_code}"
+        )
+
+        if species_name:
+            identification += (
+                f" | {species_name.upper()}"
+            )
+
+        return identification
+
     # CLARA_V2_GLOBAL_SUMMARY_BEGIN
     overall_margin_released = 0.0
     overall_refin_count = 0
     overall_refin_total = 0.0
     overall_port_count = 0
     overall_port_total = 0.0
+    benefit_identifications = []
 
     for idx_b, b in enumerate(beneficios):
         nb = b.get("cliente", {}).get("beneficio") or b.get("numero", "N/A")
         especie = b.get("cliente", {}).get("especie") or "N/A"
+
+        benefit_identification = (
+            format_benefit_identification(
+                nb,
+                especie,
+            )
+        )
+
+        benefit_identifications.append(
+            benefit_identification
+        )
+
         uf = b.get("beneficio", {}).get("uf") or "PE"
         ddb = b.get("beneficio", {}).get("ddb") or "N/A"
         situacao = b.get("beneficio", {}).get("situacao") or "ATIVO"
@@ -1573,9 +1654,8 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         
         benefit_header = (
             f"➖➖➖➖➖➖➖➖➖➖\n\n"
-            f"📋 *BENEFÍCIO {idx_b + 1}: NB {nb}*\n"
+            f"📋 *{benefit_identification}*\n"
             f"• *Situação:* {situacao}\n"
-            f"• *Espécie:* {especie}\n"
             f"• *UF:* {uf} | *DDB:* {ddb}\n"
             f"• *Salário:* {fmt_brl(salario)}\n"
             f"• *Margem Livre:* {fmt_brl(margem_livre)} "
@@ -2131,6 +2211,8 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 {
                     "beneficio":
                         benefit_number,
+                    "identificacao_beneficio":
+                        benefit_identification,
                     "margem_livre":
                         round(
                             margin_value,
@@ -2191,10 +2273,20 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             else "benef\u00edcios"
         )
 
+        summary_title = (
+            f"📊 *RESUMO GERAL — "
+            f"{benefit_identifications[0]}*"
+            if (
+                benefit_count == 1
+                and benefit_identifications
+            )
+            else "📊 *RESUMO GERAL DO CLIENTE*"
+        )
+
         global_summary_lines = [
             "",
-            "--------------------",
-            "\U0001F4CA *RESUMO GERAL DO CLIENTE*",
+            "━━━━━━━━━━━━━━━━━━",
+            summary_title,
             (
                 "\U0001F4B5 *Margem dispon\u00edvel:* "
                 f"{benefit_count} {benefit_word} "
@@ -2202,6 +2294,15 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 f"{fmt_brl(overall_margin_released)}"
             ),
         ]
+
+        if benefit_count > 1:
+            global_summary_lines.extend(
+                [
+                    f"📋 *{identification}*"
+                    for identification
+                    in benefit_identifications
+                ]
+            )
 
         if overall_refin_count > 0:
             global_summary_lines.append(
