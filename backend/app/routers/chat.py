@@ -2256,10 +2256,8 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             benefit_summary_lines = [
                 "",
                 "━━━━━━━━━━━━━━━━━━",
-                (
-                    f"📊 *RESUMO GERAL — "
-                    f"{benefit_identification}*"
-                ),
+                "📊 *RESUMO GERAL*",
+                f"📋 *{benefit_identification}*",
                 (
                     "\U0001F4B5 *Margem dispon\u00edvel:* "
                     f"{fmt_brl(margin_value)} "
