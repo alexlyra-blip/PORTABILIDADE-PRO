@@ -1048,13 +1048,18 @@ def test_resumo_geral_exibe_identificacao_completa_beneficio():
     )
 
     assert (
-        'f"📊 *RESUMO GERAL — "'
+        '"📊 *RESUMO GERAL*"'
         in segment
     )
 
     assert (
-        'f"{benefit_identification}*"'
+        'f"📋 *{benefit_identification}*"'
         in segment
+    )
+
+    assert (
+        'f"📊 *RESUMO GERAL — "'
+        not in segment
     )
 
     assert (
