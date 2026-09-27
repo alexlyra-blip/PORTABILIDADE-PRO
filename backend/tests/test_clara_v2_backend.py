@@ -1007,3 +1007,83 @@ def test_cpf_automatico_menu_e_resposta_sao_separados():
         '"follow_up_reply"'
         in source
     )
+
+def test_resumo_geral_exibe_identificacao_completa_beneficio():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "from inss_species import ESPECIES_INSS_MAP"
+        in source
+    )
+
+    assert (
+        "# CLARA_V2_BENEFIT_IDENTIFICATION"
+        in segment
+    )
+
+    assert (
+        'f"📋 *{benefit_identification}*\\n"'
+        in segment
+    )
+
+    assert (
+        'f"📊 *RESUMO GERAL — "'
+        in segment
+    )
+
+    assert (
+        'f"{benefit_identifications[0]}*"'
+        in segment
+    )
+
+    assert (
+        '"identificacao_beneficio":'
+        in segment
+    )
+
+
+def test_resumo_geral_multiplos_beneficios_lista_cada_nb():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "benefit_identifications = []"
+        in segment
+    )
+
+    assert (
+        "if benefit_count > 1:"
+        in segment
+    )
+
+    assert (
+        'f"📋 *{identification}*"'
+        in segment
+    )
+
+    assert (
+        "for identification"
+        in segment
+    )
+
