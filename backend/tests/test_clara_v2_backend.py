@@ -538,7 +538,7 @@ def test_cpf_sem_contratos_retorna_margem_e_valor_liberado():
     )
 
 
-def test_cpf_automatico_usa_resumo_geral_consolidado():
+def test_cpf_automatico_usa_resumo_separado_por_beneficio():
     source = _source()
 
     start = source.index(
@@ -563,37 +563,47 @@ def test_cpf_automatico_usa_resumo_geral_consolidado():
     )
 
     assert (
-        "CLARA_V2_GLOBAL_SUMMARY_RENDER"
+        "CLARA_V2_BENEFIT_VISUAL_SUMMARY"
+        in segment
+    )
+
+    assert (
+        "CLARA_V2_BENEFIT_SUMMARY_RENDER"
         in segment
     )
 
     assert (
         "RESUMO GERAL DO CLIENTE"
+        not in segment
+    )
+
+    assert (
+        'f"{benefit_identification}*"'
         in segment
     )
 
     assert (
-        "overall_margin_released"
+        "benefit_refin_total"
         in segment
     )
 
     assert (
-        "overall_refin_total"
+        "benefit_port_total"
         in segment
     )
 
     assert (
-        "overall_port_total"
+        "total_general"
+        in segment
+    )
+
+    assert (
+        "CLARA_V2_GLOBAL_SUMMARY_SESSION_ONLY"
         in segment
     )
 
     assert (
         "resumo_ofertas_geral"
-        in segment
-    )
-
-    assert (
-        "CLARA_V2_NO_BENEFIT_VISUAL_SUMMARY"
         in segment
     )
 
@@ -1043,7 +1053,7 @@ def test_resumo_geral_exibe_identificacao_completa_beneficio():
     )
 
     assert (
-        'f"{benefit_identifications[0]}*"'
+        'f"{benefit_identification}*"'
         in segment
     )
 
@@ -1053,7 +1063,7 @@ def test_resumo_geral_exibe_identificacao_completa_beneficio():
     )
 
 
-def test_resumo_geral_multiplos_beneficios_lista_cada_nb():
+def test_resumo_multiplos_beneficios_nao_consolida_valores_visuais():
     source = _source()
 
     start = source.index(
@@ -1068,22 +1078,32 @@ def test_resumo_geral_multiplos_beneficios_lista_cada_nb():
     segment = source[start:end]
 
     assert (
+        "RESUMO GERAL DO CLIENTE"
+        not in segment
+    )
+
+    assert (
         "benefit_identifications = []"
-        in segment
+        not in segment
     )
 
     assert (
         "if benefit_count > 1:"
+        not in segment
+    )
+
+    assert (
+        "benefit_summary_lines"
         in segment
     )
 
     assert (
-        'f"📋 *{identification}*"'
+        "benefit_refin_count"
         in segment
     )
 
     assert (
-        "for identification"
+        "benefit_port_count"
         in segment
     )
 
