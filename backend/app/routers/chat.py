@@ -1619,7 +1619,6 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
     overall_refin_total = 0.0
     overall_port_count = 0
     overall_port_total = 0.0
-    benefit_identifications = []
 
     for idx_b, b in enumerate(beneficios):
         nb = b.get("cliente", {}).get("beneficio") or b.get("numero", "N/A")
@@ -1630,10 +1629,6 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 nb,
                 especie,
             )
-        )
-
-        benefit_identifications.append(
-            benefit_identification
         )
 
         uf = b.get("beneficio", {}).get("uf") or "PE"
@@ -2198,10 +2193,9 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             + benefit_port_total
         )
 
-        # CLARA_V2_NO_BENEFIT_VISUAL_SUMMARY
-        # Mantem os dados individuais na session.
-        # O cliente recebe um unico resumo consolidado
-        # apos todos os beneficios.
+        # CLARA_V2_BENEFIT_VISUAL_SUMMARY
+        # Cada beneficio recebe seu proprio resumo visual.
+        # Nunca mistura valores de NBs diferentes.
 
         if session is not None:
             session.setdefault(
@@ -2252,120 +2246,108 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             )
         )
 
-    # CLARA_V2_GLOBAL_SUMMARY_RENDER
+        # CLARA_V2_BENEFIT_SUMMARY_RENDER
+        has_benefit_offers = (
+            benefit_refin_count > 0
+            or benefit_port_count > 0
+        )
+
+        if has_benefit_offers:
+            benefit_summary_lines = [
+                "",
+                "━━━━━━━━━━━━━━━━━━",
+                (
+                    f"📊 *RESUMO GERAL — "
+                    f"{benefit_identification}*"
+                ),
+                (
+                    "\U0001F4B5 *Margem dispon\u00edvel:* "
+                    f"{fmt_brl(margin_value)} "
+                    "| *Libera aprox.:* "
+                    f"{fmt_brl(margin_released)}"
+                ),
+            ]
+
+            if benefit_refin_count > 0:
+                benefit_summary_lines.append(
+                    "\U0001F3E6 "
+                    "*Refinanciamento(s) C6:* "
+                    f"{benefit_refin_count} "
+                    "| *Total Liberado:* "
+                    f"{fmt_brl(benefit_refin_total)}"
+                )
+
+            if benefit_port_count > 0:
+                benefit_summary_lines.append(
+                    "\U0001F504 "
+                    "*Portabilidade(s):* "
+                    f"{benefit_port_count} "
+                    "| *Total Liberado:* "
+                    f"{fmt_brl(benefit_port_total)}"
+                )
+
+            benefit_summary_lines.append(
+                "\U0001F4B0 "
+                "*Total Geral Liberado:* "
+                f"{fmt_brl(total_general)}"
+            )
+
+            reply += (
+                "\n"
+                + "\n".join(
+                    benefit_summary_lines
+                )
+            )
+
+    # CLARA_V2_GLOBAL_SUMMARY_SESSION_ONLY
+    # Mantem o consolidado apenas internamente para compatibilidade.
+    # Nenhum total de beneficios diferentes e exibido ao cliente.
     has_global_offers = (
         overall_refin_count > 0
         or overall_port_count > 0
     )
 
-    if has_global_offers:
+    if (
+        has_global_offers
+        and session is not None
+    ):
+        benefit_count = len(beneficios)
         overall_total = (
             overall_margin_released
             + overall_refin_total
             + overall_port_total
         )
 
-        benefit_count = len(beneficios)
-
-        benefit_word = (
-            "benef\u00edcio"
-            if benefit_count == 1
-            else "benef\u00edcios"
-        )
-
-        summary_title = (
-            f"📊 *RESUMO GERAL — "
-            f"{benefit_identifications[0]}*"
-            if (
-                benefit_count == 1
-                and benefit_identifications
-            )
-            else "📊 *RESUMO GERAL DO CLIENTE*"
-        )
-
-        global_summary_lines = [
-            "",
-            "━━━━━━━━━━━━━━━━━━",
-            summary_title,
-            (
-                "\U0001F4B5 *Margem dispon\u00edvel:* "
-                f"{benefit_count} {benefit_word} "
-                "| *Libera aprox.:* "
-                f"{fmt_brl(overall_margin_released)}"
-            ),
-        ]
-
-        if benefit_count > 1:
-            global_summary_lines.extend(
-                [
-                    f"📋 *{identification}*"
-                    for identification
-                    in benefit_identifications
-                ]
-            )
-
-        if overall_refin_count > 0:
-            global_summary_lines.append(
-                "\U0001F3E6 "
-                "*Refinanciamento(s) C6:* "
-                f"{overall_refin_count} "
-                "| *Total Liberado:* "
-                f"{fmt_brl(overall_refin_total)}"
-            )
-
-        if overall_port_count > 0:
-            global_summary_lines.append(
-                "\U0001F504 "
-                "*Portabilidade(s):* "
-                f"{overall_port_count} "
-                "| *Total Liberado:* "
-                f"{fmt_brl(overall_port_total)}"
-            )
-
-        global_summary_lines.append(
-            "\U0001F4B0 "
-            "*Total Geral Liberado:* "
-            f"{fmt_brl(overall_total)}"
-        )
-
-        reply += (
-            "\n"
-            + "\n".join(
-                global_summary_lines
-            )
-        )
-
-        if session is not None:
-            session[
-                "resumo_ofertas_geral"
-            ] = {
-                "beneficios":
-                    benefit_count,
-                "margem_liberada":
-                    round(
-                        overall_margin_released,
-                        2,
-                    ),
-                "qtd_refins_c6":
-                    overall_refin_count,
-                "total_refins_c6":
-                    round(
-                        overall_refin_total,
-                        2,
-                    ),
-                "qtd_portabilidades":
-                    overall_port_count,
-                "total_portabilidades":
-                    round(
-                        overall_port_total,
-                        2,
-                    ),
-                "total_geral":
-                    round(
-                        overall_total,
-                        2,
-                    ),
-            }
+        session[
+            "resumo_ofertas_geral"
+        ] = {
+            "beneficios":
+                benefit_count,
+            "margem_liberada":
+                round(
+                    overall_margin_released,
+                    2,
+                ),
+            "qtd_refins_c6":
+                overall_refin_count,
+            "total_refins_c6":
+                round(
+                    overall_refin_total,
+                    2,
+                ),
+            "qtd_portabilidades":
+                overall_port_count,
+            "total_portabilidades":
+                round(
+                    overall_port_total,
+                    2,
+                ),
+            "total_geral":
+                round(
+                    overall_total,
+                    2,
+                ),
+        }
 
     # CLARA_POST_MENU
     post_menu = ""
