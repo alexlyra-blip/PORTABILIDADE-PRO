@@ -524,7 +524,7 @@ def test_cpf_sem_portabilidade_informa_cliente_abaixo_da_margem():
     )
 
     assert (
-        "dispon\\u00edvel para este benef\\u00edcio"
+        "dispon\\u00edvel para o cliente neste benef\\u00edcio"
         in segment
     )
 
