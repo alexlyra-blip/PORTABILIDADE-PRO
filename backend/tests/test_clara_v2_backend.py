@@ -454,6 +454,111 @@ def test_cpf_automatico_prioriza_refin_c6_antes_da_portabilidade():
         in segment
     )
 
+def test_cpf_margem_abaixo_de_15_nao_gera_simulacao():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "# CLARA_V2_MIN_MARGIN_SIMULATION"
+        in segment
+    )
+
+    assert (
+        "min_margin_simulation = 15.0"
+        in segment
+    )
+
+    assert (
+        "margin_value >= min_margin_simulation"
+        in segment
+    )
+
+    assert (
+        "if margin_is_eligible:"
+        in segment
+    )
+
+    assert (
+        "liberado_aprox = 0.0"
+        in segment
+    )
+
+
+def test_cpf_sem_portabilidade_informa_cliente_abaixo_da_margem():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "# CLARA_V2_NO_PORTABILITY_MESSAGE"
+        in segment
+    )
+
+    assert (
+        "if benefit_port_count <= 0:"
+        in segment
+    )
+
+    assert (
+        "Nenhuma proposta de portabilidade "
+        in segment
+    )
+
+    assert (
+        "dispon\\u00edvel para este benef\\u00edcio"
+        in segment
+    )
+
+
+def test_resumo_nao_exibe_libera_aprox_para_margem_inelegivel():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "if margin_is_eligible:"
+        in segment
+    )
+
+    assert (
+        '"*Margem dispon\\u00edvel:* "'
+        in segment
+    )
+
+    assert (
+        '"| *Libera aprox.:* "'
+        in segment
+    )
+
+
 def test_cpf_sem_contratos_retorna_margem_e_valor_liberado():
     source = _source()
 
