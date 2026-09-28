@@ -1613,6 +1613,9 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
 
         return identification
 
+    # CLARA_V2_MIN_MARGIN_SIMULATION
+    min_margin_simulation = 15.0
+
     # CLARA_V2_GLOBAL_SUMMARY_BEGIN
     overall_margin_released = 0.0
     overall_refin_count = 0
@@ -1639,13 +1642,25 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         # Margins
         salario = b.get("margens", {}).get("salario", 0.0)
         margem_livre = b.get("margens", {}).get("margem_livre", 0.0)
-        liberado_aprox = await calcular_valor_liberado_margem(margem_livre)
+        margin_value = _clara_float(
+            margem_livre
+        )
+        margin_is_eligible = (
+            margin_value >= min_margin_simulation
+        )
+
+        if margin_is_eligible:
+            liberado_aprox = await calcular_valor_liberado_margem(
+                margin_value
+            )
+        else:
+            # Margem abaixo de R$ 15,00 nao gera simulacao.
+            liberado_aprox = 0.0
 
         overall_margin_released += max(
             0.0,
             _clara_float(liberado_aprox),
         )
-        margem_aprox_txt = f"_(Libera aprox. {fmt_brl(liberado_aprox)})_" if liberado_aprox > 0 else ""
         
         benefit_header = (
             f"➖➖➖➖➖➖➖➖➖➖\n\n"
@@ -1653,11 +1668,16 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             f"• *Situação:* {situacao}\n"
             f"• *UF:* {uf} | *DDB:* {ddb}\n"
             f"• *Salário:* {fmt_brl(salario)}\n"
-            f"• *Margem Livre:* {fmt_brl(margem_livre)} "
+            f"• *Margem Livre:* {fmt_brl(margin_value)}"
         )
-        if margem_livre > 0:
-            benefit_header += f"_(Libera aprox. {fmt_brl(liberado_aprox)})_"
-        benefit_header += "\n\n"
+        if (
+            margin_is_eligible
+            and liberado_aprox > 0
+        ):
+            benefit_header += (
+                f" _(Libera aprox. {fmt_brl(liberado_aprox)})_"
+            )
+        benefit_header += "\n"
         
         loans = b.get("emprestimos", []) or []
         benefit_loans_replies = []
@@ -1768,10 +1788,18 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 "\u2139\ufe0f *Nenhum contrato ativo "
                 "encontrado para portabilidade.*\n\n"
                 "\U0001F4B5 *Margem Livre:* "
-                f"{fmt_brl(margin_value_no_loans)}\n"
-                "\U0001F4B0 *Valor aproximado liberado:* "
-                f"{fmt_brl(released_no_loans)}"
+                f"{fmt_brl(margin_value_no_loans)}"
             )
+
+            if (
+                margin_is_eligible
+                and released_no_loans > 0
+            ):
+                no_loans_reply += (
+                    "\n\U0001F4B0 "
+                    "*Valor aproximado liberado:* "
+                    f"{fmt_brl(released_no_loans)}"
+                )
 
         # Run simulation for each loan
         for idx_l, c in enumerate(loans):
@@ -2176,10 +2204,6 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         # RESUMO POR BENEFICIO
         # ========================================================
 
-        margin_value = _clara_float(
-            margem_livre
-        )
-
         margin_released = max(
             0.0,
             _clara_float(
@@ -2239,6 +2263,16 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 }
             )
 
+        # CLARA_V2_NO_PORTABILITY_MESSAGE
+        # A mensagem fica logo abaixo da margem e antes dos contratos.
+        if benefit_port_count <= 0:
+            benefit_header += (
+                "\u2139\ufe0f *Nenhuma proposta de portabilidade "
+                "dispon\u00edvel para este benef\u00edcio.*\n"
+            )
+
+        benefit_header += "\n"
+
         reply += (
             benefit_header
             + "\n\n".join(
@@ -2258,13 +2292,22 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 "━━━━━━━━━━━━━━━━━━",
                 "📊 *RESUMO GERAL*",
                 f"📋 *{benefit_identification}*",
-                (
-                    "\U0001F4B5 *Margem dispon\u00edvel:* "
-                    f"{fmt_brl(margin_value)} "
-                    "| *Libera aprox.:* "
-                    f"{fmt_brl(margin_released)}"
-                ),
             ]
+
+            if margin_is_eligible:
+                benefit_summary_lines.append(
+                    (
+                        "\U0001F4B5 *Margem dispon\u00edvel:* "
+                        f"{fmt_brl(margin_value)} "
+                        "| *Libera aprox.:* "
+                        f"{fmt_brl(margin_released)}"
+                    )
+                )
+            else:
+                benefit_summary_lines.append(
+                    "\U0001F4B5 *Margem dispon\u00edvel:* "
+                    f"{fmt_brl(margin_value)}"
+                )
 
             if benefit_refin_count > 0:
                 benefit_summary_lines.append(
