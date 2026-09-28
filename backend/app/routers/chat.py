@@ -2268,7 +2268,7 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         if benefit_port_count <= 0:
             benefit_header += (
                 "\u2139\ufe0f *Nenhuma proposta de portabilidade "
-                "dispon\u00edvel para este benef\u00edcio.*\n"
+                "dispon\u00edvel para o cliente neste benef\u00edcio.*\n"
             )
 
         benefit_header += "\n"
