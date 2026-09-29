@@ -383,6 +383,24 @@ def test_intersecao_sem_facta_em_um_contrato():
 
     assert offers == []
 
+def test_grupos_facta_reconhecem_codigo_compe_mesmo_com_nome_generico():
+    assert (
+        Service.identificar_grupo(
+            "ORIGEM GENERICA",
+            "626",
+        )
+        == "A"
+    )
+
+    assert (
+        Service.identificar_grupo(
+            "ORIGEM GENERICA",
+            "389",
+        )
+        == "B"
+    )
+
+
 def test_grupo_a_com_grupo_a_pode_unificar():
     result = Service.validar(
         banco_destino="FACTA",
