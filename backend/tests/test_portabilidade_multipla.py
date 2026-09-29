@@ -67,10 +67,10 @@ def test_exemplo_margem_negativa():
         == 100
     )
     assert result["maior_parcela"] == 120
-    assert result["parcela_refin"] == 340
+    assert result["parcela_refin"] == 320
 
 
-def test_grupo_c_pode_ser_unificado():
+def test_banco_fora_ab_individual_usa_mesmo_banco():
     result = Service.validar(
         banco_destino="FACTA",
         convenio="INSS",
@@ -78,6 +78,7 @@ def test_grupo_c_pode_ser_unificado():
         contratos=[
             {
                 "banco": "BRB",
+                "codigo": "070",
                 "parcela": 150,
                 "saldo_devedor": 5000,
                 "parcelas_pagas": 15,
@@ -86,7 +87,8 @@ def test_grupo_c_pode_ser_unificado():
     )
 
     assert result["elegivel_previo"] is True
-    assert result["grupo_operacao"] == "C"
+    assert result["grupo_operacao"] == "MESMO_BANCO"
+    assert result["identidade_operacao"] == "070"
 
 
 def test_grupo_a_e_b_nao_podem_misturar():
@@ -111,7 +113,7 @@ def test_grupo_a_e_b_nao_podem_misturar():
     assert result["elegivel_previo"] is False
 
     assert any(
-        "Grupos A, B e C" in item
+        "Grupo A unifica somente com A" in item
         for item in result["bloqueios"]
     )
 
@@ -141,32 +143,7 @@ def test_maximo_seis_contratos():
     )
 
 
-def test_regra_refin_usa_ou():
-    result = Service.validar(
-        banco_destino="FACTA",
-        convenio="INSS",
-        margem_disponivel=0,
-        contratos=[
-            {
-                "banco": "C6",
-                "parcela": 40,
-                "saldo_devedor": 2500,
-            }
-        ],
-        valor_operacao_refin=3500,
-    )
-
-    assert (
-        result[
-            "regra_minimo_refin_atendida"
-        ]
-        is True
-    )
-
-    assert result["elegivel_previo"] is True
-
-
-def test_refin_reprova_se_nao_atender_nenhum():
+def test_validacao_estrutural_nao_usa_regra_antiga_parcela_ou_bruto():
     result = Service.validar(
         banco_destino="FACTA",
         convenio="INSS",
@@ -182,15 +159,49 @@ def test_refin_reprova_se_nao_atender_nenhum():
     )
 
     assert result["parcela_refin"] == 20
+    assert result["regra_minimo_refin_atendida"] is None
+    assert result["elegivel_previo"] is True
 
-    assert (
-        result[
-            "regra_minimo_refin_atendida"
-        ]
-        is False
+
+def test_financeiro_aplica_bruto_minimo_faixa_e_troco_maior_50():
+    ofertas = Service.simular_financeiro(
+        parcela_refin=100,
+        saldo_consolidado=3000,
     )
 
-    assert result["elegivel_previo"] is False
+    assert ofertas
+    assert ofertas[0]["modalidade"] == "Sem Carencia"
+    assert ofertas[0]["tabela"] == "Refin Normal"
+    assert ofertas[0]["fator"] == 0.022594
+    assert ofertas[0]["novo_contrato"] == 4425.95
+    assert ofertas[0]["troco"] == 1425.95
+
+    assert all(
+        oferta["novo_contrato"] >= 3000
+        and oferta["troco"] > 50
+        for oferta in ofertas
+    )
+
+
+def test_financeiro_respeita_faixa_carencia_de_3000_a_3999():
+    ofertas = Service.simular_financeiro(
+        parcela_refin=80,
+        saldo_consolidado=3000,
+    )
+
+    assert ofertas
+    assert all(
+        oferta["modalidade"] == "Com Carencia"
+        for oferta in ofertas
+    )
+    assert [
+        oferta["tabela"]
+        for oferta in ofertas
+    ] == [
+        "Refin Normal",
+        "Refin FLEX 0",
+        "Refin Flex 1",
+    ]
 
 
 
@@ -422,7 +433,7 @@ def test_grupo_b_com_grupo_b_pode_unificar():
     assert result["grupo_operacao"] == "B"
 
 
-def test_grupo_c_bloqueado_para_unificacao_entre_si():
+def test_fora_ab_bancos_diferentes_nao_unificam():
     result = Service.validar(
         banco_destino="FACTA",
         convenio="INSS",
@@ -430,6 +441,7 @@ def test_grupo_c_bloqueado_para_unificacao_entre_si():
         contratos=[
             {
                 "banco": "BRB",
+                "codigo": "070",
                 "beneficio": "1234567890",
                 "parcela": 150,
                 "saldo_devedor": 5000,
@@ -437,6 +449,7 @@ def test_grupo_c_bloqueado_para_unificacao_entre_si():
             },
             {
                 "banco": "BANCO INTER",
+                "codigo": "077",
                 "beneficio": "1234567890",
                 "parcela": 150,
                 "saldo_devedor": 5000,
@@ -447,12 +460,42 @@ def test_grupo_c_bloqueado_para_unificacao_entre_si():
 
     assert result["elegivel_previo"] is False
     assert any(
-        "Grupo C nao podem ser unificados" in item
+        "bancos fora de A/B" in item
         for item in result["bloqueios"]
     )
 
 
-def test_grupo_c_nao_mistura_com_grupo_a():
+def test_fora_ab_mesmo_banco_pode_unificar():
+    result = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=0,
+        contratos=[
+            {
+                "banco": "BRB",
+                "codigo": "070",
+                "beneficio": "1234567890",
+                "parcela": 150,
+                "saldo_devedor": 5000,
+                "parcelas_pagas": 14,
+            },
+            {
+                "banco": "BANCO BRB",
+                "codigo": "070",
+                "beneficio": "1234567890",
+                "parcela": 160,
+                "saldo_devedor": 5200,
+                "parcelas_pagas": 18,
+            },
+        ],
+    )
+
+    assert result["elegivel_previo"] is True
+    assert result["grupo_operacao"] == "MESMO_BANCO"
+    assert result["identidade_operacao"] == "070"
+
+
+def test_banco_fora_ab_nao_mistura_com_grupo_a():
     result = Service.validar(
         banco_destino="FACTA",
         convenio="INSS",
@@ -477,7 +520,7 @@ def test_grupo_c_nao_mistura_com_grupo_a():
 
     assert result["elegivel_previo"] is False
     assert any(
-        "Grupos A, B e C" in item
+        "bancos fora de A/B" in item
         for item in result["bloqueios"]
     )
 
@@ -542,7 +585,7 @@ def test_bloqueia_misturar_12_pagas_com_menos_grupo_b():
     )
 
 
-def test_bloqueia_misturar_12_pagas_com_menos_grupo_c():
+def test_bloqueia_misturar_12_pagas_com_menos_fora_ab_mesmo_banco():
     result = Service.validar(
         banco_destino="FACTA",
         convenio="INSS",
@@ -550,13 +593,15 @@ def test_bloqueia_misturar_12_pagas_com_menos_grupo_c():
         contratos=[
             {
                 "banco": "BRB",
+                "codigo": "070",
                 "beneficio": "1234567890",
                 "parcela": 150,
                 "saldo_devedor": 5000,
                 "parcelas_pagas": 18,
             },
             {
-                "banco": "BANCO INTER",
+                "banco": "BANCO BRB",
+                "codigo": "070",
                 "beneficio": "1234567890",
                 "parcela": 150,
                 "saldo_devedor": 5000,
@@ -625,7 +670,7 @@ def test_permite_multiplos_contratos_a_partir_de_12_pagas():
     assert result["elegivel_previo"] is True
     assert result["grupo_operacao"] == "A"
 
-def test_parcela_refin_final_inclui_vinte():
+def test_parcela_refin_negativa_nao_soma_vinte():
     result = Service.validar(
         banco_destino="FACTA",
         convenio="INSS",
@@ -648,7 +693,7 @@ def test_parcela_refin_final_inclui_vinte():
 
     assert result["soma_parcelas"] == 400
     assert result["margem_negativa"] == 80
-    assert result["parcela_refin"] == 340
+    assert result["parcela_refin"] == 320
 
 def test_parcela_refin_sem_adicional_quando_margem_zero():
     result = Service.validar(
@@ -700,6 +745,120 @@ def test_parcela_refin_sem_adicional_quando_margem_positiva():
     assert result["soma_parcelas"] == 200
     assert result["margem_negativa"] == 0
     assert result["parcela_refin"] == 200
+
+
+def test_margem_negativa_exige_parcela_maior_igual_negativo_mais_20():
+    bloqueado = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=-80,
+        contratos=[
+            {
+                "banco": "BMG",
+                "beneficio": "123",
+                "parcela": 99,
+                "saldo_devedor": 3000,
+            },
+            {
+                "banco": "C6",
+                "beneficio": "123",
+                "parcela": 80,
+                "saldo_devedor": 2500,
+            },
+        ],
+    )
+
+    assert bloqueado["elegivel_previo"] is False
+    assert bloqueado["parcela_viabilidade_minima"] == 100
+
+    liberado = Service.validar(
+        banco_destino="FACTA",
+        convenio="INSS",
+        margem_disponivel=-80,
+        contratos=[
+            {
+                "banco": "BMG",
+                "beneficio": "123",
+                "parcela": 100,
+                "saldo_devedor": 3000,
+            },
+            {
+                "banco": "C6",
+                "beneficio": "123",
+                "parcela": 80,
+                "saldo_devedor": 2500,
+            },
+        ],
+    )
+
+    assert liberado["elegivel_previo"] is True
+    assert liberado["parcela_refin"] == 100
+
+
+def test_regras_facta_origem_usam_configuracao_portabilidade_pro():
+    bloqueios = Service.validar_regras_banco_origem(
+        contratos=[
+            {
+                "banco": "BANCO TESTE",
+                "codigo": "999",
+                "parcelas_pagas": 8,
+            }
+        ],
+        origin_config=[
+            {
+                "origin_bank": "999",
+                "min_paid": 12,
+            }
+        ],
+        origin_blocklist=[],
+    )
+
+    assert len(bloqueios) == 1
+    assert "12 parcelas" in bloqueios[0]
+    assert "possui 8" in bloqueios[0]
+
+    bloqueios = Service.validar_regras_banco_origem(
+        contratos=[
+            {
+                "banco": "BANCO BLOQUEADO",
+                "parcelas_pagas": 30,
+            }
+        ],
+        origin_config=[],
+        origin_blocklist=[
+            "BANCO BLOQUEADO",
+        ],
+    )
+
+    assert len(bloqueios) == 1
+    assert "FACTA nao porta" in bloqueios[0]
+
+
+def test_rota_facta_nao_exige_intersecao_nem_simulacao_individual():
+    router_path = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "routers"
+        / "portabilidade_multipla.py"
+    )
+
+    text = router_path.read_text(
+        encoding="utf-8"
+    )
+
+    start = text.index(
+        "async def simular_portabilidade_multipla_facta("
+    )
+    end = text.index(
+        "# MULTIPLA_DAYCOVAL_BACKEND_V1",
+        start,
+    )
+    endpoint = text[start:end]
+
+    assert "simular_financeiro(" in endpoint
+    assert "_interseccionar_ofertas_facta(" not in endpoint
+    assert "_SimuladorService" not in endpoint
+    assert "resultados_motor" not in endpoint
 
 
 def test_regra_promotora_bloqueia_banco_origem():
