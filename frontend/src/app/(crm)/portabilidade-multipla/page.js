@@ -43,6 +43,28 @@ const DEFAULT_CONFIG = {
     "PICPAY",
   ],
 
+  grupo_a_codigos: [
+    "041",
+    "318",
+    "707",
+    "341",
+    "104",
+    "237",
+    "033",
+    "121",
+    "623",
+    "336",
+    "626",
+    "422",
+  ],
+
+  grupo_b_codigos: [
+    "461",
+    "389",
+    "001",
+    "380",
+  ],
+
   // FACTA oficial nao possui Grupo C.
   // Qualquer banco fora de A/B somente unifica
   // com contratos da mesma instituicao.
@@ -1268,11 +1290,42 @@ export default function PortabilidadeMultiplaPage() {
 
 
   const identifyGroup = (
-    bankName
+    bankName,
+    bankCode = ""
   ) => {
 
     const bank =
       normalizeBank(bankName);
+
+    const codeSource =
+      `${bankCode || ""} ${bankName || ""}`;
+
+    const codeMatch =
+      codeSource.match(
+        /(?:^|\D)(\d{3})(?:\D|$)/
+      );
+
+    const code =
+      codeMatch?.[1] ||
+      "";
+
+    if (
+      (
+        config.grupo_a_codigos ||
+        []
+      ).includes(code)
+    ) {
+      return "A";
+    }
+
+    if (
+      (
+        config.grupo_b_codigos ||
+        []
+      ).includes(code)
+    ) {
+      return "B";
+    }
 
     if (
       config.grupo_a
@@ -1294,16 +1347,15 @@ export default function PortabilidadeMultiplaPage() {
       return "B";
     }
 
-    if (!bank) {
+    if (!bank && !code) {
       return null;
     }
 
     /*
      * Bancos fora de A/B recebem uma chave por instituicao.
-     * Isso replica a regra FACTA: somente o mesmo banco pode
-     * ser unificado fora dos grupos A/B.
+     * O codigo COMPE tem prioridade, como no simulador FACTA.
      */
-    return `BANK:${norm(bank)}`;
+    return `BANK:${code || norm(bank)}`;
   };
 
 
@@ -1406,7 +1458,8 @@ export default function PortabilidadeMultiplaPage() {
               isAlternativeDestination
                 ? "A"
                 : identifyGroup(
-                    loan.banco
+                    loan.banco,
+                    loan.codigo
                   ),
           })
         ),
