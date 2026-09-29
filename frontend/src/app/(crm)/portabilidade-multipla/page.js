@@ -17,8 +17,8 @@ const DEFAULT_CONFIG = {
   banco: "FACTA",
   convenio: "INSS",
   max_contratos: 6,
-  parcela_minima_refin: 50,
   valor_minimo_operacao: 3000,
+  troco_minimo_exclusivo: 50,
   adicional_viabilidade: 20,
 
   grupo_a: [
@@ -43,14 +43,33 @@ const DEFAULT_CONFIG = {
     "PICPAY",
   ],
 
-  grupo_c: [
-    "QI SOCIEDADE",
-    "BANCO ORIGINAL",
-    "BANCO INTER",
-    "BANCO MULTIPLO",
-    "BRB",
-    "DIGIO",
+  grupo_a_codigos: [
+    "041",
+    "318",
+    "707",
+    "341",
+    "104",
+    "237",
+    "033",
+    "121",
+    "623",
+    "336",
+    "626",
+    "422",
   ],
+
+  grupo_b_codigos: [
+    "461",
+    "389",
+    "001",
+    "380",
+  ],
+
+  // FACTA oficial nao possui Grupo C.
+  // Qualquer banco fora de A/B somente unifica
+  // com contratos da mesma instituicao.
+  grupo_c: [],
+  fora_ab_mesmo_banco: true,
 };
 
 
@@ -1081,6 +1100,13 @@ export default function PortabilidadeMultiplaPage() {
       : factaOffers;
 
     return [...list].sort((a, b) => {
+      const orderA = Number(a?.ordem_facta || 0);
+      const orderB = Number(b?.ordem_facta || 0);
+
+      if (orderA > 0 || orderB > 0) {
+        return orderA - orderB;
+      }
+
       const tableA = String(a?.tabela || a?.table_name || a?.nome_tabela || "");
       const tableB = String(b?.tabela || b?.table_name || b?.nome_tabela || "");
       return tableA.localeCompare(tableB, undefined, { numeric: true, sensitivity: "base" });
@@ -1264,11 +1290,42 @@ export default function PortabilidadeMultiplaPage() {
 
 
   const identifyGroup = (
-    bankName
+    bankName,
+    bankCode = ""
   ) => {
 
     const bank =
       normalizeBank(bankName);
+
+    const codeSource =
+      `${bankCode || ""} ${bankName || ""}`;
+
+    const codeMatch =
+      codeSource.match(
+        /(?:^|\D)(\d{3})(?:\D|$)/
+      );
+
+    const code =
+      codeMatch?.[1] ||
+      "";
+
+    if (
+      (
+        config.grupo_a_codigos ||
+        []
+      ).includes(code)
+    ) {
+      return "A";
+    }
+
+    if (
+      (
+        config.grupo_b_codigos ||
+        []
+      ).includes(code)
+    ) {
+      return "B";
+    }
 
     if (
       config.grupo_a
@@ -1290,17 +1347,15 @@ export default function PortabilidadeMultiplaPage() {
       return "B";
     }
 
-    if (
-      config.grupo_c
-        .map(norm)
-        .includes(
-          norm(bank)
-        )
-    ) {
-      return "C";
+    if (!bank && !code) {
+      return null;
     }
 
-    return null;
+    /*
+     * Bancos fora de A/B recebem uma chave por instituicao.
+     * O codigo COMPE tem prioridade, como no simulador FACTA.
+     */
+    return `BANK:${code || norm(bank)}`;
   };
 
 
@@ -1403,7 +1458,8 @@ export default function PortabilidadeMultiplaPage() {
               isAlternativeDestination
                 ? "A"
                 : identifyGroup(
-                    loan.banco
+                    loan.banco,
+                    loan.codigo
                   ),
           })
         ),
@@ -1567,19 +1623,15 @@ export default function PortabilidadeMultiplaPage() {
               )
             : 0;
 
-        /* MULTIPLA_FACTA_REFIN_MARGIN_V3 */
+        /* MULTIPLA_FACTA_REFIN_MARGIN_V4
+         * O +20 serve somente para viabilidade.
+         * A parcela consolidada e soma - margem negativa.
+         */
         const parcelaRefin =
           Math.max(
             0,
             somaParcelas -
-              margemNegativa +
-              (
-                margemNegativa > 0
-                  ? money(
-                      config.adicional_viabilidade
-                    )
-                  : 0
-              )
+              margemNegativa
           );
 
         return {
@@ -1591,14 +1643,7 @@ export default function PortabilidadeMultiplaPage() {
             isAlternativeDestination
               ? 0
               : minimoViabilidade,
-          parcelaRefin:
-            isAlternativeDestination
-              ? Math.max(
-                  0,
-                  somaParcelas -
-                    margemNegativa
-                )
-              : parcelaRefin,
+          parcelaRefin,
           viabilidade:
             isAlternativeDestination ||
             margemNegativa === 0 ||
@@ -1632,11 +1677,18 @@ export default function PortabilidadeMultiplaPage() {
               "B"
           ),
 
-        C:
+        SAME_BANK:
           enrichedLoans.filter(
             (loan) =>
-              loan.grupo_facta ===
-              "C"
+              Boolean(
+                loan.grupo_facta
+              ) &&
+              ![
+                "A",
+                "B",
+              ].includes(
+                loan.grupo_facta
+              )
           ),
 
         OTHER:
@@ -2549,33 +2601,6 @@ export default function PortabilidadeMultiplaPage() {
       return;
     }
 
-    if (
-      !isAlternativeDestination &&
-      group === "C" &&
-      selectedLoans.length > 0
-    ) {
-      setNotice({
-        type: "warning",
-        text:
-          "Contratos do Grupo C nao podem ser unificados entre si.",
-      });
-
-      return;
-    }
-
-    if (
-      !isAlternativeDestination &&
-      selectedGroup === "C"
-    ) {
-      setNotice({
-        type: "warning",
-        text:
-          "Contratos do Grupo C nao podem ser unificados entre si.",
-      });
-
-      return;
-    }
-
     if (selectedLoans.length > 0) {
       const loanPaid =
         getLoanPaid(loan);
@@ -2654,10 +2679,24 @@ export default function PortabilidadeMultiplaPage() {
       selectedGroup &&
       selectedGroup !== group
     ) {
+      const sameBankMode =
+        String(
+          selectedGroup
+        ).startsWith(
+          "BANK:"
+        ) ||
+        String(
+          group
+        ).startsWith(
+          "BANK:"
+        );
+
       setNotice({
         type: "warning",
         text:
-          `A operacao atual pertence ao Grupo ${selectedGroup}. Nao e permitido misturar os Grupos A, B e C.`,
+          sameBankMode
+            ? "Bancos fora dos Grupos A/B somente podem ser unificados com contratos da mesma instituicao."
+            : `A operacao atual pertence ao Grupo ${selectedGroup}. Grupo A unifica somente com A e Grupo B somente com B.`,
       });
 
       return;
@@ -3178,9 +3217,9 @@ export default function PortabilidadeMultiplaPage() {
           setNotice({
             type: "success",
             text:
-              `${motorResponse.ofertas.length} `
-              + `tabela(s) ${selectedDestination} elegivel(is) `
-              + `para todos os contratos selecionados.`,
+              selectedDestination === "FACTA"
+                ? `${motorResponse.ofertas.length} tabela(s) FACTA gerada(s) pela simulação financeira consolidada.`
+                : `${motorResponse.ofertas.length} tabela(s) ${selectedDestination} elegivel(is) para todos os contratos selecionados.`,
           });
 
         } else {
@@ -3255,12 +3294,6 @@ export default function PortabilidadeMultiplaPage() {
       selectedGroup !== group &&
       !selected;
 
-    const isGroupCBlocked =
-      !isAlternativeDestination &&
-      !selected &&
-      (selectedGroup === "C" ||
-        (selectedLoans.length > 0 && group === "C"));
-
     const isPaidTierBlocked =
       !isAlternativeDestination &&
       !selected &&
@@ -3274,7 +3307,6 @@ export default function PortabilidadeMultiplaPage() {
         : (
             !group ||
             blockedGroup ||
-            isGroupCBlocked ||
             isPaidTierBlocked ||
             activePrecheck.blocked
           );
@@ -3389,7 +3421,10 @@ export default function PortabilidadeMultiplaPage() {
               >
                 {isAlternativeDestination
                   ? selectedDestination
-                  : `Grupo ${group || "?"}`}
+                  : group === "A" ||
+                    group === "B"
+                    ? `Grupo ${group}`
+                    : "Mesmo banco"}
               </span>
             </div>
 
@@ -3427,7 +3462,7 @@ export default function PortabilidadeMultiplaPage() {
               >
                 {activePrecheck.reason}
               </div>
-            ) : !selected && isGroupCBlocked ? (
+            ) : !selected && blockedGroup ? (
               <div
                 className="
                   mt-3
@@ -3442,7 +3477,9 @@ export default function PortabilidadeMultiplaPage() {
                   text-slate-600
                 "
               >
-                Contratos do Grupo C não podem ser unificados entre si.
+                {String(selectedGroup || "").startsWith("BANK:")
+                  ? "Bloqueado: fora de A/B somente contratos da mesma instituição."
+                  : "Bloqueado: Grupo A unifica somente com A e Grupo B somente com B."}
               </div>
             ) : !selected && isPaidTierBlocked ? (
               <div
@@ -3706,7 +3743,8 @@ export default function PortabilidadeMultiplaPage() {
               (loan) =>
                 renderLoan(
                   loan,
-                  group
+                  loan.grupo_facta ||
+                    group
                 )
             )
 
@@ -3811,7 +3849,9 @@ export default function PortabilidadeMultiplaPage() {
               <p className="text-[11px] font-semibold text-slate-400">
                 {isDaycoval
                   ? "Min. 2 e máx. 3 contratos • Sem restrição de grupos"
-                  : "Até 6 contratos do mesmo grupo e benefício"}
+                  : isQueroMais
+                    ? "Min. 2 e máx. 3 contratos • Sem restrição de grupos"
+                    : "Até 6 contratos • A↔A • B↔B • fora A/B somente mesmo banco"}
               </p>
             </div>
           </div>
@@ -4583,9 +4623,9 @@ export default function PortabilidadeMultiplaPage() {
 
                 {!isAlternativeDestination
                   ? renderGroup(
-                      "C",
-                      "Grupo C",
-                      "Nao sao unificaveis entre si"
+                      "SAME_BANK",
+                      "Fora dos Grupos A/B",
+                      "Unificação permitida somente entre contratos da mesma instituição"
                     )
                   : null}
 
@@ -4621,7 +4661,7 @@ export default function PortabilidadeMultiplaPage() {
                         text-amber-600
                       "
                     >
-                      Estes contratos permanecem bloqueados.
+                      Contratos sem identificação de banco permanecem bloqueados.
                     </p>
 
                     <div
@@ -5259,7 +5299,9 @@ export default function PortabilidadeMultiplaPage() {
                                 text-slate-400
                               "
                             >
-                              Aprovadas em todos os contratos
+                              {selectedDestination === "FACTA"
+                                ? "Simulação financeira consolidada"
+                                : "Aprovadas em todos os contratos"}
                             </p>
                           </div>
 
@@ -5495,24 +5537,42 @@ export default function PortabilidadeMultiplaPage() {
                                         text-slate-400
                                       "
                                     >
-                                      {Number(
-                                        offer.prazo ||
-                                        0
-                                      )}
-                                      x
-                                      {" \u2022 "}
-                                      Taxa{" "}
-                                      {Number(
-                                        offer.taxa_refin ||
-                                        offer.taxa_juros ||
-                                        0
-                                      )
-                                        .toFixed(2)
-                                        .replace(
-                                          ".",
-                                          ","
-                                        )}
-                                      % a.m.
+                                      {selectedDestination === "FACTA"
+                                        ? (
+                                            <>
+                                              {offer.modalidade ||
+                                                "Simulação consolidada"}
+                                              {" • "}
+                                              Fator{" "}
+                                              {Number(
+                                                offer.fator ||
+                                                offer.coeficiente ||
+                                                0
+                                              ).toFixed(6)}
+                                            </>
+                                          )
+                                        : (
+                                            <>
+                                              {Number(
+                                                offer.prazo ||
+                                                0
+                                              )}
+                                              x
+                                              {" • "}
+                                              Taxa{" "}
+                                              {Number(
+                                                offer.taxa_refin ||
+                                                offer.taxa_juros ||
+                                                0
+                                              )
+                                                .toFixed(2)
+                                                .replace(
+                                                  ".",
+                                                  ","
+                                                )}
+                                              % a.m.
+                                            </>
+                                          )}
                                     </p>
                                   </div>
 
