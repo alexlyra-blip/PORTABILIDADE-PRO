@@ -71,6 +71,14 @@ async def configuracao_portabilidade_multipla(
             PortabilidadeMultiplaFactaService
             .GRUPO_B
         ),
+        "grupo_a_codigos": sorted(
+            PortabilidadeMultiplaFactaService
+            .GRUPO_A_CODIGOS
+        ),
+        "grupo_b_codigos": sorted(
+            PortabilidadeMultiplaFactaService
+            .GRUPO_B_CODIGOS
+        ),
         # FACTA oficial: nao existe Grupo C.
         # Bancos fora de A/B somente unificam
         # com contratos da mesma instituicao.
