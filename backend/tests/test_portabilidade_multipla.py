@@ -1433,7 +1433,7 @@ def test_rota_daycoval_envia_financeiro_consolidado_ao_motor():
     assert "parcela=(\n                        soma_parcelas\n                    )" in endpoint
     assert "saldo_devedor=(\n                        soma_saldos\n                    )" in endpoint
 
-def test_frontend_facta_nao_soma_vinte_com_margem_zero():
+def test_frontend_facta_parcela_consolidada_nao_soma_vinte():
     page_path = (
         Path(__file__).resolve().parents[2]
         / "frontend"
@@ -1446,10 +1446,19 @@ def test_frontend_facta_nao_soma_vinte_com_margem_zero():
 
     text = page_path.read_text(encoding="utf-8")
 
-    assert "MULTIPLA_FACTA_REFIN_MARGIN_V3" in text
-    assert "margemNegativa > 0" in text
-    assert "? money(" in text
-    assert ": 0" in text
+    marker = "MULTIPLA_FACTA_REFIN_MARGIN_V4"
+    assert marker in text
+
+    start = text.index(marker)
+    end = text.index(
+        "return {",
+        start,
+    )
+    calculation = text[start:end]
+
+    assert "somaParcelas -" in calculation
+    assert "margemNegativa" in calculation
+    assert "config.adicional_viabilidade" not in calculation
 
 
 def test_daycoval_normaliza_financeiro_para_tela():
