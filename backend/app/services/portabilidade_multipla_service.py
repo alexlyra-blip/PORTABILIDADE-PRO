@@ -18,9 +18,150 @@ class PortabilidadeMultiplaFactaService:
     """
 
     MAX_CONTRATOS = 6
+    # FACTA - regras financeiras extraidas do simulador oficial
+    # eportfacta/config.py.
+    # MIN_PARCELA_REFIN permanece apenas por compatibilidade com
+    # integracoes antigas; a Multipla FACTA nao usa mais parcela
+    # minima como criterio financeiro.
     MIN_PARCELA_REFIN = 50.00
     MIN_VALOR_OPERACAO = 3000.00
+    TROCO_MINIMO = 50.00
     ADICIONAL_VIABILIDADE = 20.00
+
+    FATORES = {
+        "Refin Normal": 0.022594,
+        "Refin FLEX 0": 0.022424,
+        "Refin Flex 1": 0.022169,
+        "Refin Flex 2": 0.021999,
+        "Refin Flex 3": 0.021746,
+        "Refin Flex 4": 0.021495,
+        "Refin Flex 5": 0.021328,
+        "Refin Flex 6": 0.021246,
+    }
+
+    FATORES_CARENCIA = {
+        "Refin Normal": 0.023925,
+        "Refin FLEX 0": 0.023730,
+        "Refin Flex 1": 0.023439,
+        "Refin Flex 2": 0.023246,
+        "Refin Flex 3": 0.022958,
+        "Refin Flex 4": 0.022672,
+        "Refin Flex 5": 0.022482,
+        "Refin Flex 6": 0.022293,
+        "Refin Flex 7": 0.022093,
+    }
+
+    FAIXAS = [
+        (
+            4000.00,
+            5499.99,
+            [
+                "Refin Normal",
+                "Refin FLEX 0",
+                "Refin Flex 1",
+            ],
+        ),
+        (
+            5500.00,
+            8499.99,
+            [
+                "Refin Normal",
+                "Refin FLEX 0",
+                "Refin Flex 1",
+                "Refin Flex 2",
+            ],
+        ),
+        (
+            8500.00,
+            13999.99,
+            [
+                "Refin Normal",
+                "Refin FLEX 0",
+                "Refin Flex 1",
+                "Refin Flex 2",
+                "Refin Flex 3",
+                "Refin Flex 4",
+                "Refin Flex 5",
+            ],
+        ),
+        (
+            14000.00,
+            100000.00,
+            [
+                "Refin Normal",
+                "Refin FLEX 0",
+                "Refin Flex 1",
+                "Refin Flex 2",
+                "Refin Flex 3",
+                "Refin Flex 4",
+                "Refin Flex 5",
+                "Refin Flex 6",
+            ],
+        ),
+    ]
+
+    FAIXAS_CARENCIA = [
+        (
+            3000.00,
+            3999.99,
+            [
+                "Refin Normal",
+                "Refin FLEX 0",
+                "Refin Flex 1",
+            ],
+        ),
+        (
+            4000.00,
+            5499.99,
+            [
+                "Refin Normal",
+                "Refin FLEX 0",
+                "Refin Flex 1",
+                "Refin Flex 2",
+                "Refin Flex 3",
+            ],
+        ),
+        (
+            5500.00,
+            8499.99,
+            [
+                "Refin Normal",
+                "Refin FLEX 0",
+                "Refin Flex 1",
+                "Refin Flex 2",
+                "Refin Flex 3",
+            ],
+        ),
+        (
+            8500.00,
+            13999.99,
+            [
+                "Refin Normal",
+                "Refin FLEX 0",
+                "Refin Flex 1",
+                "Refin Flex 2",
+                "Refin Flex 3",
+                "Refin Flex 4",
+                "Refin Flex 5",
+                "Refin Flex 6",
+            ],
+        ),
+        (
+            14000.00,
+            100000.00,
+            [
+                "Refin Normal",
+                "Refin FLEX 0",
+                "Refin Flex 1",
+                "Refin Flex 2",
+                "Refin Flex 3",
+                "Refin Flex 4",
+                "Refin Flex 5",
+                "Refin Flex 6",
+                "Refin Flex 7",
+            ],
+        ),
+    ]
 
     GRUPO_A = {
         "BANRISUL",
@@ -44,14 +185,10 @@ class PortabilidadeMultiplaFactaService:
         "PICPAY",
     }
 
-    GRUPO_C = {
-        "QI SOCIEDADE",
-        "BANCO ORIGINAL",
-        "BANCO INTER",
-        "BANCO MULTIPLO",
-        "BRB",
-        "DIGIO",
-    }
+    # Compatibilidade de atributo para consumidores antigos.
+    # Na regra oficial FACTA NAO existe Grupo C: todo banco fora
+    # dos Grupos A/B somente unifica com a mesma instituicao.
+    GRUPO_C = set()
 
     BANK_ALIASES = {
         "BANRISUL": "BANRISUL",
@@ -149,10 +286,36 @@ class PortabilidadeMultiplaFactaService:
         if banco_normalizado in cls.GRUPO_B:
             return "B"
 
-        if banco_normalizado in cls.GRUPO_C:
-            return "C"
-
         return None
+
+    @classmethod
+    def identidade_unificacao(
+        cls,
+        banco: Any,
+        codigo: Any = None,
+    ) -> str:
+        """
+        Identidade usada pelos bancos fora de A/B.
+
+        O simulador FACTA usa primeiro o codigo COMPE quando
+        disponivel; na ausencia dele, usa o nome normalizado.
+        """
+        fontes = [
+            str(codigo or "").strip(),
+            str(banco or "").strip(),
+        ]
+
+        for fonte in fontes:
+            match = _re.search(
+                r"(?<!\d)(\d{3})(?!\d)",
+                fonte,
+            )
+            if match:
+                return match.group(1)
+
+        return cls.normalizar_banco(
+            banco
+        )
 
     @classmethod
     def normalizar_beneficio(
@@ -366,6 +529,299 @@ class PortabilidadeMultiplaFactaService:
 
         return bloqueios
 
+    @classmethod
+    def validar_regras_banco_origem(
+        cls,
+        contratos,
+        origin_config=None,
+        origin_blocklist=None,
+        min_paid_installments=0,
+        min_table_paid_any=0,
+    ):
+        """
+        Valida SOMENTE as regras de origem cadastradas no
+        Portabilidade PRO para o banco destino FACTA.
+
+        Nao executa simulacao financeira individual e, portanto,
+        nao exige tabela comum entre os contratos.
+        """
+        origin_config = origin_config or []
+        origin_blocklist = origin_blocklist or []
+
+        bloqueios = []
+        minimum_global = max(
+            cls._promotora_int(
+                min_paid_installments
+            ),
+            cls._promotora_int(
+                min_table_paid_any
+            ),
+        )
+
+        for index, contrato in enumerate(
+            contratos or [],
+            start=1,
+        ):
+            banco = " ".join(
+                str(
+                    contrato.get(key)
+                    or ""
+                ).strip()
+                for key in (
+                    "codigo",
+                    "banco",
+                )
+                if str(
+                    contrato.get(key)
+                    or ""
+                ).strip()
+            )
+
+            blocked_by = ""
+
+            for rule in origin_blocklist:
+                if isinstance(rule, dict):
+                    rule_bank = str(
+                        rule.get(
+                            "origin_bank",
+                            "",
+                        )
+                        or ""
+                    ).strip()
+                else:
+                    rule_bank = str(
+                        rule
+                        or ""
+                    ).strip()
+
+                if not rule_bank:
+                    continue
+
+                if cls._promotora_bank_matches(
+                    banco,
+                    rule_bank,
+                ):
+                    blocked_by = rule_bank
+                    break
+
+            if blocked_by:
+                bloqueios.append(
+                    f"Contrato {index}: FACTA nao porta "
+                    "contratos originados no banco "
+                    f"{blocked_by}."
+                )
+                continue
+
+            parcelas_pagas = cls.parcelas_pagas(
+                contrato
+            )
+
+            specific_minimum = 0
+            specific_bank = ""
+
+            for rule in origin_config:
+                if not isinstance(
+                    rule,
+                    dict,
+                ):
+                    continue
+
+                rule_bank = str(
+                    rule.get(
+                        "origin_bank",
+                        "",
+                    )
+                    or ""
+                ).strip()
+
+                if not rule_bank:
+                    continue
+
+                if not cls._promotora_bank_matches(
+                    banco,
+                    rule_bank,
+                ):
+                    continue
+
+                minimum = cls._promotora_int(
+                    rule.get(
+                        "min_paid",
+                        0,
+                    )
+                )
+
+                if minimum > specific_minimum:
+                    specific_minimum = minimum
+                    specific_bank = rule_bank
+
+            required = max(
+                minimum_global,
+                specific_minimum,
+            )
+
+            if parcelas_pagas < required:
+                banco_label = (
+                    specific_bank
+                    or str(
+                        contrato.get(
+                            "banco",
+                            "",
+                        )
+                        or "Banco de origem"
+                    ).strip()
+                )
+
+                bloqueios.append(
+                    f"Contrato {index}: {banco_label} "
+                    f"exige no minimo {required} parcelas "
+                    "pagas para portabilidade FACTA. "
+                    f"Contrato possui {parcelas_pagas}."
+                )
+
+        return bloqueios
+
+    @classmethod
+    def tabelas_disponiveis(
+        cls,
+        bruto,
+        faixas,
+    ):
+        for valor_minimo, valor_maximo, tabelas in (
+            faixas
+            or []
+        ):
+            if (
+                valor_minimo
+                <= bruto
+                <= valor_maximo
+            ):
+                return list(
+                    tabelas
+                )
+
+        return []
+
+    @classmethod
+    def simular_financeiro(
+        cls,
+        *,
+        parcela_refin,
+        saldo_consolidado,
+    ):
+        """
+        Replica o calculo financeiro do eportfacta:
+
+            bruto = parcela consolidada / fator
+            bruto >= R$ 3.000,00
+            tabela precisa pertencer a faixa do bruto
+            troco = bruto - saldo consolidado
+            somente troco > R$ 50,00
+
+        Executa a simulacao UMA vez sobre os totais consolidados.
+        """
+        parcela_refin = cls._money(
+            parcela_refin
+        )
+        saldo_consolidado = cls._money(
+            saldo_consolidado
+        )
+
+        ofertas = []
+        ordem = 0
+
+        configuracoes = [
+            (
+                "Sem Carencia",
+                cls.FAIXAS,
+                cls.FATORES,
+            ),
+            (
+                "Com Carencia",
+                cls.FAIXAS_CARENCIA,
+                cls.FATORES_CARENCIA,
+            ),
+        ]
+
+        for modalidade, faixas, fatores in configuracoes:
+            for tabela, fator in fatores.items():
+                if fator <= 0:
+                    continue
+
+                bruto = (
+                    parcela_refin
+                    / fator
+                )
+
+                if bruto < cls.MIN_VALOR_OPERACAO:
+                    continue
+
+                tabelas_liberadas = (
+                    cls.tabelas_disponiveis(
+                        bruto,
+                        faixas,
+                    )
+                )
+
+                if tabela not in tabelas_liberadas:
+                    continue
+
+                troco = (
+                    bruto
+                    - saldo_consolidado
+                )
+
+                # Regra oficial e estrita: somente troco > 50.
+                if troco <= cls.TROCO_MINIMO:
+                    continue
+
+                ordem += 1
+
+                ofertas.append({
+                    "banco": "FACTA",
+                    "tabela": tabela,
+                    "modalidade": modalidade,
+                    "com_carencia": (
+                        modalidade
+                        == "Com Carencia"
+                    ),
+                    "prazo": 0,
+                    "taxa_juros": 0.0,
+                    "taxa_refin": 0.0,
+                    "fator": fator,
+                    "coeficiente": fator,
+                    "parcela_refin": round(
+                        parcela_refin,
+                        2,
+                    ),
+                    "novo_contrato": round(
+                        bruto,
+                        2,
+                    ),
+                    "valor_total_contrato": round(
+                        bruto,
+                        2,
+                    ),
+                    "saldo_total": round(
+                        saldo_consolidado,
+                        2,
+                    ),
+                    "saldo_devedor": round(
+                        saldo_consolidado,
+                        2,
+                    ),
+                    "troco": round(
+                        troco,
+                        2,
+                    ),
+                    "valor_liberado": round(
+                        troco,
+                        2,
+                    ),
+                    "ordem_facta": ordem,
+                })
+
+        return ofertas
+
 
     @classmethod
     def validar(
@@ -416,6 +872,8 @@ class PortabilidadeMultiplaFactaService:
 
         contratos_normalizados = []
         grupos_ativos = set()
+        chaves_unificacao = set()
+        identidades_fora_grupo = set()
         beneficios_ativos = set()
 
         soma_parcelas = 0.0
@@ -438,6 +896,39 @@ class PortabilidadeMultiplaFactaService:
             grupo = cls.identificar_grupo(
                 banco_original
             )
+
+            identidade_banco = (
+                cls.identidade_unificacao(
+                    banco_original,
+                    contrato.get("codigo"),
+                )
+            )
+
+            if grupo in {
+                "A",
+                "B",
+            }:
+                chave_unificacao = (
+                    f"GRUPO:{grupo}"
+                )
+                grupos_ativos.add(
+                    grupo
+                )
+            else:
+                chave_unificacao = (
+                    f"BANCO:{identidade_banco}"
+                    if identidade_banco
+                    else ""
+                )
+                if identidade_banco:
+                    identidades_fora_grupo.add(
+                        identidade_banco
+                    )
+
+            if chave_unificacao:
+                chaves_unificacao.add(
+                    chave_unificacao
+                )
 
             parcela = cls._money(
                 contrato.get("parcela")
@@ -482,17 +973,6 @@ class PortabilidadeMultiplaFactaService:
                     "banco nao informado."
                 )
 
-            if grupo is None:
-                bloqueios.append(
-                    f"Contrato {index}: banco "
-                    f"'{banco_original}' nao pertence "
-                    "aos grupos permitidos da "
-                    "Portabilidade Multipla FACTA."
-                )
-
-            else:
-                grupos_ativos.add(grupo)
-
             soma_parcelas += parcela
             soma_saldos += saldo
             maior_parcela = max(
@@ -506,29 +986,28 @@ class PortabilidadeMultiplaFactaService:
                     "banco_original": banco_original,
                     "banco_normalizado": banco,
                     "grupo_facta": grupo,
+                    "identidade_unificacao": (
+                        identidade_banco
+                    ),
+                    "chave_unificacao": (
+                        chave_unificacao
+                    ),
                     "beneficio": beneficio,
                     "parcela": parcela,
                     "saldo_devedor": saldo,
-                    "selecionavel": grupo in {
-                        "A",
-                        "B",
-                        "C",
-                    },
+                    "selecionavel": bool(
+                        banco
+                    ),
                 }
             )
 
-        if len(grupos_ativos) > 1:
+        if len(chaves_unificacao) > 1:
             bloqueios.append(
-                "Contratos dos Grupos A, B e C nao "
-                "podem ser unificados na mesma "
-                "operacao."
-            )
-
-        if "C" in grupos_ativos and len(contratos) > 1:
-            bloqueios.append(
-                "Contratos do Grupo C nao podem ser "
-                "unificados entre si na "
-                "Portabilidade Multipla FACTA."
+                "Os contratos selecionados nao sao "
+                "compativeis para unificacao FACTA: "
+                "Grupo A unifica somente com A; Grupo B "
+                "somente com B; bancos fora de A/B "
+                "somente com contratos da mesma instituicao."
             )
 
         if len(beneficios_ativos) > 1:
@@ -562,7 +1041,34 @@ class PortabilidadeMultiplaFactaService:
 
         grupo_operacao = (
             next(iter(grupos_ativos))
-            if len(grupos_ativos) == 1
+            if (
+                len(grupos_ativos) == 1
+                and len(chaves_unificacao) == 1
+            )
+            else (
+                "MESMO_BANCO"
+                if (
+                    len(chaves_unificacao) == 1
+                    and not grupos_ativos
+                )
+                else None
+            )
+        )
+
+        identidade_operacao = (
+            next(
+                iter(
+                    identidades_fora_grupo
+                )
+            )
+            if (
+                grupo_operacao
+                == "MESMO_BANCO"
+                and len(
+                    identidades_fora_grupo
+                )
+                == 1
+            )
             else None
         )
 
@@ -604,22 +1110,15 @@ class PortabilidadeMultiplaFactaService:
                     "valor da margem negativa."
                 )
 
-        # MULTIPLA_FACTA_REFIN_MARGIN_V2
-        # Regra FACTA:
-        # - margem zero/positiva: soma das parcelas;
-        # - margem negativa: soma - negativo + R$ 20,00.
-        if margem_negativa > 0:
-            parcela_refin = round(
-                soma_parcelas
-                - margem_negativa
-                + cls.ADICIONAL_VIABILIDADE,
-                2,
-            )
-        else:
-            parcela_refin = round(
-                soma_parcelas,
-                2,
-            )
+        # MULTIPLA_FACTA_REFIN_MARGIN_V4
+        # O +R$20,00 existe SOMENTE como criterio de viabilidade:
+        # pelo menos uma parcela >= negativo + 20.
+        # Ele NAO e somado na parcela consolidada.
+        parcela_refin = round(
+            soma_parcelas
+            - margem_negativa,
+            2,
+        )
 
         if parcela_refin <= 0:
             bloqueios.append(
@@ -634,34 +1133,10 @@ class PortabilidadeMultiplaFactaService:
             else None
         )
 
+        # A regra financeira e aplicada depois, por tabela:
+        # bruto >= 3.000 e troco > 50.
+        # Nao existe mais "parcela >= 50 OU bruto >= 3000".
         regra_minimo_refin = None
-
-        if valor_operacao is not None:
-            regra_minimo_refin = bool(
-                parcela_refin
-                >= cls.MIN_PARCELA_REFIN
-                or valor_operacao
-                >= cls.MIN_VALOR_OPERACAO
-            )
-
-            if not regra_minimo_refin:
-                bloqueios.append(
-                    "O Refin deve possuir parcela "
-                    "minima de R$ 50,00 OU valor "
-                    "da operacao igual ou superior "
-                    "a R$ 3.000,00."
-                )
-
-        elif (
-            parcela_refin
-            < cls.MIN_PARCELA_REFIN
-        ):
-            avisos.append(
-                "Parcela Refin abaixo de R$ 50,00. "
-                "A operacao somente podera seguir "
-                "se o valor calculado do Refin for "
-                "igual ou superior a R$ 3.000,00."
-            )
 
         return {
             "banco_destino": "FACTA",
@@ -670,6 +1145,12 @@ class PortabilidadeMultiplaFactaService:
                 len(bloqueios) == 0
             ),
             "grupo_operacao": grupo_operacao,
+            "identidade_operacao": (
+                identidade_operacao
+            ),
+            "chaves_unificacao": sorted(
+                chaves_unificacao
+            ),
             "beneficio_operacao": beneficio_operacao,
             "quantidade_contratos": (
                 total_contratos
@@ -709,6 +1190,12 @@ class PortabilidadeMultiplaFactaService:
             ),
             "regra_minimo_refin_atendida": (
                 regra_minimo_refin
+            ),
+            "bruto_minimo": (
+                cls.MIN_VALOR_OPERACAO
+            ),
+            "troco_minimo_exclusivo": (
+                cls.TROCO_MINIMO
             ),
             "contratos": (
                 contratos_normalizados
