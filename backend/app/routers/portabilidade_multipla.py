@@ -259,6 +259,7 @@ from app.models.sqlalchemy_models import (
     Bank as _Bank,
     BankRule as _BankRule,
     BankTable as _BankTable,
+    Coefficient as _Coefficient,
 )
 
 from app.routers.deps import (
@@ -595,6 +596,10 @@ async def motor_config_multipla(
                 0,
             "min_table_paid_any":
                 0,
+            "financial_coefficients":
+                [],
+            "active_financial_coefficients":
+                0,
         }
 
     rules_result = await db.execute(
@@ -693,6 +698,141 @@ async def motor_config_multipla(
         else 0
     )
 
+    table_by_id = {
+        table.id: table
+        for table in inss_tables
+    }
+
+    financial_coefficients = []
+
+    if table_by_id:
+        coefficients_result = await db.execute(
+            _select(
+                _Coefficient
+            ).where(
+                _Coefficient.bank_id
+                == facta.id,
+                _Coefficient.table_id.in_(
+                    list(
+                        table_by_id.keys()
+                    )
+                ),
+            )
+        )
+
+        for coeff in (
+            coefficients_result
+            .scalars()
+            .all()
+        ):
+            table = table_by_id.get(
+                coeff.table_id
+            )
+
+            if table is None:
+                continue
+
+            coefficient_value = (
+                _motor_float(
+                    getattr(
+                        coeff,
+                        "coefficient",
+                        0,
+                    )
+                )
+            )
+
+            if coefficient_value <= 0:
+                continue
+
+            financial_coefficients.append({
+                "coefficient_id":
+                    coeff.id,
+                "table_id":
+                    table.id,
+                "table_name":
+                    getattr(
+                        table,
+                        "name",
+                        "",
+                    ),
+                "term":
+                    _motor_int(
+                        getattr(
+                            coeff,
+                            "term",
+                            0,
+                        )
+                    ),
+                "interest_rate":
+                    _motor_float(
+                        getattr(
+                            coeff,
+                            "interest_rate",
+                            0,
+                        )
+                    ),
+                "interest_rate_refin":
+                    _motor_float(
+                        getattr(
+                            coeff,
+                            "interest_rate_refin",
+                            0,
+                        )
+                    ),
+                "coefficient":
+                    coefficient_value,
+                "min_ticket":
+                    _motor_float(
+                        getattr(
+                            table,
+                            "min_ticket",
+                            0,
+                        )
+                    ),
+                "max_ticket":
+                    _motor_float(
+                        getattr(
+                            table,
+                            "max_ticket",
+                            0,
+                        )
+                    ),
+                "min_installment":
+                    _motor_float(
+                        getattr(
+                            table,
+                            "min_installment",
+                            0,
+                        )
+                    ),
+                "max_installment":
+                    _motor_float(
+                        getattr(
+                            table,
+                            "max_installment",
+                            0,
+                        )
+                    ),
+            })
+
+    financial_coefficients.sort(
+        key=lambda item: (
+            -_motor_int(
+                item.get(
+                    "term",
+                    0,
+                )
+            ),
+            str(
+                item.get(
+                    "table_name",
+                    "",
+                )
+            ),
+        )
+    )
+
     return {
         "facta_encontrado":
             True,
@@ -746,6 +886,16 @@ async def motor_config_multipla(
         "active_inss_tables":
             len(
                 inss_tables
+            ),
+
+        # Fonte unica dos calculos financeiros da Multipla FACTA.
+        # Sao os mesmos coeficientes editaveis no Portabilidade PRO.
+        "financial_coefficients":
+            financial_coefficients,
+
+        "active_financial_coefficients":
+            len(
+                financial_coefficients
             ),
     }
 
@@ -1104,6 +1254,12 @@ async def simular_portabilidade_multipla_facta(
                 parcela_refin,
             saldo_consolidado=
                 soma_saldos,
+            coeficientes=(
+                motor_rules.get(
+                    "financial_coefficients",
+                    [],
+                )
+            ),
         )
     )
 
@@ -1117,8 +1273,9 @@ async def simular_portabilidade_multipla_facta(
             "bloqueios": [
                 (
                     "Nenhuma tabela FACTA ficou viavel na "
-                    "simulacao consolidada: o bruto deve "
-                    "respeitar as faixas do simulador FACTA, "
+                    "simulacao consolidada usando os "
+                    "coeficientes ativos do Portabilidade PRO. "
+                    "O bruto deve respeitar as faixas FACTA, "
                     "ser de no minimo R$ 3.000,00 e o troco "
                     "deve ser superior a R$ 50,00."
                 )
