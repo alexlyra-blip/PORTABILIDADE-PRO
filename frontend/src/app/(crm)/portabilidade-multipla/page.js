@@ -5484,24 +5484,42 @@ export default function PortabilidadeMultiplaPage() {
                                         text-slate-400
                                       "
                                     >
-                                      {Number(
-                                        offer.prazo ||
-                                        0
-                                      )}
-                                      x
-                                      {" \u2022 "}
-                                      Taxa{" "}
-                                      {Number(
-                                        offer.taxa_refin ||
-                                        offer.taxa_juros ||
-                                        0
-                                      )
-                                        .toFixed(2)
-                                        .replace(
-                                          ".",
-                                          ","
-                                        )}
-                                      % a.m.
+                                      {selectedDestination === "FACTA"
+                                        ? (
+                                            <>
+                                              {offer.modalidade ||
+                                                "Simulação consolidada"}
+                                              {" • "}
+                                              Fator{" "}
+                                              {Number(
+                                                offer.fator ||
+                                                offer.coeficiente ||
+                                                0
+                                              ).toFixed(6)}
+                                            </>
+                                          )
+                                        : (
+                                            <>
+                                              {Number(
+                                                offer.prazo ||
+                                                0
+                                              )}
+                                              x
+                                              {" • "}
+                                              Taxa{" "}
+                                              {Number(
+                                                offer.taxa_refin ||
+                                                offer.taxa_juros ||
+                                                0
+                                              )
+                                                .toFixed(2)
+                                                .replace(
+                                                  ".",
+                                                  ","
+                                                )}
+                                              % a.m.
+                                            </>
+                                          )}
                                     </p>
                                   </div>
 
