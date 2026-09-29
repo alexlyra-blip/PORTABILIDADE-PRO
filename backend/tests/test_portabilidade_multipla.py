@@ -163,30 +163,73 @@ def test_validacao_estrutural_nao_usa_regra_antiga_parcela_ou_bruto():
     assert result["elegivel_previo"] is True
 
 
-def test_financeiro_aplica_bruto_minimo_faixa_e_troco_maior_50():
+def test_financeiro_usa_coeficiente_recebido_do_portabilidade_pro():
+    coeficientes = [
+        {
+            "coefficient_id": 1,
+            "table_id": 10,
+            "table_name": "INSS CIP REFIN NORMAL",
+            "term": 108,
+            "interest_rate": 1.80,
+            "interest_rate_refin": 1.80,
+            "coefficient": 0.025,
+        }
+    ]
+
     ofertas = Service.simular_financeiro(
         parcela_refin=100,
         saldo_consolidado=3000,
+        coeficientes=coeficientes,
     )
 
-    assert ofertas
-    assert ofertas[0]["modalidade"] == "Sem Carencia"
-    assert ofertas[0]["tabela"] == "Refin Normal"
-    assert ofertas[0]["fator"] == 0.022594
-    assert ofertas[0]["novo_contrato"] == 4425.95
-    assert ofertas[0]["troco"] == 1425.95
+    assert len(ofertas) == 1
+    assert ofertas[0]["tabela"] == "INSS CIP REFIN NORMAL"
+    assert ofertas[0]["tabela_facta"] == "Refin Normal"
+    assert ofertas[0]["prazo"] == 108
+    assert ofertas[0]["fator"] == 0.025
+    assert ofertas[0]["novo_contrato"] == 4000
+    assert ofertas[0]["troco"] == 1000
 
-    assert all(
-        oferta["novo_contrato"] >= 3000
-        and oferta["troco"] > 50
-        for oferta in ofertas
+    # Alterando o coeficiente no Portabilidade PRO,
+    # o resultado financeiro muda sem alterar codigo.
+    alterados = [
+        {
+            **coeficientes[0],
+            "coefficient": 0.020,
+        }
+    ]
+
+    novas_ofertas = Service.simular_financeiro(
+        parcela_refin=100,
+        saldo_consolidado=3000,
+        coeficientes=alterados,
     )
+
+    assert novas_ofertas[0]["novo_contrato"] == 5000
+    assert novas_ofertas[0]["troco"] == 2000
 
 
 def test_financeiro_respeita_faixa_carencia_de_3000_a_3999():
     ofertas = Service.simular_financeiro(
         parcela_refin=80,
         saldo_consolidado=3000,
+        coeficientes=[
+            {
+                "table_name": "INSS REFIN NORMAL CARENCIA",
+                "term": 108,
+                "coefficient": 0.023925,
+            },
+            {
+                "table_name": "INSS REFIN FLEX 0 CARENCIA",
+                "term": 108,
+                "coefficient": 0.023730,
+            },
+            {
+                "table_name": "INSS REFIN FLEX 1 CARENCIA",
+                "term": 108,
+                "coefficient": 0.023439,
+            },
+        ],
     )
 
     assert ofertas
@@ -195,7 +238,7 @@ def test_financeiro_respeita_faixa_carencia_de_3000_a_3999():
         for oferta in ofertas
     )
     assert [
-        oferta["tabela"]
+        oferta["tabela_facta"]
         for oferta in ofertas
     ] == [
         "Refin Normal",
@@ -203,6 +246,16 @@ def test_financeiro_respeita_faixa_carencia_de_3000_a_3999():
         "Refin Flex 1",
     ]
 
+
+
+def test_financeiro_sem_coeficiente_portabilidade_pro_nao_inventa_fator():
+    ofertas = Service.simular_financeiro(
+        parcela_refin=500,
+        saldo_consolidado=1000,
+        coeficientes=[],
+    )
+
+    assert ofertas == []
 
 
 def test_permite_contratos_do_mesmo_beneficio():
