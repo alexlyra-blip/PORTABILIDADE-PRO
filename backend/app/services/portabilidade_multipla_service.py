@@ -373,6 +373,23 @@ class PortabilidadeMultiplaFactaService:
         except (TypeError, ValueError):
             return 0.0
 
+    @staticmethod
+    def _float(value: Any) -> float:
+        try:
+            return float(value or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    @staticmethod
+    def _int(value: Any) -> int:
+        try:
+            return max(
+                0,
+                int(float(value or 0)),
+            )
+        except (TypeError, ValueError):
+            return 0
+
     # MULTIPLA_PROMOTORA_ORIGIN_RULES
 
     @staticmethod
