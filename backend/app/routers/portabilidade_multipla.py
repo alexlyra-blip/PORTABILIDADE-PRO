@@ -71,13 +71,23 @@ async def configuracao_portabilidade_multipla(
             PortabilidadeMultiplaFactaService
             .GRUPO_B
         ),
-        "grupo_c": sorted(
+        # FACTA oficial: nao existe Grupo C.
+        # Bancos fora de A/B somente unificam
+        # com contratos da mesma instituicao.
+        "grupo_c": [],
+        "fora_ab_mesmo_banco": True,
+        "valor_minimo_operacao": (
             PortabilidadeMultiplaFactaService
-            .GRUPO_C
+            .MIN_VALOR_OPERACAO
         ),
-        "parcela_minima_refin": 50.0,
-        "valor_minimo_operacao": 3000.0,
-        "adicional_viabilidade": 20.0,
+        "troco_minimo_exclusivo": (
+            PortabilidadeMultiplaFactaService
+            .TROCO_MINIMO
+        ),
+        "adicional_viabilidade": (
+            PortabilidadeMultiplaFactaService
+            .ADICIONAL_VIABILIDADE
+        ),
     }
 
 
@@ -801,6 +811,103 @@ def _facta_rejection_reasons(
     )
 
 
+async def _facta_promotora_rules(
+    db,
+    current_user,
+    contratos,
+):
+    """
+    Revalida no backend as regras de origem da promotora.
+    O endpoint /simular nao confia somente no pre-check visual.
+    """
+    promotora_id = current_user.id
+
+    if (
+        getattr(
+            current_user,
+            "role",
+            "",
+        )
+        != "promotora"
+        and getattr(
+            current_user,
+            "broker_id",
+            None,
+        )
+    ):
+        promotora_id = current_user.broker_id
+
+    try:
+        result = await db.execute(
+            _multipla_promotora_select(
+                _MultiplaPromotoraRule
+            ).where(
+                _MultiplaPromotoraRule.promotora_id
+                == promotora_id
+            )
+        )
+    except Exception as error:
+        print(
+            "[WARNING] Falha ao validar regras "
+            "da promotora para FACTA: "
+            f"{error}"
+        )
+
+        return [
+            (
+                "Nao foi possivel validar as regras "
+                "de origem da promotora no momento."
+            )
+        ]
+
+    origin_config = []
+    origin_blocklist = []
+
+    for rule in result.scalars().all():
+        if rule.rule_key not in {
+            "origin_bank_config",
+            "origin_bank_blocklist",
+        }:
+            continue
+
+        try:
+            parsed = _multipla_promotora_json.loads(
+                rule.rule_value or "[]"
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            parsed = []
+
+        if not isinstance(
+            parsed,
+            list,
+        ):
+            parsed = []
+
+        if (
+            rule.rule_key
+            == "origin_bank_config"
+        ):
+            origin_config = parsed
+
+        if (
+            rule.rule_key
+            == "origin_bank_blocklist"
+        ):
+            origin_blocklist = parsed
+
+    return (
+        PortabilidadeMultiplaFactaService
+        .validar_regras_promotora_origem(
+            contratos=contratos,
+            origin_config=origin_config,
+            origin_blocklist=origin_blocklist,
+        )
+    )
+
+
 @router.post(
     "/simular"
 )
@@ -817,51 +924,137 @@ async def simular_portabilidade_multipla_facta(
     ),
 ):
     """
-    Orquestra o Motor existente SEM altera-lo.
+    FACTA aderente ao simulador eportfacta.
 
-    Cada banco originador selecionado e
-    submetido ao SimuladorService usando
-    os valores consolidados da Multipla.
-
-    Assim:
-    - regras do banco originador continuam
-      sendo aplicadas;
-    - regras FACTA continuam no Motor;
-    - regras da promotora continuam no Motor;
-    - regras das tabelas e coeficientes
-      continuam no Motor;
-    - somente tabelas FACTA comuns a TODOS
-      os contratos sao retornadas.
+    Fluxo:
+    1. valida estrutura/NB/grupo;
+    2. valida cada origem pelas regras dinamicas do
+       Portabilidade PRO e da promotora;
+    3. NAO executa simulacoes financeiras individuais;
+    4. NAO exige intersecao de tabelas;
+    5. executa UMA simulacao financeira consolidada com
+       fatores/faixas do config.py FACTA.
     """
 
-    contratos_dict = [
-        item.dict()
-        for item
-        in payload.contratos
-    ]
+    contratos_dict = []
+
+    for item in payload.contratos:
+        if hasattr(
+            item,
+            "model_dump",
+        ):
+            contratos_dict.append(
+                item.model_dump()
+            )
+        else:
+            contratos_dict.append(
+                item.dict()
+            )
 
     validacao = (
         PortabilidadeMultiplaFactaService
         .validar(
             banco_destino=
                 payload.banco_destino,
-
             convenio=
                 payload.convenio,
-
             margem_disponivel=
                 payload.margem_disponivel,
-
             contratos=
                 contratos_dict,
         )
     )
+
+    # Regras de origem cadastradas diretamente no banco FACTA
+    # do Portabilidade PRO continuam sendo a fonte editavel.
+    try:
+        motor_rules = await motor_config_multipla(
+            db,
+            current_user,
+        )
+    except Exception as error:
+        print(
+            "[WARNING] Falha ao carregar regras FACTA "
+            "da Portabilidade Multipla: "
+            f"{error}"
+        )
+        motor_rules = {
+            "facta_encontrado": False,
+            "excluded_origin_banks": [],
+            "origin_min_paid": [],
+            "min_paid_installments": 0,
+            "min_table_paid_any": 0,
+        }
+
+    bloqueios_origem = (
+        PortabilidadeMultiplaFactaService
+        .validar_regras_banco_origem(
+            contratos=contratos_dict,
+            origin_config=(
+                motor_rules.get(
+                    "origin_min_paid",
+                    [],
+                )
+            ),
+            origin_blocklist=(
+                motor_rules.get(
+                    "excluded_origin_banks",
+                    [],
+                )
+            ),
+            min_paid_installments=(
+                motor_rules.get(
+                    "min_paid_installments",
+                    0,
+                )
+            ),
+            min_table_paid_any=(
+                motor_rules.get(
+                    "min_table_paid_any",
+                    0,
+                )
+            ),
+        )
+    )
+
+    bloqueios_promotora = await (
+        _facta_promotora_rules(
+            db,
+            current_user,
+            contratos_dict,
+        )
+    )
+
+    bloqueios_adicionais = [
+        *bloqueios_origem,
+        *bloqueios_promotora,
+    ]
+
+    if bloqueios_adicionais:
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *bloqueios_adicionais,
+        ]
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    validacao[
+        "bloqueios_origem_facta"
+    ] = bloqueios_origem
+    validacao[
+        "bloqueios_promotora"
+    ] = bloqueios_promotora
 
     if not validacao.get(
         "elegivel_previo"
     ):
         return {
             "success": False,
+            "banco": "FACTA",
             "ofertas": [],
             "rejeitados": [],
             "bloqueios":
@@ -869,386 +1062,66 @@ async def simular_portabilidade_multipla_facta(
                     "bloqueios",
                     [],
                 ),
-            "avisos":
-                validacao.get(
-                    "avisos",
-                    [],
-                ),
+            "bloqueios_contratos": [],
             "validacao":
                 validacao,
         }
 
-    soma_parcelas = round(
-        sum(
-            _motor_float(
-                item.parcela
-            )
-            for item
-            in payload.contratos
-        ),
-        2,
+    soma_parcelas = _motor_float(
+        validacao.get(
+            "soma_parcelas"
+        )
     )
-
-    soma_saldos = round(
-        sum(
-            _motor_float(
-                item.saldo_devedor
-            )
-            for item
-            in payload.contratos
-        ),
-        2,
+    soma_saldos = _motor_float(
+        validacao.get(
+            "soma_saldos"
+        )
     )
-
-    margem_negativa = round(
-        abs(
-            min(
-                0.0,
-                _motor_float(
-                    payload
-                    .margem_disponivel
-                ),
-            )
-        ),
-        2,
+    margem_negativa = _motor_float(
+        validacao.get(
+            "margem_negativa"
+        )
     )
-
-    # MULTIPLA_FACTA_REFIN_MARGIN_V2
-    # Sem margem negativa, a parcela do Refin e exatamente
-    # a soma das parcelas. O +20 existe somente quando
-    # ha margem negativa a compensar.
-    parcela_refin = round(
-        max(
-            0.0,
-            soma_parcelas
-            - margem_negativa
-            + (
-                PortabilidadeMultiplaFactaService
-                .ADICIONAL_VIABILIDADE
-                if margem_negativa > 0
-                else 0.0
-            ),
-        ),
-        2,
-    )
-
-    idade = max(
-        18,
-        _motor_int(
-            payload.cliente.idade,
-            18,
-        ),
-    )
-
-    especie = str(
-        payload.cliente.especie
-        or ""
-    ).strip()
-
-    especie_codigo_match = (
-        _re.search(
-            r"\d{1,3}",
-            especie,
+    parcela_refin = _motor_float(
+        validacao.get(
+            "parcela_refin"
         )
     )
 
-    especie_codigo = (
-        especie_codigo_match
-        .group(0)
-        .zfill(2)
-        if especie_codigo_match
-        else especie
-    )
-
-    invalidez_codes = {
-        "04",
-        "05",
-        "06",
-        "30",
-        "32",
-        "87",
-        "92",
-    }
-
-    is_60_plus = (
-        payload.cliente
-        .is_60_plus
-        if payload.cliente
-        .is_60_plus
-        is not None
-        else idade >= 60
-    )
-
-    is_invalidez_60_plus = (
-        payload.cliente
-        .is_invalidez_60_plus
-        if payload.cliente
-        .is_invalidez_60_plus
-        is not None
-        else (
-            idade >= 60
-            and especie_codigo
-            in invalidez_codes
+    # UMA unica simulacao financeira sobre os valores consolidados.
+    ofertas = (
+        PortabilidadeMultiplaFactaService
+        .simular_financeiro(
+            parcela_refin=
+                parcela_refin,
+            saldo_consolidado=
+                soma_saldos,
         )
     )
 
-    resultados_motor = []
-
-    bloqueios_contratos = []
-
-    for contrato in (
-        payload.contratos
-    ):
-
-        prazo_total = max(
-            1,
-            _motor_int(
-                contrato.prazo,
-                1,
-            ),
-        )
-
-        prazo_restante = max(
-            1,
-            _motor_int(
-                contrato
-                .prazo_restante,
-                1,
-            ),
-        )
-
-        banco_origem = (
-            str(
-                contrato.codigo
-                or ""
-            ).strip()
-            or str(
-                contrato.banco
-                or ""
-            ).strip()
-        )
-
-        sim_input = (
-            _SimulacaoInput(
-                nome_cliente=
-                    payload
-                    .cliente
-                    .nome,
-
-                cpf=
-                    payload
-                    .cliente
-                    .cpf,
-
-                idade=
-                    idade,
-
-                convenio=
-                    "INSS",
-
-                sub_convenio=
-                    "",
-
-                benefit_species=
-                    especie_codigo,
-
-                banco=
-                    banco_origem,
-
-                # MULTIPLA_REFIN_FINAL_PLUS_20
-                # A parcela FINAL do Refin deve ser:
-                #
-                # soma parcelas
-                # - margem negativa
-                # + R$ 20,00.
-                #
-                # Como o Motor recebe e desconta
-                # margem negativa separadamente,
-                # enviamos parcela_refin + margem.
-                #
-                # Assim o Motor termina exatamente
-                # na parcela_refin calculada.
-                parcela=(
-                    parcela_refin
-                    + margem_negativa
-                ),
-
-                saldo_devedor=
-                    soma_saldos,
-
-                taxa_atual=
-                    _motor_float(
-                        contrato.taxa
-                    ),
-
-                # Portabilidade Multipla FACTA:
-                # nao aplica taxa minima de portabilidade.
-                skip_portability_rate_validation=
-                    True,
-
-                total_term=
-                    prazo_total,
-
-                remaining_term=
-                    prazo_restante,
-
-                data_concessao=
-                    payload
-                    .cliente
-                    .data_concessao,
-
-                is_60_plus=
-                    bool(
-                        is_60_plus
-                    ),
-
-                is_invalidez_60_plus=
-                    bool(
-                        is_invalidez_60_plus
-                    ),
-
-                analfabeto=
-                    bool(
-                        payload
-                        .cliente
-                        .analfabeto
-                    ),
-
-                possui_dois_cartoes=
-                    bool(
-                        payload
-                        .cliente
-                        .possui_dois_cartoes
-                    ),
-
-                valor_margem_negativa=
-                    margem_negativa,
-            )
-        )
-
-        try:
-            result = await (
-                _SimuladorService
-                .executar(
-                    sim_input,
-                    db,
-                    current_user.id,
-                )
-            )
-
-        except Exception as error:
-            bloqueios_contratos.append({
-                "contrato":
-                    contrato.contrato,
-                "banco":
-                    contrato.banco,
-                "motivos": [
-                    str(error)
-                ],
-            })
-
-            resultados_motor.append({
-                "ofertas": [],
-                "rejeitados": [],
-            })
-
-            continue
-
-        resultados_motor.append(
-            result
-        )
-
-        ofertas_facta = [
-            oferta
-            for oferta
-            in (
-                result.get(
-                    "ofertas",
-                    []
-                )
-                or []
-            )
-            if _oferta_e_facta(
-                oferta
-            )
-        ]
-
-        if not ofertas_facta:
-            motivos = (
-                _facta_rejection_reasons(
-                    result
-                )
-            )
-
-            if not motivos:
-                motivos = [
-                    (
-                        "Nenhuma tabela FACTA "
-                        "elegivel para este "
-                        "contrato nas regras "
-                        "atuais do Motor."
-                    )
-                ]
-
-            bloqueios_contratos.append({
-                "contrato":
-                    contrato.contrato,
-                "banco":
-                    contrato.banco,
-                "motivos":
-                    motivos,
-            })
-
-    if bloqueios_contratos:
+    if not ofertas:
         return {
             "success": False,
-
+            "banco": "FACTA",
+            "convenio": "INSS",
             "ofertas": [],
-
-            "bloqueios_contratos":
-                bloqueios_contratos,
-
-            "validacao":
-                validacao,
-
-            "resumo": {
-                "soma_parcelas":
-                    soma_parcelas,
-                "margem_negativa":
-                    margem_negativa,
-                "parcela_refin":
-                    parcela_refin,
-                "saldo_total":
-                    soma_saldos,
-            },
-        }
-
-    ofertas_comuns = (
-        _interseccionar_ofertas_facta(
-            resultados_motor
-        )
-    )
-
-    if not ofertas_comuns:
-        return {
-            "success": False,
-
-            "ofertas": [],
-
+            "rejeitados": [],
             "bloqueios": [
                 (
-                    "Os contratos possuem "
-                    "ofertas FACTA individuais, "
-                    "mas nao existe uma mesma "
-                    "tabela/prazo FACTA elegivel "
-                    "para todos eles."
+                    "Nenhuma tabela FACTA ficou viavel na "
+                    "simulacao consolidada: o bruto deve "
+                    "respeitar as faixas do simulador FACTA, "
+                    "ser de no minimo R$ 3.000,00 e o troco "
+                    "deve ser superior a R$ 50,00."
                 )
             ],
-
-            "validacao":
-                validacao,
-
+            "bloqueios_contratos": [],
+            "validacao": validacao,
             "resumo": {
+                "quantidade_contratos":
+                    len(
+                        payload.contratos
+                    ),
                 "soma_parcelas":
                     soma_parcelas,
                 "margem_negativa":
@@ -1260,280 +1133,51 @@ async def simular_portabilidade_multipla_facta(
             },
         }
 
-    ofertas_normalizadas = []
-
-    rejeitados_multipla = []
-
-    for oferta in ofertas_comuns:
-
-        tabela = (
-            oferta.get("tabela")
-            or oferta.get(
-                "table_name"
-            )
-            or oferta.get(
-                "nome_tabela"
-            )
-            or "FACTA"
-        )
-
-        prazo = _motor_int(
-            oferta.get(
-                "prazo",
-                oferta.get(
-                    "term",
-                    0,
-                ),
-            )
-        )
-
-        parcela_motor = (
-            _motor_float(
-                oferta.get(
-                    "valor_parcela",
-                    oferta.get(
-                        "parcela",
-                        parcela_refin,
-                    ),
-                )
-            )
-        )
-
-        if parcela_motor <= 0:
-            parcela_motor = (
-                parcela_refin
-            )
-
-        novo_contrato = (
-            _motor_float(
-                oferta.get(
-                    "valor_total_contrato",
-                    oferta.get(
-                        "novo_contrato",
-                        oferta.get(
-                            "valor_financiado",
-                            0,
-                        ),
-                    ),
-                )
-            )
-        )
-
-        troco_raw = oferta.get(
-            "troco"
-        )
-
-        if troco_raw is None:
-            troco_raw = oferta.get(
-                "valor_liberado"
-            )
-
-        troco = _motor_float(
-            troco_raw
-        )
-
-        if (
-            troco_raw is None
-            and novo_contrato > 0
-        ):
-            troco = (
-                novo_contrato
-                - soma_saldos
-            )
-
-        troco = round(
-            troco,
-            2,
-        )
-
-        coeficiente = (
-            _motor_float(
-                oferta.get(
-                    "coeficiente",
-                    oferta.get(
-                        "coefficient",
-                        0,
-                    ),
-                )
-            )
-        )
-
-        if (
-            coeficiente <= 0
-            and novo_contrato > 0
-            and parcela_motor > 0
-        ):
-            coeficiente = (
-                parcela_motor
-                / novo_contrato
-            )
-
-        taxa = _motor_float(
-            oferta.get(
-                "taxa_juros",
-                oferta.get(
-                    "taxa",
-                    oferta.get(
-                        "interest_rate",
-                        0,
-                    ),
-                ),
-            )
-        )
-
-        taxa_refin = (
-            _motor_float(
-                oferta.get(
-                    "taxa_refin",
-                    oferta.get(
-                        "interest_rate_refin",
-                        taxa,
-                    ),
-                )
-            )
-        )
-
-        # REGRA ESPECIFICA DA MULTIPLA:
-        # parcela >= 50 OU
-        # valor da operacao >= 3000.
-        regra_minima_ok = (
-            parcela_motor >= 50.0
-            or novo_contrato
-            >= 3000.0
-        )
-
-        if not regra_minima_ok:
-            rejeitados_multipla.append({
-                "tabela":
-                    str(tabela),
-
-                "prazo":
-                    prazo,
-
-                "motivo":
-                    (
-                        "Portabilidade Multipla: "
-                        "parcela do Refin inferior "
-                        "a R$ 50,00 e valor da "
-                        "operacao inferior a "
-                        "R$ 3.000,00."
-                    ),
-            })
-
-            continue
-
-        ofertas_normalizadas.append({
-            **oferta,
-
-            "banco":
-                oferta.get(
-                    "banco"
-                )
-                or "FACTA",
-
-            "tabela":
-                str(tabela),
-
-            "prazo":
-                prazo,
-
-            "taxa_juros":
-                taxa,
-
-            "taxa_refin":
-                taxa_refin,
-
-            "coeficiente":
-                round(
-                    coeficiente,
-                    8,
-                ),
-
-            "parcela_refin":
-                round(
-                    parcela_motor,
-                    2,
-                ),
-
-            "novo_contrato":
-                round(
-                    novo_contrato,
-                    2,
-                ),
-
-            "saldo_total":
-                soma_saldos,
-
-            "troco":
-                troco,
-
-            "quantidade_contratos":
-                len(
-                    payload.contratos
-                ),
-        })
-
-    ofertas_normalizadas.sort(
-        key=lambda item:
-            _motor_float(
-                item.get("troco")
-            ),
-        reverse=False,
-    )
-
     return {
-        "success":
-            bool(
-                ofertas_normalizadas
-            ),
-
-        "banco":
-            "FACTA",
-
-        "convenio":
-            "INSS",
-
+        "success": True,
+        "banco": "FACTA",
+        "convenio": "INSS",
         "beneficio":
             validacao.get(
                 "beneficio_operacao"
             ),
-
         "grupo":
             validacao.get(
                 "grupo_operacao"
             ),
-
-        "ofertas":
-            ofertas_normalizadas,
-
-        "rejeitados":
-            rejeitados_multipla,
-
-        "bloqueios_contratos":
-            [],
-
-        "validacao":
-            validacao,
-
+        "identidade_operacao":
+            validacao.get(
+                "identidade_operacao"
+            ),
+        "ofertas": ofertas,
+        "rejeitados": [],
+        "bloqueios": [],
+        "bloqueios_contratos": [],
+        "validacao": validacao,
         "resumo": {
             "quantidade_contratos":
                 len(
                     payload.contratos
                 ),
-
             "soma_parcelas":
                 soma_parcelas,
-
             "margem_negativa":
                 margem_negativa,
-
             "parcela_refin":
                 parcela_refin,
-
             "saldo_total":
                 soma_saldos,
+            "bruto_minimo": (
+                PortabilidadeMultiplaFactaService
+                .MIN_VALOR_OPERACAO
+            ),
+            "troco_minimo_exclusivo": (
+                PortabilidadeMultiplaFactaService
+                .TROCO_MINIMO
+            ),
         },
     }
+
 
 # ============================================================
 # MULTIPLA_DAYCOVAL_BACKEND_V1
