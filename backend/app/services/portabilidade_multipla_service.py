@@ -185,6 +185,29 @@ class PortabilidadeMultiplaFactaService:
         "PICPAY",
     }
 
+    # Codigos COMPE exatamente como no config.py do eportfacta.
+    GRUPO_A_CODIGOS = {
+        "041",
+        "318",
+        "707",
+        "341",
+        "104",
+        "237",
+        "033",
+        "121",
+        "623",
+        "336",
+        "626",
+        "422",
+    }
+
+    GRUPO_B_CODIGOS = {
+        "461",
+        "389",
+        "001",
+        "380",
+    }
+
     # Compatibilidade de atributo para consumidores antigos.
     # Na regra oficial FACTA NAO existe Grupo C: todo banco fora
     # dos Grupos A/B somente unifica com a mesma instituicao.
@@ -192,6 +215,7 @@ class PortabilidadeMultiplaFactaService:
 
     BANK_ALIASES = {
         "BANRISUL": "BANRISUL",
+        "ESTADO DO RIO GRANDE DO SUL": "BANRISUL",
         "BMG": "BMG",
         "COMPE": "COMPE",
         "DAYCOVAL": "DAYCOVAL",
@@ -200,10 +224,13 @@ class PortabilidadeMultiplaFactaService:
         "CAIXA ECONOMICA FEDERAL": "CAIXA",
         "CAIXA ECONOMICA": "CAIXA",
         "CAIXA": "CAIXA",
+        "CEF": "CAIXA",
         "BRADESCO": "BRADESCO",
         "SANTANDER": "SANTANDER",
         "AGIBANK": "AGIBANK",
+        "AGIBAN": "AGIBANK",
         "BANCO PAN": "PAN",
+        "PANAMERICANO": "PAN",
         "PAN": "PAN",
         "BANCO C6": "C6",
         "C6 BANK": "C6",
@@ -275,7 +302,28 @@ class PortabilidadeMultiplaFactaService:
     def identificar_grupo(
         cls,
         banco: Any,
+        codigo: Any = None,
     ) -> Optional[str]:
+        codigo_compe = ""
+
+        for fonte in (
+            str(codigo or "").strip(),
+            str(banco or "").strip(),
+        ):
+            match = _re.search(
+                r"(?<!\d)(\d{3})(?!\d)",
+                fonte,
+            )
+            if match:
+                codigo_compe = match.group(1)
+                break
+
+        if codigo_compe in cls.GRUPO_A_CODIGOS:
+            return "A"
+
+        if codigo_compe in cls.GRUPO_B_CODIGOS:
+            return "B"
+
         banco_normalizado = cls.normalizar_banco(
             banco
         )
@@ -894,7 +942,8 @@ class PortabilidadeMultiplaFactaService:
             )
 
             grupo = cls.identificar_grupo(
-                banco_original
+                banco_original,
+                contrato.get("codigo"),
             )
 
             identidade_banco = (
