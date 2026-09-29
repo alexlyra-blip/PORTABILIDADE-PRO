@@ -28,28 +28,11 @@ class PortabilidadeMultiplaFactaService:
     TROCO_MINIMO = 50.00
     ADICIONAL_VIABILIDADE = 20.00
 
-    FATORES = {
-        "Refin Normal": 0.022594,
-        "Refin FLEX 0": 0.022424,
-        "Refin Flex 1": 0.022169,
-        "Refin Flex 2": 0.021999,
-        "Refin Flex 3": 0.021746,
-        "Refin Flex 4": 0.021495,
-        "Refin Flex 5": 0.021328,
-        "Refin Flex 6": 0.021246,
-    }
-
-    FATORES_CARENCIA = {
-        "Refin Normal": 0.023925,
-        "Refin FLEX 0": 0.023730,
-        "Refin Flex 1": 0.023439,
-        "Refin Flex 2": 0.023246,
-        "Refin Flex 3": 0.022958,
-        "Refin Flex 4": 0.022672,
-        "Refin Flex 5": 0.022482,
-        "Refin Flex 6": 0.022293,
-        "Refin Flex 7": 0.022093,
-    }
+    # IMPORTANTE:
+    # os coeficientes financeiros NAO ficam fixos neste arquivo.
+    # Eles sao lidos da tabela coefficients do Portabilidade PRO,
+    # vinculados as tabelas FACTA ativas. Assim, qualquer ajuste
+    # feito no painel administrativo passa a valer automaticamente.
 
     FAIXAS = [
         (
@@ -750,22 +733,69 @@ class PortabilidadeMultiplaFactaService:
         return []
 
     @classmethod
+    def _tabela_facta_canonica(
+        cls,
+        nome_tabela,
+    ):
+        """
+        Traduz o nome cadastrado no Portabilidade PRO para a
+        nomenclatura usada pelas faixas do simulador FACTA.
+
+        Exemplos aceitos:
+        - INSS CIP REFIN NORMAL
+        - REFIN FLEX 0
+        - INSS REFIN FLEX 4 CARENCIA
+        """
+        nome = cls._normalizar_texto(
+            nome_tabela
+        )
+
+        if not nome:
+            return None
+
+        if "NORMAL" in nome:
+            return "Refin Normal"
+
+        match = _re.search(
+            r"FLEX\s*(\d+)",
+            nome,
+        )
+
+        if not match:
+            return None
+
+        numero = int(
+            match.group(1)
+        )
+
+        if numero == 0:
+            return "Refin FLEX 0"
+
+        return f"Refin Flex {numero}"
+
+    @classmethod
     def simular_financeiro(
         cls,
         *,
         parcela_refin,
         saldo_consolidado,
+        coeficientes,
     ):
         """
-        Replica o calculo financeiro do eportfacta:
+        Executa UMA simulacao financeira consolidada.
 
-            bruto = parcela consolidada / fator
+        O Portabilidade PRO e a fonte dos coeficientes:
+        - tabela/coefficient cadastrados no painel;
+        - prazo e taxa do registro Coefficient;
+        - tabela precisa estar ativa no banco FACTA.
+
+        As faixas comerciais continuam seguindo o config.py
+        do simulador FACTA.
+
+            bruto = parcela consolidada / coeficiente
             bruto >= R$ 3.000,00
-            tabela precisa pertencer a faixa do bruto
             troco = bruto - saldo consolidado
             somente troco > R$ 50,00
-
-        Executa a simulacao UMA vez sobre os totais consolidados.
         """
         parcela_refin = cls._money(
             parcela_refin
@@ -777,96 +807,232 @@ class PortabilidadeMultiplaFactaService:
         ofertas = []
         ordem = 0
 
-        configuracoes = [
-            (
-                "Sem Carencia",
-                cls.FAIXAS,
-                cls.FATORES,
-            ),
-            (
-                "Com Carencia",
-                cls.FAIXAS_CARENCIA,
-                cls.FATORES_CARENCIA,
-            ),
-        ]
+        for item in (
+            coeficientes
+            or []
+        ):
+            if not isinstance(
+                item,
+                dict,
+            ):
+                continue
 
-        for modalidade, faixas, fatores in configuracoes:
-            for tabela, fator in fatores.items():
-                if fator <= 0:
-                    continue
-
-                bruto = (
-                    parcela_refin
-                    / fator
+            coeficiente = cls._float(
+                item.get(
+                    "coefficient",
+                    item.get(
+                        "coeficiente",
+                        0,
+                    ),
                 )
+            )
 
-                if bruto < cls.MIN_VALOR_OPERACAO:
-                    continue
+            if coeficiente <= 0:
+                continue
 
-                tabelas_liberadas = (
-                    cls.tabelas_disponiveis(
-                        bruto,
-                        faixas,
+            tabela_original = str(
+                item.get(
+                    "table_name",
+                    item.get(
+                        "tabela",
+                        "",
+                    ),
+                )
+                or ""
+            ).strip()
+
+            tabela_canonica = (
+                cls._tabela_facta_canonica(
+                    tabela_original
+                )
+            )
+
+            if not tabela_canonica:
+                continue
+
+            nome_norm = (
+                cls._normalizar_texto(
+                    tabela_original
+                )
+            )
+
+            com_carencia = (
+                "CARENCIA"
+                in nome_norm
+            )
+
+            faixas = (
+                cls.FAIXAS_CARENCIA
+                if com_carencia
+                else cls.FAIXAS
+            )
+
+            bruto = (
+                parcela_refin
+                / coeficiente
+            )
+
+            if bruto < cls.MIN_VALOR_OPERACAO:
+                continue
+
+            tabelas_liberadas = (
+                cls.tabelas_disponiveis(
+                    bruto,
+                    faixas,
+                )
+            )
+
+            if (
+                tabela_canonica
+                not in tabelas_liberadas
+            ):
+                continue
+
+            # Preserva tambem os limites editaveis da tabela
+            # cadastrada no Portabilidade PRO, quando informados.
+            min_ticket = cls._money(
+                item.get(
+                    "min_ticket"
+                )
+            )
+
+            max_ticket = cls._money(
+                item.get(
+                    "max_ticket"
+                )
+            )
+
+            if (
+                min_ticket > 0
+                and bruto < min_ticket
+            ):
+                continue
+
+            if (
+                max_ticket > 0
+                and bruto > max_ticket
+            ):
+                continue
+
+            min_installment = cls._money(
+                item.get(
+                    "min_installment"
+                )
+            )
+
+            max_installment = cls._money(
+                item.get(
+                    "max_installment"
+                )
+            )
+
+            if (
+                min_installment > 0
+                and parcela_refin
+                < min_installment
+            ):
+                continue
+
+            if (
+                max_installment > 0
+                and parcela_refin
+                > max_installment
+            ):
+                continue
+
+            troco = (
+                bruto
+                - saldo_consolidado
+            )
+
+            # Regra oficial e estrita: somente troco > 50.
+            if troco <= cls.TROCO_MINIMO:
+                continue
+
+            ordem += 1
+
+            taxa_refin = cls._float(
+                item.get(
+                    "interest_rate_refin"
+                )
+            )
+
+            taxa = cls._float(
+                item.get(
+                    "interest_rate"
+                )
+            )
+
+            ofertas.append({
+                "banco": "FACTA",
+                "tabela": (
+                    tabela_original
+                    or tabela_canonica
+                ),
+                "tabela_facta":
+                    tabela_canonica,
+                "table_id":
+                    item.get(
+                        "table_id"
+                    ),
+                "coefficient_id":
+                    item.get(
+                        "coefficient_id"
+                    ),
+                "modalidade": (
+                    "Com Carencia"
+                    if com_carencia
+                    else "Sem Carencia"
+                ),
+                "com_carencia":
+                    com_carencia,
+                "prazo": cls._int(
+                    item.get(
+                        "term",
+                        0,
                     )
-                )
-
-                if tabela not in tabelas_liberadas:
-                    continue
-
-                troco = (
-                    bruto
-                    - saldo_consolidado
-                )
-
-                # Regra oficial e estrita: somente troco > 50.
-                if troco <= cls.TROCO_MINIMO:
-                    continue
-
-                ordem += 1
-
-                ofertas.append({
-                    "banco": "FACTA",
-                    "tabela": tabela,
-                    "modalidade": modalidade,
-                    "com_carencia": (
-                        modalidade
-                        == "Com Carencia"
-                    ),
-                    "prazo": 0,
-                    "taxa_juros": 0.0,
-                    "taxa_refin": 0.0,
-                    "fator": fator,
-                    "coeficiente": fator,
-                    "parcela_refin": round(
-                        parcela_refin,
-                        2,
-                    ),
-                    "novo_contrato": round(
-                        bruto,
-                        2,
-                    ),
-                    "valor_total_contrato": round(
-                        bruto,
-                        2,
-                    ),
-                    "saldo_total": round(
-                        saldo_consolidado,
-                        2,
-                    ),
-                    "saldo_devedor": round(
-                        saldo_consolidado,
-                        2,
-                    ),
-                    "troco": round(
-                        troco,
-                        2,
-                    ),
-                    "valor_liberado": round(
-                        troco,
-                        2,
-                    ),
-                    "ordem_facta": ordem,
-                })
+                ),
+                "taxa_juros":
+                    taxa,
+                "taxa_refin": (
+                    taxa_refin
+                    or taxa
+                ),
+                "fator":
+                    coeficiente,
+                "coeficiente":
+                    coeficiente,
+                "parcela_refin": round(
+                    parcela_refin,
+                    2,
+                ),
+                "novo_contrato": round(
+                    bruto,
+                    2,
+                ),
+                "valor_total_contrato": round(
+                    bruto,
+                    2,
+                ),
+                "saldo_total": round(
+                    saldo_consolidado,
+                    2,
+                ),
+                "saldo_devedor": round(
+                    saldo_consolidado,
+                    2,
+                ),
+                "troco": round(
+                    troco,
+                    2,
+                ),
+                "valor_liberado": round(
+                    troco,
+                    2,
+                ),
+                "ordem_facta":
+                    ordem,
+            })
 
         return ofertas
 
