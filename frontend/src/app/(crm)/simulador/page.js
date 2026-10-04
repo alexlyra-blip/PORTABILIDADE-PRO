@@ -2900,7 +2900,8 @@ function SimuladorPageContent() {
           !isSiapeModal &&
           ["87", "88"].includes(codigoEspecie);
 
-        const percent = 0.45;
+        const loanPercent = isLOAS ? 0.30 : 0.35;
+        const percent = isLOAS ? 0.40 : 0.45;
 
         const margemConsignavel = isSiapeModal
           ? 0
@@ -2908,6 +2909,13 @@ function SimuladorPageContent() {
               margensAtivas.margem_total_consignavel ??
               margensAtivas.margem_consignavel ??
               (salario * percent)
+            );
+
+        const margemEmprestimo = isSiapeModal
+          ? 0
+          : Number(
+              margensAtivas.margem_emprestimo ??
+              (salario * loanPercent)
             );
 
         const totalComprometido = isSiapeModal
@@ -2935,8 +2943,11 @@ function SimuladorPageContent() {
             ? Number(margemLivreInformada)
             : isSiapeModal
               ? 0
-              : margemConsignavel -
-                totalComprometido;
+              : margemEmprestimo -
+                Number(
+                  activeBenefit?.resumo?.total_parcelas_emprestimos ??
+                  totalComprometido
+                );
 
         const showMargem = Math.max(
           margemLivreReal,
