@@ -1659,3 +1659,45 @@ def test_salvar_configuracao_do_banco_preserva_logo():
         '"/banks/{bank_id}/upload-logo"'
         in admin_source
     )
+
+
+
+def test_resumo_regras_prioriza_taxa_refin_das_tabelas():
+    bancos_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "bancos"
+        / "page.jsx"
+    ).read_text(encoding="utf-8")
+
+    # Tela + PDF precisam usar a mesma hierarquia:
+    # tabela ativa do convenio > regra global do banco.
+    assert (
+        bancos_source.count(
+            "RESUMO_REGRAS_REFIN_TABLE_PRIORITY"
+        )
+        == 2
+    )
+
+    assert (
+        bancos_source.count(
+            "const refinRateValue = fallbackRefinRate !== null"
+        )
+        == 2
+    )
+
+    assert (
+        bancos_source.count(
+            ".filter(rate => Number.isFinite(rate) && rate > 0)"
+        )
+        >= 2
+    )
+
+    assert (
+        "const refinRateValue = hasRefinThreshold ? "
+        "rule.refin_portability_rate_threshold : fallbackRefinRate;"
+        not in bancos_source
+    )
