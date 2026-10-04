@@ -618,14 +618,20 @@ export default function BancosPage() {
 
                     const refinRates = tablesForAgreement
                       .map(t => Number(t.min_rate))
-                      .filter(rate => !isNaN(rate) && rate !== null);
+                      .filter(rate => Number.isFinite(rate) && rate > 0);
                     const fallbackRefinRate = refinRates.length > 0 ? Math.min(...refinRates) : null;
 
                     const hasPortThreshold = rule && rule.portability_rate_threshold !== null && rule.portability_rate_threshold !== undefined;
                     const portRateValue = hasPortThreshold ? rule.portability_rate_threshold : fallbackPortRate;
 
                     const hasRefinThreshold = rule && rule.refin_portability_rate_threshold !== null && rule.refin_portability_rate_threshold !== undefined;
-                    const refinRateValue = hasRefinThreshold ? rule.refin_portability_rate_threshold : fallbackRefinRate;
+
+                    // RESUMO_REGRAS_REFIN_TABLE_PRIORITY
+                    // Tabela ativa do convênio tem prioridade sobre
+                    // a taxa global cadastrada na regra do banco.
+                    const refinRateValue = fallbackRefinRate !== null
+                      ? fallbackRefinRate
+                      : (hasRefinThreshold ? Number(rule.refin_portability_rate_threshold) : null);
 
                     // 5. Calculate Fallback Ticket & Installment Limit
                     const ticketValues = tablesForAgreement.map(t => Number(t.min_ticket)).filter(val => val > 0);

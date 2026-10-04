@@ -1659,3 +1659,46 @@ def test_salvar_configuracao_do_banco_preserva_logo():
         '"/banks/{bank_id}/upload-logo"'
         in admin_source
     )
+
+
+
+def test_resumo_visual_bancos_prioriza_taxa_refin_das_tabelas():
+    bancos_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "bancos"
+        / "page.jsx"
+    ).read_text(encoding="utf-8")
+
+    # A correção é exclusiva do resumo visual da página
+    # Bancos e Regras. Não altera motor, backend ou PDF.
+    assert (
+        bancos_source.count(
+            "RESUMO_REGRAS_REFIN_TABLE_PRIORITY"
+        )
+        == 1
+    )
+
+    assert (
+        bancos_source.count(
+            "const refinRateValue = fallbackRefinRate !== null"
+        )
+        == 1
+    )
+
+    assert (
+        bancos_source.count(
+            ".filter(rate => Number.isFinite(rate) && rate > 0)"
+        )
+        >= 1
+    )
+
+    # O bloco do PDF permanece com a lógica anterior.
+    assert (
+        "const refinRateValue = hasRefinThreshold ? "
+        "rule.refin_portability_rate_threshold : fallbackRefinRate;"
+        in bancos_source
+    )
