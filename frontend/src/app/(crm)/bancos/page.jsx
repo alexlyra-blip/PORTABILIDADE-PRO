@@ -616,19 +616,37 @@ export default function BancosPage() {
                       .filter(rate => !isNaN(rate) && rate !== null);
                     const fallbackPortRate = portRates.length > 0 ? Math.min(...portRates) : null;
 
-                    const refinRates = tablesForAgreement
+                    // Para o resumo visual, prioriza tabelas explicitamente
+                    // cadastradas para o convênio selecionado. Isso evita que
+                    // uma tabela genérica/legada sem convênio contamine a taxa.
+                    const explicitAgreementTables = tablesForAgreement.filter(
+                      t => t.agreement && matchAgreement(t.agreement, activeAgreement)
+                    );
+
+                    const refinRateTables = explicitAgreementTables.length > 0
+                      ? explicitAgreementTables
+                      : tablesForAgreement;
+
+                    // RESUMO_REGRAS_REFIN_TABLE_PRIORITY
+                    // "Taxa da tabela" = taxa_convenio. min_rate é um campo
+                    // técnico de validação e só entra como fallback.
+                    const convenioRates = refinRateTables
+                      .map(t => Number(t.taxa_convenio))
+                      .filter(rate => Number.isFinite(rate) && rate > 0);
+
+                    const minRateFallbacks = refinRateTables
                       .map(t => Number(t.min_rate))
                       .filter(rate => Number.isFinite(rate) && rate > 0);
-                    const fallbackRefinRate = refinRates.length > 0 ? Math.min(...refinRates) : null;
+
+                    const fallbackRefinRate = convenioRates.length > 0
+                      ? Math.min(...convenioRates)
+                      : (minRateFallbacks.length > 0 ? Math.min(...minRateFallbacks) : null);
 
                     const hasPortThreshold = rule && rule.portability_rate_threshold !== null && rule.portability_rate_threshold !== undefined;
                     const portRateValue = hasPortThreshold ? rule.portability_rate_threshold : fallbackPortRate;
 
                     const hasRefinThreshold = rule && rule.refin_portability_rate_threshold !== null && rule.refin_portability_rate_threshold !== undefined;
 
-                    // RESUMO_REGRAS_REFIN_TABLE_PRIORITY
-                    // Tabela ativa do convênio tem prioridade sobre
-                    // a taxa global cadastrada na regra do banco.
                     const refinRateValue = fallbackRefinRate !== null
                       ? fallbackRefinRate
                       : (hasRefinThreshold ? Number(rule.refin_portability_rate_threshold) : null);
@@ -691,7 +709,7 @@ export default function BancosPage() {
                         <RuleItem icon={<Icons.Wallet size={18} />} label="Saldo Mínimo" value={formatCurrency(minDebtBalance)} />
                         
                         <RuleItem icon={<Icons.TrendingDown size={18} />} label="Taxa Mínima Portabilidade" value={(portRateValue !== null && portRateValue !== undefined) ? `${portRateValue}%` : "Não informado"} />
-                        <RuleItem icon={<Icons.RefreshCw size={18} />} label="Taxa Mínima Refin/Port" value={(refinRateValue !== null && refinRateValue !== undefined) ? `${refinRateValue}%` : "Não informado"} />
+                        <RuleItem icon={<Icons.RefreshCw size={18} />} label="Taxa Mínima Refin/Port" value={(refinRateValue !== null && refinRateValue !== undefined) ? `${Number(refinRateValue).toFixed(2).replace('.', ',')}%` : "Não informado"} />
                         
                         {(() => {
                           const blockedOriginRuleObj = promotoraRules.find(r => r.rule_key === 'origin_bank_blocklist');
