@@ -559,7 +559,7 @@ def test_resumo_nao_exibe_libera_aprox_para_margem_inelegivel():
     )
 
 
-def test_cpf_sem_contratos_retorna_margem_e_valor_liberado():
+def test_cpf_sem_contratos_usa_cabecalho_completo_e_resumo():
     source = _source()
 
     start = source.index(
@@ -598,48 +598,31 @@ def test_cpf_sem_contratos_retorna_margem_e_valor_liberado():
         in part
     )
 
-    assert "Margem Livre" in part
-
+    # O fluxo sem contratos nao cria mais um cabecalho antigo
+    # sem especie; ele preserva benefit_header e segue ao resumo.
     assert (
-        "Valor aproximado liberado"
-        in part
+        "BENEF\\u00cdCIO "
+        not in part
     )
 
     assert (
-        "fmt_brl(margin_value_no_loans)"
+        "benefit_header += ("
         in part
-    )
-
-    assert (
-        "fmt_brl(released_no_loans)"
-        in part
-    )
-
-    assert (
-        "reply += ("
-        in part
-    )
-
-    assert (
-        '+ (no_loans_reply or "")'
-        in part
-    )
-
-    # O cabe?alho normal do benef?cio tamb?m cont?m
-    # margem. No cen?rio sem contratos ele N?O pode
-    # ser usado, evitando duplicidade.
-    guard = part[
-        part.rindex("if not loans:"):
-    ]
-
-    assert (
-        "benefit_header"
-        not in guard
     )
 
     assert (
         "continue"
-        in guard
+        not in part
+    )
+
+    assert (
+        "RESUMO POR BENEFICIO"
+        in segment
+    )
+
+    assert (
+        "margin_released > 0"
+        in segment
     )
 
 
@@ -1217,3 +1200,73 @@ def test_resumo_multiplos_beneficios_nao_consolida_valores_visuais():
         in segment
     )
 
+
+
+def test_clara_reutiliza_coeficiente_e_valor_da_consulta_cpf_para_73_mais():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "# CLARA_V2_SHARED_MARGIN_COEFFICIENT"
+        in segment
+    )
+
+    assert (
+        '"valor_liberado_margem"'
+        in segment
+    )
+
+    assert (
+        "backend_margin_released > 0"
+        in segment
+    )
+
+    assert (
+        "resolve_margin_convenio("
+        in segment
+    )
+
+    assert (
+        "convenio=margin_convenio"
+        in segment
+    )
+
+
+def test_clara_separador_antes_de_todo_beneficio_e_quebra_entre_beneficios():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        'f"➖➖➖➖➖➖➖➖➖➖\\n\\n"'
+        in segment
+    )
+
+    assert (
+        'reply += "\\n\\n"'
+        in segment
+    )
+
+    assert (
+        'f"📋 *{benefit_identification}*\\n"'
+        in segment
+    )

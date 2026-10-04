@@ -1683,7 +1683,8 @@ export default function ConsultaCPFPage() {
       cliente.especie === "87" ||
       cliente.especie === "88";
 
-    const percent = 0.45;
+    const loanPercent = isLOAS ? 0.30 : 0.35;
+    const percent = isLOAS ? 0.40 : 0.45;
 
     const margemConsignavel = Number(
       margens.margem_total_consignavel ??
@@ -1692,7 +1693,7 @@ export default function ConsultaCPFPage() {
 
     const margemEmprestimo = Number(
       margens.margem_emprestimo ??
-      (salario * 0.35)
+      (salario * loanPercent)
     );
 
     const totalComprometido = Number(
@@ -1714,20 +1715,27 @@ export default function ConsultaCPFPage() {
       margemLivreReal
     );
 
+    // O backend e a fonte unica do coeficiente diario.
+    // Nao ha corte por idade: clientes 73+ usam o mesmo
+    // coeficiente informado para os demais clientes.
     const coeficienteUtilizado = Number(
-      cliente.coeficiente_utilizado ||
-      margens.coeficiente_utilizado ||
-      0.02270
+      margens.coeficiente_utilizado ??
+      cliente.coeficiente_utilizado ??
+      0
     );
 
-    const valorLiberadoMargem = Number(
-      margens.valor_liberado_margem ||
-      (
-        coeficienteUtilizado > 0
-          ? showMargem / coeficienteUtilizado
-          : 0
-      )
+    const valorBackend = Number(
+      margens.valor_liberado_margem ??
+      cliente.valor_liberado_margem ??
+      0
     );
+
+    const valorLiberadoMargem =
+      valorBackend > 0
+        ? valorBackend
+        : coeficienteUtilizado > 0
+          ? showMargem / coeficienteUtilizado
+          : 0;
 
     return {
       isSiape: false,

@@ -28,7 +28,7 @@ class ConsultaCliente(BaseModel):
     tempo_contribuicao_meses: Optional[int] = 0
     situacao_trabalhista: Optional[str] = ""
     saldo_aproximado: Optional[float] = 0.0
-    coeficiente_utilizado: Optional[float] = 0.02270
+    coeficiente_utilizado: Optional[float] = 0.0
     empresa: Optional[ConsultaEmpresa] = None
 
 class ConsultaMargem(BaseModel):
@@ -41,7 +41,7 @@ class ConsultaMargem(BaseModel):
     total_comprometido: float = 0.0
     margem_livre: float = 0.0
     valor_liberado_margem: float = 0.0
-    coeficiente_utilizado: Optional[float] = 0.02270
+    coeficiente_utilizado: Optional[float] = 0.0
     margem_cartao: float = 0.0
     possui_cartao: bool = False
     cartao_utilizado: float = 0.0
@@ -49,8 +49,9 @@ class ConsultaMargem(BaseModel):
     rmc_promosys: float = 0.0
     rcc_promosys: float = 0.0
 
-    # Regra INSS 45%
-    # 35% emprestimos + 5% RMC + 5% RCC
+    # Regra INSS:
+    # normal = 35% emprestimos + 5% RMC + 5% RCC = 45%
+    # LOAS 87/88 = 30% emprestimos + 5% RMC + 5% RCC = 40%
     margem_total_consignavel: float = 0.0
 
     margem_rmc: float = 0.0
