@@ -177,21 +177,14 @@ export default function BancosPage() {
 
       const refinRates = tablesForAgreement
         .map(t => Number(t.min_rate))
-        .filter(rate => Number.isFinite(rate) && rate > 0);
+        .filter(rate => !isNaN(rate) && rate !== null);
       const fallbackRefinRate = refinRates.length > 0 ? Math.min(...refinRates) : null;
 
       const hasPortThreshold = rule && rule.portability_rate_threshold !== null && rule.portability_rate_threshold !== undefined;
       const portRateValue = hasPortThreshold ? rule.portability_rate_threshold : fallbackPortRate;
 
       const hasRefinThreshold = rule && rule.refin_portability_rate_threshold !== null && rule.refin_portability_rate_threshold !== undefined;
-
-      // RESUMO_REGRAS_REFIN_TABLE_PRIORITY
-      // A menor taxa das tabelas ativas do convênio é a fonte
-      // mais específica. A taxa da regra do banco é fallback
-      // apenas quando nenhuma tabela informa min_rate.
-      const refinRateValue = fallbackRefinRate !== null
-        ? fallbackRefinRate
-        : (hasRefinThreshold ? Number(rule.refin_portability_rate_threshold) : null);
+      const refinRateValue = hasRefinThreshold ? rule.refin_portability_rate_threshold : fallbackRefinRate;
 
       // Calcular Prazos
       let prazosAtivos = tablesForAgreement
