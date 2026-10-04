@@ -1292,3 +1292,92 @@ def test_clara_separador_antes_de_todo_beneficio_e_quebra_entre_beneficios():
         'f"📋 *{benefit_identification}*\\n"'
         in segment
     )
+
+
+
+def test_margem_74_mais_prioriza_faixa_etaria_no_backend():
+    source = (
+        ROOT
+        / "app"
+        / "services"
+        / "margem_service.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "AGE_SPECIFIC_MARGIN_START = 74"
+        in source
+    )
+
+    assert (
+        "async def _fetch_age_coefficient("
+        in source
+    )
+
+    assert (
+        "BankTable.min_age <= idade"
+        in source
+    )
+
+    assert (
+        "BankTable.max_age >= idade"
+        in source
+    )
+
+    assert (
+        "age_coefficient is not None"
+        in source
+    )
+
+
+def test_consulta_cpf_repassa_idade_ao_calculo_de_margem():
+    source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "consultas.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "# CONSULTA_CPF_AGE_MARGIN_COEFFICIENT"
+        in source
+    )
+
+    assert (
+        'idade_cliente = int('
+        in source
+    )
+
+    assert (
+        "idade=idade_cliente"
+        in source
+    )
+
+    assert (
+        "coeficiente_fator=coef_fator"
+        in source
+    )
+
+
+def test_clara_fallback_de_margem_repassa_idade_do_beneficio():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "benefit_age = int("
+        in segment
+    )
+
+    assert (
+        "idade=benefit_age"
+        in segment
+    )

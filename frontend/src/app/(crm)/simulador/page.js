@@ -2954,8 +2954,8 @@ function SimuladorPageContent() {
           0
         );
 
-        // Usa o mesmo coeficiente calculado no backend da Consulta CPF,
-        // sem regra diferente para clientes acima de 73 anos.
+        // Usa o mesmo coeficiente calculado no backend da Consulta CPF.
+        // Para INSS 74+, esse coeficiente ja considera a faixa etaria.
         const coeficienteUtilizado = Number(
           margensAtivas.coeficiente_utilizado ??
           activeBenefit?.cliente?.coeficiente_utilizado ??

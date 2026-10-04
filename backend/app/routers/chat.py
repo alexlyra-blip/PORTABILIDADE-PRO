@@ -1697,6 +1697,13 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             or "INSS"
         )
 
+        benefit_age = int(
+            _clara_float(
+                benefit_client.get("idade")
+                or client_age
+            )
+        )
+
         if margin_is_eligible:
             if backend_margin_released > 0:
                 liberado_aprox = (
@@ -1708,6 +1715,7 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                         margin_value,
                         db,
                         convenio=margin_convenio,
+                        idade=benefit_age,
                     )
                 )
         else:
