@@ -364,7 +364,7 @@ def test_rmc_rcc_promosys_ocupam_slots_sem_cartao_listado():
     )
 
 
-def test_loas_tambem_mantem_35_5_5():
+def test_loas_87_usa_30_porcento_para_emprestimos():
     result = recalculate_benefit_margins(
         build_payload(
             "87 - BPC LOAS"
@@ -373,14 +373,45 @@ def test_loas_tambem_mantem_35_5_5():
 
     margens = result["margens"]
 
+    # 30% de 1.621,00 = 486,30.
     assert (
         margens["margem_emprestimo"]
-        == 567.35
+        == 486.30
+    )
+
+    # Total = 30% emprestimo + 5% RMC + 5% RCC.
+    assert (
+        margens["margem_total_consignavel"]
+        == 648.40
     )
 
     assert margens["margem_rmc"] == 81.05
     assert margens["margem_rcc"] == 81.05
-    assert margens["margem_livre"] == 51.20
+
+    # Parcelas ativas = 516,15.
+    assert margens["margem_livre"] == -29.85
+
+
+def test_loas_88_tambem_usa_30_porcento():
+    result = recalculate_benefit_margins(
+        build_payload(
+            "88 - AMPARO SOCIAL AO IDOSO"
+        )
+    )
+
+    margens = result["margens"]
+
+    assert (
+        margens["margem_emprestimo"]
+        == 486.30
+    )
+
+    assert (
+        margens["margem_total_consignavel"]
+        == 648.40
+    )
+
+    assert margens["margem_livre"] == -29.85
 
 
 def test_valores_financeiros_truncados():
@@ -445,7 +476,12 @@ def test_recalcula_payload_antigo_cache():
 
     assert (
         loas["margens"]["margem_emprestimo"]
-        == 567.35
+        == 486.30
+    )
+
+    assert (
+        loas["margens"]["margem_livre"]
+        == -29.85
     )
 
     assert (
