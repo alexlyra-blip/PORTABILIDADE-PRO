@@ -119,7 +119,18 @@ async def create_bank(bank: BankCreate, db: AsyncSession = Depends(get_db), admi
 
 @router.patch("/banks/{bank_id}", response_model=BankResponse)
 async def update_bank(bank_id: int, bank_data: dict, db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
-    bank = await AdminService.update_bank(db, bank_id, bank_data)
+    # BANK_LOGO_PRESERVE_ON_CONFIG_UPDATE
+    # A identidade visual é alterada exclusivamente pelo endpoint
+    # /banks/{bank_id}/upload-logo. Salvar nome/regras/prioridades
+    # nunca pode apagar nem regravar a logo já persistida.
+    safe_bank_data = dict(bank_data or {})
+    safe_bank_data.pop("logo_url", None)
+
+    bank = await AdminService.update_bank(
+        db,
+        bank_id,
+        safe_bank_data,
+    )
     if not bank:
         raise HTTPException(status_code=404, detail="Bank not found")
     return bank
