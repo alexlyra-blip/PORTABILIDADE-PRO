@@ -1010,6 +1010,9 @@ function SimuladorPageContent() {
       total_comprometido:
         totalComprometidoExtrato,
       coeficiente_utilizado: coeficienteExtrato,
+      prazo_margem: Number(
+        extractedData.prazo_margem || 0
+      ),
       valor_liberado_margem: valorLiberadoExtrato
     }));
 
@@ -1108,6 +1111,10 @@ function SimuladorPageContent() {
        coeficiente_utilizado:
          activeBenefit.margens?.coeficiente_utilizado ??
          activeBenefit.cliente?.coeficiente_utilizado ??
+         0,
+       prazo_margem:
+         activeBenefit.margens?.prazo_margem ??
+         activeBenefit.cliente?.prazo_margem ??
          0,
        valor_liberado_margem:
          activeBenefit.margens?.valor_liberado_margem ??
@@ -1970,6 +1977,11 @@ function SimuladorPageContent() {
                                       )
                                     )}
                             </span>
+                            {Number(formData.prazo_margem) > 0 && (
+                              <span className="inline-flex mt-2 px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-200 text-[9px] font-black text-emerald-700 uppercase tracking-wider">
+                                Prazo {Number(formData.prazo_margem)}x
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

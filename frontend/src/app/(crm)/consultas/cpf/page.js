@@ -2396,7 +2396,15 @@ export default function ConsultaCPFPage() {
                 </div>
                 <div className="flex items-center gap-3 bg-emerald-50 rounded-2xl border border-emerald-200 p-4 sm:col-span-2 xl:col-span-1">
                   <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0"><Icons.Banknote size={20} /></div>
-                  <div className="min-w-0"><p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-tight">Valor Liberado</p><p className="text-sm md:text-base font-black text-emerald-700 mt-1 whitespace-nowrap">{formatBRL(marginInfo.valorLiberadoMargem)}</p></div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-tight">Valor Liberado</p>
+                    <p className="text-sm md:text-base font-black text-emerald-700 mt-1 whitespace-nowrap">{formatBRL(marginInfo.valorLiberadoMargem)}</p>
+                    {Number(marginInfo.prazoMargem) > 0 && (
+                      <span className="inline-flex mt-2 px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-200 text-[9px] font-black text-emerald-700 uppercase tracking-wider">
+                        Prazo {Number(marginInfo.prazoMargem)}x
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

@@ -1504,3 +1504,42 @@ def test_clara_72_77_ignora_valor_antigo_e_recalcula():
     )
 
     assert recalc_index < backend_index
+
+
+
+def test_frontend_exibe_selo_prazo_da_margem():
+    cpf_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "consultas"
+        / "cpf"
+        / "page.js"
+    ).read_text(encoding="utf-8")
+
+    simulador_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "simulador"
+        / "page.js"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "Prazo {Number(marginInfo.prazoMargem)}x"
+        in cpf_source
+    )
+
+    assert (
+        "prazo_margem:"
+        in simulador_source
+    )
+
+    assert (
+        "Prazo {Number(formData.prazo_margem)}x"
+        in simulador_source
+    )
