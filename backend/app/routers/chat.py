@@ -1060,6 +1060,39 @@ Senão, peça o próximo dado faltante usando o texto EXATO correspondente da li
 
 
 # CLARA_V2_MANUAL_FLOW
+def extrair_cpf_da_mensagem(
+    message: str,
+) -> str | None:
+    """
+    Extrai um CPF de 11 dígitos mesmo quando o usuário
+    insere espaços, pontos ou hífens em agrupamentos livres.
+
+    Exemplos aceitos:
+    12345678909
+    123.456.789-09
+    123 456 789 09
+    12345 6789 09
+    """
+    texto = str(message or "")
+
+    # Cada dígito pode ser separado por espaço, ponto ou hífen.
+    # Os limites impedem capturar parte de uma sequência numérica
+    # maior que 11 dígitos.
+    pattern = r"(?<!\d)(?:\d[.\s-]*){11}(?!\d)"
+
+    for match in re.finditer(pattern, texto):
+        digits = re.sub(
+            r"\D",
+            "",
+            match.group(0),
+        )
+
+        if len(digits) == 11:
+            return digits
+
+    return None
+
+
 def detectar_cliente_nao_assinante(
     message: str,
 ) -> bool:
@@ -2911,12 +2944,14 @@ async def chat_interaction(
             return ({"status": "success", "reply": reply_text, "sender": sender} | chat_response_meta())
 
         # Priority 3: CPF directo
-        cpf_matches = re.findall(r'\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b', message)
-        if not cpf_matches:
-            cpf_matches = re.findall(r'\b\d{11}\b', message)
+        # CLARA_V2_CPF_FLEXIBLE_FORMAT
+        # Aceita 11 dígitos contínuos ou separados por espaços,
+        # pontos e hífens em qualquer agrupamento.
+        clean_cpf = extrair_cpf_da_mensagem(
+            message
+        )
             
-        if cpf_matches:
-            clean_cpf = re.sub(r'\D', '', cpf_matches[0])
+        if clean_cpf:
             is_illiterate = detectar_cliente_nao_assinante(
                 message
             )
