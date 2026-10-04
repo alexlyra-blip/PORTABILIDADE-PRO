@@ -215,3 +215,65 @@ async def test_margem_calculo():
         "OK: Promosys = "
         "35% emprestimo + 5% RMC + 5% RCC"
     )
+
+
+
+@pytest.mark.asyncio
+async def test_margem_idade_76_prioriza_coeficiente_etario():
+    from app.services import margem_service
+
+    db = AsyncMock()
+
+    with patch(
+        "app.services.margem_service._fetch_age_coefficient",
+        new_callable=AsyncMock,
+        return_value=0.030000,
+    ) as mock_age, patch(
+        "app.services.margem_service._fetch_daily_coefficient",
+        new_callable=AsyncMock,
+        return_value=0.022460,
+    ) as mock_daily:
+        coeficiente = await margem_service.obter_coeficiente_fator(
+            db,
+            convenio="INSS",
+            idade=76,
+        )
+
+        liberado = await margem_service.calcular_valor_liberado_margem(
+            398.25,
+            db,
+            convenio="INSS",
+            idade=76,
+            coeficiente_fator=coeficiente,
+        )
+
+    assert coeficiente == 0.030000
+    assert liberado == 13275.00
+    mock_age.assert_awaited_once()
+    mock_daily.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_margem_idade_73_mantem_coeficiente_diario():
+    from app.services import margem_service
+
+    db = AsyncMock()
+
+    with patch(
+        "app.services.margem_service._fetch_age_coefficient",
+        new_callable=AsyncMock,
+        return_value=0.030000,
+    ) as mock_age, patch(
+        "app.services.margem_service._fetch_daily_coefficient",
+        new_callable=AsyncMock,
+        return_value=0.022460,
+    ) as mock_daily:
+        coeficiente = await margem_service.obter_coeficiente_fator(
+            db,
+            convenio="INSS",
+            idade=73,
+        )
+
+    assert coeficiente == 0.022460
+    mock_age.assert_not_awaited()
+    mock_daily.assert_awaited_once()
