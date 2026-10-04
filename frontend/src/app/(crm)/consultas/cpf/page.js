@@ -1715,9 +1715,9 @@ export default function ConsultaCPFPage() {
       margemLivreReal
     );
 
-    // O backend e a fonte unica do coeficiente diario.
-    // Nao ha corte por idade: clientes 73+ usam o mesmo
-    // coeficiente informado para os demais clientes.
+    // O backend e a fonte unica do coeficiente de margem.
+    // INSS 74+ prioriza a faixa etaria cadastrada no
+    // banco-base; os demais casos usam o coeficiente diario.
     const coeficienteUtilizado = Number(
       margens.coeficiente_utilizado ??
       cliente.coeficiente_utilizado ??
