@@ -1438,3 +1438,69 @@ def test_frontend_nao_recalcula_margem_localmente_para_72_mais():
         "idadeClienteMargem >= 72"
         in simulador_source
     )
+
+
+
+def test_cache_consulta_cpf_recalcula_margem_com_idade():
+    source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "consultas.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "# CONSULTA_CPF_CACHE_AGE_MARGIN"
+        in source
+    )
+
+    assert (
+        "idade=idade_cliente"
+        in source
+    )
+
+    assert (
+        "coeficiente_fator=coef_fator"
+        in source
+    )
+
+    assert (
+        '"prazo_margem"'
+        in source
+    )
+
+
+def test_clara_72_77_ignora_valor_antigo_e_recalcula():
+    source = _source()
+
+    start = source.index(
+        "async def simulate_for_cpf("
+    )
+
+    end = source.index(
+        '@router.post("/external/chat")',
+        start,
+    )
+
+    segment = source[start:end]
+
+    assert (
+        "# CLARA_V2_FORCE_REDUCED_TERM_RECALC"
+        in segment
+    )
+
+    assert (
+        "if benefit_margin_term:"
+        in segment
+    )
+
+    recalc_index = segment.index(
+        "if benefit_margin_term:"
+    )
+
+    backend_index = segment.index(
+        "elif backend_margin_released > 0:",
+        recalc_index,
+    )
+
+    assert recalc_index < backend_index
