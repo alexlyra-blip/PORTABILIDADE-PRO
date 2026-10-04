@@ -49,8 +49,9 @@ class ConsultaMargem(BaseModel):
     rmc_promosys: float = 0.0
     rcc_promosys: float = 0.0
 
-    # Regra INSS 45%
-    # 35% emprestimos + 5% RMC + 5% RCC
+    # Regra INSS:
+    # normal = 35% emprestimos + 5% RMC + 5% RCC = 45%
+    # LOAS 87/88 = 30% emprestimos + 5% RMC + 5% RCC = 40%
     margem_total_consignavel: float = 0.0
 
     margem_rmc: float = 0.0
