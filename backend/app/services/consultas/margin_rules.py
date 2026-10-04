@@ -7,8 +7,9 @@ from typing import Any, Dict
 LOAS_SPECIES = {87, 88}
 CARD_MARGIN_PERCENT = Decimal("0.05")
 DEFAULT_LOAN_MARGIN_PERCENT = Decimal("0.35")
-LOAS_LOAN_MARGIN_PERCENT = Decimal("0.35")
-TOTAL_MARGIN_PERCENT = Decimal("0.45")
+LOAS_LOAN_MARGIN_PERCENT = Decimal("0.30")
+DEFAULT_TOTAL_MARGIN_PERCENT = Decimal("0.45")
+LOAS_TOTAL_MARGIN_PERCENT = Decimal("0.40")
 MAX_CARD_SLOTS = 2
 
 INACTIVE_STATUS_MARKERS = (
@@ -143,17 +144,18 @@ def recalculate_benefit_margins(
     data: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
-    Aplica a regra consignavel de 45%:
+    Aplica a regra consignavel por especie:
 
-    - 35% para emprestimos consignados;
+    - especies 87/88 (LOAS): 30% para emprestimos;
+    - demais especies INSS: 35% para emprestimos;
     - 5% reservado para Cartao Consignado RMC;
     - 5% reservado para Cartao Beneficio RCC.
 
     As reservas RMC/RCC sao independentes da margem
-    de 35% dos emprestimos.
+    destinada aos emprestimos.
 
     Margem livre de emprestimo =
-        35% da renda - parcelas de emprestimos ativos.
+        percentual da especie x renda - parcelas ativas.
     """
     if not isinstance(data, dict):
         return data
@@ -173,18 +175,45 @@ def recalculate_benefit_margins(
         str(salario)
     )
 
+    especie_codigo = extract_species_code(
+        cliente.get("especie")
+        or data.get("especie")
+        or (
+            data.get("beneficio", {}).get("especie")
+            if isinstance(
+                data.get("beneficio"),
+                dict,
+            )
+            else ""
+        )
+    )
+
+    is_loas = especie_codigo in LOAS_SPECIES
+
+    loan_margin_percent = (
+        LOAS_LOAN_MARGIN_PERCENT
+        if is_loas
+        else DEFAULT_LOAN_MARGIN_PERCENT
+    )
+
+    total_margin_percent = (
+        LOAS_TOTAL_MARGIN_PERCENT
+        if is_loas
+        else DEFAULT_TOTAL_MARGIN_PERCENT
+    )
+
     # ========================================================
     # LIMITES CONSIGNAVEIS
     # ========================================================
 
     margem_total_consignavel = money(
         salario_decimal
-        * TOTAL_MARGIN_PERCENT
+        * total_margin_percent
     )
 
     margem_emprestimo = money(
         salario_decimal
-        * DEFAULT_LOAN_MARGIN_PERCENT
+        * loan_margin_percent
     )
 
     margem_rmc = money(
@@ -237,7 +266,7 @@ def recalculate_benefit_margins(
     )
 
     # IMPORTANTE:
-    # RMC/RCC nao reduzem os 35% de emprestimo.
+    # RMC/RCC nao reduzem a margem de emprestimo da especie.
     diff_livre = (
         Decimal(str(margem_emprestimo))
         - Decimal(str(total_emprestimos_ativos))
@@ -394,11 +423,11 @@ def recalculate_benefit_margins(
     margens.update({
         "salario": salario,
 
-        # 45% total
+        # Total: 45% normal / 40% LOAS
         "margem_total_consignavel":
             margem_total_consignavel,
 
-        # 35% emprestimos
+        # Emprestimos: 35% normal / 30% LOAS
         "margem_emprestimo":
             margem_emprestimo,
 
