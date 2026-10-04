@@ -312,7 +312,17 @@ def test_cpf_automatico_usa_mesmo_provider_da_consulta_web():
     )
 
     assert (
-        "provider_type = await get_active_provider(db)"
+        "async def _safe_active_provider("
+        in consultas_source
+    )
+
+    assert (
+        "await get_active_provider("
+        in consultas_source
+    )
+
+    assert (
+        "provider_type = await _safe_active_provider(db)"
         in consultas_source
     )
 
