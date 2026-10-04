@@ -188,13 +188,6 @@ async def _execute_cpf_query_flow(
                 )
 
                 async with AsyncSessionLocal() as temp_db:
-                    coef_fator = (
-                        await obter_coeficiente_fator(
-                            temp_db,
-                            convenio=margin_convenio,
-                        )
-                    )
-
                     async def atualizar_valores(
                         item: dict,
                     ):
@@ -223,12 +216,39 @@ async def _execute_cpf_query_flow(
                                 0.0,
                             )
 
+                        idade_cliente = int(
+                            cliente.get("idade")
+                            or 0
+                        )
+
+                        # CONSULTA_CPF_CACHE_AGE_MARGIN
+                        coef_fator = (
+                            await obter_coeficiente_fator(
+                                temp_db,
+                                convenio=margin_convenio,
+                                idade=idade_cliente,
+                            )
+                        )
+
+                        prazo_margem = obter_prazo_margem(
+                            idade_cliente,
+                            convenio=margin_convenio,
+                        )
+
                         valor_liberado = (
                             await calcular_valor_liberado_margem(
                                 margem_livre or 0.0,
                                 temp_db,
                                 convenio=margin_convenio,
+                                idade=idade_cliente,
+                                coeficiente_fator=coef_fator,
                             )
+                        )
+
+                        valor_minimo_margem = (
+                            REDUCED_TERM_MIN_CONTRACT_AMOUNT
+                            if prazo_margem
+                            else 0.0
                         )
 
                         if margens:
@@ -238,6 +258,12 @@ async def _execute_cpf_query_flow(
                             margens[
                                 "coeficiente_utilizado"
                             ] = coef_fator
+                            margens[
+                                "prazo_margem"
+                            ] = prazo_margem
+                            margens[
+                                "valor_minimo_contrato_margem"
+                            ] = valor_minimo_margem
 
                         if cliente:
                             cliente[
@@ -246,6 +272,12 @@ async def _execute_cpf_query_flow(
                             cliente[
                                 "coeficiente_utilizado"
                             ] = coef_fator
+                            cliente[
+                                "prazo_margem"
+                            ] = prazo_margem
+                            cliente[
+                                "valor_minimo_contrato_margem"
+                            ] = valor_minimo_margem
 
                     for beneficio_item in dados_json.get(
                         "beneficios",

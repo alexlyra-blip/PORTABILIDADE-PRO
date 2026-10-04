@@ -1712,7 +1712,20 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         )
 
         if margin_is_eligible:
-            if backend_margin_released > 0:
+            # CLARA_V2_FORCE_REDUCED_TERM_RECALC
+            # Para 72-77 anos, nunca confiar em valor antigo
+            # vindo de cache/provider: sempre recalcular pela
+            # faixa etaria fixa antes de exibir.
+            if benefit_margin_term:
+                liberado_aprox = (
+                    await calcular_valor_liberado_margem(
+                        margin_value,
+                        db,
+                        convenio=margin_convenio,
+                        idade=benefit_age,
+                    )
+                )
+            elif backend_margin_released > 0:
                 liberado_aprox = (
                     backend_margin_released
                 )
