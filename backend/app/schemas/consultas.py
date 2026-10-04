@@ -29,6 +29,8 @@ class ConsultaCliente(BaseModel):
     situacao_trabalhista: Optional[str] = ""
     saldo_aproximado: Optional[float] = 0.0
     coeficiente_utilizado: Optional[float] = 0.0
+    prazo_margem: Optional[int] = None
+    valor_minimo_contrato_margem: float = 0.0
     empresa: Optional[ConsultaEmpresa] = None
 
 class ConsultaMargem(BaseModel):
@@ -42,6 +44,8 @@ class ConsultaMargem(BaseModel):
     margem_livre: float = 0.0
     valor_liberado_margem: float = 0.0
     coeficiente_utilizado: Optional[float] = 0.0
+    prazo_margem: Optional[int] = None
+    valor_minimo_contrato_margem: float = 0.0
     margem_cartao: float = 0.0
     possui_cartao: bool = False
     cartao_utilizado: float = 0.0
