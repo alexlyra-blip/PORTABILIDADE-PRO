@@ -268,9 +268,12 @@ async def calcular_valor_liberado_margem(
     if coeficiente_fator <= 0:
         return 0.0
 
-    valor_contrato = (
-        float(margem_livre)
-        / float(coeficiente_fator)
+    valor_contrato = round(
+        (
+            float(margem_livre)
+            / float(coeficiente_fator)
+        ),
+        2,
     )
 
     if (
@@ -284,7 +287,4 @@ async def calcular_valor_liberado_margem(
     ):
         return 0.0
 
-    return round(
-        valor_contrato,
-        2,
-    )
+    return valor_contrato
