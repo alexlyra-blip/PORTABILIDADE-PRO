@@ -65,3 +65,10 @@ jobs:
 
       - name: Verificar sintaxe do backend
         run: python -m compileall -q backend/app
+
+      - name: Instalar pytest para testes da Clara
+        run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Executar testes de regressao da Clara
+        working-directory: backend
+        run: python -m pytest tests/test_clara_v2_backend.py -q
