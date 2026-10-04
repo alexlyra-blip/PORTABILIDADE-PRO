@@ -31,7 +31,13 @@ from app.utils.config_helper import (
     set_multicorban_quota_config,
     calculate_renewal_cycle,
 )
-from app.services.margem_service import calcular_valor_liberado_margem, obter_coeficiente_fator, resolve_margin_convenio
+from app.services.margem_service import (
+    REDUCED_TERM_MIN_CONTRACT_AMOUNT,
+    calcular_valor_liberado_margem,
+    obter_coeficiente_fator,
+    obter_prazo_margem,
+    resolve_margin_convenio,
+)
 
 logger = logging.getLogger("consultas_router")
 
@@ -494,6 +500,11 @@ async def _execute_cpf_query_flow(
                     idade=idade_cliente,
                 )
 
+                prazo_margem = obter_prazo_margem(
+                    idade_cliente,
+                    convenio=margin_convenio,
+                )
+
                 valor_liberado = (
                     await calcular_valor_liberado_margem(
                         margem_livre or 0.0,
@@ -504,6 +515,12 @@ async def _execute_cpf_query_flow(
                     )
                 )
 
+                valor_minimo_margem = (
+                    REDUCED_TERM_MIN_CONTRACT_AMOUNT
+                    if prazo_margem
+                    else 0.0
+                )
+
                 if margens:
                     margens[
                         "valor_liberado_margem"
@@ -511,6 +528,12 @@ async def _execute_cpf_query_flow(
                     margens[
                         "coeficiente_utilizado"
                     ] = coef_fator
+                    margens[
+                        "prazo_margem"
+                    ] = prazo_margem
+                    margens[
+                        "valor_minimo_contrato_margem"
+                    ] = valor_minimo_margem
 
                 if cliente:
                     cliente[
@@ -519,6 +542,12 @@ async def _execute_cpf_query_flow(
                     cliente[
                         "coeficiente_utilizado"
                     ] = coef_fator
+                    cliente[
+                        "prazo_margem"
+                    ] = prazo_margem
+                    cliente[
+                        "valor_minimo_contrato_margem"
+                    ] = valor_minimo_margem
 
                 results.append(
                     (numero_beneficio, res)
