@@ -1662,7 +1662,7 @@ def test_salvar_configuracao_do_banco_preserva_logo():
 
 
 
-def test_resumo_regras_prioriza_taxa_refin_das_tabelas():
+def test_resumo_visual_bancos_prioriza_taxa_refin_das_tabelas():
     bancos_source = (
         ROOT.parent
         / "frontend"
@@ -1673,31 +1673,32 @@ def test_resumo_regras_prioriza_taxa_refin_das_tabelas():
         / "page.jsx"
     ).read_text(encoding="utf-8")
 
-    # Tela + PDF precisam usar a mesma hierarquia:
-    # tabela ativa do convenio > regra global do banco.
+    # A correção é exclusiva do resumo visual da página
+    # Bancos e Regras. Não altera motor, backend ou PDF.
     assert (
         bancos_source.count(
             "RESUMO_REGRAS_REFIN_TABLE_PRIORITY"
         )
-        == 2
+        == 1
     )
 
     assert (
         bancos_source.count(
             "const refinRateValue = fallbackRefinRate !== null"
         )
-        == 2
+        == 1
     )
 
     assert (
         bancos_source.count(
             ".filter(rate => Number.isFinite(rate) && rate > 0)"
         )
-        >= 2
+        >= 1
     )
 
+    # O bloco do PDF permanece com a lógica anterior.
     assert (
         "const refinRateValue = hasRefinThreshold ? "
         "rule.refin_portability_rate_threshold : fallbackRefinRate;"
-        not in bancos_source
+        in bancos_source
     )
