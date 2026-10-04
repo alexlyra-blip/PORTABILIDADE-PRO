@@ -218,52 +218,56 @@ async def test_margem_calculo():
 
 
 
+@pytest.mark.parametrize(
+    "idade,prazo,coeficiente",
+    [
+        (72, 96, 0.02340),
+        (73, 84, 0.02463),
+        (74, 72, 0.02638),
+        (75, 60, 0.02894),
+        (76, 48, 0.03293),
+        (77, 36, 0.03980),
+    ],
+)
 @pytest.mark.asyncio
-async def test_margem_idade_76_prioriza_coeficiente_etario():
+async def test_margem_prazo_reduzido_por_idade(
+    idade,
+    prazo,
+    coeficiente,
+):
     from app.services import margem_service
 
     db = AsyncMock()
 
     with patch(
-        "app.services.margem_service._fetch_age_coefficient",
-        new_callable=AsyncMock,
-        return_value=0.030000,
-    ) as mock_age, patch(
         "app.services.margem_service._fetch_daily_coefficient",
         new_callable=AsyncMock,
         return_value=0.022460,
     ) as mock_daily:
-        coeficiente = await margem_service.obter_coeficiente_fator(
+        calculado = await margem_service.obter_coeficiente_fator(
             db,
             convenio="INSS",
-            idade=76,
+            idade=idade,
         )
 
-        liberado = await margem_service.calcular_valor_liberado_margem(
-            398.25,
-            db,
-            convenio="INSS",
-            idade=76,
-            coeficiente_fator=coeficiente,
+    assert calculado == coeficiente
+    assert (
+        margem_service.obter_prazo_margem(
+            idade,
+            "INSS",
         )
-
-    assert coeficiente == 0.030000
-    assert liberado == 13275.00
-    mock_age.assert_awaited_once()
+        == prazo
+    )
     mock_daily.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_margem_idade_73_mantem_coeficiente_diario():
+async def test_margem_ate_71_usa_coeficiente_diario():
     from app.services import margem_service
 
     db = AsyncMock()
 
     with patch(
-        "app.services.margem_service._fetch_age_coefficient",
-        new_callable=AsyncMock,
-        return_value=0.030000,
-    ) as mock_age, patch(
         "app.services.margem_service._fetch_daily_coefficient",
         new_callable=AsyncMock,
         return_value=0.022460,
@@ -271,9 +275,73 @@ async def test_margem_idade_73_mantem_coeficiente_diario():
         coeficiente = await margem_service.obter_coeficiente_fator(
             db,
             convenio="INSS",
-            idade=73,
+            idade=71,
         )
 
     assert coeficiente == 0.022460
-    mock_age.assert_not_awaited()
+    assert margem_service.obter_prazo_margem(71, "INSS") is None
     mock_daily.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_margem_prazo_reduzido_exige_contrato_minimo_1000():
+    from app.services import margem_service
+
+    abaixo_minimo = await margem_service.calcular_valor_liberado_margem(
+        23.39,
+        convenio="INSS",
+        idade=72,
+        coeficiente_fator=0.02340,
+    )
+
+    no_minimo = await margem_service.calcular_valor_liberado_margem(
+        23.40,
+        convenio="INSS",
+        idade=72,
+        coeficiente_fator=0.02340,
+    )
+
+    assert abaixo_minimo == 0.0
+    assert no_minimo == 1000.00
+
+
+@pytest.mark.asyncio
+async def test_margem_idade_76_usa_48x_e_coeficiente_03293():
+    from app.services import margem_service
+
+    coeficiente = await margem_service.obter_coeficiente_fator(
+        convenio="INSS",
+        idade=76,
+    )
+
+    liberado = await margem_service.calcular_valor_liberado_margem(
+        398.25,
+        convenio="INSS",
+        idade=76,
+        coeficiente_fator=coeficiente,
+    )
+
+    assert coeficiente == 0.03293
+    assert margem_service.obter_prazo_margem(76, "INSS") == 48
+    assert liberado == round(398.25 / 0.03293, 2)
+
+
+@pytest.mark.asyncio
+async def test_margem_acima_de_77_nao_simula():
+    from app.services import margem_service
+
+    coeficiente = await margem_service.obter_coeficiente_fator(
+        convenio="INSS",
+        idade=78,
+    )
+
+    liberado = await margem_service.calcular_valor_liberado_margem(
+        500.00,
+        convenio="INSS",
+        idade=78,
+        coeficiente_fator=coeficiente,
+    )
+
+    assert coeficiente == 0.0
+    assert margem_service.obter_prazo_margem(78, "INSS") is None
+    assert liberado == 0.0
