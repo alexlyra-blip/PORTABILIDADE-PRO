@@ -8,7 +8,10 @@ from sqlalchemy import select, func
 from app.database import get_db, AsyncSessionLocal
 from app.services.admin_service import AdminService
 from app.services.simulador_service import SimuladorService
-from app.services.margem_service import calcular_valor_liberado_margem
+from app.services.margem_service import (
+    calcular_valor_liberado_margem,
+    resolve_margin_convenio,
+)
 from app.models.models import SimulacaoInput
 from app.models.sqlalchemy_models import Bank, User, WhatsappChatLog
 from datetime import datetime, timezone, timedelta
@@ -1625,7 +1628,19 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
 
     for idx_b, b in enumerate(beneficios):
         nb = b.get("cliente", {}).get("beneficio") or b.get("numero", "N/A")
-        especie = b.get("cliente", {}).get("especie") or "N/A"
+        especie = (
+            b.get("cliente", {}).get("especie")
+            or b.get("especie")
+            or (
+                b.get("beneficio", {}).get("especie")
+                if isinstance(
+                    b.get("beneficio"),
+                    dict,
+                )
+                else ""
+            )
+            or "N/A"
+        )
 
         benefit_identification = (
             format_benefit_identification(
@@ -1640,8 +1655,23 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         bloqueio = b.get("beneficio", {}).get("bloqueio_emprestimo") or "NÃO"
         
         # Margins
-        salario = b.get("margens", {}).get("salario", 0.0)
-        margem_livre = b.get("margens", {}).get("margem_livre", 0.0)
+        benefit_margins = (
+            b.get("margens", {})
+            or {}
+        )
+        benefit_client = (
+            b.get("cliente", {})
+            or {}
+        )
+
+        salario = benefit_margins.get(
+            "salario",
+            0.0,
+        )
+        margem_livre = benefit_margins.get(
+            "margem_livre",
+            0.0,
+        )
         margin_value = _clara_float(
             margem_livre
         )
@@ -1649,10 +1679,37 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             margin_value >= min_margin_simulation
         )
 
-        if margin_is_eligible:
-            liberado_aprox = await calcular_valor_liberado_margem(
-                margin_value
+        # CLARA_V2_SHARED_MARGIN_COEFFICIENT
+        # A Consulta CPF ja devolve valor e coeficiente calculados
+        # pelo backend. A Clara reutiliza exatamente a mesma base,
+        # inclusive para clientes com mais de 73 anos.
+        backend_margin_released = _clara_float(
+            benefit_margins.get(
+                "valor_liberado_margem"
             )
+            or benefit_client.get(
+                "valor_liberado_margem"
+            )
+        )
+
+        margin_convenio = resolve_margin_convenio(
+            b.get("convenio")
+            or "INSS"
+        )
+
+        if margin_is_eligible:
+            if backend_margin_released > 0:
+                liberado_aprox = (
+                    backend_margin_released
+                )
+            else:
+                liberado_aprox = (
+                    await calcular_valor_liberado_margem(
+                        margin_value,
+                        db,
+                        convenio=margin_convenio,
+                    )
+                )
         else:
             # Margem abaixo de R$ 15,00 nao gera simulacao.
             liberado_aprox = 0.0
@@ -1770,36 +1827,10 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         no_loans_reply = None
 
         if not loans:
-            margin_value_no_loans = _clara_float(
-                margem_livre
-            )
-
-            released_no_loans = max(
-                0.0,
-                _clara_float(
-                    liberado_aprox
-                ),
-            )
-
             no_loans_reply = (
-                f"\U0001F4CB *BENEF\u00cdCIO "
-                f"{idx_b + 1}: NB "
-                f"{benefit_number}*\n\n"
                 "\u2139\ufe0f *Nenhum contrato ativo "
-                "encontrado para portabilidade.*\n\n"
-                "\U0001F4B5 *Margem Livre:* "
-                f"{fmt_brl(margin_value_no_loans)}"
+                "encontrado para portabilidade.*\n"
             )
-
-            if (
-                margin_is_eligible
-                and released_no_loans > 0
-            ):
-                no_loans_reply += (
-                    "\n\U0001F4B0 "
-                    "*Valor aproximado liberado:* "
-                    f"{fmt_brl(released_no_loans)}"
-                )
 
         # Run simulation for each loan
         for idx_l, c in enumerate(loans):
@@ -2193,12 +2224,10 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         overall_port_count += benefit_port_count
         overall_port_total += benefit_port_total
 
-        if not loans:
-            reply += (
-                "\n\n"
-                + (no_loans_reply or "")
+        if not loans and no_loans_reply:
+            benefit_header += (
+                no_loans_reply
             )
-            continue
 
         # ========================================================
         # RESUMO POR BENEFICIO
@@ -2265,7 +2294,7 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
 
         # CLARA_V2_NO_PORTABILITY_MESSAGE
         # A mensagem fica logo abaixo da margem e antes dos contratos.
-        if benefit_port_count <= 0:
+        if loans and benefit_port_count <= 0:
             benefit_header += (
                 "\u2139\ufe0f *Nenhuma proposta de portabilidade "
                 "dispon\u00edvel para o cliente neste benef\u00edcio.*\n"
@@ -2281,12 +2310,13 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
         )
 
         # CLARA_V2_BENEFIT_SUMMARY_RENDER
-        has_benefit_offers = (
-            benefit_refin_count > 0
+        has_benefit_summary = (
+            margin_released > 0
+            or benefit_refin_count > 0
             or benefit_port_count > 0
         )
 
-        if has_benefit_offers:
+        if has_benefit_summary:
             benefit_summary_lines = [
                 "",
                 "━━━━━━━━━━━━━━━━━━",
@@ -2340,11 +2370,15 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
                 )
             )
 
+        # Mantem o proximo separador sempre em nova linha.
+        reply += "\n\n"
+
     # CLARA_V2_GLOBAL_SUMMARY_SESSION_ONLY
     # Mantem o consolidado apenas internamente para compatibilidade.
     # Nenhum total de beneficios diferentes e exibido ao cliente.
     has_global_offers = (
-        overall_refin_count > 0
+        overall_margin_released > 0
+        or overall_refin_count > 0
         or overall_port_count > 0
     )
 
