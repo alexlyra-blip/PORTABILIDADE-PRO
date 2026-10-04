@@ -1716,8 +1716,20 @@ export default function ConsultaCPFPage() {
     );
 
     // O backend e a fonte unica do coeficiente de margem.
-    // INSS 74+ prioriza a faixa etaria cadastrada no
-    // banco-base; os demais casos usam o coeficiente diario.
+    // Até 71 anos usa o coeficiente diário; de 72 a 77,
+    // usa a regra fixa de prazo reduzido. Acima de 77 não simula.
+    const idadeCliente = Number(
+      cliente.idade || 0
+    );
+    const usaRegraPrazoReduzido =
+      idadeCliente >= 72;
+
+    const prazoMargem = Number(
+      margens.prazo_margem ??
+      cliente.prazo_margem ??
+      0
+    );
+
     const coeficienteUtilizado = Number(
       margens.coeficiente_utilizado ??
       cliente.coeficiente_utilizado ??
@@ -1733,9 +1745,11 @@ export default function ConsultaCPFPage() {
     const valorLiberadoMargem =
       valorBackend > 0
         ? valorBackend
-        : coeficienteUtilizado > 0
-          ? showMargem / coeficienteUtilizado
-          : 0;
+        : usaRegraPrazoReduzido
+          ? 0
+          : coeficienteUtilizado > 0
+            ? showMargem / coeficienteUtilizado
+            : 0;
 
     return {
       isSiape: false,
@@ -1750,7 +1764,9 @@ export default function ConsultaCPFPage() {
       margemLivreReal,
       showMargem,
       valorLiberadoMargem,
-      coeficienteUtilizado
+      coeficienteUtilizado,
+      prazoMargem,
+      usaRegraPrazoReduzido
     };
   };
 

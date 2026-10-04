@@ -2955,7 +2955,14 @@ function SimuladorPageContent() {
         );
 
         // Usa o mesmo coeficiente calculado no backend da Consulta CPF.
-        // Para INSS 74+, esse coeficiente ja considera a faixa etaria.
+        // Até 71 anos usa o diário; 72-77 usa prazo reduzido fixo.
+        const idadeClienteMargem = Number(
+          activeBenefit?.cliente?.idade ?? 0
+        );
+        const usaRegraPrazoReduzido =
+          !isSiapeModal &&
+          idadeClienteMargem >= 72;
+
         const coeficienteUtilizado = Number(
           margensAtivas.coeficiente_utilizado ??
           activeBenefit?.cliente?.coeficiente_utilizado ??
@@ -2972,12 +2979,14 @@ function SimuladorPageContent() {
         const valorLiberadoMargem =
           valorBackend > 0
             ? valorBackend
-            : (
-                showMargem > 0 &&
-                coeficienteUtilizado > 0
-                  ? showMargem / coeficienteUtilizado
-                  : 0
-              );
+            : usaRegraPrazoReduzido
+              ? 0
+              : (
+                  showMargem > 0 &&
+                  coeficienteUtilizado > 0
+                    ? showMargem / coeficienteUtilizado
+                    : 0
+                );
 
         const isMagnetico = () => {
           if (!activeBenefit || !activeBenefit.banco_pagador) return true;

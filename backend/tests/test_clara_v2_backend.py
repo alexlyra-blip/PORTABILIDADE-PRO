@@ -1295,7 +1295,7 @@ def test_clara_separador_antes_de_todo_beneficio_e_quebra_entre_beneficios():
 
 
 
-def test_margem_74_mais_prioriza_faixa_etaria_no_backend():
+def test_margem_72_a_77_usa_regra_fixa_de_prazo_reduzido():
     source = (
         ROOT
         / "app"
@@ -1304,27 +1304,40 @@ def test_margem_74_mais_prioriza_faixa_etaria_no_backend():
     ).read_text(encoding="utf-8")
 
     assert (
-        "AGE_SPECIFIC_MARGIN_START = 74"
+        "REDUCED_TERM_MARGIN_START_AGE = 72"
         in source
     )
 
     assert (
-        "async def _fetch_age_coefficient("
+        "REDUCED_TERM_MARGIN_MAX_AGE = 77"
         in source
     )
 
     assert (
-        "BankTable.min_age <= idade"
+        "REDUCED_TERM_MIN_CONTRACT_AMOUNT = 1000.00"
+        in source
+    )
+
+    for idade, prazo, coeficiente in [
+        (72, 96, "0.02340"),
+        (73, 84, "0.02463"),
+        (74, 72, "0.02638"),
+        (75, 60, "0.02894"),
+        (76, 48, "0.03293"),
+        (77, 36, "0.03980"),
+    ]:
+        assert (
+            f'{idade}: {{"term": {prazo}, "coefficient": {coeficiente}}}'
+            in source
+        )
+
+    assert (
+        "valor_contrato"
         in source
     )
 
     assert (
-        "BankTable.max_age >= idade"
-        in source
-    )
-
-    assert (
-        "age_coefficient is not None"
+        "< REDUCED_TERM_MIN_CONTRACT_AMOUNT"
         in source
     )
 
@@ -1380,4 +1393,48 @@ def test_clara_fallback_de_margem_repassa_idade_do_beneficio():
     assert (
         "idade=benefit_age"
         in segment
+    )
+
+
+
+def test_frontend_nao_recalcula_margem_localmente_para_72_mais():
+    cpf_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "consultas"
+        / "cpf"
+        / "page.js"
+    ).read_text(encoding="utf-8")
+
+    simulador_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "simulador"
+        / "page.js"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "usaRegraPrazoReduzido"
+        in cpf_source
+    )
+
+    assert (
+        "usaRegraPrazoReduzido"
+        in simulador_source
+    )
+
+    assert (
+        "idadeCliente >= 72"
+        in cpf_source
+    )
+
+    assert (
+        "idadeClienteMargem >= 72"
+        in simulador_source
     )
