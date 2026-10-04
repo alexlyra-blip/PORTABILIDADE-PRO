@@ -1683,7 +1683,8 @@ export default function ConsultaCPFPage() {
       cliente.especie === "87" ||
       cliente.especie === "88";
 
-    const percent = 0.45;
+    const loanPercent = isLOAS ? 0.30 : 0.35;
+    const percent = isLOAS ? 0.40 : 0.45;
 
     const margemConsignavel = Number(
       margens.margem_total_consignavel ??
@@ -1692,7 +1693,7 @@ export default function ConsultaCPFPage() {
 
     const margemEmprestimo = Number(
       margens.margem_emprestimo ??
-      (salario * 0.35)
+      (salario * loanPercent)
     );
 
     const totalComprometido = Number(
