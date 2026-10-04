@@ -23,6 +23,41 @@ def _top_function(name):
     raise AssertionError(f"Funcao {name} nao encontrada.")
 
 
+def _load_cpf_helper():
+    source = _source()
+    tree = ast.parse(source)
+
+    helper = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "extrair_cpf_da_mensagem"
+        ),
+        None,
+    )
+
+    assert helper is not None
+
+    module = ast.Module(body=[helper], type_ignores=[])
+    ast.fix_missing_locations(module)
+
+    import re
+
+    namespace = {"re": re}
+
+    exec(
+        compile(
+            module,
+            filename=str(CHAT_PATH),
+            mode="exec",
+        ),
+        namespace,
+    )
+
+    return namespace["extrair_cpf_da_mensagem"]
+
+
 def _load_signature_helper():
     source = _source()
     tree = ast.parse(source)
@@ -1542,4 +1577,83 @@ def test_frontend_exibe_selo_prazo_da_margem():
     assert (
         "Prazo {Number(formData.prazo_margem)}x"
         in simulador_source
+    )
+
+
+
+@pytest.mark.parametrize(
+    "message,expected",
+    [
+        ("12345678909", "12345678909"),
+        ("123.456.789-09", "12345678909"),
+        ("123 456 789 09", "12345678909"),
+        ("12345 6789 09", "12345678909"),
+        ("CPF: 123 45 6789-09", "12345678909"),
+    ],
+)
+def test_clara_extrai_cpf_com_espacos_e_pontuacao(
+    message,
+    expected,
+):
+    extrair = _load_cpf_helper()
+    assert extrair(message) == expected
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "12345 456 22",
+        "1234567890",
+        "123456789012",
+    ],
+)
+def test_clara_nao_aceita_cpf_com_quantidade_incorreta_de_digitos(
+    message,
+):
+    extrair = _load_cpf_helper()
+    assert extrair(message) is None
+
+
+def test_salvar_configuracao_do_banco_preserva_logo():
+    frontend_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "admin"
+        / "banks"
+        / "page.tsx"
+    ).read_text(encoding="utf-8")
+
+    admin_source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "admin.py"
+    ).read_text(encoding="utf-8")
+
+    submit_start = frontend_source.index(
+        "const handleSubmit = async"
+    )
+    submit_end = frontend_source.index(
+        "const handleAgreementChange",
+        submit_start,
+    )
+    submit_segment = frontend_source[
+        submit_start:submit_end
+    ]
+
+    assert (
+        "logo_url: formData.logo_url"
+        not in submit_segment
+    )
+
+    assert (
+        'safe_bank_data.pop("logo_url", None)'
+        in admin_source
+    )
+
+    assert (
+        '"/banks/{bank_id}/upload-logo"'
+        in admin_source
     )
