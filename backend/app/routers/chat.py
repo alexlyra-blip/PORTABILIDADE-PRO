@@ -9,7 +9,9 @@ from app.database import get_db, AsyncSessionLocal
 from app.services.admin_service import AdminService
 from app.services.simulador_service import SimuladorService
 from app.services.margem_service import (
+    REDUCED_TERM_MIN_CONTRACT_AMOUNT,
     calcular_valor_liberado_margem,
+    obter_prazo_margem,
     resolve_margin_convenio,
 )
 from app.models.models import SimulacaoInput
@@ -1704,6 +1706,11 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             )
         )
 
+        benefit_margin_term = obter_prazo_margem(
+            benefit_age,
+            convenio=margin_convenio,
+        )
+
         if margin_is_eligible:
             if backend_margin_released > 0:
                 liberado_aprox = (
@@ -1739,8 +1746,25 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             margin_is_eligible
             and liberado_aprox > 0
         ):
+            term_suffix = (
+                f" em {benefit_margin_term}x"
+                if benefit_margin_term
+                else ""
+            )
             benefit_header += (
-                f" _(Libera aprox. {fmt_brl(liberado_aprox)})_"
+                " _(Libera aprox. "
+                f"{fmt_brl(liberado_aprox)}"
+                f"{term_suffix})_"
+            )
+        elif (
+            margin_is_eligible
+            and benefit_margin_term
+        ):
+            benefit_header += (
+                " _(Prazo "
+                f"{benefit_margin_term}x | "
+                "simulação mínima "
+                f"{fmt_brl(REDUCED_TERM_MIN_CONTRACT_AMOUNT)})_"
             )
         benefit_header += "\n"
         
