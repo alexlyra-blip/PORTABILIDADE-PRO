@@ -524,7 +524,7 @@ def test_cpf_sem_portabilidade_informa_cliente_abaixo_da_margem():
     )
 
     assert (
-        "if benefit_port_count <= 0:"
+        "if loans and benefit_port_count <= 0:"
         in segment
     )
 
@@ -559,7 +559,7 @@ def test_resumo_nao_exibe_libera_aprox_para_margem_inelegivel():
     )
 
     assert (
-        '"*Margem dispon\\u00edvel:* "'
+        '"\\U0001F4B5 *Margem dispon\\u00edvel:* "'
         in segment
     )
 
@@ -621,8 +621,20 @@ def test_cpf_sem_contratos_usa_cabecalho_completo_e_resumo():
     )
 
     assert (
-        "continue"
-        not in part
+        "if not loans and no_loans_reply:"
+        in segment
+    )
+
+    assert (
+        "benefit_header += (\n"
+        "                no_loans_reply"
+        in segment
+    )
+
+    assert (
+        "if not loans:\n"
+        "            reply += ("
+        not in segment
     )
 
     assert (
@@ -676,7 +688,7 @@ def test_cpf_automatico_usa_resumo_separado_por_beneficio():
     )
 
     assert (
-        'f"{benefit_identification}*"'
+        'f"📋 *{benefit_identification}*"'
         in segment
     )
 
@@ -1030,7 +1042,7 @@ def test_clara_v2_nao_possui_textos_corrompidos():
     )
 
     assert (
-        r"*BENEF\u00cdCIO "
+        'f"📋 *{benefit_identification}*\\n"'
         in source
     )
 
