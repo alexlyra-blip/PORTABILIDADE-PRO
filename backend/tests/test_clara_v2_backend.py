@@ -1702,3 +1702,41 @@ def test_resumo_visual_bancos_prioriza_taxa_refin_das_tabelas():
         "rule.refin_portability_rate_threshold : fallbackRefinRate;"
         in bancos_source
     )
+
+
+
+def test_resumo_visual_bancos_usa_taxa_convenio_e_ignora_generica_quando_ha_explicita():
+    bancos_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "bancos"
+        / "page.jsx"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "const explicitAgreementTables = tablesForAgreement.filter("
+        in bancos_source
+    )
+
+    assert (
+        "const refinRateTables = explicitAgreementTables.length > 0"
+        in bancos_source
+    )
+
+    assert (
+        ".map(t => Number(t.taxa_convenio))"
+        in bancos_source
+    )
+
+    assert (
+        ".map(t => Number(t.min_rate))"
+        in bancos_source
+    )
+
+    assert (
+        "Number(refinRateValue).toFixed(2).replace('.', ',')"
+        in bancos_source
+    )
