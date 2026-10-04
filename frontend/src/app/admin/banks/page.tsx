@@ -322,9 +322,11 @@ export default function BanksPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // A logo tem ciclo de vida próprio via /upload-logo.
+      // Nunca reenviar logo_url ao salvar configurações do banco:
+      // isso evita sobrescrever/quebrar a imagem já persistida.
       const bankPayload = { 
         name: formData.name, 
-        logo_url: formData.logo_url, 
         active: formData.active,
         priority: parseInt(formData.priority) || 99,
         is_margin_base: formData.is_margin_base || false,
