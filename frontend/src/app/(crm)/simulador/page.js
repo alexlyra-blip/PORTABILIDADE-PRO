@@ -972,7 +972,7 @@ function SimuladorPageContent() {
 
     const coeficienteExtrato = normalizarNumeroExtrato(
       extractedData.coeficiente_utilizado,
-      isSiapeExtract ? 0 : 0.02270
+      0
     );
 
     const valorLiberadoInformado = normalizarNumeroExtrato(
@@ -1105,8 +1105,14 @@ function SimuladorPageContent() {
        total_comprometido: isSiapeBenefit
          ? 0
          : activeBenefit.margens?.total_comprometido || 0,
-       coeficiente_utilizado: activeBenefit.margens?.coeficiente_utilizado ?? 0.02270,
-       valor_liberado_margem: activeBenefit.margens?.valor_liberado_margem ?? 0
+       coeficiente_utilizado:
+         activeBenefit.margens?.coeficiente_utilizado ??
+         activeBenefit.cliente?.coeficiente_utilizado ??
+         0,
+       valor_liberado_margem:
+         activeBenefit.margens?.valor_liberado_margem ??
+         activeBenefit.cliente?.valor_liberado_margem ??
+         0
     }));
 
     const possuiDoisCartoesImportado =
@@ -2937,22 +2943,30 @@ function SimuladorPageContent() {
           0
         );
 
+        // Usa o mesmo coeficiente calculado no backend da Consulta CPF,
+        // sem regra diferente para clientes acima de 73 anos.
         const coeficienteUtilizado = Number(
-          activeBenefit?.cliente?.coeficiente_utilizado ??
           margensAtivas.coeficiente_utilizado ??
-          (isSiapeModal ? 0 : 0.02270)
+          activeBenefit?.cliente?.coeficiente_utilizado ??
+          0
         );
 
-        const valorLiberadoMargem = Number(
+        const valorBackend = Number(
           margensAtivas.valor_liberado_margem ??
+          activeBenefit?.cliente?.valor_liberado_margem ??
           activeBenefit?.valor_liberado_margem ??
-          (
-            showMargem > 0 &&
-            coeficienteUtilizado > 0
-              ? showMargem / coeficienteUtilizado
-              : 0
-          )
+          0
         );
+
+        const valorLiberadoMargem =
+          valorBackend > 0
+            ? valorBackend
+            : (
+                showMargem > 0 &&
+                coeficienteUtilizado > 0
+                  ? showMargem / coeficienteUtilizado
+                  : 0
+              );
 
         const isMagnetico = () => {
           if (!activeBenefit || !activeBenefit.banco_pagador) return true;
