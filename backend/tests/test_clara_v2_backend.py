@@ -136,7 +136,9 @@ def test_detecta_cliente_assinante(message):
 def test_cpf_direto_define_inss_e_nao_usa_estado_antigo():
     source = _source()
 
-    start = source.index("cpf_matches = re.findall")
+    start = source.index(
+        "clean_cpf = extrair_cpf_da_mensagem("
+    )
     end = source.index("# Priority 4:", start)
     segment = source[start:end]
 
