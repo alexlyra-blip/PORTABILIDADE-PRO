@@ -425,11 +425,6 @@ async def _execute_cpf_query_flow(
     results = []
 
     async with AsyncSessionLocal() as temp_db:
-        coef_fator = await obter_coeficiente_fator(
-            temp_db,
-            convenio=margin_convenio,
-        )
-
         for numero_beneficio in numeros_beneficios:
             try:
                 res = None
@@ -487,11 +482,25 @@ async def _execute_cpf_query_flow(
                         0.0,
                     )
 
+                idade_cliente = int(
+                    cliente.get("idade")
+                    or 0
+                )
+
+                # CONSULTA_CPF_AGE_MARGIN_COEFFICIENT
+                coef_fator = await obter_coeficiente_fator(
+                    temp_db,
+                    convenio=margin_convenio,
+                    idade=idade_cliente,
+                )
+
                 valor_liberado = (
                     await calcular_valor_liberado_margem(
                         margem_livre or 0.0,
                         temp_db,
                         convenio=margin_convenio,
+                        idade=idade_cliente,
+                        coeficiente_fator=coef_fator,
                     )
                 )
 
