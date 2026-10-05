@@ -1740,3 +1740,207 @@ def test_resumo_visual_bancos_usa_taxa_convenio_e_ignora_generica_quando_ha_expl
         "Number(refinRateValue).toFixed(2).replace('.', ',')"
         in bancos_source
     )
+
+
+
+def _load_can_delete_managed_user():
+    source = (
+        ROOT
+        / "app"
+        / "services"
+        / "admin_service.py"
+    ).read_text(encoding="utf-8")
+
+    tree = ast.parse(source)
+
+    helper = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name
+            == "can_delete_managed_user"
+        ),
+        None,
+    )
+
+    assert helper is not None
+
+    module = ast.Module(
+        body=[helper],
+        type_ignores=[],
+    )
+    ast.fix_missing_locations(module)
+
+    namespace = {}
+
+    exec(
+        compile(
+            module,
+            filename="admin_service.py",
+            mode="exec",
+        ),
+        namespace,
+    )
+
+    return namespace[
+        "can_delete_managed_user"
+    ]
+
+
+def test_admin_pode_excluir_usuario():
+    from types import SimpleNamespace
+
+    can_delete = _load_can_delete_managed_user()
+
+    admin = SimpleNamespace(
+        id=1,
+        role="admin",
+    )
+    target = SimpleNamespace(
+        id=99,
+        role="promotora",
+        created_by_user_id=None,
+        broker_id=None,
+    )
+
+    assert can_delete(admin, target) is True
+
+
+@pytest.mark.parametrize(
+    "role",
+    ["vendedor", "corretor"],
+)
+def test_promotora_pode_excluir_usuario_criado_por_ela(
+    role,
+):
+    from types import SimpleNamespace
+
+    can_delete = _load_can_delete_managed_user()
+
+    promotora = SimpleNamespace(
+        id=10,
+        role="promotora",
+    )
+    target = SimpleNamespace(
+        id=20,
+        role=role,
+        created_by_user_id=10,
+        broker_id=10,
+    )
+
+    assert can_delete(
+        promotora,
+        target,
+    ) is True
+
+
+def test_promotora_nao_exclui_usuario_criado_por_outro():
+    from types import SimpleNamespace
+
+    can_delete = _load_can_delete_managed_user()
+
+    promotora = SimpleNamespace(
+        id=10,
+        role="promotora",
+    )
+    target = SimpleNamespace(
+        id=20,
+        role="corretor",
+        created_by_user_id=1,
+        broker_id=10,
+    )
+
+    assert can_delete(
+        promotora,
+        target,
+    ) is False
+
+
+@pytest.mark.parametrize(
+    "role",
+    ["admin", "promotora"],
+)
+def test_promotora_nao_exclui_admin_ou_outra_promotora(
+    role,
+):
+    from types import SimpleNamespace
+
+    can_delete = _load_can_delete_managed_user()
+
+    promotora = SimpleNamespace(
+        id=10,
+        role="promotora",
+    )
+    target = SimpleNamespace(
+        id=20,
+        role=role,
+        created_by_user_id=10,
+        broker_id=10,
+    )
+
+    assert can_delete(
+        promotora,
+        target,
+    ) is False
+
+
+def test_promotora_pode_excluir_usuario_legado_da_propria_equipe():
+    from types import SimpleNamespace
+
+    can_delete = _load_can_delete_managed_user()
+
+    promotora = SimpleNamespace(
+        id=10,
+        role="promotora",
+    )
+    legacy_target = SimpleNamespace(
+        id=20,
+        role="vendedor",
+        created_by_user_id=None,
+        broker_id=10,
+    )
+
+    assert can_delete(
+        promotora,
+        legacy_target,
+    ) is True
+
+
+def test_pagina_usuarios_respeita_can_delete():
+    users_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "admin"
+        / "users"
+        / "page.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "can_delete?: boolean;"
+        in users_source
+    )
+
+    assert (
+        "loggedUser?.role === 'admin' || user.can_delete"
+        in users_source
+    )
+
+    service_source = (
+        ROOT
+        / "app"
+        / "services"
+        / "admin_service.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        '"can_delete": can_delete_managed_user('
+        in service_source
+    )
+
+    assert (
+        "# PROMOTORA_DELETE_OWN_USERS"
+        in service_source
+    )
