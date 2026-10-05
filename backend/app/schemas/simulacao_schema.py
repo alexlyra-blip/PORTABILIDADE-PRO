@@ -77,6 +77,7 @@ class UserResponse(UserBase):
     subscription_days_remaining: Optional[int] = None
     subscription_status: Optional[str] = None
     access_notice: Optional[dict] = None
+    can_delete: Optional[bool] = False
     class Config:
         from_attributes = True
 
