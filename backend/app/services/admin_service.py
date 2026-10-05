@@ -10,6 +10,83 @@ from app.services import auth_service
 from datetime import datetime, timedelta, timezone
 from app.services.user_access_service import apply_auto_renewal, days_remaining, normalize_datetime
 
+
+def can_delete_managed_user(
+    current_user,
+    target_user,
+) -> bool:
+    """
+    Define quem pode excluir usuários na Gestão de Equipe.
+
+    - Admin mantém permissão total.
+    - Promotora pode excluir apenas vendedor/corretor
+      que ela própria criou.
+    - Para usuários legados sem created_by_user_id,
+      broker_id é aceito como vínculo de compatibilidade.
+    - Promotora nunca pode excluir a si mesma,
+      outro admin ou outra promotora.
+    """
+    current_role = str(
+        getattr(current_user, "role", "")
+        or ""
+    ).lower()
+
+    if current_role == "admin":
+        return True
+
+    if current_role != "promotora":
+        return False
+
+    current_id = getattr(
+        current_user,
+        "id",
+        None,
+    )
+    target_id = getattr(
+        target_user,
+        "id",
+        None,
+    )
+
+    if (
+        current_id is None
+        or target_id is None
+        or target_id == current_id
+    ):
+        return False
+
+    target_role = str(
+        getattr(target_user, "role", "")
+        or ""
+    ).lower()
+
+    if target_role not in {
+        "vendedor",
+        "corretor",
+    }:
+        return False
+
+    created_by_user_id = getattr(
+        target_user,
+        "created_by_user_id",
+        None,
+    )
+
+    if created_by_user_id is not None:
+        return created_by_user_id == current_id
+
+    # Compatibilidade com usuários antigos, criados antes
+    # do preenchimento de created_by_user_id.
+    return (
+        getattr(
+            target_user,
+            "broker_id",
+            None,
+        )
+        == current_id
+    )
+
+
 class AdminService:
     @staticmethod
     async def get_all_banks(db: AsyncSession):
@@ -478,6 +555,10 @@ class AdminService:
                 "simulations_count": sim_counts.get(u.id, 0),
                 "last_access": u.last_access,
                 "broker_name": broker_names.get(u.broker_id, "Administrador") if u.broker_id else "Administrador",
+                "can_delete": can_delete_managed_user(
+                    current_user,
+                    u,
+                ),
                 "subscription_expires_at": u.subscription_expires_at if can_view_expiration else None,
                 "subscription_days_remaining": visible_remaining,
                 "subscription_status": (
@@ -850,19 +931,34 @@ class AdminService:
         return db_sim
 
     @staticmethod
-    async def delete_user(db: AsyncSession, user_id: int, current_user: User):
-        result = await db.execute(select(User).where(User.id == user_id))
+    async def delete_user(
+        db: AsyncSession,
+        user_id: int,
+        current_user: User,
+    ):
+        result = await db.execute(
+            select(User).where(
+                User.id == user_id
+            )
+        )
         db_user = result.scalar_one_or_none()
+
         if not db_user:
             return False
-            
-        if current_user.role == "promotora":
-            if db_user.broker_id != current_user.id or db_user.role != "vendedor":
-                raise HTTPException(status_code=403, detail="Acesso negado: Este usuário não pertence a você.")
-                
-        elif current_user.role == "vendedor":
-            raise HTTPException(status_code=403, detail="Vendedores não têm permissão para excluir usuários.")
-            
+
+        # PROMOTORA_DELETE_OWN_USERS
+        if not can_delete_managed_user(
+            current_user,
+            db_user,
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Acesso negado: você só pode excluir "
+                    "usuários criados pela sua própria promotora."
+                ),
+            )
+
         await db.delete(db_user)
         await db.commit()
         return True
