@@ -24,6 +24,7 @@ interface User {
   simulations_count?: number;
   last_access?: string;
   broker_name?: string;
+  can_delete?: boolean;
 }
 
 function getDaysLeft(expiresAt?: string): number | null {
@@ -362,9 +363,15 @@ export default function UsersPage() {
           >
             {isBlocked ? <Icons.Lock /> : <Icons.Unlock />}
           </button>
-          <button onClick={() => handleDelete(user.id)} className="w-10 h-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all border border-red-500/20 flex items-center justify-center">
-            <Icons.Trash />
-          </button>
+          {(loggedUser?.role === 'admin' || user.can_delete) && (
+            <button
+              onClick={() => handleDelete(user.id)}
+              className="w-10 h-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all border border-red-500/20 flex items-center justify-center"
+              title="Excluir Usuário"
+            >
+              <Icons.Trash />
+            </button>
+          )}
         </div>
       </div>
     );
