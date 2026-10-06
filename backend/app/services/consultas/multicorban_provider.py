@@ -30,6 +30,69 @@ def safe_int(value) -> int:
 def safe_str(value) -> str:
     return str(value) if value is not None else ""
 
+
+def _as_dict_list(value) -> List[Dict[str, Any]]:
+    """
+    Normaliza coleções que a MultiCorban pode devolver
+    como objeto único ou lista de objetos.
+    """
+    if isinstance(value, dict):
+        return [value]
+
+    if isinstance(value, list):
+        return [
+            item
+            for item in value
+            if isinstance(item, dict)
+        ]
+
+    return []
+
+
+def _calculate_age(value) -> int:
+    raw = safe_str(value).strip()
+
+    if not raw:
+        return 0
+
+    candidates = [raw]
+
+    if len(raw) >= 10:
+        candidates.append(raw[:10])
+
+    formats = (
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+        "%Y/%m/%d",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f",
+    )
+
+    for candidate in candidates:
+        for fmt in formats:
+            try:
+                birth_date = datetime.strptime(
+                    candidate,
+                    fmt,
+                )
+                today = datetime.today()
+                return (
+                    today.year
+                    - birth_date.year
+                    - (
+                        (today.month, today.day)
+                        < (
+                            birth_date.month,
+                            birth_date.day,
+                        )
+                    )
+                )
+            except ValueError:
+                continue
+
+    return 0
+
+
 class MultiCorbanProvider(ConsultaBeneficioProvider):
     _cache = {}
 
@@ -206,9 +269,57 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
         beneficiario = raw.get("Beneficiario", {}) or {}
         resumo_fin = raw.get("ResumoFinanceiro", {}) or {}
         dados_bancarios = raw.get("DadosBancarios", {}) or {}
-        emprestimos_list = raw.get("Emprestimos", []) or []
-        rmc_raw = raw.get("Rmc", {}) or {}
-        rcc_raw = raw.get("RCC", {}) or {}
+
+        emprestimos_source = (
+            raw.get("Emprestimos")
+            or raw.get("EMPRESTIMOS")
+            or []
+        )
+        rmc_source = (
+            raw.get("Rmc")
+            or raw.get("RMC")
+            or {}
+        )
+        rcc_source = (
+            raw.get("RCC")
+            or raw.get("Rcc")
+            or {}
+        )
+
+        emprestimos_list = _as_dict_list(
+            emprestimos_source
+        )
+        rmc_items = _as_dict_list(
+            rmc_source
+        )
+        rcc_items = _as_dict_list(
+            rcc_source
+        )
+
+        rmc_raw = (
+            rmc_items[0]
+            if rmc_items
+            else {}
+        )
+        rcc_raw = (
+            rcc_items[0]
+            if rcc_items
+            else {}
+        )
+
+        logger.info(
+            "MULTICORBAN_SHAPE convenio=%s "
+            "emprestimos_source=%s emprestimos=%s "
+            "rmc_source=%s rmc_items=%s "
+            "rcc_source=%s rcc_items=%s",
+            convenio,
+            type(emprestimos_source).__name__,
+            len(emprestimos_list),
+            type(rmc_source).__name__,
+            len(rmc_items),
+            type(rcc_source).__name__,
+            len(rcc_items),
+        )
         
         telefones_list = raw.get("Telefone") or raw.get("TELEFONE") or raw.get("Telefones") or raw.get("TELEFONES") or []
         if not isinstance(telefones_list, list):
@@ -245,17 +356,17 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
 
         total_loans_installments = sum(safe_float(emp.get("ValorParcela")) for emp in emprestimos_list)
 
-        rmc_val = 0.0
-        if isinstance(rmc_raw, dict):
-            rmc_val = safe_float(rmc_raw.get("ValorParcela") or rmc_raw.get("Valor") or 0.0)
-        elif isinstance(rmc_raw, list) and len(rmc_raw) > 0:
-            rmc_val = safe_float(rmc_raw[0].get("ValorParcela") or rmc_raw[0].get("Valor") or 0.0)
+        rmc_val = safe_float(
+            rmc_raw.get("ValorParcela")
+            or rmc_raw.get("Valor")
+            or 0.0
+        )
 
-        rcc_val = 0.0
-        if isinstance(rcc_raw, dict):
-            rcc_val = safe_float(rcc_raw.get("ValorParcela") or rcc_raw.get("Valor") or 0.0)
-        elif isinstance(rcc_raw, list) and len(rcc_raw) > 0:
-            rcc_val = safe_float(rcc_raw[0].get("ValorParcela") or rcc_raw[0].get("Valor") or 0.0)
+        rcc_val = safe_float(
+            rcc_raw.get("ValorParcela")
+            or rcc_raw.get("Valor")
+            or 0.0
+        )
 
         total_comprometido = total_loans_installments + rmc_val + rcc_val
 
@@ -406,15 +517,14 @@ class MultiCorbanProvider(ConsultaBeneficioProvider):
                 if clean_t and clean_t not in telefones:
                     telefones.append(clean_t)
 
-        idade = 0
-        birth_str = beneficiario.get("DataNascimento")
-        if birth_str:
-            try:
-                birth_date = datetime.strptime(birth_str, "%Y-%m-%d")
-                today = datetime.today()
-                idade = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-            except:
-                pass
+        birth_str = (
+            beneficiario.get("DataNascimento")
+            or raw.get("DATA_NASCIMENTO")
+            or raw.get("DataNascimento")
+        )
+        idade = _calculate_age(
+            birth_str
+        )
 
         original_query = safe_str(raw.get("_original_query", ""))
         total_count = raw.get("_total_count", 0)
