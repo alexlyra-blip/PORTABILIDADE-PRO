@@ -2081,3 +2081,73 @@ def test_consulta_cpf_cache_nao_usa_int_direto_na_idade():
         "context="cache_beneficio""
         in flow
     )
+
+
+
+def _load_consulta_number_helper():
+    source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "consultas.py"
+    ).read_text(encoding="utf-8")
+
+    tree = ast.parse(source)
+
+    helper = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name
+            == "_coerce_consulta_number"
+        ),
+        None,
+    )
+
+    assert helper is not None
+
+    module = ast.Module(
+        body=[helper],
+        type_ignores=[],
+    )
+    ast.fix_missing_locations(module)
+
+    namespace = {}
+
+    exec(
+        compile(
+            module,
+            filename="consultas.py",
+            mode="exec",
+        ),
+        namespace,
+    )
+
+    return namespace[
+        "_coerce_consulta_number"
+    ]
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (398.25, 398.25),
+        ("398.25", 398.25),
+        ("398,25", 398.25),
+        ("R$ 398,25", 398.25),
+        ("1.234,56", 1234.56),
+    ],
+)
+def test_consulta_cpf_normaliza_margem_de_cache_antigo(
+    value,
+    expected,
+):
+    normalize_number = (
+        _load_consulta_number_helper()
+    )
+
+    assert (
+        normalize_number(value)
+        == expected
+    )
