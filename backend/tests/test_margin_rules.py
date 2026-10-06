@@ -797,3 +797,42 @@ def test_calculate_renewal_cycle_dia_15():
     assert start_jan == datetime(2025, 12, 15, 0, 0)
     assert end_jan == datetime(2026, 1, 15, 0, 0)
 
+
+
+
+def test_multicorban_inicio_manual_substitui_inicio_do_ciclo_atual():
+    from datetime import datetime
+    from app.utils.config_helper import (
+        resolve_multicorban_counter_cycle,
+    )
+
+    now = datetime(2026, 10, 6, 13, 15)
+    manual = datetime(2026, 10, 6, 13, 14, 30)
+
+    start, end = resolve_multicorban_counter_cycle(
+        renewal_day=6,
+        ref_date=now,
+        manual_start=manual,
+    )
+
+    assert start == manual
+    assert end == datetime(2026, 11, 6, 0, 0)
+
+
+def test_multicorban_inicio_manual_nao_vaza_para_proximo_ciclo():
+    from datetime import datetime
+    from app.utils.config_helper import (
+        resolve_multicorban_counter_cycle,
+    )
+
+    manual = datetime(2026, 10, 6, 13, 14, 30)
+    next_month = datetime(2026, 11, 7, 10, 0)
+
+    start, end = resolve_multicorban_counter_cycle(
+        renewal_day=6,
+        ref_date=next_month,
+        manual_start=manual,
+    )
+
+    assert start == datetime(2026, 11, 6, 0, 0)
+    assert end == datetime(2026, 12, 6, 0, 0)
