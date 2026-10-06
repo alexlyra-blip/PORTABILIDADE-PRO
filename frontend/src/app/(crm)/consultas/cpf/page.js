@@ -332,6 +332,7 @@ export default function ConsultaCPFPage() {
   const [quotaInput, setQuotaInput] = useState("");
   const [diaRenovacaoInput, setDiaRenovacaoInput] = useState("15");
   const [savingQuota, setSavingQuota] = useState(false);
+  const [startingCounter, setStartingCounter] = useState(false);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -633,6 +634,86 @@ export default function ConsultaCPFPage() {
       toast.error("Erro ao atualizar o total de consultas do plano.");
     } finally {
       setSavingQuota(false);
+    }
+  };
+
+  const handleStartCounter = async () => {
+    const confirmed = window.confirm(
+      "Iniciar um novo contador do MultiCorban agora?\n\n" +
+      "As consultas anteriores continuarão no histórico, mas " +
+      "o contador do ciclo atual começará em 0 a partir deste momento."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setStartingCounter(true);
+
+    try {
+      const res = await api.post(
+        "/consultas/multicorban/iniciar-contador"
+      );
+
+      const totalConsultas =
+        res?.total_consultas ??
+        creditos?.total_consultas ??
+        1000;
+
+      const consultasConsumidas =
+        res?.consultas_consumidas ?? 0;
+
+      const creditosCalc =
+        res?.creditos_online ??
+        res?.creditos ??
+        Math.max(
+          0,
+          totalConsultas - consultasConsumidas
+        );
+
+      setCreditos({
+        creditos: creditosCalc,
+        creditos_offline:
+          res?.creditos_offline || 0,
+        creditos_geracao_leads:
+          res?.geracao_leads || 0,
+        total_consultas: totalConsultas,
+        consultas_consumidas:
+          consultasConsumidas,
+        dia_renovacao:
+          res?.dia_renovacao ??
+          new Date().getDate(),
+        proxima_renovacao:
+          res?.proxima_renovacao,
+        ciclo_inicio:
+          res?.ciclo_inicio,
+        ciclo_fim:
+          res?.ciclo_fim,
+        contador_iniciado_em:
+          res?.contador_iniciado_em,
+        isMultiCorban: true
+      });
+
+      setDiaRenovacaoInput(
+        String(
+          res?.dia_renovacao ??
+          new Date().getDate()
+        )
+      );
+
+      toast.success(
+        "Contador MultiCorban iniciado com sucesso."
+      );
+    } catch (err) {
+      console.error(
+        "Erro ao iniciar contador MultiCorban:",
+        err
+      );
+      toast.error(
+        "Não foi possível iniciar o contador do MultiCorban."
+      );
+    } finally {
+      setStartingCounter(false);
     }
   };
 
@@ -1988,6 +2069,19 @@ export default function ConsultaCPFPage() {
                   <p className="text-lg font-black text-slate-200">
                     {creditos?.consultas_consumidas !== null && creditos?.consultas_consumidas !== undefined ? Number(creditos.consultas_consumidas).toLocaleString('pt-BR') : "0"}
                   </p>
+                  <button
+                    type="button"
+                    onClick={handleStartCounter}
+                    disabled={startingCounter}
+                    title="Iniciar um novo ciclo de contagem a partir de agora"
+                    className="mt-2 inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600/20 border border-blue-400/30 text-[8px] font-black uppercase tracking-wider text-blue-200 hover:bg-blue-600 hover:text-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Icons.RefreshCw
+                      size={10}
+                      className={startingCounter ? "animate-spin" : ""}
+                    />
+                    {startingCounter ? "Iniciando..." : "Iniciar Contador"}
+                  </button>
                 </div>
 
                 <div className="flex-1 md:flex-initial px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
