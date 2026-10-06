@@ -76,3 +76,7 @@ jobs:
       - name: Executar testes de margem INSS e LOAS
         working-directory: backend
         run: python -m pytest tests/test_margin_rules.py tests/test_margem_calculo.py -q
+
+      - name: Executar testes do MultiCorban
+        working-directory: backend
+        run: python -m pytest tests/test_multicorban_service.py -q
