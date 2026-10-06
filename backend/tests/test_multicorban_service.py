@@ -243,3 +243,106 @@ async def test_multicorban_provider_bank_normalization(mock_env):
         cartao = normalized["cartoes"][0]
         assert cartao["codigo"] == "079"
         assert cartao["banco"] == "PICPAY"
+
+
+
+@pytest.mark.anyio
+async def test_multicorban_normaliza_listas_rmc_rcc_cliente_72_mais(
+    mock_env,
+):
+    provider = MultiCorbanProvider()
+
+    raw_payload = {
+        "Beneficiario": {
+            "Nome": "CLIENTE TESTE IDOSO",
+            "CPF": "00000000000",
+            "Beneficio": "1234567890",
+            "Especie": "41",
+            "Situacao": "ATIVO",
+            "DataNascimento": "1950-05-10T00:00:00",
+        },
+        "ResumoFinanceiro": {
+            "ValorBeneficio": "2500.00",
+        },
+        "DadosBancarios": {
+            "Banco": "237",
+            "Agencia": "1234",
+            "ContaPagto": "5678",
+        },
+        "Emprestimos": {
+            "NomeBanco": "BRADESCO",
+            "Banco": "237",
+            "Contrato": "EMP-001",
+            "ValorParcela": "300.00",
+            "Quitacao": "5000.00",
+            "Prazo": 84,
+            "ParcelasRestantes": 40,
+            "Taxa": 1.80,
+        },
+        "Rmc": [
+            {
+                "NomeBanco": "079",
+                "Banco": "079",
+                "Contrato": "RMC-001",
+                "Valor": "125.00",
+                "ValorParcela": "50.00",
+            }
+        ],
+        "RCC": [
+            {
+                "NomeBanco": "237",
+                "Banco": "237",
+                "Contrato": "RCC-001",
+                "Valor": "125.00",
+                "ValorParcela": "45.00",
+            }
+        ],
+    }
+
+    with patch(
+        "httpx.AsyncClient.post",
+        new_callable=AsyncMock,
+    ) as mock_post:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.text = "ok"
+        resp.headers = {
+            "content-type": "application/json"
+        }
+        resp.json = MagicMock(
+            return_value=[raw_payload]
+        )
+        mock_post.return_value = resp
+
+        normalized = (
+            await provider.consultar_por_cpf(
+                "00000000000",
+                convenio="INSS",
+            )
+        )
+
+    assert normalized["origem"] == "MULTICORBAN"
+    assert normalized["cliente"]["idade"] >= 72
+    assert len(normalized["emprestimos"]) == 1
+    assert len(normalized["cartoes"]) == 2
+    assert {
+        card["tipo"]
+        for card in normalized["cartoes"]
+    } == {
+        "Cartão Consignado (RMC)",
+        "Cartão Benefício (RCC)",
+    }
+
+
+def test_multicorban_calcula_idade_em_formatos_variados():
+    from app.services.consultas.multicorban_provider import (
+        _calculate_age,
+    )
+
+    assert _calculate_age(
+        "1950-05-10T00:00:00"
+    ) >= 72
+
+    assert _calculate_age(
+        "10/05/1950"
+    ) >= 72
