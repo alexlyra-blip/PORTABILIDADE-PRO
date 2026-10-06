@@ -346,3 +346,22 @@ def test_multicorban_calcula_idade_em_formatos_variados():
     assert _calculate_age(
         "10/05/1950"
     ) >= 72
+
+
+
+def test_multicorban_normalizador_descarta_itens_invalidos():
+    from app.services.consultas.multicorban_provider import (
+        _as_dict_list,
+    )
+
+    assert _as_dict_list(
+        [
+            None,
+            "invalido",
+            {"Contrato": "OK"},
+        ]
+    ) == [
+        {"Contrato": "OK"}
+    ]
+
+    assert _as_dict_list(None) == []
