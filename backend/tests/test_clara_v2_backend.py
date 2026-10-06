@@ -2078,7 +2078,7 @@ def test_consulta_cpf_cache_nao_usa_int_direto_na_idade():
     )
 
     assert (
-        "context="cache_beneficio""
+        'context="cache_beneficio"'
         in flow
     )
 
