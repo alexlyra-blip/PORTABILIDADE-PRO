@@ -86,6 +86,7 @@ async def set_active_provider(
 
 MULTICORBAN_TOTAL_CONSULTAS_KEY = "multicorban_total_consultas"
 MULTICORBAN_RENEWAL_DAY_KEY = "multicorban_renewal_day"
+MULTICORBAN_COUNTER_START_KEY = "multicorban_counter_start"
 DEFAULT_MULTICORBAN_TOTAL = 1000
 DEFAULT_MULTICORBAN_RENEWAL_DAY = 15
 
@@ -187,6 +188,52 @@ async def get_multicorban_quota_config(
     }
 
 
+async def get_multicorban_counter_start(
+    db: AsyncSession,
+):
+    from datetime import datetime
+
+    raw = await get_system_setting(
+        db,
+        MULTICORBAN_COUNTER_START_KEY,
+        None,
+    )
+
+    if not raw:
+        return None
+
+    try:
+        return datetime.fromisoformat(raw)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Data de inicio manual do contador "
+            "MultiCorban invalida: %s",
+            raw,
+        )
+        return None
+
+
+async def set_multicorban_counter_start(
+    db: AsyncSession,
+    start_at,
+):
+    from datetime import datetime
+
+    value = (
+        start_at
+        if isinstance(start_at, datetime)
+        else datetime.fromisoformat(str(start_at))
+    )
+
+    await set_system_setting(
+        db,
+        MULTICORBAN_COUNTER_START_KEY,
+        value.isoformat(),
+    )
+
+    return value
+
+
 async def set_multicorban_quota_config(
     db: AsyncSession,
     total_consultas: int,
@@ -241,3 +288,48 @@ def calculate_renewal_cycle(
 
     return start_date, end_date
 
+
+
+
+def resolve_multicorban_counter_cycle(
+    renewal_day: int = 15,
+    ref_date: Optional[object] = None,
+    manual_start: Optional[object] = None,
+) -> tuple:
+    """
+    Resolve o ciclo efetivo do contador MultiCorban.
+
+    O inicio manual vale somente dentro do ciclo mensal atual.
+    No ciclo seguinte, a contagem volta automaticamente ao
+    inicio normal configurado pelo dia de renovacao.
+    """
+    start_date, end_date = calculate_renewal_cycle(
+        renewal_day=renewal_day,
+        ref_date=ref_date,
+    )
+
+    if manual_start is None:
+        return start_date, end_date
+
+    candidate = manual_start
+
+    if (
+        hasattr(start_date, "tzinfo")
+        and start_date.tzinfo is not None
+        and getattr(candidate, "tzinfo", None) is None
+    ):
+        candidate = candidate.replace(
+            tzinfo=start_date.tzinfo
+        )
+    elif (
+        getattr(candidate, "tzinfo", None) is not None
+        and getattr(start_date, "tzinfo", None) is None
+    ):
+        candidate = candidate.replace(
+            tzinfo=None
+        )
+
+    if start_date <= candidate < end_date:
+        return candidate, end_date
+
+    return start_date, end_date
