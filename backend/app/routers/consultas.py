@@ -28,8 +28,11 @@ from app.services.c6_bank_service import C6BankError, C6BankService
 from app.utils.config_helper import (
     get_active_provider,
     get_multicorban_quota_config,
+    get_multicorban_counter_start,
+    set_multicorban_counter_start,
     set_multicorban_quota_config,
     calculate_renewal_cycle,
+    resolve_multicorban_counter_cycle,
 )
 from app.services.margem_service import (
     REDUCED_TERM_MIN_CONTRACT_AMOUNT,
@@ -1549,9 +1552,18 @@ async def get_multicorban_saldo(
         total_consultas = quota_cfg["total_consultas"]
         dia_renovacao = quota_cfg["dia_renovacao"]
 
-        start_date, end_date = calculate_renewal_cycle(
-            renewal_day=dia_renovacao,
-            ref_date=now
+        manual_counter_start = (
+            await get_multicorban_counter_start(
+                db
+            )
+        )
+
+        start_date, end_date = (
+            resolve_multicorban_counter_cycle(
+                renewal_day=dia_renovacao,
+                ref_date=now,
+                manual_start=manual_counter_start,
+            )
         )
 
         # Consultas realizadas no ciclo atual (a partir do dia da renovacao) calculadas em tempo real
@@ -1592,6 +1604,11 @@ async def get_multicorban_saldo(
             "total_consultas": total_consultas,
             "consultas_consumidas": consultas_consumidas,
             "dia_renovacao": dia_renovacao,
+            "contador_iniciado_em": (
+                manual_counter_start.isoformat()
+                if manual_counter_start
+                else None
+            ),
             "ciclo_inicio": start_date.strftime("%d/%m/%Y"),
             "ciclo_fim": end_date.strftime("%d/%m/%Y"),
             "proxima_renovacao": end_date.strftime("%d/%m/%Y"),
@@ -1618,6 +1635,72 @@ async def get_multicorban_saldo(
             "proxima_renovacao": "15/09/2026",
             "raw": {}
         }
+
+
+@router.post("/multicorban/iniciar-contador")
+async def start_multicorban_counter(
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Inicia um novo ciclo de contagem MultiCorban a partir
+    do instante atual sem apagar logs historicos.
+    """
+    user_role = str(
+        getattr(current_user, "role", "")
+    ).strip().lower()
+
+    if user_role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso negado.",
+        )
+
+    now = datetime.now()
+
+    quota_cfg = await get_multicorban_quota_config(
+        db
+    )
+
+    total_consultas = quota_cfg[
+        "total_consultas"
+    ]
+
+    renewal_day = max(
+        1,
+        min(28, now.day),
+    )
+
+    await set_multicorban_quota_config(
+        db,
+        total_consultas=total_consultas,
+        dia_renovacao=renewal_day,
+    )
+
+    await set_multicorban_counter_start(
+        db,
+        now,
+    )
+
+    global multicorban_saldo_cache
+    multicorban_saldo_cache["data"] = None
+    multicorban_saldo_cache["expires_at"] = datetime.min
+    multicorban_saldo_cache["external_res"] = None
+    multicorban_saldo_cache[
+        "external_expires_at"
+    ] = datetime.min
+
+    logger.info(
+        "[MULTICORBAN_COUNTER] Novo ciclo iniciado "
+        "manualmente em %s por admin_id=%s",
+        now.isoformat(),
+        getattr(current_user, "id", None),
+    )
+
+    return await get_multicorban_saldo(
+        current_user=current_user,
+        db=db,
+    )
 
 
 @router.post("/multicorban/config")
