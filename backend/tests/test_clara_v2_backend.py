@@ -2165,3 +2165,49 @@ def test_consulta_cpf_normaliza_margem_de_cache_antigo(
         normalize_number(value)
         == expected
     )
+
+
+
+def test_admin_consulta_cpf_tem_botao_iniciar_contador_multicorban():
+    page_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "consultas"
+        / "cpf"
+        / "page.js"
+    ).read_text(encoding="utf-8")
+
+    router_source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "consultas.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "Iniciar Contador"
+        in page_source
+    )
+
+    assert (
+        "handleStartCounter"
+        in page_source
+    )
+
+    assert (
+        '"/consultas/multicorban/iniciar-contador"'
+        in page_source
+    )
+
+    assert (
+        '@router.post("/multicorban/iniciar-contador")'
+        in router_source
+    )
+
+    assert (
+        "set_multicorban_counter_start("
+        in router_source
+    )
