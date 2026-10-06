@@ -1393,7 +1393,12 @@ def test_consulta_cpf_repassa_idade_ao_calculo_de_margem():
     )
 
     assert (
-        'idade_cliente = int('
+        "_coerce_consulta_age("
+        in source
+    )
+
+    assert (
+        "idade_cliente = _coerce_consulta_age("
         in source
     )
 
@@ -1487,7 +1492,12 @@ def test_cache_consulta_cpf_recalcula_margem_com_idade():
     ).read_text(encoding="utf-8")
 
     assert (
-        "# CONSULTA_CPF_CACHE_AGE_MARGIN"
+        'context="cache_beneficio"'
+        in source
+    )
+
+    assert (
+        "_coerce_consulta_age("
         in source
     )
 
@@ -1943,4 +1953,215 @@ def test_pagina_usuarios_respeita_can_delete():
     assert (
         "# PROMOTORA_DELETE_OWN_USERS"
         in service_source
+    )
+
+
+
+def _load_consulta_age_helper():
+    source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "consultas.py"
+    ).read_text(encoding="utf-8")
+
+    tree = ast.parse(source)
+
+    helper = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "_coerce_consulta_age"
+        ),
+        None,
+    )
+
+    assert helper is not None
+
+    module = ast.Module(
+        body=[helper],
+        type_ignores=[],
+    )
+    ast.fix_missing_locations(module)
+
+    from datetime import datetime
+
+    namespace = {
+        "datetime": datetime,
+    }
+
+    exec(
+        compile(
+            module,
+            filename="consultas.py",
+            mode="exec",
+        ),
+        namespace,
+    )
+
+    return namespace[
+        "_coerce_consulta_age"
+    ]
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (76, 76),
+        (76.0, 76),
+        ("76", 76),
+        ("76.0", 76),
+        ("76 anos", 76),
+        (" 72 ", 72),
+    ],
+)
+def test_consulta_cpf_normaliza_idade_de_cache_antigo(
+    value,
+    expected,
+):
+    normalize_age = _load_consulta_age_helper()
+
+    assert (
+        normalize_age(
+            {"idade": value}
+        )
+        == expected
+    )
+
+
+def test_consulta_cpf_regra_margem_nao_invalida_provider():
+    source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "consultas.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "async def _apply_consulta_margin_rules("
+        in source
+    )
+
+    assert (
+        "Falha ao aplicar regra de margem "
+        in source
+    )
+
+    assert (
+        "sem invalidar os dados da consulta. "
+        in source
+    )
+
+    assert (
+        "await _apply_consulta_margin_rules("
+        in source
+    )
+
+    assert (
+        "# O cálculo de margem é pós-processamento."
+        in source
+    )
+
+
+def test_consulta_cpf_cache_nao_usa_int_direto_na_idade():
+    source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "consultas.py"
+    ).read_text(encoding="utf-8")
+
+    flow_start = source.index(
+        "async def _execute_cpf_query_flow("
+    )
+
+    flow_end = source.index(
+        "async def _execute_beneficio_query_flow(",
+        flow_start,
+    )
+
+    flow = source[
+        flow_start:flow_end
+    ]
+
+    assert (
+        'idade_cliente = int(\n'
+        '                            cliente.get("idade")'
+        not in flow
+    )
+
+    assert (
+        'context="cache_beneficio"'
+        in flow
+    )
+
+
+
+def _load_consulta_number_helper():
+    source = (
+        ROOT
+        / "app"
+        / "routers"
+        / "consultas.py"
+    ).read_text(encoding="utf-8")
+
+    tree = ast.parse(source)
+
+    helper = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name
+            == "_coerce_consulta_number"
+        ),
+        None,
+    )
+
+    assert helper is not None
+
+    module = ast.Module(
+        body=[helper],
+        type_ignores=[],
+    )
+    ast.fix_missing_locations(module)
+
+    namespace = {}
+
+    exec(
+        compile(
+            module,
+            filename="consultas.py",
+            mode="exec",
+        ),
+        namespace,
+    )
+
+    return namespace[
+        "_coerce_consulta_number"
+    ]
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (398.25, 398.25),
+        ("398.25", 398.25),
+        ("398,25", 398.25),
+        ("R$ 398,25", 398.25),
+        ("1.234,56", 1234.56),
+    ],
+)
+def test_consulta_cpf_normaliza_margem_de_cache_antigo(
+    value,
+    expected,
+):
+    normalize_number = (
+        _load_consulta_number_helper()
+    )
+
+    assert (
+        normalize_number(value)
+        == expected
     )

@@ -81,6 +81,240 @@ def get_provider_by_type(provider_type: str):
 CONSULTA_CPF_CACHE_VERSION = 3
 
 
+def _coerce_consulta_age(
+    cliente: dict,
+) -> int:
+    """
+    Normaliza idade vinda de providers/caches antigos.
+
+    Aceita int, float, "76", "76.0", "76 anos" e,
+    quando necessário, calcula pela data de nascimento.
+    """
+    if not isinstance(cliente, dict):
+        return 0
+
+    raw_age = cliente.get("idade")
+
+    if isinstance(raw_age, (int, float)):
+        try:
+            return max(0, int(raw_age))
+        except Exception:
+            return 0
+
+    age_text = str(raw_age or "").strip()
+
+    if age_text:
+        try:
+            return max(
+                0,
+                int(
+                    float(
+                        age_text.replace(",", ".")
+                    )
+                ),
+            )
+        except Exception:
+            digits = ""
+            for char in age_text:
+                if char.isdigit():
+                    digits += char
+                elif digits:
+                    break
+
+            if digits:
+                try:
+                    return max(0, int(digits))
+                except Exception:
+                    pass
+
+    birth_text = str(
+        cliente.get("data_nascimento")
+        or ""
+    ).strip()
+
+    if not birth_text:
+        return 0
+
+    for fmt in (
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f",
+    ):
+        try:
+            birth_date = datetime.strptime(
+                birth_text,
+                fmt,
+            )
+            today = datetime.now()
+            return max(
+                0,
+                today.year
+                - birth_date.year
+                - (
+                    (today.month, today.day)
+                    < (
+                        birth_date.month,
+                        birth_date.day,
+                    )
+                ),
+            )
+        except ValueError:
+            continue
+
+    return 0
+
+
+def _coerce_consulta_number(
+    value,
+) -> float:
+    if value in (None, ""):
+        return 0.0
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    raw = (
+        str(value)
+        .strip()
+        .replace("R$", "")
+        .replace(" ", "")
+    )
+
+    if "," in raw and "." in raw:
+        raw = (
+            raw
+            .replace(".", "")
+            .replace(",", ".")
+        )
+    elif "," in raw:
+        raw = raw.replace(",", ".")
+
+    try:
+        return float(raw)
+    except Exception:
+        return 0.0
+
+
+async def _apply_consulta_margin_rules(
+    item: dict,
+    db: AsyncSession,
+    convenio: str,
+    margin_convenio: str,
+    context: str = "",
+) -> bool:
+    """
+    Aplica metadados de margem sem invalidar a consulta.
+
+    Falha de cálculo não pode ser tratada como falha do provider.
+    """
+    if not isinstance(item, dict):
+        return False
+
+    item["convenio"] = convenio
+
+    margens = item.get("margens")
+    cliente = item.get("cliente")
+
+    if not isinstance(margens, dict):
+        margens = {}
+
+    if not isinstance(cliente, dict):
+        cliente = {}
+
+    margem_livre = margens.get(
+        "margem_livre"
+    )
+
+    if margem_livre is None:
+        margem_livre = cliente.get(
+            "margem_livre",
+            0.0,
+        )
+
+    margem_livre = _coerce_consulta_number(
+        margem_livre
+    )
+    idade_cliente = _coerce_consulta_age(
+        cliente
+    )
+
+    try:
+        coef_fator = (
+            await obter_coeficiente_fator(
+                db,
+                convenio=margin_convenio,
+                idade=idade_cliente,
+            )
+        )
+
+        prazo_margem = obter_prazo_margem(
+            idade_cliente,
+            convenio=margin_convenio,
+        )
+
+        valor_liberado = (
+            await calcular_valor_liberado_margem(
+                margem_livre,
+                db,
+                convenio=margin_convenio,
+                idade=idade_cliente,
+                coeficiente_fator=coef_fator,
+            )
+        )
+
+        valor_minimo_margem = (
+            REDUCED_TERM_MIN_CONTRACT_AMOUNT
+            if prazo_margem
+            else 0.0
+        )
+
+        if cliente:
+            cliente["idade"] = idade_cliente
+            cliente[
+                "valor_liberado_margem"
+            ] = valor_liberado
+            cliente[
+                "coeficiente_utilizado"
+            ] = coef_fator
+            cliente[
+                "prazo_margem"
+            ] = prazo_margem
+            cliente[
+                "valor_minimo_contrato_margem"
+            ] = valor_minimo_margem
+
+        if margens:
+            margens[
+                "margem_livre"
+            ] = margem_livre
+            margens[
+                "valor_liberado_margem"
+            ] = valor_liberado
+            margens[
+                "coeficiente_utilizado"
+            ] = coef_fator
+            margens[
+                "prazo_margem"
+            ] = prazo_margem
+            margens[
+                "valor_minimo_contrato_margem"
+            ] = valor_minimo_margem
+
+        return True
+
+    except Exception as margin_error:
+        logger.warning(
+            "[CPF_MARGIN] Falha ao aplicar regra de margem "
+            "sem invalidar os dados da consulta. "
+            "context=%s idade=%s erro=%s",
+            context or "consulta",
+            idade_cliente,
+            type(margin_error).__name__,
+        )
+        return False
+
+
 async def _execute_cpf_query_flow(
     cpf: str,
     db: AsyncSession,
@@ -188,103 +422,16 @@ async def _execute_cpf_query_flow(
                 )
 
                 async with AsyncSessionLocal() as temp_db:
-                    async def atualizar_valores(
-                        item: dict,
-                    ):
-                        if not isinstance(item, dict):
-                            return
-
-                        item["convenio"] = convenio
-
-                        margens = (
-                            item.get("margens")
-                            or {}
-                        )
-
-                        cliente = (
-                            item.get("cliente")
-                            or {}
-                        )
-
-                        margem_livre = margens.get(
-                            "margem_livre"
-                        )
-
-                        if margem_livre is None:
-                            margem_livre = cliente.get(
-                                "margem_livre",
-                                0.0,
-                            )
-
-                        idade_cliente = int(
-                            cliente.get("idade")
-                            or 0
-                        )
-
-                        # CONSULTA_CPF_CACHE_AGE_MARGIN
-                        coef_fator = (
-                            await obter_coeficiente_fator(
-                                temp_db,
-                                convenio=margin_convenio,
-                                idade=idade_cliente,
-                            )
-                        )
-
-                        prazo_margem = obter_prazo_margem(
-                            idade_cliente,
-                            convenio=margin_convenio,
-                        )
-
-                        valor_liberado = (
-                            await calcular_valor_liberado_margem(
-                                margem_livre or 0.0,
-                                temp_db,
-                                convenio=margin_convenio,
-                                idade=idade_cliente,
-                                coeficiente_fator=coef_fator,
-                            )
-                        )
-
-                        valor_minimo_margem = (
-                            REDUCED_TERM_MIN_CONTRACT_AMOUNT
-                            if prazo_margem
-                            else 0.0
-                        )
-
-                        if margens:
-                            margens[
-                                "valor_liberado_margem"
-                            ] = valor_liberado
-                            margens[
-                                "coeficiente_utilizado"
-                            ] = coef_fator
-                            margens[
-                                "prazo_margem"
-                            ] = prazo_margem
-                            margens[
-                                "valor_minimo_contrato_margem"
-                            ] = valor_minimo_margem
-
-                        if cliente:
-                            cliente[
-                                "valor_liberado_margem"
-                            ] = valor_liberado
-                            cliente[
-                                "coeficiente_utilizado"
-                            ] = coef_fator
-                            cliente[
-                                "prazo_margem"
-                            ] = prazo_margem
-                            cliente[
-                                "valor_minimo_contrato_margem"
-                            ] = valor_minimo_margem
-
                     for beneficio_item in dados_json.get(
                         "beneficios",
                         [],
                     ):
-                        await atualizar_valores(
-                            beneficio_item
+                        await _apply_consulta_margin_rules(
+                            beneficio_item,
+                            temp_db,
+                            convenio,
+                            margin_convenio,
+                            context="cache_beneficio",
                         )
 
                     beneficio_principal = dados_json.get(
@@ -292,11 +439,21 @@ async def _execute_cpf_query_flow(
                     )
 
                     if beneficio_principal:
-                        await atualizar_valores(
-                            beneficio_principal
+                        await _apply_consulta_margin_rules(
+                            beneficio_principal,
+                            temp_db,
+                            convenio,
+                            margin_convenio,
+                            context="cache_principal",
                         )
 
-                    await atualizar_valores(dados_json)
+                    await _apply_consulta_margin_rules(
+                        dados_json,
+                        temp_db,
+                        convenio,
+                        margin_convenio,
+                        context="cache_raiz",
+                    )
 
                 for beneficio_item in dados_json.get(
                     "beneficios",
@@ -347,6 +504,7 @@ async def _execute_cpf_query_flow(
 
     beneficios_info = None
     last_beneficios_error = None
+    provider_errors = []
 
     try:
         beneficios_info = (
@@ -357,6 +515,13 @@ async def _execute_cpf_query_flow(
         )
     except Exception as error:
         last_beneficios_error = error
+        provider_errors.append(
+            (
+                provider_type,
+                type(error).__name__,
+                str(error),
+            )
+        )
         if provider_type == "multicorban":
             logger.warning(
                 f"[FALLBACK] MultiCorban falhou ao listar benefícios do CPF {masked_cpf}: {error}. Tentando Promosys..."
@@ -374,10 +539,31 @@ async def _execute_cpf_query_flow(
                 logger.error(
                     f"[FALLBACK] Promosys também falhou para CPF {masked_cpf}: {fb_err}"
                 )
+                provider_errors.append(
+                    (
+                        "promosys",
+                        type(fb_err).__name__,
+                        str(fb_err),
+                    )
+                )
                 last_beneficios_error = fb_err
 
     if not beneficios_info and last_beneficios_error is not None:
         err_msg = str(last_beneficios_error)
+
+        logger.error(
+            "[CPF_PROVIDER] Todos os providers falharam "
+            "cpf=%s tentativas=%s",
+            masked_cpf,
+            [
+                (
+                    source,
+                    error_type,
+                )
+                for source, error_type, _
+                in provider_errors
+            ],
+        )
 
         if (
             "token" in err_msg.lower()
@@ -507,79 +693,20 @@ async def _execute_cpf_query_flow(
                         if telefone
                     ]
 
-                margens = res.get("margens") or {}
-                cliente = res.get("cliente") or {}
-
-                margem_livre = margens.get(
-                    "margem_livre"
-                )
-
-                if margem_livre is None:
-                    margem_livre = cliente.get(
-                        "margem_livre",
-                        0.0,
-                    )
-
-                idade_cliente = int(
-                    cliente.get("idade")
-                    or 0
-                )
-
                 # CONSULTA_CPF_AGE_MARGIN_COEFFICIENT
-                coef_fator = await obter_coeficiente_fator(
+                # O cálculo de margem é pós-processamento.
+                # Uma falha aqui não pode descartar a resposta
+                # válida recebida do MultiCorban/Promosys.
+                await _apply_consulta_margin_rules(
+                    res,
                     temp_db,
-                    convenio=margin_convenio,
-                    idade=idade_cliente,
+                    convenio,
+                    margin_convenio,
+                    context=(
+                        "provider_"
+                        f"{provider_type}"
+                    ),
                 )
-
-                prazo_margem = obter_prazo_margem(
-                    idade_cliente,
-                    convenio=margin_convenio,
-                )
-
-                valor_liberado = (
-                    await calcular_valor_liberado_margem(
-                        margem_livre or 0.0,
-                        temp_db,
-                        convenio=margin_convenio,
-                        idade=idade_cliente,
-                        coeficiente_fator=coef_fator,
-                    )
-                )
-
-                valor_minimo_margem = (
-                    REDUCED_TERM_MIN_CONTRACT_AMOUNT
-                    if prazo_margem
-                    else 0.0
-                )
-
-                if margens:
-                    margens[
-                        "valor_liberado_margem"
-                    ] = valor_liberado
-                    margens[
-                        "coeficiente_utilizado"
-                    ] = coef_fator
-                    margens[
-                        "prazo_margem"
-                    ] = prazo_margem
-                    margens[
-                        "valor_minimo_contrato_margem"
-                    ] = valor_minimo_margem
-
-                if cliente:
-                    cliente[
-                        "valor_liberado_margem"
-                    ] = valor_liberado
-                    cliente[
-                        "coeficiente_utilizado"
-                    ] = coef_fator
-                    cliente[
-                        "prazo_margem"
-                    ] = prazo_margem
-                    cliente[
-                        "valor_minimo_contrato_margem"
-                    ] = valor_minimo_margem
 
                 results.append(
                     (numero_beneficio, res)
