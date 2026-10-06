@@ -1393,7 +1393,12 @@ def test_consulta_cpf_repassa_idade_ao_calculo_de_margem():
     )
 
     assert (
-        'idade_cliente = int('
+        "_coerce_consulta_age("
+        in source
+    )
+
+    assert (
+        "idade_cliente = _coerce_consulta_age("
         in source
     )
 
@@ -1487,7 +1492,12 @@ def test_cache_consulta_cpf_recalcula_margem_com_idade():
     ).read_text(encoding="utf-8")
 
     assert (
-        "# CONSULTA_CPF_CACHE_AGE_MARGIN"
+        'context="cache_beneficio"'
+        in source
+    )
+
+    assert (
+        "_coerce_consulta_age("
         in source
     )
 
@@ -2035,7 +2045,11 @@ def test_consulta_cpf_regra_margem_nao_invalida_provider():
 
     assert (
         "Falha ao aplicar regra de margem "
-        "sem invalidar os dados da consulta."
+        in source
+    )
+
+    assert (
+        "sem invalidar os dados da consulta. "
         in source
     )
 
