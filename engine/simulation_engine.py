@@ -464,7 +464,9 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
 
                     # Additional Table Validation: Min Paid Installments
                     if tabela.min_paid_installments:
-                        parcelas_pagas = (int(prazo_total) - int(prazo_restante))
+                        parcelas_pagas = resolver_parcelas_pagas(
+                            cliente_input
+                        )
                         if parcelas_pagas < int(tabela.min_paid_installments):
                             motivos_tabelas.append(f"Tabela {tabela.name}: Exige {tabela.min_paid_installments} parcelas pagas (Cliente tem {parcelas_pagas})")
                             continue
