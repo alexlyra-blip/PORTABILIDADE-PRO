@@ -116,3 +116,35 @@ def test_sem_parcelas_pagas_explicitas_mantem_fallback_legado():
     client = _client(None)
 
     assert resolver_parcelas_pagas(client) == 30
+
+
+
+def test_frontend_importa_parcelas_pagas_e_nao_valor_da_parcela():
+    source = (
+        ROOT
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "simulador"
+        / "page.js"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "selectedLoan.parcelas_pagas ??"
+        in source
+    )
+
+    assert (
+        "selectedLoan.parcela_atual ??"
+        not in source
+    )
+
+    assert (
+        "parcelas_pagas:" in source
+    )
+
+    assert (
+        'emp.parcelas_pagas !== undefined'
+        in source
+    )
