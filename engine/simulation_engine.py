@@ -6,7 +6,10 @@ from sqlalchemy.orm import selectinload
 import traceback
 import json
 
-from .eligibility_engine import verificar_elegibilidade
+from .eligibility_engine import (
+    verificar_elegibilidade,
+    resolver_parcelas_pagas,
+)
 from .financial_engine import calcular_viabilidade_financeira, resolver_taxa_juros
 from app.models.sqlalchemy_models import Bank, BankTable, Coefficient, BankRule, PromotoraRule, User
 from app.models.models import BancoAprovado
@@ -153,7 +156,9 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
 
         full_origin_name = str(cliente_input.banco or "").upper()
         input_words = get_clean_words(full_origin_name)
-        parcelas_pagas = prazo_total - prazo_restante
+        parcelas_pagas = resolver_parcelas_pagas(
+            cliente_input
+        )
         
         # Check Admin Origin Rules
         for rule in admin_origin_config:

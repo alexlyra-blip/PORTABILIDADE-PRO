@@ -100,6 +100,68 @@ def _banco_corresponde(banco_input, banco_regra):
         
     return False
 
+def resolver_parcelas_pagas(cliente_input) -> int:
+    """
+    Retorna a quantidade real de parcelas pagas.
+
+    Quando o contrato importado informa parcelas_pagas,
+    esse dado e autoritativo. O calculo prazo total -
+    prazo restante existe somente como fallback para
+    simulacoes manuais/legadas que nao enviam o campo.
+    """
+    explicit = getattr(
+        cliente_input,
+        "parcelas_pagas",
+        None,
+    )
+
+    if explicit not in (None, ""):
+        try:
+            return max(
+                0,
+                int(float(explicit)),
+            )
+        except (TypeError, ValueError):
+            pass
+
+    try:
+        prazo_total = int(
+            getattr(
+                cliente_input,
+                "prazo_total",
+                getattr(
+                    cliente_input,
+                    "total_term",
+                    0,
+                ),
+            )
+            or 0
+        )
+    except (TypeError, ValueError):
+        prazo_total = 0
+
+    try:
+        prazo_restante = int(
+            getattr(
+                cliente_input,
+                "prazo_restante",
+                getattr(
+                    cliente_input,
+                    "remaining_term",
+                    0,
+                ),
+            )
+            or 0
+        )
+    except (TypeError, ValueError):
+        prazo_restante = 0
+
+    return max(
+        0,
+        prazo_total - prazo_restante,
+    )
+
+
 def verificar_elegibilidade(cliente_input, regra_banco):
     """
     Verifica se o cliente passa nos filtros iniciais baseados nas regras cadastradas.
@@ -128,9 +190,9 @@ def verificar_elegibilidade(cliente_input, regra_banco):
             return False, f"Convênio/Espécie {convenio_cliente}/{especie_cliente} não aceito por este banco."
             
     # 3. Mínimo de Parcelas Pagas
-    prazo_total = int(getattr(cliente_input, "prazo_total", getattr(cliente_input, "total_term", 0)))
-    prazo_restante = int(getattr(cliente_input, "prazo_restante", getattr(cliente_input, "remaining_term", 0)))
-    parcelas_pagas = prazo_total - prazo_restante
+    parcelas_pagas = resolver_parcelas_pagas(
+        cliente_input
+    )
     
     banco_origem = str(getattr(cliente_input, "banco", getattr(cliente_input, "bank", ""))).upper().strip()
     

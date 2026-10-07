@@ -80,3 +80,7 @@ jobs:
       - name: Executar testes do MultiCorban
         working-directory: backend
         run: python -m pytest tests/test_multicorban_service.py -q
+
+      - name: Executar testes de elegibilidade por parcelas pagas
+        working-directory: backend
+        run: python -m pytest tests/test_eligibility_origin_paid.py -q
