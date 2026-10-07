@@ -34,6 +34,7 @@ def _banco_corresponde(banco_input, banco_regra):
         "707": "DAYCOVAL",
         "335": "DIGIO",
         "149": "FACTA",
+        "935": "FACTA",
         "012": "INBURSA",
         "029": "ITAÚ CONSIGNADO",
         "184": "ITAÚ BBA",
