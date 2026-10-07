@@ -148,3 +148,18 @@ def test_frontend_importa_parcelas_pagas_e_nao_valor_da_parcela():
         'emp.parcelas_pagas !== undefined'
         in source
     )
+
+
+
+def test_match_codigo_facta_com_regra_facta():
+    from engine.eligibility_engine import (
+        _banco_corresponde,
+    )
+
+    assert (
+        _banco_corresponde(
+            "149 - FACTA FINANCEIRA",
+            "FACTA",
+        )
+        is True
+    )
