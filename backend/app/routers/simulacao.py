@@ -108,6 +108,14 @@ async def processar_simulacao_promosys_core(
             saldo_devedor=float(emp.get("quitacao", 0)),
             total_term=int(emp.get("prazo", 0)),
             remaining_term=max(1, int(emp.get("prazo_restante", 0))),
+            parcelas_pagas=(
+                max(
+                    0,
+                    int(float(emp.get("parcelas_pagas"))),
+                )
+                if emp.get("parcelas_pagas") not in (None, "")
+                else None
+            ),
             taxa_atual=float(emp.get("taxa", 0)) if emp.get("taxa") else None,
             benefit_species=extrair_codigo_especie(payload.cliente.especie),
             cpf=payload.cliente.cpf,

@@ -103,13 +103,18 @@ def _banco_corresponde(banco_input, banco_regra):
 
 def resolver_parcelas_pagas(cliente_input) -> int:
     """
-    Retorna a quantidade real de parcelas pagas.
+    Resolve a quantidade de parcelas pagas usada nas regras de elegibilidade.
 
-    Quando o contrato importado informa parcelas_pagas,
-    esse dado e autoritativo. O calculo prazo total -
-    prazo restante existe somente como fallback para
-    simulacoes manuais/legadas que nao enviam o campo.
+    Há contratos em que a consulta entrega parcelas_pagas e prazo restante
+    simultaneamente, mas esses campos podem divergir entre provedores. Para
+    nunca aprovar uma portabilidade com menos parcelas pagas do que o mínimo
+    do banco, quando as duas fontes são válidas usamos o menor valor.
+
+    Exemplos:
+    - parcelas_pagas=11 e 84-54=30 -> usa 11;
+    - parcelas_pagas=88 e 96-88=8 -> usa 8.
     """
+    explicit_value = None
     explicit = getattr(
         cliente_input,
         "parcelas_pagas",
@@ -118,12 +123,12 @@ def resolver_parcelas_pagas(cliente_input) -> int:
 
     if explicit not in (None, ""):
         try:
-            return max(
+            explicit_value = max(
                 0,
                 int(float(explicit)),
             )
         except (TypeError, ValueError):
-            pass
+            explicit_value = None
 
     try:
         prazo_total = int(
@@ -157,11 +162,33 @@ def resolver_parcelas_pagas(cliente_input) -> int:
     except (TypeError, ValueError):
         prazo_restante = 0
 
-    return max(
-        0,
-        prazo_total - prazo_restante,
-    )
+    calculadas_pelo_prazo = None
+    if (
+        prazo_total > 0
+        and prazo_restante >= 0
+        and prazo_restante <= prazo_total
+    ):
+        calculadas_pelo_prazo = max(
+            0,
+            prazo_total - prazo_restante,
+        )
 
+    if (
+        explicit_value is not None
+        and calculadas_pelo_prazo is not None
+    ):
+        return min(
+            explicit_value,
+            calculadas_pelo_prazo,
+        )
+
+    if explicit_value is not None:
+        return explicit_value
+
+    if calculadas_pelo_prazo is not None:
+        return calculadas_pelo_prazo
+
+    return 0
 
 def verificar_elegibilidade(cliente_input, regra_banco):
     """

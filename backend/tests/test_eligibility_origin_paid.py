@@ -72,6 +72,36 @@ def test_parcelas_pagas_explicitas_prevalecem_sobre_prazo():
     assert resolver_parcelas_pagas(client) == 11
 
 
+def test_divergencia_96x_88_restantes_usa_8_pagas():
+    client = SimulacaoInput(
+        banco="935",
+        convenio="INSS",
+        idade=65,
+        parcela=735.15,
+        saldo_devedor=35789.98,
+        total_term=96,
+        remaining_term=88,
+        parcelas_pagas=88,
+        benefit_species="41",
+    )
+
+    assert resolver_parcelas_pagas(client) == 8
+
+    elegivel_c6, motivo_c6 = verificar_elegibilidade(
+        client,
+        _rule(12),
+    )
+    assert elegivel_c6 is False
+    assert "8/12" in motivo_c6
+
+    elegivel_daycoval, motivo_daycoval = verificar_elegibilidade(
+        client,
+        _rule(24),
+    )
+    assert elegivel_daycoval is False
+    assert "8/24" in motivo_daycoval
+
+
 def test_facta_com_11_pagas_bloqueia_c6_quando_regra_exige_12():
     elegivel, motivo = verificar_elegibilidade(
         _client(11),
@@ -174,5 +204,30 @@ def test_mapa_simulacao_normaliza_935_como_facta():
 
     assert (
         '"935": "FACTA FINANCEIRA"'
+        in source
+    )
+
+
+def test_simulacao_automatica_preserva_parcelas_pagas():
+    source = (
+        ROOT
+        / "backend"
+        / "app"
+        / "routers"
+        / "simulacao.py"
+    ).read_text(encoding="utf-8")
+
+    assert "parcelas_pagas=(" in source
+
+
+def test_tabela_usa_resolver_unico_de_parcelas_pagas():
+    source = (
+        ROOT
+        / "engine"
+        / "simulation_engine.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "parcelas_pagas = resolver_parcelas_pagas("
         in source
     )
