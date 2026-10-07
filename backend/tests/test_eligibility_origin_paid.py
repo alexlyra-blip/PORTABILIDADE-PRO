@@ -52,7 +52,7 @@ def _rule(min_paid_facta):
 
 def _client(parcelas_pagas):
     return SimulacaoInput(
-        banco="149 - FACTA FINANCEIRA",
+        banco="935",
         convenio="INSS",
         idade=65,
         parcela=250.00,
@@ -151,15 +151,28 @@ def test_frontend_importa_parcelas_pagas_e_nao_valor_da_parcela():
 
 
 
-def test_match_codigo_facta_com_regra_facta():
+def test_match_codigo_935_facta_com_regra_facta():
     from engine.eligibility_engine import (
         _banco_corresponde,
     )
 
     assert (
         _banco_corresponde(
-            "149 - FACTA FINANCEIRA",
+            "935",
             "FACTA",
         )
         is True
+    )
+
+
+def test_mapa_simulacao_normaliza_935_como_facta():
+    source = (
+        ROOT
+        / "engine"
+        / "simulation_engine.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        '"935": "FACTA FINANCEIRA"'
+        in source
     )
