@@ -900,7 +900,7 @@ function SimuladorPageContent() {
           prazoTotal: selectedLoan.prazo_total.toString(),
           prazoRestante: selectedLoan.prazo_restante.toString(),
           parcelasPagas: String(
-            selectedLoan.parcela_atual ??
+            selectedLoan.parcelas_pagas ??
             Math.max(
               0,
               Number(selectedLoan.prazo_total || 0) -
@@ -1241,7 +1241,15 @@ function SimuladorPageContent() {
             : "",
           prazoTotal: pTotal,
           prazoRestante: isSiapeBenefit ? pTotal : (emp.prazo_restante ? emp.prazo_restante.toString() : ""),
-          parcelasPagas: isSiapeBenefit ? "0" : (emp.parcelas_pagas ? emp.parcelas_pagas.toString() : ""),
+          parcelasPagas: isSiapeBenefit
+            ? "0"
+            : (
+                emp.parcelas_pagas !== undefined &&
+                emp.parcelas_pagas !== null &&
+                emp.parcelas_pagas !== ""
+                  ? emp.parcelas_pagas.toString()
+                  : ""
+              ),
           taxaAtual: emp.taxa ? Number(emp.taxa).toFixed(2).replace('.', ',') : "",
           taxaAjustada: emp.taxa ? Number(emp.taxa).toFixed(2).replace('.', ',') : ""
         };
