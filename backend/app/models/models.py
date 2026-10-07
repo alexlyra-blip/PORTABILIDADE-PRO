@@ -13,6 +13,14 @@ class SimulacaoInput(BaseModel):
     saldo_devedor: float = Field(..., gt=0, description="Saldo devedor total")
     prazo_total: int = Field(..., gt=0, alias="total_term", description="Prazo total do contrato")
     prazo_restante: int = Field(..., gt=0, alias="remaining_term", description="Prazo restante do contrato")
+    parcelas_pagas: Optional[int] = Field(
+        None,
+        ge=0,
+        description=(
+            "Quantidade de parcelas efetivamente pagas "
+            "informada pela consulta do contrato"
+        ),
+    )
     
     # Campos opcionais
     taxa_juros: Optional[float] = Field(None, alias="taxa_atual", description="Taxa de juros atual (%)")
