@@ -67,6 +67,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
             "707": "DAYCOVAL",
             "335": "DIGIO",
             "149": "FACTA",
+            "935": "FACTA FINANCEIRA",
             "012": "INBURSA",
             "029": "ITAÚ CONSIGNADO",
             "184": "ITAÚ BBA",
