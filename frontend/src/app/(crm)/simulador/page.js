@@ -1412,6 +1412,12 @@ function SimuladorPageContent() {
           taxa_atual: parseFloat((c.taxaAjustada || c.taxaAtual || 0).toString().replace(',', '.')),
           total_term: parseInt(c.prazoTotal),
           remaining_term: parseInt(c.prazoRestante),
+          parcelas_pagas:
+            c.parcelasPagas !== undefined &&
+            c.parcelasPagas !== null &&
+            c.parcelasPagas !== ""
+              ? parseInt(c.parcelasPagas, 10)
+              : null,
           data_concessao: formData.data_concessao || null,
           is_60_plus: formData.is_60_plus || (["04", "05", "06", "32", "92", "87"].includes(formData.benefit_species) && parseInt(formData.idade || 0) < 60),
           is_invalidez_60_plus: parseInt(formData.idade || 0) >= 60,
