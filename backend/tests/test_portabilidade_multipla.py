@@ -248,6 +248,174 @@ def test_financeiro_respeita_faixa_carencia_de_3000_a_3999():
 
 
 
+def test_facta_rco_cip_exemplo_planilha_e_viavel():
+    contratos = [
+        {
+            "banco": "BMG",
+            "contrato": "PORT1",
+            "saldo_devedor": 1569.00,
+            "prazo": 84,
+            "prazo_restante": 56,
+            "parcelas_pagas": 28,
+        },
+        {
+            "banco": "C6",
+            "contrato": "PORT2",
+            "saldo_devedor": 1843.00,
+            "prazo": 84,
+            "prazo_restante": 55,
+            "parcelas_pagas": 29,
+        },
+        {
+            "banco": "PAN",
+            "contrato": "PORT3",
+            "saldo_devedor": 3383.00,
+            "prazo": 84,
+            "prazo_restante": 55,
+            "parcelas_pagas": 29,
+        },
+    ]
+
+    avaliacao = Service.avaliar_custo_rco_cip(
+        contratos=contratos,
+        bruto=8500.00,
+    )
+
+    assert avaliacao["valido"] is True
+    assert avaliacao["rco_total"] == 423.33
+    assert avaliacao["cip_total"] == 47.19
+    assert avaliacao["custo_total"] == 470.52
+    assert avaliacao["percentual_custo"] == 5.5355
+    assert avaliacao["percentual_limite"] == 5.85
+    assert avaliacao["doze_ou_mais_pagas"] is True
+    assert avaliacao["viavel"] is True
+
+
+def test_facta_rco_cip_reprova_quando_custo_supera_limite():
+    contratos = [
+        {
+            "banco": "BMG",
+            "saldo_devedor": 1569.00,
+            "prazo": 84,
+            "prazo_restante": 56,
+            "parcelas_pagas": 28,
+        },
+        {
+            "banco": "C6",
+            "saldo_devedor": 1843.00,
+            "prazo": 84,
+            "prazo_restante": 55,
+            "parcelas_pagas": 29,
+        },
+        {
+            "banco": "PAN",
+            "saldo_devedor": 3383.00,
+            "prazo": 84,
+            "prazo_restante": 55,
+            "parcelas_pagas": 29,
+        },
+    ]
+
+    avaliacao = Service.avaliar_custo_rco_cip(
+        contratos=contratos,
+        bruto=8000.00,
+    )
+
+    assert avaliacao["percentual_custo"] == 5.8815
+    assert avaliacao["percentual_limite"] == 5.85
+    assert avaliacao["viavel"] is False
+
+
+def test_facta_rco_cip_referencias_por_saldo():
+    assert Service.valor_referencia_rco(1000.00) == 195.00
+    assert Service.valor_referencia_rco(1000.01) == 195.00
+    assert Service.valor_referencia_rco(2000.01) == 253.00
+    assert Service.valor_referencia_rco(4000.01) == 352.00
+    assert Service.valor_referencia_rco(8000.01) == 545.00
+    assert Service.valor_referencia_rco(15000.01) == 835.00
+    assert Service.valor_referencia_rco(40000.01) == 1830.00
+    assert Service.valor_referencia_rco(60000.01) == 2653.00
+
+
+def test_facta_rco_cip_usa_faixa_menos_de_12_pagas():
+    avaliacao = Service.avaliar_custo_rco_cip(
+        contratos=[
+            {
+                "banco": "BMG",
+                "saldo_devedor": 1000.00,
+                "prazo": 84,
+                "prazo_restante": 76,
+                "parcelas_pagas": 8,
+            }
+        ],
+        bruto=3000.00,
+    )
+
+    assert avaliacao["doze_ou_mais_pagas"] is False
+    assert avaliacao["percentual_limite"] == 11.72
+
+
+def test_financeiro_facta_filtra_oferta_pela_regra_rco_cip():
+    contratos = [
+        {
+            "banco": "BMG",
+            "saldo_devedor": 1569.00,
+            "prazo": 84,
+            "prazo_restante": 56,
+            "parcelas_pagas": 28,
+        },
+        {
+            "banco": "C6",
+            "saldo_devedor": 1843.00,
+            "prazo": 84,
+            "prazo_restante": 55,
+            "parcelas_pagas": 29,
+        },
+        {
+            "banco": "PAN",
+            "saldo_devedor": 3383.00,
+            "prazo": 84,
+            "prazo_restante": 55,
+            "parcelas_pagas": 29,
+        },
+    ]
+
+    coeficiente_viavel = 212.50 / 8500.00
+    ofertas = Service.simular_financeiro(
+        parcela_refin=212.50,
+        saldo_consolidado=6795.00,
+        coeficientes=[
+            {
+                "table_name": "INSS CIP REFIN NORMAL",
+                "term": 108,
+                "coefficient": coeficiente_viavel,
+            }
+        ],
+        contratos=contratos,
+    )
+
+    assert len(ofertas) == 1
+    assert ofertas[0]["novo_contrato"] == 8500.00
+    assert ofertas[0]["rco_cip"]["custo_total"] == 470.52
+    assert ofertas[0]["rco_cip"]["viavel"] is True
+
+    coeficiente_inviavel = 212.50 / 8000.00
+    ofertas = Service.simular_financeiro(
+        parcela_refin=212.50,
+        saldo_consolidado=6795.00,
+        coeficientes=[
+            {
+                "table_name": "INSS CIP REFIN NORMAL",
+                "term": 108,
+                "coefficient": coeficiente_inviavel,
+            }
+        ],
+        contratos=contratos,
+    )
+
+    assert ofertas == []
+
+
 def test_financeiro_sem_coeficiente_portabilidade_pro_nao_inventa_fator():
     ofertas = Service.simular_financeiro(
         parcela_refin=500,
