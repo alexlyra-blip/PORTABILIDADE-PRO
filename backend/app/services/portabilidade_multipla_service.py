@@ -28,6 +28,32 @@ class PortabilidadeMultiplaFactaService:
     TROCO_MINIMO = 50.00
     ADICIONAL_VIABILIDADE = 20.00
 
+    # Regra FACTA de custo RCO/CIP para Portabilidade Multipla.
+    # O custo total da operacao e a soma do RCO individual de cada
+    # contrato com a tarifa CIP fixa por contrato.
+    CIP_POR_CONTRATO = 15.73
+
+    RCO_REFERENCIAS = (
+        (1000.00, 195.00),
+        (2000.00, 195.00),
+        (4000.00, 253.00),
+        (8000.00, 352.00),
+        (15000.00, 545.00),
+        (40000.00, 835.00),
+        (60000.00, 1830.00),
+        (999999.00, 2653.00),
+    )
+
+    # (bruto_maximo, percentual_12_ou_mais, percentual_menos_12)
+    CUSTO_CIP_FAIXAS = (
+        (3000.00, 9.77, 11.72),
+        (4000.00, 8.06, 9.74),
+        (5500.00, 6.00, 7.31),
+        (8500.00, 5.85, 7.12),
+        (14000.00, 3.80, 4.60),
+        (999999.99, 3.40, 4.17),
+    )
+
     # IMPORTANTE:
     # os coeficientes financeiros NAO ficam fixos neste arquivo.
     # Eles sao lidos da tabela coefficients do Portabilidade PRO,
@@ -729,6 +755,254 @@ class PortabilidadeMultiplaFactaService:
         return bloqueios
 
     @classmethod
+    def valor_referencia_rco(
+        cls,
+        saldo_devedor,
+    ):
+        saldo = cls._money(
+            saldo_devedor
+        )
+
+        for limite, referencia in cls.RCO_REFERENCIAS:
+            if saldo <= limite:
+                return referencia
+
+        return None
+
+    @classmethod
+    def calcular_custo_rco_cip(
+        cls,
+        contratos,
+    ):
+        detalhes = []
+        erros = []
+        total_rco = 0.0
+
+        for index, contrato in enumerate(
+            contratos or [],
+            start=1,
+        ):
+            saldo = cls._money(
+                contrato.get(
+                    "saldo_devedor"
+                )
+            )
+            prazo_total = cls._int(
+                contrato.get("prazo")
+            )
+
+            prazo_restante_raw = contrato.get(
+                "prazo_restante"
+            )
+            if prazo_restante_raw in (None, ""):
+                prazo_restante = max(
+                    0,
+                    prazo_total
+                    - cls.parcelas_pagas(
+                        contrato
+                    ),
+                )
+            else:
+                prazo_restante = cls._int(
+                    prazo_restante_raw
+                )
+
+            referencia = cls.valor_referencia_rco(
+                saldo
+            )
+
+            if referencia is None:
+                erros.append(
+                    f"Contrato {index}: saldo devedor fora "
+                    "da faixa RCO FACTA."
+                )
+                continue
+
+            if prazo_total <= 0:
+                erros.append(
+                    f"Contrato {index}: prazo total nao "
+                    "informado para calcular RCO."
+                )
+                continue
+
+            if prazo_restante > prazo_total:
+                erros.append(
+                    f"Contrato {index}: prazo restante maior "
+                    "que o prazo total."
+                )
+                continue
+
+            rco = round(
+                (
+                    referencia
+                    / prazo_total
+                )
+                * prazo_restante,
+                2,
+            )
+            cip = cls.CIP_POR_CONTRATO
+            custo_contrato = round(
+                rco + cip,
+                2,
+            )
+
+            total_rco = round(
+                total_rco + rco,
+                2,
+            )
+
+            detalhes.append({
+                "contrato": contrato.get(
+                    "contrato"
+                ),
+                "saldo_devedor": saldo,
+                "valor_referencia_rco": (
+                    referencia
+                ),
+                "prazo_total": prazo_total,
+                "prazo_restante": (
+                    prazo_restante
+                ),
+                "parcelas_pagas": (
+                    cls.parcelas_pagas(
+                        contrato
+                    )
+                ),
+                "rco": rco,
+                "cip": cip,
+                "custo_total_contrato": (
+                    custo_contrato
+                ),
+            })
+
+        total_cip = round(
+            len(contratos or [])
+            * cls.CIP_POR_CONTRATO,
+            2,
+        )
+        custo_total = round(
+            total_rco + total_cip,
+            2,
+        )
+
+        return {
+            "valido": not erros,
+            "erros": erros,
+            "quantidade_contratos": len(
+                contratos or []
+            ),
+            "rco_total": total_rco,
+            "cip_unitario": (
+                cls.CIP_POR_CONTRATO
+            ),
+            "cip_total": total_cip,
+            "custo_total": custo_total,
+            "contratos": detalhes,
+        }
+
+    @classmethod
+    def percentual_limite_custo_cip(
+        cls,
+        bruto,
+        *,
+        doze_ou_mais,
+    ):
+        bruto = cls._money(
+            bruto
+        )
+
+        for (
+            limite,
+            percentual_mais,
+            percentual_menos,
+        ) in cls.CUSTO_CIP_FAIXAS:
+            if bruto <= limite:
+                return (
+                    percentual_mais
+                    if doze_ou_mais
+                    else percentual_menos
+                )
+
+        return None
+
+    @classmethod
+    def avaliar_custo_rco_cip(
+        cls,
+        *,
+        contratos,
+        bruto,
+    ):
+        calculo = cls.calcular_custo_rco_cip(
+            contratos
+        )
+        bruto = cls._money(
+            bruto
+        )
+
+        if not calculo["valido"]:
+            return {
+                **calculo,
+                "bruto_operacao": bruto,
+                "percentual_custo": None,
+                "percentual_limite": None,
+                "doze_ou_mais_pagas": None,
+                "viavel": False,
+            }
+
+        if bruto <= 0:
+            return {
+                **calculo,
+                "bruto_operacao": bruto,
+                "percentual_custo": None,
+                "percentual_limite": None,
+                "doze_ou_mais_pagas": None,
+                "viavel": False,
+            }
+
+        doze_ou_mais = all(
+            cls.parcelas_pagas(
+                contrato
+            ) >= 12
+            for contrato in (
+                contratos or []
+            )
+        )
+
+        percentual_limite = (
+            cls.percentual_limite_custo_cip(
+                bruto,
+                doze_ou_mais=doze_ou_mais,
+            )
+        )
+
+        percentual_custo = (
+            calculo["custo_total"]
+            / bruto
+        ) * 100.0
+
+        viavel = bool(
+            percentual_limite is not None
+            and percentual_custo
+            <= percentual_limite
+        )
+
+        return {
+            **calculo,
+            "bruto_operacao": bruto,
+            "percentual_custo": round(
+                percentual_custo,
+                4,
+            ),
+            "percentual_limite": (
+                percentual_limite
+            ),
+            "doze_ou_mais_pagas": (
+                doze_ou_mais
+            ),
+            "viavel": viavel,
+        }
+
+    @classmethod
     def tabelas_disponiveis(
         cls,
         bruto,
@@ -797,6 +1071,7 @@ class PortabilidadeMultiplaFactaService:
         parcela_refin,
         saldo_consolidado,
         coeficientes,
+        contratos=None,
     ):
         """
         Executa UMA simulacao financeira consolidada.
@@ -957,6 +1232,24 @@ class PortabilidadeMultiplaFactaService:
             ):
                 continue
 
+            # Regra FACTA RCO/CIP:
+            # custo total / bruto deve ser menor ou igual ao
+            # percentual maximo da faixa da operacao.
+            avaliacao_rco_cip = None
+
+            if contratos is not None:
+                avaliacao_rco_cip = (
+                    cls.avaliar_custo_rco_cip(
+                        contratos=contratos,
+                        bruto=bruto,
+                    )
+                )
+
+                if not avaliacao_rco_cip.get(
+                    "viavel"
+                ):
+                    continue
+
             troco = (
                 bruto
                 - saldo_consolidado
@@ -1049,6 +1342,9 @@ class PortabilidadeMultiplaFactaService:
                 ),
                 "ordem_facta":
                     ordem,
+                "rco_cip": (
+                    avaliacao_rco_cip
+                ),
             })
 
         return ofertas
