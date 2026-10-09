@@ -44,14 +44,19 @@ class PortabilidadeMultiplaFactaService:
         (999999.00, 2653.00),
     )
 
-    # (bruto_maximo, percentual_12_ou_mais, percentual_menos_12)
+    # (bruto_minimo, bruto_maximo, percentual_12_ou_mais,
+    #  percentual_menos_12)
+    #
+    # IMPORTANTE: as faixas sao fechadas exatamente nos limites
+    # informados pela FACTA. Ex.: R$ 8.500,00 ja pertence a faixa
+    # de 8.500,00 ate 13.999,99.
     CUSTO_CIP_FAIXAS = (
-        (3000.00, 9.77, 11.72),
-        (4000.00, 8.06, 9.74),
-        (5500.00, 6.00, 7.31),
-        (8500.00, 5.85, 7.12),
-        (14000.00, 3.80, 4.60),
-        (999999.99, 3.40, 4.17),
+        (0.00, 2999.99, 9.77, 11.72),
+        (3000.00, 3999.99, 8.06, 9.74),
+        (4000.00, 5499.99, 6.00, 7.31),
+        (5500.00, 8499.99, 5.85, 7.12),
+        (8500.00, 13999.99, 3.80, 4.60),
+        (14000.00, 999999.99, 3.40, 4.17),
     )
 
     # IMPORTANTE:
@@ -912,11 +917,16 @@ class PortabilidadeMultiplaFactaService:
         )
 
         for (
-            limite,
+            bruto_minimo,
+            bruto_maximo,
             percentual_mais,
             percentual_menos,
         ) in cls.CUSTO_CIP_FAIXAS:
-            if bruto <= limite:
+            if (
+                bruto_minimo
+                <= bruto
+                <= bruto_maximo
+            ):
                 return (
                     percentual_mais
                     if doze_ou_mais
@@ -980,10 +990,14 @@ class PortabilidadeMultiplaFactaService:
             / bruto
         ) * 100.0
 
+        # A tabela FACTA representa o percentual MINIMO
+        # de custo necessario para a operacao ser viavel.
+        # Ex.: bruto R$ 8.500,00 => minimo 3,80%.
+        # Se o custo calculado for 5,50%, a operacao e viavel.
         viavel = bool(
             percentual_limite is not None
             and percentual_custo
-            <= percentual_limite
+            >= percentual_limite
         )
 
         return {
@@ -993,7 +1007,12 @@ class PortabilidadeMultiplaFactaService:
                 percentual_custo,
                 4,
             ),
+            # Mantem percentual_limite por compatibilidade
+            # com consumidores existentes e expoe o nome correto.
             "percentual_limite": (
+                percentual_limite
+            ),
+            "percentual_minimo": (
                 percentual_limite
             ),
             "doze_ou_mais_pagas": (
@@ -1233,8 +1252,8 @@ class PortabilidadeMultiplaFactaService:
                 continue
 
             # Regra FACTA RCO/CIP:
-            # custo total / bruto deve ser menor ou igual ao
-            # percentual maximo da faixa da operacao.
+            # custo total / bruto deve ser maior ou igual ao
+            # percentual minimo da faixa da operacao.
             avaliacao_rco_cip = None
 
             if contratos is not None:
