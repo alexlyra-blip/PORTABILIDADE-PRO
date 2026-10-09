@@ -1278,7 +1278,7 @@ async def simular_portabilidade_multipla_facta(
                     "bruto minimo e troco minimo, a operacao "
                     "precisa atender a regra de custo RCO/CIP: "
                     "custo total dividido pelo bruto deve ser "
-                    "menor ou igual ao percentual limite da "
+                    "maior ou igual ao percentual minimo da "
                     "faixa FACTA."
                 )
             ],
