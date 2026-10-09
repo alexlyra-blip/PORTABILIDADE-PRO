@@ -286,12 +286,13 @@ def test_facta_rco_cip_exemplo_planilha_e_viavel():
     assert avaliacao["cip_total"] == 47.19
     assert avaliacao["custo_total"] == 470.52
     assert avaliacao["percentual_custo"] == 5.5355
-    assert avaliacao["percentual_limite"] == 5.85
+    assert avaliacao["percentual_limite"] == 3.80
+    assert avaliacao["percentual_minimo"] == 3.80
     assert avaliacao["doze_ou_mais_pagas"] is True
     assert avaliacao["viavel"] is True
 
 
-def test_facta_rco_cip_reprova_quando_custo_supera_limite():
+def test_facta_rco_cip_reprova_quando_custo_fica_abaixo_do_minimo():
     contratos = [
         {
             "banco": "BMG",
@@ -318,12 +319,55 @@ def test_facta_rco_cip_reprova_quando_custo_supera_limite():
 
     avaliacao = Service.avaliar_custo_rco_cip(
         contratos=contratos,
-        bruto=8000.00,
+        bruto=14000.00,
     )
 
-    assert avaliacao["percentual_custo"] == 5.8815
-    assert avaliacao["percentual_limite"] == 5.85
+    assert avaliacao["percentual_custo"] == 3.3609
+    assert avaliacao["percentual_limite"] == 3.40
     assert avaliacao["viavel"] is False
+
+
+def test_facta_custo_cip_respeita_limites_exatos_das_faixas():
+    casos_12_ou_mais = [
+        (2999.99, 9.77),
+        (3000.00, 8.06),
+        (3999.99, 8.06),
+        (4000.00, 6.00),
+        (5499.99, 6.00),
+        (5500.00, 5.85),
+        (8499.99, 5.85),
+        (8500.00, 3.80),
+        (13999.99, 3.80),
+        (14000.00, 3.40),
+        (999999.99, 3.40),
+    ]
+
+    for bruto, esperado in casos_12_ou_mais:
+        assert (
+            Service.percentual_limite_custo_cip(
+                bruto,
+                doze_ou_mais=True,
+            )
+            == esperado
+        )
+
+    casos_menos_12 = [
+        (2999.99, 11.72),
+        (3000.00, 9.74),
+        (4000.00, 7.31),
+        (5500.00, 7.12),
+        (8500.00, 4.60),
+        (14000.00, 4.17),
+    ]
+
+    for bruto, esperado in casos_menos_12:
+        assert (
+            Service.percentual_limite_custo_cip(
+                bruto,
+                doze_ou_mais=False,
+            )
+            == esperado
+        )
 
 
 def test_facta_rco_cip_referencias_por_saldo():
@@ -352,7 +396,7 @@ def test_facta_rco_cip_usa_faixa_menos_de_12_pagas():
     )
 
     assert avaliacao["doze_ou_mais_pagas"] is False
-    assert avaliacao["percentual_limite"] == 11.72
+    assert avaliacao["percentual_limite"] == 9.74
 
 
 def test_financeiro_facta_filtra_oferta_pela_regra_rco_cip():
@@ -399,7 +443,7 @@ def test_financeiro_facta_filtra_oferta_pela_regra_rco_cip():
     assert ofertas[0]["rco_cip"]["custo_total"] == 470.52
     assert ofertas[0]["rco_cip"]["viavel"] is True
 
-    coeficiente_inviavel = 212.50 / 8000.00
+    coeficiente_inviavel = 212.50 / 14000.00
     ofertas = Service.simular_financeiro(
         parcela_refin=212.50,
         saldo_consolidado=6795.00,
