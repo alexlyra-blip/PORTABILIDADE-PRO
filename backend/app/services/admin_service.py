@@ -72,19 +72,21 @@ def can_delete_managed_user(
         None,
     )
 
+    broker_id = getattr(
+        target_user,
+        "broker_id",
+        None,
+    )
+
+    # O vínculo direto com a promotora deve prevalecer também para
+    # contas antigas que foram criadas por outro usuário administrador.
+    if broker_id == current_id:
+        return True
+
     if created_by_user_id is not None:
         return created_by_user_id == current_id
 
-    # Compatibilidade com usuários antigos, criados antes
-    # do preenchimento de created_by_user_id.
-    return (
-        getattr(
-            target_user,
-            "broker_id",
-            None,
-        )
-        == current_id
-    )
+    return False
 
 
 class AdminService:
@@ -460,7 +462,11 @@ class AdminService:
         if not db_user:
             return None
         if current_user.role == "promotora" and db_user.id != current_user.id:
-            if db_user.broker_id != current_user.id:
+            pertence_promotora = (
+                db_user.broker_id == current_user.id
+                or db_user.created_by_user_id == current_user.id
+            )
+            if not pertence_promotora:
                 raise HTTPException(status_code=403, detail="Acesso negado")
         if current_user.role == "vendedor" and db_user.id != current_user.id:
             raise HTTPException(status_code=403, detail="Acesso negado")
@@ -471,10 +477,16 @@ class AdminService:
         if current_user.role == "admin":
             result = await db.execute(select(User))
         elif current_user.role == "promotora":
-            # Promotora vê a si mesma e os usuários criados por ela
+            # Promotora vê a si mesma e todos os usuários pertencentes
+            # à sua equipe. created_by_user_id cobre contas legadas em
+            # que o broker_id ficou ausente ou inconsistente.
             result = await db.execute(
                 select(User).where(
-                    or_(User.broker_id == current_user.id, User.id == current_user.id)
+                    or_(
+                        User.broker_id == current_user.id,
+                        User.created_by_user_id == current_user.id,
+                        User.id == current_user.id,
+                    )
                 )
             )
         else: # vendedor
@@ -714,8 +726,16 @@ class AdminService:
             return None
             
         if current_user.role == "promotora":
-            # Promotora verify ownership
-            if db_user.broker_id != current_user.id or db_user.role not in ["vendedor", "corretor"]:
+            # Compatibilidade com usuários legados: considera vínculo
+            # direto (broker_id) ou autoria da criação da conta.
+            pertence_promotora = (
+                db_user.broker_id == current_user.id
+                or db_user.created_by_user_id == current_user.id
+            )
+            if (
+                not pertence_promotora
+                or db_user.role not in ["vendedor", "corretor"]
+            ):
                 raise HTTPException(status_code=403, detail="Acesso negado: Este usuário não pertence a você.")
             
             # Restrict globais, but ALLOW role if it's within team roles
