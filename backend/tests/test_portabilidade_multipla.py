@@ -370,6 +370,124 @@ def test_facta_custo_cip_respeita_limites_exatos_das_faixas():
         )
 
 
+def test_facta_rco_cip_individual_bloqueia_contrato_antes_da_agregacao():
+    contrato = {
+        "banco": "BMG",
+        "contrato": "IND-FAIL",
+        "parcela": 100.00,
+        "saldo_devedor": 1569.00,
+        "prazo": 84,
+        "prazo_restante": 56,
+        "parcelas_pagas": 28,
+    }
+
+    resultado = (
+        Service.avaliar_contrato_individual_rco_cip(
+            contrato=contrato,
+            coeficientes=[
+                {
+                    "table_name": "INSS CIP REFIN NORMAL",
+                    "term": 108,
+                    "coefficient": 0.025,
+                }
+            ],
+        )
+    )
+
+    assert resultado["elegivel"] is False
+    assert resultado["custo_total"] == 145.73
+    assert "indisponivel para agregacao" in (
+        resultado["motivo"].lower()
+    )
+
+
+def test_facta_rco_cip_individual_libera_se_um_coeficiente_for_viavel():
+    contrato = {
+        "banco": "BMG",
+        "contrato": "IND-OK",
+        "parcela": 100.00,
+        "saldo_devedor": 1569.00,
+        "prazo": 84,
+        "prazo_restante": 56,
+        "parcelas_pagas": 28,
+    }
+
+    resultado = (
+        Service.avaliar_contrato_individual_rco_cip(
+            contrato=contrato,
+            coeficientes=[
+                {
+                    "table_name": "TABELA NAO VIAVEL",
+                    "term": 108,
+                    "coefficient": 0.025,
+                },
+                {
+                    "table_name": "TABELA VIAVEL",
+                    "term": 84,
+                    "coefficient": 0.070,
+                },
+            ],
+        )
+    )
+
+    assert resultado["elegivel"] is True
+    assert len(
+        resultado["ofertas_viaveis"]
+    ) == 1
+    assert (
+        resultado["ofertas_viaveis"][0]["tabela"]
+        == "TABELA VIAVEL"
+    )
+
+
+def test_facta_rco_cip_individual_nao_exige_tabela_comum_entre_contratos():
+    contratos = [
+        {
+            "banco": "BMG",
+            "contrato": "A",
+            "parcela": 100.00,
+            "saldo_devedor": 1569.00,
+            "prazo": 84,
+            "prazo_restante": 56,
+            "parcelas_pagas": 28,
+        },
+        {
+            "banco": "C6",
+            "contrato": "B",
+            "parcela": 50.00,
+            "saldo_devedor": 3383.00,
+            "prazo": 84,
+            "prazo_restante": 55,
+            "parcelas_pagas": 29,
+        },
+    ]
+
+    resultado = (
+        Service.validar_contratos_individuais_rco_cip(
+            contratos=contratos,
+            coeficientes=[
+                {
+                    "table_name": "COEF A",
+                    "term": 84,
+                    "coefficient": 0.070,
+                },
+                {
+                    "table_name": "COEF B",
+                    "term": 96,
+                    "coefficient": 0.030,
+                },
+            ],
+        )
+    )
+
+    assert resultado["elegivel"] is True
+    assert resultado["bloqueios"] == []
+    assert all(
+        item["quantidade_ofertas_viaveis"] >= 1
+        for item in resultado["resultados"]
+    )
+
+
 def test_facta_rco_cip_referencias_por_saldo():
     assert Service.valor_referencia_rco(1000.00) == 195.00
     assert Service.valor_referencia_rco(1000.01) == 195.00
@@ -1115,6 +1233,30 @@ def test_regras_facta_origem_usam_configuracao_portabilidade_pro():
 
     assert len(bloqueios) == 1
     assert "FACTA nao porta" in bloqueios[0]
+
+
+def test_rota_facta_aplica_prevalidacao_individual_rco_cip():
+    router_path = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "routers"
+        / "portabilidade_multipla.py"
+    )
+
+    text = router_path.read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "validar_contratos_individuais_rco_cip("
+        in text
+    )
+    assert (
+        'validacao["rco_cip_individual"]'
+        in text
+        or '"rco_cip_individual"'
+        in text
+    )
 
 
 def test_rota_facta_nao_exige_intersecao_nem_simulacao_individual():
