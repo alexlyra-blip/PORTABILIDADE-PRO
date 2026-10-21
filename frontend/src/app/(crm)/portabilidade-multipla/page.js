@@ -914,6 +914,220 @@ function bankRuleMatches(
 }
 
 
+function factaRcoReference(saldoValue) {
+  const saldo = money(saldoValue);
+
+  const faixas = [
+    [1000.00, 195.00],
+    [2000.00, 195.00],
+    [4000.00, 253.00],
+    [8000.00, 352.00],
+    [15000.00, 545.00],
+    [40000.00, 835.00],
+    [60000.00, 1830.00],
+    [999999.00, 2653.00],
+  ];
+
+  const faixa = faixas.find(
+    ([limite]) => saldo <= limite
+  );
+
+  return faixa ? faixa[1] : null;
+}
+
+
+function factaCipMinimum(brutoValue, paidValue) {
+  const bruto = money(brutoValue);
+  const paid = Number(paidValue || 0);
+
+  const faixas = [
+    [0.00, 2999.99, 9.77, 11.72],
+    [3000.00, 3999.99, 8.06, 9.74],
+    [4000.00, 5499.99, 6.00, 7.31],
+    [5500.00, 8499.99, 5.85, 7.12],
+    [8500.00, 13999.99, 3.80, 4.60],
+    [14000.00, 999999.99, 3.40, 4.17],
+  ];
+
+  const faixa = faixas.find(
+    ([minimo, maximo]) =>
+      bruto >= minimo &&
+      bruto <= maximo
+  );
+
+  if (!faixa) return null;
+
+  return paid >= 12
+    ? faixa[2]
+    : faixa[3];
+}
+
+
+function factaIndividualRcoCipCheck(
+  loan,
+  coefficients
+) {
+  const list = Array.isArray(coefficients)
+    ? coefficients
+    : [];
+
+  if (!list.length) {
+    return {
+      blocked: false,
+      pending: true,
+      reason: "",
+    };
+  }
+
+  const saldo = money(
+    loan?.saldo_devedor
+  );
+  const parcela = money(
+    loan?.parcela
+  );
+  const prazo = Number(
+    loan?.prazo || 0
+  );
+  const paid = Number(
+    loan?.parcelas_pagas ??
+      Math.max(
+        0,
+        prazo -
+          Number(
+            loan?.prazo_restante || 0
+          )
+      )
+  );
+  const prazoRestanteRaw =
+    loan?.prazo_restante;
+  const prazoRestante =
+    prazoRestanteRaw !== null &&
+    prazoRestanteRaw !== undefined &&
+    prazoRestanteRaw !== ""
+      ? Number(prazoRestanteRaw)
+      : Math.max(0, prazo - paid);
+
+  const referencia =
+    factaRcoReference(saldo);
+
+  if (
+    parcela <= 0 ||
+    prazo <= 0 ||
+    referencia === null ||
+    prazoRestante < 0 ||
+    prazoRestante > prazo
+  ) {
+    return {
+      blocked: true,
+      reason:
+        "Indisponível para agregação: dados insuficientes para calcular o RCO/CIP individual.",
+    };
+  }
+
+  const rco = Number(
+    (
+      (referencia / prazo) *
+      prazoRestante
+    ).toFixed(2)
+  );
+  const cip = 15.73;
+  const custoTotal = Number(
+    (rco + cip).toFixed(2)
+  );
+
+  let best = null;
+
+  for (const item of list) {
+    const coefficient = Number(
+      item?.coefficient ??
+        item?.coeficiente ??
+        0
+    );
+
+    if (
+      !Number.isFinite(coefficient) ||
+      coefficient <= 0
+    ) {
+      continue;
+    }
+
+    const bruto =
+      parcela / coefficient;
+    const minimo =
+      factaCipMinimum(
+        bruto,
+        paid
+      );
+
+    if (minimo === null) {
+      continue;
+    }
+
+    const percentual =
+      (custoTotal / bruto) * 100;
+    const margem =
+      percentual - minimo;
+
+    const candidate = {
+      bruto,
+      minimo,
+      percentual,
+      margem,
+      tabela:
+        item?.table_name ||
+        item?.tabela ||
+        "",
+    };
+
+    if (
+      !best ||
+      candidate.margem >
+        best.margem
+    ) {
+      best = candidate;
+    }
+
+    if (percentual >= minimo) {
+      return {
+        blocked: false,
+        pending: false,
+        reason: "",
+        rco,
+        cip,
+        custoTotal,
+        bruto,
+        percentual,
+        minimo,
+      };
+    }
+  }
+
+  const detail = best
+    ? " Custo " +
+      best.percentual
+        .toFixed(2)
+        .replace(".", ",") +
+      "% / mínimo " +
+      best.minimo
+        .toFixed(2)
+        .replace(".", ",") +
+      "%."
+    : "";
+
+  return {
+    blocked: true,
+    pending: false,
+    reason:
+      "Indisponível para agregação: o contrato não passou na validação individual de RCO/CIP FACTA." +
+      detail,
+    rco,
+    cip,
+    custoTotal,
+    best,
+  };
+}
+
+
 function Notice({
   type = "info",
   children,
@@ -2160,11 +2374,33 @@ export default function PortabilidadeMultiplaPage() {
       };
     }
 
+    const individualRcoCip =
+      factaIndividualRcoCipCheck(
+        loan,
+        motorRules
+          ?.financial_coefficients ||
+          []
+      );
+
+    if (individualRcoCip.blocked) {
+      return {
+        blocked: true,
+        reason:
+          individualRcoCip.reason,
+        required,
+        paid,
+        rco_cip_individual:
+          individualRcoCip,
+      };
+    }
+
     return {
       blocked: false,
       reason: "",
       required,
       paid,
+      rco_cip_individual:
+        individualRcoCip,
     };
   };
 
@@ -2481,6 +2717,53 @@ export default function PortabilidadeMultiplaPage() {
         : getFactaPrecheck(
             loan
           );
+
+
+  useEffect(() => {
+    if (
+      selectedDestination !== "FACTA" ||
+      !selectedIds.length
+    ) {
+      return;
+    }
+
+    const allowedIds = new Set(
+      enrichedLoans
+        .filter(
+          (loan) =>
+            !getFactaPrecheck(
+              loan
+            ).blocked
+        )
+        .map(
+          (loan) => loan._id
+        )
+    );
+
+    const nextIds =
+      selectedIds.filter(
+        (id) =>
+          allowedIds.has(id)
+      );
+
+    if (
+      nextIds.length !==
+      selectedIds.length
+    ) {
+      setSelectedIds(nextIds);
+      setValidation(null);
+      setMotorResult(null);
+      setNotice({
+        type: "warning",
+        text:
+          "Um ou mais contratos foram removidos da agregação porque não passaram na validação individual RCO/CIP da FACTA.",
+      });
+    }
+  }, [
+    config?.motor_rules,
+    enrichedLoans,
+    selectedDestination,
+  ]);
 
 
   const selectDestination = (

@@ -1022,6 +1022,294 @@ class PortabilidadeMultiplaFactaService:
         }
 
     @classmethod
+    def avaliar_contrato_individual_rco_cip(
+        cls,
+        *,
+        contrato,
+        coeficientes,
+    ):
+        """
+        Pre-valida UM contrato para saber se ele pode participar da
+        agregacao FACTA.
+
+        Regra importante:
+        - nao exige tabela comum entre contratos;
+        - nao executa a simulacao consolidada;
+        - cada contrato precisa apenas possuir ao menos UM coeficiente
+          FACTA ativo em que o seu custo RCO/CIP individual atinja o
+          percentual minimo da faixa correspondente.
+        """
+        contrato = contrato or {}
+        parcela = cls._money(
+            contrato.get("parcela")
+        )
+
+        calculo = cls.calcular_custo_rco_cip(
+            [contrato]
+        )
+
+        if parcela <= 0:
+            return {
+                **calculo,
+                "elegivel": False,
+                "motivo": (
+                    "Parcela invalida para pre-validacao "
+                    "RCO/CIP FACTA."
+                ),
+                "ofertas_viaveis": [],
+                "melhor_avaliacao": None,
+            }
+
+        if not calculo.get("valido"):
+            return {
+                **calculo,
+                "elegivel": False,
+                "motivo": (
+                    calculo.get("erros", [None])[0]
+                    or "Nao foi possivel calcular o RCO/CIP."
+                ),
+                "ofertas_viaveis": [],
+                "melhor_avaliacao": None,
+            }
+
+        ofertas_viaveis = []
+        melhor_avaliacao = None
+
+        for item in (
+            coeficientes
+            or []
+        ):
+            if not isinstance(item, dict):
+                continue
+
+            coeficiente = cls._float(
+                item.get(
+                    "coefficient",
+                    item.get(
+                        "coeficiente",
+                        0,
+                    ),
+                )
+            )
+
+            if coeficiente <= 0:
+                continue
+
+            bruto = (
+                parcela
+                / coeficiente
+            )
+
+            avaliacao = (
+                cls.avaliar_custo_rco_cip(
+                    contratos=[contrato],
+                    bruto=bruto,
+                )
+            )
+
+            percentual_custo = cls._float(
+                avaliacao.get(
+                    "percentual_custo"
+                )
+            )
+            percentual_minimo = cls._float(
+                avaliacao.get(
+                    "percentual_minimo",
+                    avaliacao.get(
+                        "percentual_limite"
+                    ),
+                )
+            )
+
+            margem_percentual = (
+                percentual_custo
+                - percentual_minimo
+            )
+
+            candidato = {
+                "table_id": item.get(
+                    "table_id"
+                ),
+                "coefficient_id": item.get(
+                    "coefficient_id"
+                ),
+                "tabela": item.get(
+                    "table_name",
+                    item.get(
+                        "tabela",
+                        "",
+                    ),
+                ),
+                "prazo": cls._int(
+                    item.get(
+                        "term",
+                        0,
+                    )
+                ),
+                "coeficiente": (
+                    coeficiente
+                ),
+                "bruto_individual": round(
+                    bruto,
+                    2,
+                ),
+                "custo_total": (
+                    calculo.get(
+                        "custo_total"
+                    )
+                ),
+                "percentual_custo": (
+                    percentual_custo
+                ),
+                "percentual_minimo": (
+                    percentual_minimo
+                ),
+                "margem_percentual": round(
+                    margem_percentual,
+                    4,
+                ),
+                "viavel": bool(
+                    avaliacao.get(
+                        "viavel"
+                    )
+                ),
+            }
+
+            if (
+                melhor_avaliacao is None
+                or candidato[
+                    "margem_percentual"
+                ]
+                > melhor_avaliacao[
+                    "margem_percentual"
+                ]
+            ):
+                melhor_avaliacao = (
+                    candidato
+                )
+
+            if candidato["viavel"]:
+                ofertas_viaveis.append(
+                    candidato
+                )
+
+        if ofertas_viaveis:
+            return {
+                **calculo,
+                "elegivel": True,
+                "motivo": "",
+                "ofertas_viaveis": (
+                    ofertas_viaveis
+                ),
+                "melhor_avaliacao": (
+                    melhor_avaliacao
+                ),
+            }
+
+        return {
+            **calculo,
+            "elegivel": False,
+            "motivo": (
+                "Contrato indisponivel para agregacao: "
+                "o custo RCO/CIP individual nao atinge "
+                "o percentual minimo FACTA em nenhum "
+                "coeficiente ativo."
+            ),
+            "ofertas_viaveis": [],
+            "melhor_avaliacao": (
+                melhor_avaliacao
+            ),
+        }
+
+    @classmethod
+    def validar_contratos_individuais_rco_cip(
+        cls,
+        *,
+        contratos,
+        coeficientes,
+    ):
+        resultados = []
+        bloqueios = []
+
+        for index, contrato in enumerate(
+            contratos or [],
+            start=1,
+        ):
+            avaliacao = (
+                cls.avaliar_contrato_individual_rco_cip(
+                    contrato=contrato,
+                    coeficientes=coeficientes,
+                )
+            )
+
+            resultado = {
+                "indice": index,
+                "contrato": contrato.get(
+                    "contrato"
+                ),
+                "banco": contrato.get(
+                    "banco"
+                ),
+                "elegivel": bool(
+                    avaliacao.get(
+                        "elegivel"
+                    )
+                ),
+                "motivo": avaliacao.get(
+                    "motivo",
+                    "",
+                ),
+                "rco_total": avaliacao.get(
+                    "rco_total"
+                ),
+                "cip_total": avaliacao.get(
+                    "cip_total"
+                ),
+                "custo_total": avaliacao.get(
+                    "custo_total"
+                ),
+                "melhor_avaliacao": (
+                    avaliacao.get(
+                        "melhor_avaliacao"
+                    )
+                ),
+                "quantidade_ofertas_viaveis":
+                    len(
+                        avaliacao.get(
+                            "ofertas_viaveis",
+                            [],
+                        )
+                    ),
+            }
+
+            resultados.append(
+                resultado
+            )
+
+            if not resultado["elegivel"]:
+                bloqueios.append(
+                    (
+                        f"Contrato {index}"
+                        + (
+                            f" ({resultado['banco']})"
+                            if resultado["banco"]
+                            else ""
+                        )
+                        + ": "
+                        + (
+                            resultado["motivo"]
+                            or "RCO/CIP individual nao aprovado."
+                        )
+                    )
+                )
+
+        return {
+            "elegivel": not bloqueios,
+            "resultados": resultados,
+            "bloqueios": bloqueios,
+        }
+
+    @classmethod
     def tabelas_disponiveis(
         cls,
         bruto,

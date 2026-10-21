@@ -2006,6 +2006,41 @@ def test_pagina_usuarios_respeita_can_delete():
 
 
 
+def test_frontend_multipla_bloqueia_contrato_reprovado_no_rco_cip_individual():
+    users_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "(crm)"
+        / "portabilidade-multipla"
+        / "page.js"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "function factaIndividualRcoCipCheck("
+        in users_source
+    )
+    assert (
+        "motorRules"
+        in users_source
+        and "financial_coefficients"
+        in users_source
+    )
+    assert (
+        "Indisponível para agregação"
+        in users_source
+    )
+    assert (
+        "individualRcoCip.blocked"
+        in users_source
+    )
+    assert (
+        "não passaram na validação individual RCO/CIP"
+        in users_source
+    )
+
+
 def _load_consulta_age_helper():
     source = (
         ROOT

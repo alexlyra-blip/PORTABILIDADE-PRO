@@ -139,6 +139,47 @@ async def validar_portabilidade_multipla(
         )
     )
 
+    # PRE-VALIDACAO INDIVIDUAL RCO/CIP:
+    # antes de qualquer agregacao, cada contrato precisa ser apto
+    # individualmente em ao menos um coeficiente FACTA ativo.
+    motor_rules = await motor_config_multipla(
+        db,
+        current_user,
+    )
+
+    individual_rco_cip = (
+        PortabilidadeMultiplaFactaService
+        .validar_contratos_individuais_rco_cip(
+            contratos=contratos,
+            coeficientes=(
+                motor_rules.get(
+                    "financial_coefficients",
+                    [],
+                )
+            ),
+        )
+    )
+
+    if individual_rco_cip.get(
+        "bloqueios"
+    ):
+        validacao["bloqueios"] = [
+            *validacao.get(
+                "bloqueios",
+                [],
+            ),
+            *individual_rco_cip[
+                "bloqueios"
+            ],
+        ]
+        validacao[
+            "elegivel_previo"
+        ] = False
+
+    validacao[
+        "rco_cip_individual"
+    ] = individual_rco_cip
+
     promotora_id = current_user.id
 
     if (
@@ -1144,6 +1185,23 @@ async def simular_portabilidade_multipla_facta(
             "min_table_paid_any": 0,
         }
 
+    individual_rco_cip = (
+        PortabilidadeMultiplaFactaService
+        .validar_contratos_individuais_rco_cip(
+            contratos=contratos_dict,
+            coeficientes=(
+                motor_rules.get(
+                    "financial_coefficients",
+                    [],
+                )
+            ),
+        )
+    )
+
+    validacao[
+        "rco_cip_individual"
+    ] = individual_rco_cip
+
     bloqueios_origem = (
         PortabilidadeMultiplaFactaService
         .validar_regras_banco_origem(
@@ -1184,6 +1242,10 @@ async def simular_portabilidade_multipla_facta(
     )
 
     bloqueios_adicionais = [
+        *individual_rco_cip.get(
+            "bloqueios",
+            [],
+        ),
         *bloqueios_origem,
         *bloqueios_promotora,
     ]
