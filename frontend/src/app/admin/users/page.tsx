@@ -394,7 +394,33 @@ export default function UsersPage() {
     );
   };
 
-  const rootUsers = filteredUsers.filter(u => !u.broker_id || !filteredUsers.some(parent => parent.id === u.broker_id));
+  const usersById = new Map(filteredUsers.map((user) => [user.id, user]));
+
+  const isRootUser = (user: User) => {
+    if (!user.broker_id || user.broker_id === user.id || !usersById.has(user.broker_id)) {
+      return true;
+    }
+
+    const visited = new Set<number>([user.id]);
+    let parentId: number | undefined = user.broker_id;
+
+    while (parentId) {
+      if (visited.has(parentId)) {
+        // Evita que vínculos legados/cíclicos façam o usuário sumir da tela.
+        return true;
+      }
+
+      visited.add(parentId);
+      const parent = usersById.get(parentId);
+      if (!parent) return true;
+      if (!parent.broker_id) return false;
+      parentId = parent.broker_id;
+    }
+
+    return false;
+  };
+
+  const rootUsers = filteredUsers.filter(isRootUser);
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
@@ -510,7 +536,7 @@ export default function UsersPage() {
                       <option value="admin">ADMINISTRADOR MASTER</option>
                     </select>
                   </div>
-                  {loggedUser?.role === 'admin' && formData.role === 'corretor' && (
+                  {loggedUser?.role === 'admin' && ['corretor', 'vendedor'].includes(formData.role) && (
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Promotora vinculada</label>
                       <select value={formData.broker_id || ""} onChange={(e) => handlePromotoraSelection(e.target.value)} className="input-admin !rounded-2xl !bg-slate-50 border-none shadow-inner" required={formData.is_demo_user}>

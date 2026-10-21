@@ -1845,7 +1845,7 @@ def test_promotora_pode_excluir_usuario_criado_por_ela(
     ) is True
 
 
-def test_promotora_nao_exclui_usuario_criado_por_outro():
+def test_promotora_pode_excluir_usuario_vinculado_a_ela_mesmo_se_criado_por_admin():
     from types import SimpleNamespace
 
     can_delete = _load_can_delete_managed_user()
@@ -1864,7 +1864,7 @@ def test_promotora_nao_exclui_usuario_criado_por_outro():
     assert can_delete(
         promotora,
         target,
-    ) is False
+    ) is True
 
 
 @pytest.mark.parametrize(
@@ -1915,6 +1915,55 @@ def test_promotora_pode_excluir_usuario_legado_da_propria_equipe():
         promotora,
         legacy_target,
     ) is True
+
+
+def test_gestao_usuarios_promotora_considera_vinculo_legado_e_autoria():
+    service_source = (
+        ROOT
+        / "app"
+        / "services"
+        / "admin_service.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "User.created_by_user_id == current_user.id"
+        in service_source
+    )
+
+    assert (
+        "db_user.broker_id == current_user.id"
+        in service_source
+    )
+
+    assert (
+        "db_user.created_by_user_id == current_user.id"
+        in service_source
+    )
+
+
+def test_pagina_usuarios_nao_oculta_vinculo_ciclico_e_permite_vincular_vendedor():
+    users_source = (
+        ROOT.parent
+        / "frontend"
+        / "src"
+        / "app"
+        / "admin"
+        / "users"
+        / "page.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "user.broker_id === user.id"
+        in users_source
+    )
+    assert (
+        "visited.has(parentId)"
+        in users_source
+    )
+    assert (
+        "['corretor', 'vendedor'].includes(formData.role)"
+        in users_source
+    )
 
 
 def test_pagina_usuarios_respeita_can_delete():
