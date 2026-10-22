@@ -32,3 +32,24 @@ def test_resposta_nao_entrega_lista_sem_sim():
     logic = SOURCE[start:end]
     assert 'session.pop("pending_alternatives_menu", "")' in logic
     assert 'session["awaiting_alternatives_choice"] = False' in logic
+
+
+def test_opcoes_visiveis_somente_sim_nao():
+    start = SOURCE.index("follow_up_reply = (")
+    end = SOURCE.index("session[\"messages\"].append", start)
+    trecho = SOURCE[start:end]
+    assert '"1. *SIM*' in trecho
+    assert '"2. *NÃO*' in trecho
+    assert "3." not in trecho
+
+
+def test_validacao_cpf_antes_de_reiniciar_quando_aguardando_escolha():
+    tree = ast.parse(SOURCE)
+    fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_clara_cpf_valido")
+    namespace = {"re": __import__("re")}
+    exec(compile(ast.Module(body=[fn], type_ignores=[]), "<cpf>", "exec"), namespace)
+    valid = namespace["_clara_cpf_valido"]
+    assert valid("529.982.247-25")
+    assert not valid("529.982.247-24")
+    assert not valid("111.111.111-11")
+    assert 'if clean_cpf and session.get("awaiting_alternatives_choice"):' in SOURCE
