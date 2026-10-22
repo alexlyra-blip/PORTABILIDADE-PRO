@@ -186,12 +186,19 @@ def test_metadata_presente_em_todos_os_success():
         if '"status": "success"' in segment:
             success.append(segment)
 
-    assert len(success) == 18
+    # O fluxo pode ganhar novas respostas de sucesso (ex.: SIM/NÃO).
+    # Valida os metadados em todas, sem acoplar o teste à contagem.
+    assert success
 
     assert all(
         "chat_response_meta()" in segment
+        or "response_meta" in segment
         for segment in success
     )
+
+    # No encerramento, os metadados são capturados antes de
+    # remover a sessão, preservando o protocolo da resposta.
+    assert 'response_meta = chat_response_meta()' in source
 
 
 def test_metadata_tem_campos_da_clara_v2():
