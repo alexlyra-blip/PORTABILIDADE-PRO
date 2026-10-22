@@ -53,3 +53,13 @@ def test_validacao_cpf_antes_de_reiniciar_quando_aguardando_escolha():
     assert not valid("529.982.247-24")
     assert not valid("111.111.111-11")
     assert 'if clean_cpf and session.get("awaiting_alternatives_choice"):' in SOURCE
+
+
+def test_nao_finaliza_sessao_com_protocolo():
+    start = SOURCE.index('        # CLARA_ALTERNATIVES_ON_DEMAND')
+    end = SOURCE.index('        # Clara V2 - coleta manual', start)
+    trecho = SOURCE[start:end]
+    assert 'f"📝 *Protocolo de Atendimento:* {protocol}' in trecho
+    assert 'await save_chat_log(db, session, sender, True)' in trecho
+    assert 'CHAT_SESSIONS.pop(sender, None)' in trecho
+    assert 'response_meta = chat_response_meta()' in trecho
