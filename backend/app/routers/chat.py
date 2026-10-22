@@ -1216,6 +1216,19 @@ def detectar_cliente_nao_assinante(
     )
 
 
+def _clara_beneficio_ativo(dados):
+    """Somente beneficios explicitamente ativos podem gerar ofertas."""
+    if not isinstance(dados, dict):
+        return False
+
+    beneficio = dados.get("beneficio")
+    if not isinstance(beneficio, dict):
+        return False
+
+    situacao = beneficio.get("situacao")
+    return isinstance(situacao, str) and situacao.strip().upper() in {"ATIVO", "ATIVA"}
+
+
 async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user_id: int, session: dict = None) -> str:
     from app.models.sqlalchemy_models import ConsultaCpfCache
     from app.routers.consultas import _execute_cpf_query_flow
@@ -1557,7 +1570,15 @@ async def simulate_for_cpf(cpf: str, is_illiterate: bool, db: AsyncSession, user
             
     if not beneficios:
         return f"❌ *CPF {masked_cpf}:* Nenhum dado de benefício estruturado foi retornado."
-        
+
+    # CLARA_ONLY_ACTIVE_BENEFITS: filtra antes de margem, contratos e resumos.
+    beneficios = [b for b in beneficios if _clara_beneficio_ativo(b)]
+    if not beneficios:
+        return (
+            f"ℹ️ *CPF {masked_cpf}:* Nenhum benefício ativo encontrado "
+            "para simulação de portabilidade ou refinanciamento."
+        )
+
     client_name = beneficios[0].get("cliente", {}).get("nome", "Cliente")
     client_age = beneficios[0].get("cliente", {}).get("idade", 50)
     
