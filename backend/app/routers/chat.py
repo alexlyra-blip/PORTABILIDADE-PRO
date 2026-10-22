@@ -1093,6 +1093,20 @@ def extrair_cpf_da_mensagem(
     return None
 
 
+def _clara_cpf_valido(cpf: str) -> bool:
+    """Confere digitos verificadores antes de reiniciar a simulacao."""
+    digits = re.sub(r"\D", "", str(cpf or ""))
+    if len(digits) != 11 or len(set(digits)) == 1:
+        return False
+    for size in (9, 10):
+        check = (sum(int(digits[i]) * (size + 1 - i) for i in range(size)) * 10) % 11
+        if check == 10:
+            check = 0
+        if check != int(digits[size]):
+            return False
+    return True
+
+
 def detectar_cliente_nao_assinante(
     message: str,
 ) -> bool:
@@ -2972,6 +2986,11 @@ async def chat_interaction(
             message
         )
             
+        if clean_cpf and session.get("awaiting_alternatives_choice"):
+            # Um CPF novo valido tem prioridade mesmo sem escolha de SIM/NAO.
+            if not _clara_cpf_valido(clean_cpf):
+                clean_cpf = None
+
         if clean_cpf:
             is_illiterate = detectar_cliente_nao_assinante(
                 message
@@ -3034,6 +3053,9 @@ async def chat_interaction(
                 )
 
             session["simulations"] = []
+            session.pop("pending_alternatives_menu", None)
+            session["awaiting_alternatives_choice"] = False
+            session.pop("post_simulation_menu", None)
 
             reply = await simulate_for_cpf(
                 clean_cpf,
@@ -3043,13 +3065,20 @@ async def chat_interaction(
                 session=session,
             )
             # CLARA_FOLLOW_UP_REPLY
-            follow_up_reply = str(
-                session.pop(
-                    "post_simulation_menu",
-                    "",
-                )
-                or ""
+            # Guarda o menu completo ate o usuario confirmar SIM.
+            menu_alternativas = str(
+                session.pop("post_simulation_menu", "") or ""
             ).strip()
+            session.pop("pending_alternatives_menu", None)
+            session["awaiting_alternatives_choice"] = bool(menu_alternativas)
+            if menu_alternativas:
+                session["pending_alternatives_menu"] = menu_alternativas
+            follow_up_reply = (
+                "💡 *Deseja consultar outras possibilidades?*\n"
+                "1. *SIM*\n"
+                "2. *NÃO*"
+                if menu_alternativas else ""
+            )
 
             session["messages"].append({
                 "role": "user",
@@ -3093,6 +3122,54 @@ async def chat_interaction(
                     if follow_up_reply
                     else {}
                 ),
+            } | chat_response_meta())
+
+        # CLARA_ALTERNATIVES_ON_DEMAND
+        # CPF novo foi processado acima; nunca interpretar CPF como SIM/NAO.
+        if session.get("awaiting_alternatives_choice"):
+            answer = re.sub(r"[.!?\s]+", "", msg_lower)
+            if answer in {"1", "sim", "s"}:
+                reply_text = str(
+                    session.pop("pending_alternatives_menu", "") or ""
+                ).strip()
+                session["awaiting_alternatives_choice"] = False
+                if not reply_text:
+                    reply_text = "ℹ️ Nenhuma outra possibilidade disponível nesta simulação."
+            elif answer in {"2", "nao", "não", "n"}:
+                session["awaiting_alternatives_choice"] = False
+                session.pop("pending_alternatives_menu", None)
+                protocol = session.get("protocol", "N/A")
+                reply_text = (
+                    "🙏 *Muito obrigada pelo seu contato!*\n"
+                    "Foi um prazer te ajudar. Sempre que precisar, estarei por aqui!\n\n"
+                    f"📝 *Protocolo de Atendimento:* {protocol}\n\n"
+                    "_Atendimento encerrado com sucesso. Tenha um ótimo dia!_"
+                )
+            else:
+                reply_text = (
+                    "💡 *Deseja consultar outras possibilidades?*\n"
+                    "1. *SIM*\n"
+                    "2. *NÃO*\n\n"
+                    "Responda *1* ou *SIM*, *2* ou *NÃO*."
+                )
+            session["messages"].append({
+                "role": "user", "text": message,
+                "timestamp": datetime.now().isoformat(),
+            })
+            session["messages"].append({
+                "role": "bot", "text": reply_text,
+                "timestamp": datetime.now().isoformat(),
+            })
+            if answer in {"2", "nao", "não", "n"}:
+                response_meta = chat_response_meta()
+                await save_chat_log(db, session, sender, True)
+                CHAT_SESSIONS.pop(sender, None)
+                return ({
+                    "status": "success", "reply": reply_text, "sender": sender,
+                } | response_meta)
+            await save_chat_log(db, session, sender, False)
+            return ({
+                "status": "success", "reply": reply_text, "sender": sender,
             } | chat_response_meta())
 
         # Clara V2 - coleta manual da simulacao.
