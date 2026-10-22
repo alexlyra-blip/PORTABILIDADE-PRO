@@ -1093,6 +1093,20 @@ def extrair_cpf_da_mensagem(
     return None
 
 
+def _clara_cpf_valido(cpf: str) -> bool:
+    """Confere digitos verificadores antes de reiniciar a simulacao."""
+    digits = re.sub(r"\\D", "", str(cpf or ""))
+    if len(digits) != 11 or len(set(digits)) == 1:
+        return False
+    for size in (9, 10):
+        check = (sum(int(digits[i]) * (size + 1 - i) for i in range(size)) * 10) % 11
+        if check == 10:
+            check = 0
+        if check != int(digits[size]):
+            return False
+    return True
+
+
 def detectar_cliente_nao_assinante(
     message: str,
 ) -> bool:
@@ -2972,6 +2986,11 @@ async def chat_interaction(
             message
         )
             
+        if clean_cpf and session.get("awaiting_alternatives_choice"):
+            # Um CPF novo valido tem prioridade mesmo sem escolha de SIM/NAO.
+            if not _clara_cpf_valido(clean_cpf):
+                clean_cpf = None
+
         if clean_cpf:
             is_illiterate = detectar_cliente_nao_assinante(
                 message
@@ -3119,16 +3138,13 @@ async def chat_interaction(
             elif answer in {"2", "nao", "não", "n"}:
                 session["awaiting_alternatives_choice"] = False
                 session.pop("pending_alternatives_menu", None)
-                reply_text = (
-                    "✅ Entendido! Para uma nova simulação, "
-                    "envie diretamente outro CPF."
-                )
+                reply_text = "✅ Certo! Pode enviar outro CPF quando desejar."
             else:
                 reply_text = (
                     "💡 *Deseja consultar outras possibilidades?*\n"
                     "1. *SIM*\n"
                     "2. *NÃO*\n\n"
-                    "Responda 1, 2, SIM ou NÃO, ou envie outro CPF."
+                    "Responda *1* ou *SIM*, *2* ou *NÃO*."
                 )
             session["messages"].append({
                 "role": "user", "text": message,
