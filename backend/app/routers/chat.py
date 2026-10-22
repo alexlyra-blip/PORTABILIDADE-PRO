@@ -3138,7 +3138,13 @@ async def chat_interaction(
             elif answer in {"2", "nao", "não", "n"}:
                 session["awaiting_alternatives_choice"] = False
                 session.pop("pending_alternatives_menu", None)
-                reply_text = "✅ Certo! Pode enviar outro CPF quando desejar."
+                protocol = session.get("protocol", "N/A")
+                reply_text = (
+                    "🙏 *Muito obrigada pelo seu contato!*\n"
+                    "Foi um prazer te ajudar. Sempre que precisar, estarei por aqui!\n\n"
+                    f"📝 *Protocolo de Atendimento:* {protocol}\n\n"
+                    "_Atendimento encerrado com sucesso. Tenha um ótimo dia!_"
+                )
             else:
                 reply_text = (
                     "💡 *Deseja consultar outras possibilidades?*\n"
@@ -3154,6 +3160,13 @@ async def chat_interaction(
                 "role": "bot", "text": reply_text,
                 "timestamp": datetime.now().isoformat(),
             })
+            if answer in {"2", "nao", "não", "n"}:
+                response_meta = chat_response_meta()
+                await save_chat_log(db, session, sender, True)
+                CHAT_SESSIONS.pop(sender, None)
+                return ({
+                    "status": "success", "reply": reply_text, "sender": sender,
+                } | response_meta)
             await save_chat_log(db, session, sender, False)
             return ({
                 "status": "success", "reply": reply_text, "sender": sender,
