@@ -3034,6 +3034,9 @@ async def chat_interaction(
                 )
 
             session["simulations"] = []
+            session.pop("pending_alternatives_menu", None)
+            session["awaiting_alternatives_choice"] = False
+            session.pop("post_simulation_menu", None)
 
             reply = await simulate_for_cpf(
                 clean_cpf,
@@ -3043,13 +3046,20 @@ async def chat_interaction(
                 session=session,
             )
             # CLARA_FOLLOW_UP_REPLY
-            follow_up_reply = str(
-                session.pop(
-                    "post_simulation_menu",
-                    "",
-                )
-                or ""
+            # Guarda o menu completo ate o usuario confirmar SIM.
+            menu_alternativas = str(
+                session.pop("post_simulation_menu", "") or ""
             ).strip()
+            session.pop("pending_alternatives_menu", None)
+            session["awaiting_alternatives_choice"] = bool(menu_alternativas)
+            if menu_alternativas:
+                session["pending_alternatives_menu"] = menu_alternativas
+            follow_up_reply = (
+                "💡 *Deseja consultar outras possibilidades?*\n"
+                "1. *SIM*\n"
+                "2. *NÃO*"
+                if menu_alternativas else ""
+            )
 
             session["messages"].append({
                 "role": "user",
@@ -3093,6 +3103,44 @@ async def chat_interaction(
                     if follow_up_reply
                     else {}
                 ),
+            } | chat_response_meta())
+
+        # CLARA_ALTERNATIVES_ON_DEMAND
+        # CPF novo foi processado acima; nunca interpretar CPF como SIM/NAO.
+        if session.get("awaiting_alternatives_choice"):
+            answer = re.sub(r"[.!?\\s]+", "", msg_lower)
+            if answer in {"1", "sim", "s"}:
+                reply_text = str(
+                    session.pop("pending_alternatives_menu", "") or ""
+                ).strip()
+                session["awaiting_alternatives_choice"] = False
+                if not reply_text:
+                    reply_text = "ℹ️ Nenhuma outra possibilidade disponível nesta simulação."
+            elif answer in {"2", "nao", "não", "n"}:
+                session["awaiting_alternatives_choice"] = False
+                session.pop("pending_alternatives_menu", None)
+                reply_text = (
+                    "✅ Entendido! Para uma nova simulação, "
+                    "envie diretamente outro CPF."
+                )
+            else:
+                reply_text = (
+                    "💡 *Deseja consultar outras possibilidades?*\\n"
+                    "1. *SIM*\\n"
+                    "2. *NÃO*\\n\\n"
+                    "Responda 1, 2, SIM ou NÃO, ou envie outro CPF."
+                )
+            session["messages"].append({
+                "role": "user", "text": message,
+                "timestamp": datetime.now().isoformat(),
+            })
+            session["messages"].append({
+                "role": "bot", "text": reply_text,
+                "timestamp": datetime.now().isoformat(),
+            })
+            await save_chat_log(db, session, sender, False)
+            return ({
+                "status": "success", "reply": reply_text, "sender": sender,
             } | chat_response_meta())
 
         # Clara V2 - coleta manual da simulacao.
