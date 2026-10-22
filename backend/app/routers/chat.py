@@ -3108,7 +3108,7 @@ async def chat_interaction(
         # CLARA_ALTERNATIVES_ON_DEMAND
         # CPF novo foi processado acima; nunca interpretar CPF como SIM/NAO.
         if session.get("awaiting_alternatives_choice"):
-            answer = re.sub(r"[.!?\\s]+", "", msg_lower)
+            answer = re.sub(r"[.!?\s]+", "", msg_lower)
             if answer in {"1", "sim", "s"}:
                 reply_text = str(
                     session.pop("pending_alternatives_menu", "") or ""
@@ -3125,9 +3125,9 @@ async def chat_interaction(
                 )
             else:
                 reply_text = (
-                    "💡 *Deseja consultar outras possibilidades?*\\n"
-                    "1. *SIM*\\n"
-                    "2. *NÃO*\\n\\n"
+                    "💡 *Deseja consultar outras possibilidades?*\n"
+                    "1. *SIM*\n"
+                    "2. *NÃO*\n\n"
                     "Responda 1, 2, SIM ou NÃO, ou envie outro CPF."
                 )
             session["messages"].append({
