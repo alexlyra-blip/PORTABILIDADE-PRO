@@ -1095,7 +1095,7 @@ def extrair_cpf_da_mensagem(
 
 def _clara_cpf_valido(cpf: str) -> bool:
     """Confere digitos verificadores antes de reiniciar a simulacao."""
-    digits = re.sub(r"\\D", "", str(cpf or ""))
+    digits = re.sub(r"\D", "", str(cpf or ""))
     if len(digits) != 11 or len(set(digits)) == 1:
         return False
     for size in (9, 10):
