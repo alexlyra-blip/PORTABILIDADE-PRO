@@ -71,6 +71,7 @@ def run_db_fix():
             'ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;',
             'ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;',
             'ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);',
+            'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "added_debt_release_bands" JSON;',
             'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_max_age" INTEGER;',
             'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_grace_age" INTEGER;',
             'ALTER TABLE "whatsapp_chat_logs" ADD COLUMN IF NOT EXISTS "context_data" JSONB NOT NULL DEFAULT \'{}\'::jsonb;',
