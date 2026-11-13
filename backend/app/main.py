@@ -71,7 +71,6 @@ def run_db_fix():
             'ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "term" INTEGER;',
             'ALTER TABLE "simulation_results" ADD COLUMN IF NOT EXISTS "installment" FLOAT;',
             'ALTER TABLE "bank_tables" ADD COLUMN IF NOT EXISTS "max_ticket" NUMERIC(15, 2);',
-            'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "added_debt_release_bands" JSON;',
             'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_max_age" INTEGER;',
             'ALTER TABLE "bank_rules" ADD COLUMN IF NOT EXISTS "disability_grace_age" INTEGER;',
             'ALTER TABLE "whatsapp_chat_logs" ADD COLUMN IF NOT EXISTS "context_data" JSONB NOT NULL DEFAULT \'{}\'::jsonb;',
@@ -139,6 +138,24 @@ async def startup_event():
     except Exception as e:
         print(f"[WARN] Could not check/create system_settings table at startup: {e}")
     
+    # Mantém instalações existentes compatíveis com o modelo de regras dos bancos.
+    try:
+        from app.database import engine
+        async with engine.begin() as connection:
+            await connection.exec_driver_sql("SET LOCAL lock_timeout = '2s'")
+            await connection.exec_driver_sql("SET LOCAL statement_timeout = '5s'")
+            existing_column = await connection.exec_driver_sql(
+                "SELECT 1 FROM pg_attribute "
+                "WHERE attrelid = to_regclass('bank_rules') "
+                "AND attname = 'added_debt_release_bands' AND NOT attisdropped"
+            )
+            if existing_column.scalar() is None:
+                await connection.exec_driver_sql(
+                    "ALTER TABLE bank_rules ADD COLUMN IF NOT EXISTS added_debt_release_bands JSON"
+                )
+    except Exception as error:
+        print(f"[WARN] Falha ao migrar as faixas de endividamento em bank_rules: {error}")
+
     # Migracao SQLite Local para nova coluna (mantido pois eh local e nao trava)
     try:
         import sqlite3
