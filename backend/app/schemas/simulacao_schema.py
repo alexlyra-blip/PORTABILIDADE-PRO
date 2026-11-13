@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Any
 from datetime import datetime
 from decimal import Decimal
@@ -142,31 +142,7 @@ class BankWithRulesResponse(BankResponse):
     rules: List["BankRuleResponse"] = []
 
 # Bank Rule Schemas
-class AddedDebtReleaseBand(BaseModel):
-    min_added_term: int = Field(ge=0)
-    max_added_term: Optional[int] = Field(default=None, ge=0)
-    percentage: float = Field(gt=0, le=100)
-
-
-class AddedDebtReleaseRules(BaseModel):
-    added_debt_release_bands: Optional[list[AddedDebtReleaseBand]] = None
-
-    @field_validator("added_debt_release_bands")
-    @classmethod
-    def validate_bands(cls, bands):
-        previous = None
-        for band in sorted(bands or [], key=lambda item: item.min_added_term):
-            if band.max_added_term is not None and band.max_added_term < band.min_added_term:
-                raise ValueError("A parcela final deve ser igual ou maior que a inicial.")
-            if previous is not None and (
-                previous.max_added_term is None or band.min_added_term <= previous.max_added_term
-            ):
-                raise ValueError("As faixas de parcelas acrescidas não podem se sobrepor.")
-            previous = band
-        return bands
-
-
-class BankRuleBase(AddedDebtReleaseRules):
+class BankRuleBase(BaseModel):
     bank_id: int
     agreement: Optional[str] = "INSS"
     sub_agreement: Optional[str] = None

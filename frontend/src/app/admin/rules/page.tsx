@@ -7,18 +7,6 @@ import { Icons } from "@/components/Icons";
 import { useToast } from "@/components/ToastProvider";
 import { createPortal } from "react-dom";
 
-type ReleaseBand = {
-  min_added_term: string | number;
-  max_added_term: string | number | null;
-  percentage: string | number;
-};
-
-const releaseBandFields = [
-  { key: "min_added_term", label: "De parcelas", min: 0, step: 1 },
-  { key: "max_added_term", label: "Até parcelas", min: 0, step: 1 },
-  { key: "percentage", label: "Percentual (%)", min: 0.01, step: 0.01 },
-] as const;
-
 export default function RulesPage() {
   const { toast } = useToast();
   const [banks, setBanks] = useState<any[]>([]);
@@ -36,7 +24,6 @@ export default function RulesPage() {
     max_age: 80,
     max_term: 84,
     min_release_amount: 0,
-    added_debt_release_bands: [],
     allowed_benefit_types: "",
     literacy_required: false,
     accepts_disability: false,
@@ -110,7 +97,6 @@ export default function RulesPage() {
         max_age: rule.max_age || 80,
         max_term: rule.max_term || 84,
         min_release_amount: rule.min_release_amount || 0,
-        added_debt_release_bands: rule.added_debt_release_bands ?? [],
         allowed_benefit_types: rule.allowed_benefit_types || "",
         literacy_required: rule.literacy_required || false,
         accepts_disability: rule.accepts_disability || false,
@@ -141,7 +127,6 @@ export default function RulesPage() {
         max_age: 80,
         max_term: 84,
         min_release_amount: 0,
-        added_debt_release_bands: [],
         allowed_benefit_types: "",
         literacy_required: false,
         accepts_disability: false,
@@ -183,11 +168,6 @@ export default function RulesPage() {
         max_age: parseInt(formData.max_age),
         max_term: parseInt(formData.max_term),
         min_release_amount: parseFloat(formData.min_release_amount),
-        added_debt_release_bands: (formData.added_debt_release_bands as ReleaseBand[]).map((band) => ({
-          min_added_term: Number(band.min_added_term),
-          max_added_term: band.max_added_term == null || band.max_added_term === "" ? null : Number(band.max_added_term),
-          percentage: Number(band.percentage),
-        })),
         disability_min_age: parseInt(formData.disability_min_age) || 0,
         disability_max_age: parseInt(formData.disability_max_age) || 0,
         disability_grace_age: parseInt(formData.disability_grace_age) || 0,
@@ -647,46 +627,6 @@ export default function RulesPage() {
                    </div>
                  </div>
                  
-                 <fieldset className="space-y-3">
-                   <legend className="text-sm font-bold text-blue-700">Troco mínimo por novo endividamento</legend>
-                   <p className="text-xs text-slate-600">Use as parcelas acrescidas no refin. Deixe o fim da faixa em branco para incluir todos os prazos acima do início.</p>
-                   {(formData.added_debt_release_bands as ReleaseBand[]).map((band, index, bands) => (
-                     <div key={index} className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:items-end">
-                       {releaseBandFields.map(({ key, label, min, step }) => (
-                         <label key={key} className="text-xs font-semibold text-slate-700">
-                           {label}
-                           <input
-                             className="input-admin"
-                             type="number"
-                             min={min}
-                             step={step}
-                             max={key === "percentage" ? 100 : undefined}
-                             required={key !== "max_added_term"}
-                             value={band[key] ?? ""}
-                             onChange={(event) => setFormData({
-                               ...formData,
-                               added_debt_release_bands: bands.map((item, row) =>
-                                 row === index ? { ...item, [key]: event.target.value } : item
-                               ),
-                             })}
-                           />
-                         </label>
-                       ))}
-                       <button type="button" className="text-xs font-semibold text-red-700" onClick={() => setFormData({
-                         ...formData,
-                         added_debt_release_bands: bands.filter((_, row) => row !== index),
-                       })}>Remover faixa</button>
-                     </div>
-                   ))}
-                   <button type="button" className="text-xs font-semibold text-blue-700" onClick={() => setFormData({
-                     ...formData,
-                     added_debt_release_bands: [
-                       ...formData.added_debt_release_bands,
-                       { min_added_term: "", max_added_term: "", percentage: "" },
-                     ],
-                   })}>Adicionar faixa</button>
-                 </fieldset>
-
                  <div className="flex items-center gap-3 pt-2">
                     <input 
                       type="checkbox" 

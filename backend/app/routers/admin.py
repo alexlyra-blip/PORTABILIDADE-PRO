@@ -1,4 +1,3 @@
-from pydantic import ValidationError
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
 import shutil
 import os
@@ -9,7 +8,7 @@ from app.database import get_db
 from app.services.admin_service import AdminService
 from app.schemas.simulacao_schema import (
     BankCreate, BankResponse, BankWithRulesResponse,
-    AddedDebtReleaseRules, BankRuleCreate, BankRuleResponse,
+    BankRuleCreate, BankRuleResponse,
     BankTableCreate, BankTableResponse,
     CoefficientCreate, CoefficientResponse,
     UserCreate, UserResponse,
@@ -181,12 +180,6 @@ async def create_rule(rule: BankRuleCreate, db: AsyncSession = Depends(get_db), 
 
 @router.patch("/bank-rules/{rule_id}", response_model=BankRuleResponse)
 async def update_rule(rule_id: int, rule_data: dict, db: AsyncSession = Depends(get_db), admin: UserResponse = Depends(get_admin_user)):
-    if "added_debt_release_bands" in rule_data:
-        try:
-            bands = AddedDebtReleaseRules.model_validate(rule_data)
-        except ValidationError as error:
-            raise HTTPException(status_code=422, detail=error.errors(include_context=False)) from error
-        rule_data.update(bands.model_dump())
     rule = await AdminService.update_rule(db, rule_id, rule_data)
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
