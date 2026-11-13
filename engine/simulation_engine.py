@@ -568,11 +568,6 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                                 continue
                                 
                             prazo_acrescido = max(0, current_term - prazo_restante)
-                            novo_endividamento = prazo_acrescido * Decimal(str(stats["valor_parcela"]))
-                            troco_em_centavos = Decimal(str(troco)).quantize(
-                                Decimal("0.01"), rounding=ROUND_HALF_UP
-                            )
-
                             # Validação de Troco Mínimo (Regra de Aceitação)
                             for regra in regras_aplicaveis:
                                 if hasattr(regra, "min_release_amount") and regra.min_release_amount:
@@ -586,6 +581,10 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                                         fim is not None and prazo_acrescido > fim
                                     ):
                                         continue
+                                    novo_endividamento = prazo_acrescido * Decimal(str(stats["valor_parcela"]))
+                                    troco_em_centavos = Decimal(str(troco)).quantize(
+                                        Decimal("0.01"), rounding=ROUND_HALF_UP
+                                    )
                                     percentual = Decimal(str(faixa["percentage"]))
                                     limite = novo_endividamento * percentual / 100
                                     if troco_em_centavos <= limite:
