@@ -1,5 +1,5 @@
 from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -563,16 +563,11 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                             troco = float(resultado[1])
                             stats = resultado[2]
                             motivo_rejeicao = resultado[3] if len(resultado) > 3 else "Viabilidade reprovada"
+                            
                             if not viavel:
                                 motivos_tabelas.append(f"Tabela {tabela.name}: {motivo_rejeicao}")
                                 continue
                                 
-                            prazo_acrescido = max(0, current_term - prazo_restante)
-                            novo_endividamento = prazo_acrescido * Decimal(str(stats["valor_parcela"]))
-                            troco_em_centavos = Decimal(str(troco)).quantize(
-                                Decimal("0.01"), rounding=ROUND_HALF_UP
-                            )
-
                             # Validação de Troco Mínimo (Regra de Aceitação)
                             for regra in regras_aplicaveis:
                                 if hasattr(regra, "min_release_amount") and regra.min_release_amount:
@@ -580,24 +575,7 @@ async def executar_simulacao_completa(cliente_input, db: AsyncSession, user_id: 
                                         viavel = False
                                         motivo_rejeicao = f"Troco insuficiente (R$ {troco:.2f} < R$ {regra.min_release_amount})"
                                         break
-                                for faixa in getattr(regra, "added_debt_release_bands", None) or []:
-                                    fim = faixa["max_added_term"]
-                                    if prazo_acrescido < faixa["min_added_term"] or (
-                                        fim is not None and prazo_acrescido > fim
-                                    ):
-                                        continue
-                                    percentual = Decimal(str(faixa["percentage"]))
-                                    limite = novo_endividamento * percentual / 100
-                                    if troco_em_centavos <= limite:
-                                        viavel = False
-                                        motivo_rejeicao = (
-                                            f"Troco deve superar {percentual}% do novo endividamento "
-                                            f"(R$ {limite:.2f}, {prazo_acrescido} parcelas acrescidas)"
-                                        )
-                                    break
-                                if not viavel:
-                                    break
-
+                            
                             if not viavel:
                                 motivos_tabelas.append(f"Tabela {tabela.name}: {motivo_rejeicao}")
                                 continue

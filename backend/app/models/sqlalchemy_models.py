@@ -1,5 +1,5 @@
 from sqlalchemy import UniqueConstraint
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Numeric, JSON
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Numeric
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -207,7 +207,6 @@ class BankRule(Base):
     max_age = Column(Integer)
     max_term = Column(Integer, default=84)
     min_release_amount = Column(Numeric(15, 2))
-    added_debt_release_bands = Column(JSON, nullable=True)
     allowed_benefit_types = Column(String(255)) # Comma-separated list like "INSS,SIAPE"
     literacy_required = Column(Boolean, default=False)
     accepts_illiterate = Column(Boolean, default=True)
