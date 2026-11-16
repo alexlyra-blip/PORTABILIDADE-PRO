@@ -221,10 +221,11 @@ export default function UsersPage() {
       toast.success("Usuário removido com sucesso!");
     } catch (e: any) {
       console.error("Erro ao remover usuário:", e);
-      const detail = e?.response?.data?.detail;
-      toast.error(typeof detail === "string" && detail.trim()
-        ? detail
-        : "Não foi possível remover o usuário. Tente novamente.");
+      const message = typeof e?.message === "string" ? e.message : "";
+      const detail = message.startsWith("Erro na API")
+        ? message.split(" - ").slice(1).join(" - ")
+        : message;
+      toast.error(detail || "Não foi possível remover o usuário. Tente novamente.");
     }
   };
 
