@@ -203,8 +203,8 @@ export const api = {
       });
       return await handleResponse(response, endpoint, 'DELETE');
     } catch (err) {
-      if (err.message.includes('Erro na API')) throw err;
       console.error("DELETE Error:", err);
+      if (err instanceof Error) throw err;
       throw new Error(`Erro ao deletar em ${endpoint}.`);
     }
   },
