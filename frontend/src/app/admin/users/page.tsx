@@ -219,9 +219,12 @@ export default function UsersPage() {
       await api.delete(`/admin/users/${id}`);
       loadUsers();
       toast.success("Usuário removido com sucesso!");
-    } catch (e) {
-      console.error(e);
-      toast.error("Erro ao remover usuário.");
+    } catch (e: any) {
+      console.error("Erro ao remover usuário:", e);
+      const detail = e?.response?.data?.detail;
+      toast.error(typeof detail === "string" && detail.trim()
+        ? detail
+        : "Não foi possível remover o usuário. Tente novamente.");
     }
   };
 
