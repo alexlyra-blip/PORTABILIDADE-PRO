@@ -1,10 +1,11 @@
 import re
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
-from app.models.sqlalchemy_models import Bank, BankRule, BankTable, Coefficient, User, Company, Simulation, SimulationResult, UserBankVisibility, PromotoraRule
+from app.models.sqlalchemy_models import Bank, BankRule, BankTable, Coefficient, User, Company, Simulation, SimulationResult, UserBankVisibility, PromotoraRule, WhatsappChatLog
 from app.schemas.simulacao_schema import BankCreate, BankRuleCreate, BankTableCreate, CoefficientCreate, CompanyCreate
 from app.services import auth_service
 from datetime import datetime, timedelta, timezone
@@ -979,8 +980,30 @@ class AdminService:
                 ),
             )
 
-        await db.delete(db_user)
-        await db.commit()
+        # Desvincular os historicos da Clara sem apagar mensagens ou protocolos.
+        # whatsapp_chat_logs.user_id e opcional no modelo.
+        try:
+            await db.execute(
+                update(WhatsappChatLog)
+                .where(WhatsappChatLog.user_id == user_id)
+                .values(user_id=None)
+            )
+            await db.delete(db_user)
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Não foi possível excluir este usuário porque existem "
+                    "outros registros vinculados à conta. Os dados foram "
+                    "preservados. Contate o administrador para revisar "
+                    "os vínculos pendentes."
+                ),
+            ) from exc
+        except Exception:
+            await db.rollback()
+            raise
         return True
 
     _dashboard_cache = {}
